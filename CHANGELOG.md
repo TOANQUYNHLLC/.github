@@ -12,9 +12,9 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 - Prettier (`.prettierrc.json`, `.prettierignore`) là formatter chính: tab độ rộng 4; Markdown và YAML dùng 4 dấu cách. CI chạy `prettier --check .`.
 - ESLint (`eslint.config.js`) với `@eslint/js` và `eslint-config-prettier`, quy tắc chất lượng mã riêng của dự án (`eqeqeq`, `curly`, `no-var`, `prefer-const`…); không có quy tắc định dạng.
-- ruff (`ruff.toml`) định dạng Python với 4 dấu cách; CI chạy `ruff format --check`.
+- ruff (`ruff.toml`) định dạng Python bằng tab độ rộng 4, xuống dòng LF; CI chạy `ruff format --check`.
 - `package.json`, `package-lock.json`, `.nvmrc` — công cụ Node.js cố định phiên bản.
-- `scripts/validate.py` chặn mọi thay đổi `.prettierrc.json`, `.editorconfig`, `ruff.toml` trái quy tắc (vd. độ rộng 2).
+- `scripts/validate.py` chặn mọi thay đổi `.prettierrc.json`, `.editorconfig`, `ruff.toml` trái quy tắc (vd. độ rộng 2 ngoài nhóm ngôn ngữ bắt buộc), kiểm tra thụt lề, kiểu xuống dòng, mã hoá và BOM theo từng loại file, và đối chiếu danh sách đuôi file với `.editorconfig`, `.gitattributes`.
 - `SECURITY.md` — chính sách bảo mật áp dụng cho mọi repository của tổ chức: thông tin cần cung cấp, cách gửi báo cáo kèm liên kết soạn email sẵn mẫu, cam kết xử lý và phiên bản được hỗ trợ.
 - `CONTRIBUTING.md` — hướng dẫn đóng góp: quy trình, quy ước đặt tên branch, quy ước commit và yêu cầu đối với Pull Request.
 - `CODE_OF_CONDUCT.md` — quy tắc ứng xử trong không gian cộng tác của tổ chức.
@@ -27,12 +27,12 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - `.github/dependabot.yml` — tự động đề xuất cập nhật các GitHub Action ghim theo commit SHA.
 - `.github/CODEOWNERS` — bắt buộc người quản trị duyệt mọi thay đổi.
 - `Makefile` — `make check` chạy toàn bộ kiểm tra giống CI trên máy cục bộ.
-- `.editorconfig`, `.gitattributes`, `.gitignore` — quy ước định dạng: UTF-8, xuống dòng LF, tab độ rộng 4; Python, YAML, Markdown dùng 4 dấu cách.
+- `.editorconfig`, `.gitattributes`, `.gitignore` — quy ước định dạng: UTF-8, xuống dòng LF, tab độ rộng 4 (kể cả Python); chỉ ngôn ngữ bắt buộc dấu cách mới dùng dấu cách (4, hoặc 2 nếu formatter chính thức cố định); chỉ file bắt buộc CRLF (batch script, Visual Studio, registry/INF, MIME/iCalendar/vCard/CSV) mới dùng CRLF.
 - `profile/README.md` — badge liên hệ và phần giới thiệu tiếng Anh (**ABOUT US**).
 - Quy trình phát hành: workflow `release.yml` tự tạo GitHub Release khi gắn tag, nội dung lấy từ `CHANGELOG.md` qua `scripts/release-notes.py`.
 - Workflow `pr-title.yml` bắt buộc tiêu đề Pull Request theo quy ước commit.
 - Workflow `links.yml` và `scripts/check-external-links.py` kiểm tra liên kết bên ngoài hằng tuần.
-- `scripts/test_validate.py` — 17 test tự động cho các script kiểm tra.
+- `scripts/test_validate.py` — 32 test tự động cho các script kiểm tra.
 - `.well-known/security.txt` (RFC 9116) với email chung của công ty.
 - `scripts/validate.py` khoá email chung `toanquynhvn@gmail.com`, kiểm tra hạn `security.txt` và cấu trúc `CHANGELOG.md`.
 - `make help` (mặc định khi gõ `make`), `make test`, `make links`, `make release-notes`; `make lint` báo rõ công cụ còn thiếu.

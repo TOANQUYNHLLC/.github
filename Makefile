@@ -3,7 +3,7 @@
 # (macOS: brew install ruff shellcheck actionlint; sau đó chạy `npm ci`).
 
 .DEFAULT_GOAL := help
-TOOLS := npx ruff shellcheck actionlint
+TOOLS := git python3 ruby npx ruff shellcheck actionlint
 
 .PHONY: help check validate test format format-check lint tools links release-notes labels-preview labels-apply
 
