@@ -1,0 +1,5 @@
+# Mẫu rustfmt — chép vào root repository Rust. rustfmt mặc định dùng dấu cách; quy ước tổ chức: tab độ rộng 4.
+hard_tabs = true
+tab_spaces = 4
+max_width = 100
+newline_style = "Unix"

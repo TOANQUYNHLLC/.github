@@ -1,0 +1,14 @@
+# Mẫu .dockerignore — không đưa mã quản lý phiên bản, bí mật và tệp phát triển vào image.
+.git
+.github
+.devcontainer
+.vscode
+**/node_modules
+**/__pycache__
+**/.venv
+**/*.log
+.env
+.env.*
+!.env.example
+Dockerfile*
+compose*.yaml
