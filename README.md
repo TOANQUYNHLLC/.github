@@ -22,10 +22,10 @@ Repository này được xây dựng nhằm:
 | Đường dẫn | Chức năng |
 |---|---|
 | [`profile/README.md`](profile/README.md) | Nội dung giới thiệu công khai của CÔNG TY TNHH TOÀN QUỲNH trên trang GitHub của tổ chức |
-| `README.md` | Giải thích mục đích, cấu trúc và nguyên tắc quản lý repository này |
-| `LICENSE` | Thông tin giấy phép áp dụng cho nội dung và tài nguyên trong repository |
+| [`README.md`](README.md) | Giải thích mục đích, cấu trúc và nguyên tắc quản lý repository này |
+| [`LICENSE`](LICENSE) | Thông tin giấy phép áp dụng cho nội dung và tài nguyên trong repository |
 | `.github/ISSUE_TEMPLATE/` | Biểu mẫu báo lỗi hoặc đề xuất tính năng nếu được bổ sung |
-| `.github/PULL_REQUEST_TEMPLATE.md` | Biểu mẫu yêu cầu hợp nhất mã nguồn nếu được bổ sung |
+| [`PULL_REQUEST_TEMPLATE.md`](PULL_REQUEST_TEMPLATE.md) | Biểu mẫu yêu cầu hợp nhất mã nguồn nếu được bổ sung |
 | `.github/workflows/` | Các quy trình tự động hóa GitHub Actions nếu được sử dụng |
 
 > Nội dung giới thiệu chính thức của công ty được đặt tại [`profile/README.md`](profile/README.md).
