@@ -2,10 +2,10 @@
 
 Mẫu [ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets) để các quy tắc trong [`CONTRIBUTING.md`](../CONTRIBUTING.md) được GitHub thực thi, không chỉ nằm trên giấy. Ruleset **không** tự áp dụng từ repository này — người quản trị cần import vào từng repository hoặc cho cả tổ chức.
 
-| Tệp                                          | Dùng cho                                                                                                                                        |
-| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`default-branch.json`](default-branch.json) | Mọi repository đã thêm workflow mẫu **Kiểm tra tiêu đề Pull Request** và **Kiểm tra tên branch**                                                |
-| [`dot-github.json`](dot-github.json)         | Chính repository `.github` này — bắt buộc thêm các job của `validate.yml`. **Đã import** (2026-09-26), áp dụng cùng ruleset Protect Main có sẵn |
+| Tệp                                          | Dùng cho                                                                                                                                                                                                                                                 |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`default-branch.json`](default-branch.json) | Mọi repository đã thêm workflow mẫu **Kiểm tra tiêu đề Pull Request** và **Kiểm tra tên branch**                                                                                                                                                         |
+| [`dot-github.json`](dot-github.json)         | Ruleset **Protect Main** của chính repository `.github`: gộp mọi quy tắc của mẫu chung và Protect Main cũ, bắt buộc thêm các job của `validate.yml`; danh sách bỏ qua là hai tài khoản quản trị (xem [ADR 0005](../docs/adr/0005-merge-protect-main.md)) |
 
 ## ⚙️ QUY TẮC ÁP DỤNG CHO NHÁNH MẶC ĐỊNH
 
@@ -14,7 +14,7 @@ Mẫu [ruleset](https://docs.github.com/en/repositories/configuring-branches-and
 - Các kiểm tra tự động bắt buộc phải thành công trên branch đã cập nhật với nhánh chính.
 - Commit phải có chữ ký (GPG hoặc SSH).
 - Cấm force push và cấm xóa nhánh chính.
-- Vai trò **Admin** của repository được bỏ qua ruleset **chỉ khi hợp nhất Pull Request** (cần thiết khi tổ chức chỉ có một người quản trị, không thể tự phê duyệt Pull Request của mình).
+- `default-branch.json`: vai trò **Admin** của repository được bỏ qua ruleset **chỉ khi hợp nhất Pull Request** (cần thiết khi tổ chức chỉ có một người quản trị, không thể tự phê duyệt Pull Request của mình).
 
 ## 📥 CÁCH IMPORT
 

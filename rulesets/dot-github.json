@@ -1,14 +1,17 @@
 {
-	"name": "Bảo vệ nhánh chính — repository .github",
+	"name": "Protect Main",
 	"target": "branch",
 	"enforcement": "active",
-	"conditions": { "ref_name": { "include": ["~DEFAULT_BRANCH"], "exclude": [] } },
+	"conditions": { "ref_name": { "exclude": [], "include": ["~DEFAULT_BRANCH"] } },
 	"bypass_actors": [
-		{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }
+		{ "actor_id": 107941543, "actor_type": "User", "bypass_mode": "always" },
+		{ "actor_id": 108377655, "actor_type": "User", "bypass_mode": "always" }
 	],
 	"rules": [
 		{ "type": "deletion" },
 		{ "type": "non_fast_forward" },
+		{ "type": "creation" },
+		{ "type": "update" },
 		{ "type": "required_linear_history" },
 		{ "type": "required_signatures" },
 		{
@@ -16,9 +19,18 @@
 			"parameters": {
 				"required_approving_review_count": 1,
 				"dismiss_stale_reviews_on_push": true,
+				"required_reviewers": [],
 				"require_code_owner_review": true,
-				"require_last_push_approval": false,
+				"dismissal_restriction": {
+					"enabled": true,
+					"allowed_actors": [
+						{ "id": 107941543, "type": "User" },
+						{ "id": 108377655, "type": "User" }
+					]
+				},
+				"require_last_push_approval": true,
 				"required_review_thread_resolution": true,
+				"require_extra_approval_for_unattributed_changes": true,
 				"allowed_merge_methods": ["squash"]
 			}
 		},
@@ -26,7 +38,7 @@
 			"type": "required_status_checks",
 			"parameters": {
 				"strict_required_status_checks_policy": true,
-				"do_not_enforce_on_create": false,
+				"do_not_enforce_on_create": true,
 				"required_status_checks": [
 					{
 						"context": "Liên kết, biểu mẫu, nhãn, cấu hình định dạng và mẫu email",
@@ -38,6 +50,7 @@
 					{ "context": "Kiểm tra tên branch", "integration_id": 15368 }
 				]
 			}
-		}
+		},
+		{ "type": "code_quality", "parameters": { "severity": "all" } }
 	]
 }

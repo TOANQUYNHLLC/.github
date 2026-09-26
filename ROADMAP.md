@@ -4,6 +4,24 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ---
 
+## 🔥 ƯU TIÊN: GỘP HAI RULESET THÀNH PROTECT MAIN
+
+[`rulesets/dot-github.json`](rulesets/dot-github.json) đã gộp toàn bộ cài đặt của **Protect Main** hiện tại và ruleset mới, tên **Protect Main** ([ADR 0005](docs/adr/0005-merge-protect-main.md)). Người quản trị làm trên [Settings → Rules → Rulesets](https://github.com/TOANQUYNHLLC/.github/settings/rules) theo thứ tự để nhánh chính luôn được bảo vệ:
+
+1. Mở **Protect Main** hiện tại → đổi tên thành `Protect Main (cũ)` → **Save changes**.
+2. **New ruleset → Import a ruleset** → chọn `rulesets/dot-github.json` → **Create**. Ruleset mới tên **Protect Main**.
+3. Xóa ruleset `Protect Main (cũ)` và ruleset **Bảo vệ nhánh chính — repository .github**.
+4. Kiểm tra chỉ còn một ruleset và đủ quy tắc:
+
+    ```sh
+    gh api repos/TOANQUYNHLLC/.github/rulesets --jq '.[].name'
+    gh api repos/TOANQUYNHLLC/.github/rules/branches/main --jq '[.[].type] | unique'
+    ```
+
+    Kết quả: chỉ `Protect Main`; 9 quy tắc `code_quality`, `creation`, `deletion`, `non_fast_forward`, `pull_request`, `required_linear_history`, `required_signatures`, `required_status_checks`, `update`.
+
+---
+
 ## ✅ ĐÃ HOÀN THÀNH GẦN ĐÂY
 
 - [x] Ruleset **Bảo vệ nhánh chính — repository .github** (import từ [`dot-github.json`](rulesets/dot-github.json)) đang áp dụng cho `main` cùng ruleset **Protect Main**: chỉ Squash and merge, bắt buộc 5 kiểm tra tự động, phê duyệt của `CODEOWNERS`, commit có chữ ký, lịch sử tuyến tính (2026-09-26). Hai ruleset cùng áp dụng — quy tắc chặt hơn được dùng.
@@ -33,4 +51,3 @@ Hiện tổ chức chỉ có repository `.github`. Với mỗi repository mới,
 ## 💡 CÂN NHẮC
 
 - [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`DISCUSSION_TEMPLATE/`](DISCUSSION_TEMPLATE/).
-- [ ] Gộp ruleset **Protect Main** vào **Bảo vệ nhánh chính — repository .github** để chỉ còn một ruleset dễ quản lý (giữ các quy tắc riêng của Protect Main nếu còn cần: chặn tạo/cập nhật nhánh chính, yêu cầu phê duyệt sau lần đẩy cuối, code quality).

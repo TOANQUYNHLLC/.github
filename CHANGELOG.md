@@ -58,6 +58,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ♻️ THAY ĐỔI
 
+- `rulesets/dot-github.json` gộp toàn bộ cài đặt của ruleset Protect Main trên web (chặn tạo/cập nhật nhánh chính, phê duyệt lại sau lần đẩy cuối, code quality, danh sách bỏ qua) với ruleset mẫu, đặt tên **Protect Main**; thêm ADR 0005, cập nhật `GOVERNANCE.md`, `rulesets/README.md`, `ROADMAP.md`.
 - `ROADMAP.md` cập nhật sau khi import ruleset `dot-github.json`: các việc cấu hình `.github` đã hoàn thành, còn lại quy trình cho repository mới và việc gộp hai ruleset.
 - `ROADMAP.md` đưa việc cập nhật ruleset **Protect Main** lên ưu tiên, kèm hướng dẫn từng bước trên web và lệnh kiểm tra.
 - `CODEOWNERS`, mẫu `CODEOWNERS` và `MAINTAINERS.md` chuyển sang team `@TOANQUYNHLLC/maintainers`; `scripts/org-setup.py team` cấp quyền maintain thay cho admin.
