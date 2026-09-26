@@ -167,7 +167,7 @@ CÔNG TY TNHH TOÀN QUỲNH cam kết:
 **🏢 CÔNG TY TNHH TOÀN QUỲNH**
 
 - 👤 **Người đại diện theo pháp luật:** Nguyễn Trọng Toàn
-- 🌙 **Dự án chuyên môn:** Phòng khám chuyên khoa Nhi DR. MOON
+- 🌙 **Dự án chuyên môn:** Phòng khám chuyên khoa Nhi DR.MOON
 - 👩‍⚕️ **Bác sĩ phụ trách chuyên môn:** BS CKI Ngô Lê Như Quỳnh
 - 📍 **Địa chỉ:** Đường Huỳnh Tấn Phát, Phường Hoà Hiệp, Tỉnh Đắk Lắk, Việt Nam
 - 📱 **Điện thoại:** [0332 911 829](tel:+84332911829)
