@@ -186,6 +186,20 @@ class ValidateTest(unittest.TestCase):
 		self.edit('.editorconfig', '[*.{bat,cmd,', '[*.{bat,')
 		self.assert_fails('.editorconfig: thiếu .cmd trong mục "end_of_line = crlf"')
 
+	def test_loai_commit_phai_khop_contributing(self):
+		self.edit('.github/workflows/pr-title.yml', '|revert)', ')')
+		self.assert_fails('.github/workflows/pr-title.yml: thiếu "revert" so với CONTRIBUTING.md')
+
+	def test_tien_to_branch_phai_khop_contributing(self):
+		self.edit('workflow-templates/branch-name.yml', '|release)', ')')
+		self.assert_fails(
+			'workflow-templates/branch-name.yml: thiếu "release" so với CONTRIBUTING.md'
+		)
+
+	def test_ruleset_phai_trung_ten_job(self):
+		self.edit('rulesets/dot-github.json', '"Shell script và workflow"', '"Shell script"')
+		self.assert_fails('kiểm tra bắt buộc "Shell script" không trùng tên job nào')
+
 	def test_xuong_dong_crlf(self):
 		path = self.repo / 'SUPPORT.md'
 		path.write_bytes(path.read_bytes().replace(b'\n', b'\r\n'))

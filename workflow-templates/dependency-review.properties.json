@@ -1,0 +1,6 @@
+{
+	"name": "Rà soát dependency — TOÀN QUỲNH",
+	"description": "Chặn Pull Request thêm dependency có lỗ hổng mức cao trở lên. Cần bật Dependency graph cho repository.",
+	"iconName": "dependency-review",
+	"categories": ["Dependency Management", "Code Scanning"]
+}

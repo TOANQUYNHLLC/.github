@@ -333,6 +333,66 @@ def check_suffix_lists():
 		)
 
 
+def contributing_section(text, heading):
+	"""Nội dung một mục `## …` của CONTRIBUTING.md, tới mục kế tiếp."""
+	match = re.search(rf'^## .*{re.escape(heading)}\n(.*?)(?=^## |\Z)', text, re.M | re.S)
+	return match.group(1) if match else ''
+
+
+def workflow_pattern_words(path):
+	"""Các lựa chọn trong nhóm đầu tiên của biến pattern='^(a|b|…)…' trong workflow."""
+	text = path.read_text(encoding='utf-8') if path.exists() else ''
+	match = re.search(r"pattern='\^\(([a-z|]+)\)", text)
+	return set(match.group(1).split('|')) if match else set()
+
+
+def check_conventions():
+	"""Loại commit và tiền tố branch trong CONTRIBUTING.md phải khớp các workflow kiểm tra."""
+	contributing = (ROOT / 'CONTRIBUTING.md').read_text(encoding='utf-8')
+	types = set(
+		re.findall(r'^\| `([a-z]+)` ', contributing_section(contributing, 'QUY ƯỚC COMMIT'), re.M)
+	)
+	prefixes = set(
+		re.findall(
+			r'^\| `([a-z]+)/` ', contributing_section(contributing, 'QUY ƯỚC ĐẶT TÊN BRANCH'), re.M
+		)
+	)
+	for name, expected in (('pr-title.yml', types), ('branch-name.yml', prefixes)):
+		for folder in (ROOT / '.github' / 'workflows', ROOT / 'workflow-templates'):
+			path = folder / name
+			found = workflow_pattern_words(path)
+			for word in sorted(expected ^ found):
+				where = 'thiếu' if word in expected else 'thừa'
+				errors.append(f'{path.relative_to(ROOT)}: {where} "{word}" so với CONTRIBUTING.md')
+
+
+def check_rulesets():
+	"""Kiểm tra bắt buộc trong ruleset mẫu phải trùng tên một job có thật, nếu không PR chờ mãi."""
+	sources = {
+		'default-branch.json': ROOT / 'workflow-templates',
+		'dot-github.json': ROOT / '.github' / 'workflows',
+	}
+	for name, folder in sources.items():
+		path = ROOT / 'rulesets' / name
+		if not path.exists():
+			continue
+		try:
+			ruleset = json.loads(path.read_text(encoding='utf-8'))
+		except json.JSONDecodeError:
+			continue
+		jobs = set()
+		for workflow in sorted(folder.glob('*.yml')):
+			for job in ((load_yaml(workflow) or {}).get('jobs') or {}).values():
+				jobs.add(job.get('name'))
+		for rule in ruleset.get('rules', []):
+			for check in (rule.get('parameters') or {}).get('required_status_checks', []):
+				if check.get('context') not in jobs:
+					error(
+						path,
+						f'kiểm tra bắt buộc "{check.get("context")}" không trùng tên job nào trong {folder.relative_to(ROOT)}',
+					)
+
+
 def check_space_only(path, text):
 	"""Ngôn ngữ bắt buộc dấu cách (4 hoặc 2 mỗi cấp theo formatter chính thức): không dùng tab."""
 	width = 2 if path.suffix in TWO_SPACE_SUFFIXES else 4
@@ -519,6 +579,8 @@ for file in tracked_files():
 
 check_format_config()
 check_suffix_lists()
+check_conventions()
+check_rulesets()
 
 for required in (
 	'README.md',

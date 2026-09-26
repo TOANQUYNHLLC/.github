@@ -1,0 +1,7 @@
+{
+	"name": "Docker image — TOÀN QUỲNH",
+	"description": "Build Docker image mỗi Pull Request; đẩy lên GitHub Container Registry khi push nhánh chính hoặc gắn tag.",
+	"iconName": "docker-image",
+	"categories": ["Dockerfile", "Continuous integration"],
+	"filePatterns": ["Dockerfile$"]
+}

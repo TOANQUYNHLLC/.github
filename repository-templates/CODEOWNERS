@@ -1,0 +1,14 @@
+# Mẫu CODEOWNERS — chép vào .github/CODEOWNERS của repository rồi sửa theo dự án.
+# Dòng khớp sau cùng được ưu tiên. Người sở hữu phải có quyền ghi vào repository.
+# Tài liệu: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Mặc định: người quản trị duyệt mọi thay đổi.
+* @nguyentrongtoandl
+
+# Workflow, cấu hình CI/CD và quyền sở hữu mã: luôn cần người quản trị duyệt.
+/.github/ @nguyentrongtoandl
+
+# Ví dụ phân công theo thư mục khi tổ chức đã có team trên GitHub:
+# /frontend/ @TOANQUYNHLLC/frontend
+# /backend/ @TOANQUYNHLLC/backend
+# /docs/ @TOANQUYNHLLC/maintainers

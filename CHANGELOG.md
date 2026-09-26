@@ -10,6 +10,15 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ✨ THÊM
 
+- Workflow `branch-name.yml` (kèm bản mẫu) bắt buộc tên branch theo quy ước trong `CONTRIBUTING.md`; bỏ qua branch của Dependabot.
+- Workflow mẫu `release.yml` tạo GitHub Release từ mục tương ứng trong `CHANGELOG.md` khi gắn tag.
+- `rulesets/` — ruleset mẫu bảo vệ nhánh chính để import: Pull Request bắt buộc, phê duyệt của `CODEOWNERS`, chỉ Squash and merge, commit có chữ ký, cấm force push.
+- `repository-templates/` — mẫu `CODEOWNERS` và `dependabot.yml` cho từng repository.
+- `scripts/pre-commit.sh` và `make hooks` — pre-commit hook kiểm tra định dạng file được stage.
+- Nhãn `stale` cho workflow đóng Issue và Pull Request không hoạt động.
+- Dependabot cập nhật công cụ Node.js (npm) hằng tháng, gộp vào một Pull Request.
+- Biểu mẫu Pull Request thêm mục kiểm tra formatter/lint và quy ước tên branch, commit, tiêu đề.
+- `scripts/validate.py` kiểm tra loại commit và tiền tố branch trong `CONTRIBUTING.md` khớp các workflow, và kiểm tra bắt buộc trong ruleset trùng tên job có thật.
 - Prettier (`.prettierrc.json`, `.prettierignore`) là formatter chính: tab độ rộng 4; Markdown và YAML dùng 4 dấu cách. CI chạy `prettier --check .`.
 - ESLint (`eslint.config.js`) với `@eslint/js` và `eslint-config-prettier`, quy tắc chất lượng mã riêng của dự án (`eqeqeq`, `curly`, `no-var`, `prefer-const`…); không có quy tắc định dạng.
 - ruff (`ruff.toml`) định dạng Python bằng tab độ rộng 4, xuống dòng LF; CI chạy `ruff format --check`.
@@ -21,8 +30,8 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - `SUPPORT.md` — bảng chọn kênh hỗ trợ theo nhu cầu.
 - `CHANGELOG.md` — nhật ký thay đổi của repository.
 - `ISSUE_TEMPLATE/` — ba biểu mẫu Issue dạng form có trường bắt buộc (🐛 Báo lỗi, ✨ Đề xuất tính năng, ❓ Câu hỏi hoặc cần hỗ trợ) và `config.yml` tắt Issue trống, thêm liên kết báo cáo bảo mật và liên hệ công ty.
-- `workflow-templates/` — workflow mẫu dùng chung: Node.js CI và kiểm tra liên kết tài liệu.
-- `labels.yml` và `scripts/sync-labels.sh` — bộ 15 nhãn chuẩn và công cụ đồng bộ lên các repository (mặc định chỉ xem trước).
+- `workflow-templates/` — workflow mẫu dùng chung: Node.js CI, Python CI (ruff, pytest), Go CI (gofmt, vet, test -race), CodeQL, rà soát dependency, build và đẩy Docker image lên GHCR, kiểm tra tiêu đề Pull Request, đóng Issue/Pull Request không hoạt động và kiểm tra liên kết tài liệu; mọi action ghim theo commit SHA.
+- `labels.yml` và `scripts/sync-labels.sh` — bộ 16 nhãn chuẩn và công cụ đồng bộ lên các repository (mặc định chỉ xem trước).
 - CI `.github/workflows/validate.yml` — kiểm tra nội dung bằng `scripts/validate.py`, định dạng, ESLint, shellcheck và actionlint.
 - `.github/dependabot.yml` — tự động đề xuất cập nhật các GitHub Action ghim theo commit SHA.
 - `.github/CODEOWNERS` — bắt buộc người quản trị duyệt mọi thay đổi.
@@ -32,13 +41,16 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - Quy trình phát hành: workflow `release.yml` tự tạo GitHub Release khi gắn tag, nội dung lấy từ `CHANGELOG.md` qua `scripts/release-notes.py`.
 - Workflow `pr-title.yml` bắt buộc tiêu đề Pull Request theo quy ước commit.
 - Workflow `links.yml` và `scripts/check-external-links.py` kiểm tra liên kết bên ngoài hằng tuần.
-- `scripts/test_validate.py` — 32 test tự động cho các script kiểm tra.
+- `scripts/test_validate.py` — 35 test tự động cho các script kiểm tra.
 - `.well-known/security.txt` (RFC 9116) với email chung của công ty.
 - `scripts/validate.py` khoá email chung `toanquynhvn@gmail.com`, kiểm tra hạn `security.txt` và cấu trúc `CHANGELOG.md`.
 - `make help` (mặc định khi gõ `make`), `make test`, `make links`, `make release-notes`; `make lint` báo rõ công cụ còn thiếu.
 
 ### ♻️ THAY ĐỔI
 
+- Quy ước đặt tên branch: tên viết bằng tiếng Anh, các từ nối bằng dấu gạch dưới (`feature/appointment_booking`).
+- `CONTRIBUTING.md` bổ sung hướng dẫn viết báo lỗi, phong cách mã nguồn, kiểm thử, giữ branch cập nhật, đánh giá mã nguồn, hợp nhất, sửa lỗi khẩn cấp và quản lý phụ thuộc; thêm tiền tố branch `hotfix/`, `perf/`, `test/`, `ci/`, `release/`.
+- Quy ước commit và kiểm tra tiêu đề Pull Request thêm các loại `style`, `build`, `ci`, `revert`; phạm vi cho phép dấu gạch dưới.
 - `README.md` tập trung vào chính repository: cách GitHub áp dụng nội dung cho toàn tổ chức, cấu trúc theo nhóm, hướng dẫn phát triển cục bộ; giới thiệu công ty và thông tin liên hệ đầy đủ chuyển về `profile/README.md`.
 - Mục bảo mật trong `README.md` rút gọn, nội dung chi tiết chuyển sang `SECURITY.md`.
 - Mẫu nội dung email báo cáo bảo mật bổ sung trường **Thông tin liên hệ của người báo cáo**; liên kết soạn email khớp hoàn toàn với mẫu.

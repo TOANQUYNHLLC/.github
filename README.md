@@ -51,32 +51,36 @@ GitHub tự động áp dụng nội dung của repository này cho toàn tổ c
 
 **Tài nguyên dùng chung**
 
-| Đường dẫn                                          | Chức năng                                                                        |
-| -------------------------------------------------- | -------------------------------------------------------------------------------- |
-| [`workflow-templates/`](workflow-templates/)       | Workflow mẫu: Node.js CI, kiểm tra tài liệu                                      |
-| [`labels.yml`](labels.yml)                         | Bộ nhãn chuẩn: loại vấn đề, mức độ ưu tiên, trạng thái                           |
-| [`scripts/sync-labels.sh`](scripts/sync-labels.sh) | Đồng bộ `labels.yml` lên các repository bằng GitHub CLI (mặc định chỉ xem trước) |
+| Đường dẫn                                          | Chức năng                                                                                                                                                                                |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`workflow-templates/`](workflow-templates/)       | Workflow mẫu: Node.js CI, Python CI, Go CI, CodeQL, rà soát dependency, Docker image, tạo GitHub Release, kiểm tra tiêu đề PR và tên branch, đóng mục không hoạt động, kiểm tra tài liệu |
+| [`rulesets/`](rulesets/)                           | Ruleset mẫu bảo vệ nhánh chính (Pull Request bắt buộc, phê duyệt, Squash and merge, commit có chữ ký) để import vào repository                                                           |
+| [`repository-templates/`](repository-templates/)   | Mẫu `CODEOWNERS` và `dependabot.yml` cho từng repository (GitHub không kế thừa hai tệp này)                                                                                              |
+| [`labels.yml`](labels.yml)                         | Bộ nhãn chuẩn: loại vấn đề, mức độ ưu tiên, trạng thái                                                                                                                                   |
+| [`scripts/sync-labels.sh`](scripts/sync-labels.sh) | Đồng bộ `labels.yml` lên các repository bằng GitHub CLI (mặc định chỉ xem trước)                                                                                                         |
 
 **Cấu hình của repository này**
 
-| Đường dẫn                                                                                                                                   | Chức năng                                                                                                                                                            |
-| ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`.github/workflows/validate.yml`](.github/workflows/validate.yml)                                                                          | CI: kiểm tra nội dung, chạy test, `prettier --check`, ESLint, `ruff format --check`, shellcheck, actionlint                                                          |
-| [`.github/workflows/pr-title.yml`](.github/workflows/pr-title.yml)                                                                          | Bắt buộc tiêu đề Pull Request theo quy ước commit (`feat:`, `fix:`…)                                                                                                 |
-| [`.github/workflows/release.yml`](.github/workflows/release.yml)                                                                            | Gắn tag `v*` là tự tạo GitHub Release với nội dung lấy từ `CHANGELOG.md`                                                                                             |
-| [`.github/workflows/links.yml`](.github/workflows/links.yml)                                                                                | Kiểm tra liên kết bên ngoài (website, Facebook…) hằng tuần                                                                                                           |
-| [`.github/dependabot.yml`](.github/dependabot.yml)                                                                                          | Tự động đề xuất cập nhật các GitHub Action đang ghim theo commit SHA                                                                                                 |
-| [`.github/CODEOWNERS`](.github/CODEOWNERS)                                                                                                  | Người quản trị bắt buộc duyệt mọi thay đổi                                                                                                                           |
-| [`scripts/validate.py`](scripts/validate.py)                                                                                                | Kiểm tra liên kết, tiêu đề viết hoa, nhãn, biểu mẫu Issue, workflow, định dạng file, email chung, `security.txt`, `CHANGELOG.md` và mẫu email bảo mật                |
-| [`scripts/test_validate.py`](scripts/test_validate.py)                                                                                      | Test tự động: mỗi luật kiểm tra đều có một ca cố ý làm hỏng để chứng minh luật còn hoạt động                                                                         |
-| [`scripts/release-notes.py`](scripts/release-notes.py) · [`scripts/check-external-links.py`](scripts/check-external-links.py)               | Tách nội dung phát hành từ `CHANGELOG.md`; kiểm tra liên kết bên ngoài                                                                                               |
-| [`.well-known/security.txt`](.well-known/security.txt)                                                                                      | Tệp `security.txt` (RFC 9116) để đăng tại `https://toanquynh.com/.well-known/security.txt`                                                                           |
-| [`Makefile`](Makefile)                                                                                                                      | Lệnh chạy kiểm tra cục bộ giống CI — gõ `make` để xem danh sách                                                                                                      |
-| [`.editorconfig`](.editorconfig) · [`.prettierrc.json`](.prettierrc.json) · [`.prettierignore`](.prettierignore) · [`ruff.toml`](ruff.toml) | Quy tắc định dạng: tab độ rộng 4; chỉ ngôn ngữ bắt buộc dấu cách mới dùng dấu cách (4, hoặc 2 nếu formatter chính thức bắt buộc); UTF-8, LF (trừ file bắt buộc CRLF) |
-| [`eslint.config.js`](eslint.config.js) · [`package.json`](package.json) · [`.nvmrc`](.nvmrc)                                                | ESLint (tắt quy tắc định dạng bằng `eslint-config-prettier`), công cụ Node.js và phiên bản Node                                                                      |
-| [`.gitattributes`](.gitattributes) · [`.gitignore`](.gitignore)                                                                             | Chuẩn hoá xuống dòng LF, bỏ qua file tạm và `node_modules/`                                                                                                          |
-| [`CHANGELOG.md`](CHANGELOG.md)                                                                                                              | Nhật ký thay đổi của repository này, theo phiên bản                                                                                                                  |
-| [`LICENSE`](LICENSE)                                                                                                                        | Giấy phép MIT cho nội dung của repository này                                                                                                                        |
+| Đường dẫn                                                                                                                                   | Chức năng                                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`.github/workflows/validate.yml`](.github/workflows/validate.yml)                                                                          | CI: kiểm tra nội dung, chạy test, `prettier --check`, ESLint, `ruff format --check`, shellcheck, actionlint                                                                                                     |
+| [`.github/workflows/branch-name.yml`](.github/workflows/branch-name.yml)                                                                    | Bắt buộc tên branch của Pull Request theo quy ước `<tiền tố>/<mô_tả>`                                                                                                                                           |
+| [`.github/workflows/pr-title.yml`](.github/workflows/pr-title.yml)                                                                          | Bắt buộc tiêu đề Pull Request theo quy ước commit (`feat:`, `fix:`…)                                                                                                                                            |
+| [`.github/workflows/release.yml`](.github/workflows/release.yml)                                                                            | Gắn tag `v*` là tự tạo GitHub Release với nội dung lấy từ `CHANGELOG.md`                                                                                                                                        |
+| [`.github/workflows/links.yml`](.github/workflows/links.yml)                                                                                | Kiểm tra liên kết bên ngoài (website, Facebook…) hằng tuần                                                                                                                                                      |
+| [`.github/dependabot.yml`](.github/dependabot.yml)                                                                                          | Tự động đề xuất cập nhật các GitHub Action đang ghim theo commit SHA và công cụ Node.js                                                                                                                         |
+| [`.github/CODEOWNERS`](.github/CODEOWNERS)                                                                                                  | Người quản trị bắt buộc duyệt mọi thay đổi                                                                                                                                                                      |
+| [`scripts/validate.py`](scripts/validate.py)                                                                                                | Kiểm tra liên kết, tiêu đề viết hoa, nhãn, biểu mẫu Issue, workflow, ruleset, quy ước commit và branch khớp `CONTRIBUTING.md`, định dạng file, email chung, `security.txt`, `CHANGELOG.md` và mẫu email bảo mật |
+| [`scripts/test_validate.py`](scripts/test_validate.py)                                                                                      | Test tự động: mỗi luật kiểm tra đều có một ca cố ý làm hỏng để chứng minh luật còn hoạt động                                                                                                                    |
+| [`scripts/pre-commit.sh`](scripts/pre-commit.sh)                                                                                            | Pre-commit hook kiểm tra định dạng file được stage bằng Prettier và ruff (cài bằng `make hooks`)                                                                                                                |
+| [`scripts/release-notes.py`](scripts/release-notes.py) · [`scripts/check-external-links.py`](scripts/check-external-links.py)               | Tách nội dung phát hành từ `CHANGELOG.md`; kiểm tra liên kết bên ngoài                                                                                                                                          |
+| [`.well-known/security.txt`](.well-known/security.txt)                                                                                      | Tệp `security.txt` (RFC 9116) để đăng tại `https://toanquynh.com/.well-known/security.txt`                                                                                                                      |
+| [`Makefile`](Makefile)                                                                                                                      | Lệnh chạy kiểm tra cục bộ giống CI — gõ `make` để xem danh sách                                                                                                                                                 |
+| [`.editorconfig`](.editorconfig) · [`.prettierrc.json`](.prettierrc.json) · [`.prettierignore`](.prettierignore) · [`ruff.toml`](ruff.toml) | Quy tắc định dạng: tab độ rộng 4; chỉ ngôn ngữ bắt buộc dấu cách mới dùng dấu cách (4, hoặc 2 nếu formatter chính thức bắt buộc); UTF-8, LF (trừ file bắt buộc CRLF)                                            |
+| [`eslint.config.js`](eslint.config.js) · [`package.json`](package.json) · [`.nvmrc`](.nvmrc)                                                | ESLint (tắt quy tắc định dạng bằng `eslint-config-prettier`), công cụ Node.js và phiên bản Node                                                                                                                 |
+| [`.gitattributes`](.gitattributes) · [`.gitignore`](.gitignore)                                                                             | Chuẩn hoá xuống dòng LF, bỏ qua file tạm và `node_modules/`                                                                                                                                                     |
+| [`CHANGELOG.md`](CHANGELOG.md)                                                                                                              | Nhật ký thay đổi của repository này, theo phiên bản                                                                                                                                                             |
+| [`LICENSE`](LICENSE)                                                                                                                        | Giấy phép MIT cho nội dung của repository này                                                                                                                                                                   |
 
 ---
 
@@ -104,18 +108,19 @@ Chạy toàn bộ kiểm tra giống CI trước khi tạo Pull Request:
 make check
 ```
 
-| Lệnh                       | Tác dụng                                        |
-| -------------------------- | ----------------------------------------------- |
-| `make`                     | Xem danh sách lệnh                              |
-| `make validate`            | Kiểm tra nội dung bằng `scripts/validate.py`    |
-| `make test`                | Chạy test tự động của các script kiểm tra       |
-| `make format`              | Định dạng lại toàn bộ bằng Prettier và ruff     |
-| `make format-check`        | Kiểm tra định dạng giống CI                     |
-| `make lint`                | ESLint, shellcheck và actionlint                |
-| `make links`               | Kiểm tra liên kết bên ngoài còn hoạt động       |
-| `make release-notes TAG=…` | Xem trước nội dung GitHub Release của một tag   |
-| `make labels-preview`      | Xem trước việc đồng bộ nhãn lên các repository  |
-| `make labels-apply`        | Đồng bộ nhãn (cần GitHub CLI và quyền quản trị) |
+| Lệnh                       | Tác dụng                                                |
+| -------------------------- | ------------------------------------------------------- |
+| `make`                     | Xem danh sách lệnh                                      |
+| `make validate`            | Kiểm tra nội dung bằng `scripts/validate.py`            |
+| `make test`                | Chạy test tự động của các script kiểm tra               |
+| `make format`              | Định dạng lại toàn bộ bằng Prettier và ruff             |
+| `make format-check`        | Kiểm tra định dạng giống CI                             |
+| `make lint`                | ESLint, shellcheck và actionlint                        |
+| `make links`               | Kiểm tra liên kết bên ngoài còn hoạt động               |
+| `make release-notes TAG=…` | Xem trước nội dung GitHub Release của một tag           |
+| `make labels-preview`      | Xem trước việc đồng bộ nhãn lên các repository          |
+| `make labels-apply`        | Đồng bộ nhãn (cần GitHub CLI và quyền quản trị)         |
+| `make hooks`               | Cài pre-commit hook kiểm tra định dạng trước khi commit |
 
 ---
 

@@ -1,0 +1,6 @@
+{
+	"name": "Kiểm tra tên branch — TOÀN QUỲNH",
+	"description": "Bắt buộc tên branch của Pull Request theo quy ước <tiền tố>/<mô_tả> trong CONTRIBUTING.md; bỏ qua branch của Dependabot.",
+	"iconName": "branch-name",
+	"categories": ["Automation"]
+}

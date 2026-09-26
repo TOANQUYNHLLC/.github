@@ -1,0 +1,34 @@
+name: Kiểm tra tên branch
+
+on:
+    pull_request:
+        types:
+            - opened
+            - reopened
+            - synchronize
+
+permissions:
+    contents: read
+
+jobs:
+    branch:
+        name: Kiểm tra tên branch
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        steps:
+            - name: Kiểm tra tên branch
+              env:
+                  BRANCH: ${{ github.head_ref }}
+              run: |
+                  # Branch do Dependabot tạo có định dạng riêng, không áp dụng quy ước.
+                  if [[ "$BRANCH" == dependabot/* ]]; then
+                      echo "Bỏ qua branch của Dependabot: $BRANCH"
+                      exit 0
+                  fi
+                  pattern='^(feature|fix|hotfix|docs|refactor|perf|test|ci|chore|release)/[a-z0-9.]+(_[a-z0-9.]+)*$'
+                  if [[ "$BRANCH" =~ $pattern ]]; then
+                      echo "Tên branch hợp lệ: $BRANCH"
+                  else
+                      echo "::error::Tên branch phải theo dạng '<tiền tố>/<mô_tả>': tiền tố là feature, fix, hotfix, docs, refactor, perf, test, ci, chore hoặc release; mô tả bằng tiếng Anh, chữ thường, các từ nối bằng dấu gạch dưới — xem CONTRIBUTING.md. Tên hiện tại: $BRANCH"
+                      exit 1
+                  fi
