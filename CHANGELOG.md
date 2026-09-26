@@ -58,6 +58,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ♻️ THAY ĐỔI
 
+- `ROADMAP.md` cập nhật sau khi import ruleset `dot-github.json`: các việc cấu hình `.github` đã hoàn thành, còn lại quy trình cho repository mới và việc gộp hai ruleset.
 - `ROADMAP.md` đưa việc cập nhật ruleset **Protect Main** lên ưu tiên, kèm hướng dẫn từng bước trên web và lệnh kiểm tra.
 - `CODEOWNERS`, mẫu `CODEOWNERS` và `MAINTAINERS.md` chuyển sang team `@TOANQUYNHLLC/maintainers`; `scripts/org-setup.py team` cấp quyền maintain thay cho admin.
 - Quy ước đặt tên branch: tên viết bằng tiếng Anh, các từ nối bằng dấu gạch dưới (`feature/appointment_booking`).
