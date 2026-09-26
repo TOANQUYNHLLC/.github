@@ -4,7 +4,7 @@
 Cảm ơn bạn đã đóng góp cho dự án.
 Vui lòng điền đầy đủ các nội dung phù hợp và xóa những phần không áp dụng.
 Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Pull Request.
-Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Request công khai — gửi email tới toanquynhvn@gmail.com theo mục "BẢO MẬT" trong README.md.
+Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Request công khai — gửi email tới toanquynhvn@gmail.com theo chính sách tại https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md
 -->
 
 ## 📋 TÓM TẮT THAY ĐỔI
@@ -21,7 +21,7 @@ Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Reque
 
 <!-- Ví dụ: Closes #123, Fixes #123 hoặc Related to #123. -->
 
-- Issue/Ticket: 
+- Issue/Ticket:
 
 ## 🏷️ LOẠI THAY ĐỔI
 
@@ -56,9 +56,9 @@ Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Reque
 
 <!-- Liệt kê những thay đổi chính để người đánh giá dễ kiểm tra. -->
 
-- 
-- 
-- 
+-
+-
+-
 
 ## 🧪 KIỂM THỬ
 
@@ -66,9 +66,9 @@ Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Reque
 
 <!-- Mô tả các bước để kiểm tra thay đổi này. -->
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ### KẾT QUẢ
 
@@ -103,7 +103,7 @@ Không áp dụng.
 - [ ] Thay đổi chỉ bao gồm những nội dung cần thiết cho Pull Request này.
 - [ ] Mã nguồn tuân thủ quy ước và tiêu chuẩn của dự án.
 - [ ] Tôi đã bổ sung hoặc cập nhật kiểm thử khi cần thiết.
-- [ ] Tôi đã cập nhật tài liệu liên quan khi cần thiết.
+- [ ] Tôi đã cập nhật tài liệu liên quan và `CHANGELOG.md` (nếu dự án có) khi cần thiết.
 - [ ] Tôi đã kiểm tra khả năng tương thích với chức năng hiện có.
 - [ ] Tôi không đưa mật khẩu, khóa API, token truy cập hoặc thông tin bảo mật vào mã nguồn.
 - [ ] Tôi không đưa dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào repository.
@@ -117,5 +117,5 @@ Không áp dụng.
 
 ---
 
-**CÔNG TY TNHH TOÀN QUỲNH**  
+**CÔNG TY TNHH TOÀN QUỲNH**\
 *Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm*

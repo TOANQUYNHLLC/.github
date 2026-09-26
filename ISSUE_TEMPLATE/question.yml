@@ -1,0 +1,60 @@
+name: ❓ Câu hỏi hoặc cần hỗ trợ
+description: Hỏi về cách sử dụng, cấu hình hoặc hoạt động của dự án
+title: "[Câu hỏi] "
+labels:
+    - question
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Cảm ơn bạn đã đặt câu hỏi cho dự án.
+
+              > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue.
+
+    - type: textarea
+      id: question
+      attributes:
+          label: 📋 CÂU HỎI
+          description: Nêu rõ điều cần hỏi hoặc cần hỗ trợ.
+      validations:
+          required: true
+
+    - type: textarea
+      id: research
+      attributes:
+          label: 🔎 ĐÃ TÌM HIỂU
+          description: Tài liệu, Issue hoặc cách đã thử trước khi hỏi.
+
+    - type: input
+      id: repository
+      attributes:
+          label: 📁 DỰ ÁN / REPOSITORY
+      validations:
+          required: true
+
+    - type: input
+      id: version
+      attributes:
+          label: 🏷️ PHIÊN BẢN HOẶC COMMIT
+
+    - type: dropdown
+      id: environment
+      attributes:
+          label: 🖥️ MÔI TRƯỜNG
+          options:
+              - Phát triển
+              - Kiểm thử
+              - Production
+              - Không áp dụng
+
+    - type: checkboxes
+      id: checklist
+      attributes:
+          label: ✅ CHECKLIST
+          options:
+              - label: Tôi đã tìm kiếm và không thấy Issue nào trùng lặp.
+                required: true
+              - label: Tôi không đưa mật khẩu, khóa API, token truy cập hoặc thông tin bảo mật vào Issue.
+                required: true
+              - label: Tôi không đưa dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue.
+                required: true

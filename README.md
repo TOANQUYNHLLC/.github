@@ -1,137 +1,152 @@
 # 🏢 CÔNG TY TNHH TOÀN QUỲNH
 
-Đây là repository `.github` chính thức của **CÔNG TY TNHH TOÀN QUỲNH**, được sử dụng để quản lý hồ sơ tổ chức, tài liệu cộng đồng và các cấu hình dùng chung trên GitHub.
+[![Kiểm tra repository](https://github.com/TOANQUYNHLLC/.github/actions/workflows/validate.yml/badge.svg)](https://github.com/TOANQUYNHLLC/.github/actions/workflows/validate.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Repository `.github` chính thức của **CÔNG TY TNHH TOÀN QUỲNH**: hồ sơ tổ chức, tệp cộng đồng mặc định và cấu hình GitHub dùng chung cho mọi repository. Giới thiệu về công ty xem tại [`profile/README.md`](profile/README.md).
 
 ---
 
 ## 🎯 MỤC ĐÍCH
 
-Repository này được xây dựng nhằm:
-
 - 🏢 Quản lý nội dung giới thiệu công khai của tổ chức trên GitHub.
-- 📚 Lưu trữ các tài liệu và hướng dẫn dùng chung.
-- 📋 Chuẩn hóa biểu mẫu báo lỗi, đề xuất tính năng ([`ISSUE_TEMPLATE.md`](ISSUE_TEMPLATE.md)) và yêu cầu hợp nhất mã nguồn ([`PULL_REQUEST_TEMPLATE.md`](PULL_REQUEST_TEMPLATE.md)).
-- ⚙️ Quản lý các cấu hình GitHub áp dụng cho nhiều repository trong tổ chức.
-- 🤝 Hỗ trợ quá trình cộng tác, phát triển và quản lý dự án.
-- 🔐 Duy trì tính nhất quán, minh bạch và bảo mật trong hoạt động kỹ thuật.
+- 📋 Chuẩn hóa biểu mẫu Issue, Pull Request và quy trình cộng tác cho mọi repository.
+- 🔐 Công bố chính sách bảo mật, quy tắc ứng xử và kênh hỗ trợ dùng chung.
+- ⚙️ Cung cấp workflow mẫu, bộ nhãn chuẩn và công cụ kiểm tra để các dự án nhất quán ngay từ đầu.
+
+---
+
+## ⚙️ CÁCH HOẠT ĐỘNG
+
+GitHub tự động áp dụng nội dung của repository này cho toàn tổ chức:
+
+| Nội dung | Hiển thị ở đâu |
+|---|---|
+| `profile/README.md` | Trang giới thiệu của tổ chức trên GitHub |
+| Tệp cộng đồng mặc định và biểu mẫu | Mọi repository **chưa có tệp cùng tên riêng** — tệp riêng của repository luôn được ưu tiên |
+| `workflow-templates/` | Mục *Actions → New workflow* của mọi repository trong tổ chức |
+
+`LICENSE`, `CODEOWNERS` và `dependabot.yml` **không** được kế thừa — mỗi repository cần tệp riêng.
 
 ---
 
 ## 📁 CẤU TRÚC REPOSITORY
 
+**Hồ sơ tổ chức**
+
 | Đường dẫn | Chức năng |
 |---|---|
-| [`profile/README.md`](profile/README.md) | Nội dung giới thiệu công khai của CÔNG TY TNHH TOÀN QUỲNH trên trang GitHub của tổ chức |
-| [`README.md`](README.md) | Giải thích mục đích, cấu trúc và nguyên tắc quản lý repository này |
-| [`LICENSE`](LICENSE) | Thông tin giấy phép áp dụng cho nội dung và tài nguyên trong repository |
-| [`ISSUE_TEMPLATE.md`](ISSUE_TEMPLATE.md) | Biểu mẫu mặc định khi tạo Issue: báo lỗi, đề xuất tính năng, cải thiện hoặc câu hỏi |
-| [`PULL_REQUEST_TEMPLATE.md`](PULL_REQUEST_TEMPLATE.md) | Biểu mẫu mặc định khi tạo Pull Request: tóm tắt thay đổi, kiểm thử, rủi ro và checklist |
-| `.github/workflows/` | Các quy trình tự động hóa GitHub Actions nếu được sử dụng |
+| [`profile/README.md`](profile/README.md) | Trang giới thiệu công khai của CÔNG TY TNHH TOÀN QUỲNH trên GitHub |
 
-> Nội dung giới thiệu chính thức của công ty được đặt tại [`profile/README.md`](profile/README.md).
+**Tệp cộng đồng mặc định** — áp dụng cho mọi repository của tổ chức
+
+| Đường dẫn | Chức năng |
+|---|---|
+| [`SECURITY.md`](SECURITY.md) | Chính sách bảo mật và cách báo cáo lỗ hổng |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Hướng dẫn đóng góp: quy trình, quy ước branch, commit và Pull Request |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Quy tắc ứng xử trong không gian cộng tác |
+| [`SUPPORT.md`](SUPPORT.md) | Kênh hỗ trợ: đặt câu hỏi, báo lỗi, đề xuất, bảo mật và liên hệ |
+| [`ISSUE_TEMPLATE/`](ISSUE_TEMPLATE/) | Biểu mẫu Issue dạng form (báo lỗi, đề xuất tính năng, câu hỏi) và cấu hình `config.yml` |
+| [`PULL_REQUEST_TEMPLATE.md`](PULL_REQUEST_TEMPLATE.md) | Biểu mẫu Pull Request: tóm tắt thay đổi, kiểm thử, rủi ro và checklist |
+
+**Tài nguyên dùng chung**
+
+| Đường dẫn | Chức năng |
+|---|---|
+| [`workflow-templates/`](workflow-templates/) | Workflow mẫu: Node.js CI, kiểm tra tài liệu |
+| [`labels.yml`](labels.yml) | Bộ nhãn chuẩn: loại vấn đề, mức độ ưu tiên, trạng thái |
+| [`scripts/sync-labels.sh`](scripts/sync-labels.sh) | Đồng bộ `labels.yml` lên các repository bằng GitHub CLI (mặc định chỉ xem trước) |
+
+**Cấu hình của repository này**
+
+| Đường dẫn | Chức năng |
+|---|---|
+| [`.github/workflows/validate.yml`](.github/workflows/validate.yml) | CI: kiểm tra nội dung, chạy test và lint YAML, shell script, workflow khi push và tạo Pull Request |
+| [`.github/workflows/pr-title.yml`](.github/workflows/pr-title.yml) | Bắt buộc tiêu đề Pull Request theo quy ước commit (`feat:`, `fix:`…) |
+| [`.github/workflows/release.yml`](.github/workflows/release.yml) | Gắn tag `v*` là tự tạo GitHub Release với nội dung lấy từ `CHANGELOG.md` |
+| [`.github/workflows/links.yml`](.github/workflows/links.yml) | Kiểm tra liên kết bên ngoài (website, Facebook…) hằng tuần |
+| [`.github/dependabot.yml`](.github/dependabot.yml) | Tự động đề xuất cập nhật các GitHub Action đang ghim theo commit SHA |
+| [`.github/CODEOWNERS`](.github/CODEOWNERS) | Người quản trị bắt buộc duyệt mọi thay đổi |
+| [`scripts/validate.py`](scripts/validate.py) | Kiểm tra liên kết, tiêu đề viết hoa, nhãn, biểu mẫu Issue, workflow, định dạng file, email chung, `security.txt`, `CHANGELOG.md` và mẫu email bảo mật |
+| [`scripts/test_validate.py`](scripts/test_validate.py) | Test tự động: mỗi luật kiểm tra đều có một ca cố ý làm hỏng để chứng minh luật còn hoạt động |
+| [`scripts/release-notes.py`](scripts/release-notes.py) · [`scripts/check-external-links.py`](scripts/check-external-links.py) | Tách nội dung phát hành từ `CHANGELOG.md`; kiểm tra liên kết bên ngoài |
+| [`.well-known/security.txt`](.well-known/security.txt) | Tệp `security.txt` (RFC 9116) để đăng tại `https://toanquynh.com/.well-known/security.txt` |
+| [`Makefile`](Makefile) | Lệnh chạy kiểm tra cục bộ giống CI — gõ `make` để xem danh sách |
+| [`.editorconfig`](.editorconfig) · [`.gitattributes`](.gitattributes) · [`.gitignore`](.gitignore) · [`.yamllint.yml`](.yamllint.yml) | Quy ước định dạng: UTF-8, xuống dòng LF, thụt lề, bỏ qua file tạm |
+| [`CHANGELOG.md`](CHANGELOG.md) | Nhật ký thay đổi của repository này, theo phiên bản |
+| [`LICENSE`](LICENSE) | Giấy phép MIT cho nội dung của repository này |
 
 ---
 
-## 📋 GIỚI THIỆU NGẮN
+## 🛠️ PHÁT TRIỂN CỤC BỘ
 
-**CÔNG TY TNHH TOÀN QUỲNH** được thành lập ngày **26/05/2026**, với định hướng kết hợp giữa **công nghệ, quản trị và chăm sóc sức khỏe**.
+Cài công cụ (macOS):
 
-Công ty được xây dựng từ sự kết hợp chuyên môn của:
+```bash
+brew install yamllint shellcheck actionlint
+```
 
-- 👨‍💻 **Nguyễn Trọng Toàn** – Kỹ sư phần mềm, phụ trách định hướng công nghệ, quản trị và phát triển hệ thống.
-- 👩‍⚕️ **BS CKI Ngô Lê Như Quỳnh** – Bác sĩ chuyên khoa Nhi, phụ trách chuyên môn y khoa và phát triển các dịch vụ chăm sóc sức khỏe trẻ em.
+**Quy tắc định dạng** (khai báo trong [`.editorconfig`](.editorconfig), kiểm tra tự động bằng `make check`):
 
-Một trong những dự án trọng tâm của công ty là **Phòng khám chuyên khoa Nhi DR. MOON**.
+- Thụt lề bằng **tab**, độ rộng tab **4**.
+- Ngôn ngữ bắt buộc dùng dấu cách (YAML) thì dùng **dấu cách**, mỗi cấp **4**.
+- UTF-8, xuống dòng LF, có dòng trống cuối file, không khoảng trắng cuối dòng.
+
+Chạy toàn bộ kiểm tra giống CI trước khi tạo Pull Request:
+
+```bash
+make check
+```
+
+| Lệnh | Tác dụng |
+|---|---|
+| `make` | Xem danh sách lệnh |
+| `make validate` | Kiểm tra nội dung bằng `scripts/validate.py` |
+| `make test` | Chạy test tự động của các script kiểm tra |
+| `make lint` | Kiểm tra đã cài đủ công cụ rồi lint YAML, shell script và workflow |
+| `make links` | Kiểm tra liên kết bên ngoài còn hoạt động |
+| `make release-notes TAG=…` | Xem trước nội dung GitHub Release của một tag |
+| `make labels-preview` | Xem trước việc đồng bộ nhãn lên các repository |
+| `make labels-apply` | Đồng bộ nhãn (cần GitHub CLI và quyền quản trị) |
 
 ---
 
-## 🛠️ QUẢN LÝ VÀ CẬP NHẬT
+## 📝 QUẢN LÝ VÀ CẬP NHẬT
 
-Các nội dung trong repository này được quản lý bởi những thành viên có thẩm quyền của CÔNG TY TNHH TOÀN QUỲNH.
+Các nội dung trong repository này được quản lý bởi những thành viên có thẩm quyền của CÔNG TY TNHH TOÀN QUỲNH. Mọi thay đổi đi qua Pull Request theo [`CONTRIBUTING.md`](CONTRIBUTING.md) và cần người quản trị duyệt.
 
 Khi cập nhật nội dung, cần bảo đảm:
 
 - Thông tin chính xác và phù hợp với định hướng của công ty.
 - Không công khai dữ liệu cá nhân, thông tin y tế hoặc thông tin nội bộ.
 - Không lưu trữ mật khẩu, mã truy cập, khóa API hoặc dữ liệu bảo mật.
-- Nội dung được kiểm tra trước khi đưa lên nhánh chính.
-- Các thay đổi quan trọng phải có mô tả rõ ràng trong commit hoặc pull request.
+- `make check` chạy thành công trước khi đưa lên nhánh chính.
+- Các thay đổi quan trọng phải có mô tả rõ ràng trong commit hoặc Pull Request, và được ghi vào [`CHANGELOG.md`](CHANGELOG.md).
 - Tuân thủ quy định pháp luật và các chính sách của GitHub.
+
+---
+
+## 🚀 PHÁT HÀNH
+
+1. Chuyển nội dung mục **CHƯA PHÁT HÀNH** trong [`CHANGELOG.md`](CHANGELOG.md) thành phiên bản mới, ví dụ `## [v2026.10.Stable] — 2026-10-01`, rồi tạo lại mục **CHƯA PHÁT HÀNH** trống.
+2. Kiểm tra trước nội dung: `make release-notes TAG=v2026.10.Stable`.
+3. Gắn và đẩy tag: `git tag v2026.10.Stable && git push origin v2026.10.Stable` — workflow tự tạo GitHub Release.
 
 ---
 
 ## 🔐 BẢO MẬT
 
-Nếu phát hiện lỗ hổng hoặc vấn đề liên quan đến bảo mật, vui lòng **không đăng tải công khai** trong Issues, Discussions hoặc Pull Requests. Hãy gửi báo cáo riêng cho **CÔNG TY TNHH TOÀN QUỲNH** qua email để vấn đề được tiếp nhận và xử lý phù hợp.
+Nếu phát hiện lỗ hổng hoặc vấn đề liên quan đến bảo mật, vui lòng **không đăng tải công khai** trong Issues, Discussions hoặc Pull Requests. Cách báo cáo riêng, thông tin cần cung cấp và cam kết xử lý được quy định tại [`SECURITY.md`](SECURITY.md).
 
 > ⚠️ Không gửi mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm qua bất kỳ kênh công khai nào.
 
-### 📝 THÔNG TIN CẦN CUNG CẤP
-
-Để hỗ trợ việc xác minh và xử lý, vui lòng cung cấp:
-
-1. Tên dự án hoặc repository bị ảnh hưởng.
-2. Mô tả chi tiết vấn đề bảo mật.
-3. Các bước để tái hiện vấn đề.
-4. Mức độ ảnh hưởng dự kiến.
-5. Phiên bản hoặc môi trường phát hiện lỗi.
-6. Hình ảnh, video, nhật ký hoặc tài liệu minh họa nếu có.
-7. Thông tin liên hệ của người báo cáo.
-
-### 📧 CÁCH GỬI BÁO CÁO
-
-- **Email:** [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com)
-- **Gửi báo cáo:** [📨 Soạn email báo cáo bảo mật](mailto:toanquynhvn@gmail.com?subject=B%C3%A1o%20c%C3%A1o%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20b%E1%BA%A3o%20m%E1%BA%ADt%20%E2%80%93%20%5BT%C3%AAn%20d%E1%BB%B1%20%C3%A1n%5D&body=K%C3%ADnh%20g%E1%BB%ADi%20C%C3%94NG%20TY%20TNHH%20TO%C3%80N%20QU%E1%BB%B2NH%2C%0D%0A%0D%0AT%C3%B4i%20xin%20b%C3%A1o%20c%C3%A1o%20m%E1%BB%99t%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20b%E1%BA%A3o%20m%E1%BA%ADt%20v%E1%BB%9Bi%20th%C3%B4ng%20tin%20nh%C6%B0%20sau%3A%0D%0A%0D%0A-%20D%E1%BB%B1%20%C3%A1n%2FRepository%3A%0D%0A-%20M%C3%B4%20t%E1%BA%A3%20v%E1%BA%A5n%20%C4%91%E1%BB%81%3A%0D%0A-%20C%C3%A1c%20b%C6%B0%E1%BB%9Bc%20t%C3%A1i%20hi%E1%BB%87n%3A%0D%0A-%20M%E1%BB%A9c%20%C4%91%E1%BB%99%20%E1%BA%A3nh%20h%C6%B0%E1%BB%9Fng%3A%0D%0A-%20Phi%C3%AAn%20b%E1%BA%A3n%2FM%C3%B4i%20tr%C6%B0%E1%BB%9Dng%3A%0D%0A-%20T%C3%A0i%20li%E1%BB%87u%20ho%E1%BA%B7c%20h%C3%ACnh%20%E1%BA%A3nh%20%C4%91%C3%ADnh%20k%C3%A8m%3A%0D%0A-%20Th%C3%B4ng%20tin%20li%C3%AAn%20h%E1%BB%87%20c%E1%BB%A7a%20ng%C6%B0%E1%BB%9Di%20b%C3%A1o%20c%C3%A1o%3A%0D%0A%0D%0AT%C3%B4i%20cam%20k%E1%BA%BFt%20ch%C6%B0a%20c%C3%B4ng%20khai%20th%C3%B4ng%20tin%20n%C3%A0y%20v%C3%A0%20s%E1%BA%B5n%20s%C3%A0ng%20ph%E1%BB%91i%20h%E1%BB%A3p%20cung%20c%E1%BA%A5p%20th%C3%AAm%20th%C3%B4ng%20tin.%0D%0A%0D%0ATr%C3%A2n%20tr%E1%BB%8Dng%2C%0D%0A%0D%0A%5BH%E1%BB%8D%20v%C3%A0%20t%C3%AAn%5D)
-
-<details>
-<summary><strong>📄 Xem Mẫu Nội Dung Email</strong></summary>
-
-<br>
-
-**Tiêu đề:** Báo cáo vấn đề bảo mật – [Tên dự án]
-
-Kính gửi CÔNG TY TNHH TOÀN QUỲNH,
-
-Tôi xin báo cáo một vấn đề bảo mật với thông tin như sau:
-
-- **Dự án/Repository:**
-- **Mô tả vấn đề:**
-- **Các bước tái hiện:**
-- **Mức độ ảnh hưởng:**
-- **Phiên bản/Môi trường:**
-- **Tài liệu hoặc hình ảnh đính kèm:**
-- **Thông tin liên hệ của người báo cáo:**
-
-Tôi cam kết chưa công khai thông tin này và sẵn sàng phối hợp cung cấp thêm thông tin.
-
-Trân trọng,
-
-**[Họ và tên]**
-
-</details>
-
-### 🤝 CAM KẾT XỬ LÝ
-
-CÔNG TY TNHH TOÀN QUỲNH sẽ:
-
-- Xác nhận việc tiếp nhận báo cáo trong thời gian phù hợp.
-- Đánh giá mức độ ảnh hưởng của vấn đề.
-- Giữ bí mật thông tin người báo cáo khi được yêu cầu.
-- Phối hợp xác minh và khắc phục vấn đề.
-- Thông báo kết quả xử lý khi có thể.
-
 ---
 
-## 📞 THÔNG TIN LIÊN HỆ
+## 📞 LIÊN HỆ
 
-**CÔNG TY TNHH TOÀN QUỲNH**
-
-- 👤 **Người đại diện theo pháp luật:** Nguyễn Trọng Toàn
-- 📍 **Địa chỉ:** Đường Huỳnh Tấn Phát, Phường Hoà Hiệp, Tỉnh Đắk Lắk, Việt Nam
-- 📱 **Điện thoại:** [0332 911 829](tel:+84332911829)
 - 📧 **Email:** [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com)
 - 🌐 **Website:** [https://toanquynh.com](https://toanquynh.com)
-- 📘 **Facebook:** [Toàn Quỳnh LLC](https://www.facebook.com/ToanQuynhLLC)
+- 🏢 **Thông tin đầy đủ:** [`profile/README.md`](profile/README.md#-thông-tin-liên-hệ)
 
 ---
 

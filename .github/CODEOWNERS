@@ -1,0 +1,6 @@
+# Mọi thay đổi trong repository này ảnh hưởng tới toàn bộ tổ chức
+# (biểu mẫu, chính sách bảo mật, hướng dẫn đóng góp, workflow mẫu) nên cần người quản trị duyệt.
+* @nguyentrongtoandl
+
+# Khi tổ chức đã tạo team quản trị trên GitHub, thay dòng trên bằng:
+# * @TOANQUYNHLLC/maintainers

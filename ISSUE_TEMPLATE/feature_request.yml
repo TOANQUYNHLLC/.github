@@ -1,0 +1,107 @@
+name: ✨ Đề xuất tính năng
+description: Ý tưởng tính năng mới hoặc cải thiện chức năng, giao diện, hiệu năng, tài liệu
+title: "[Đề xuất] "
+labels:
+    - enhancement
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Cảm ơn bạn đã dành thời gian đóng góp ý tưởng cho dự án.
+
+              > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue.
+
+    - type: dropdown
+      id: type
+      attributes:
+          label: 🏷️ LOẠI ĐỀ XUẤT
+          options:
+              - ✨ Tính năng mới
+              - ♻️ Cải thiện chức năng hiện có
+              - 🎨 Giao diện hoặc trải nghiệm người dùng
+              - ⚡ Hiệu năng
+              - 📝 Tài liệu
+              - 🔧 Khác
+      validations:
+          required: true
+
+    - type: textarea
+      id: description
+      attributes:
+          label: 📋 MÔ TẢ
+          description: Mô tả ngắn gọn, rõ ràng nội dung đề xuất.
+      validations:
+          required: true
+
+    - type: textarea
+      id: problem
+      attributes:
+          label: 🎯 VẤN ĐỀ CẦN GIẢI QUYẾT
+          description: Vì sao cần thay đổi này, ai được hưởng lợi.
+      validations:
+          required: true
+
+    - type: textarea
+      id: solution
+      attributes:
+          label: 💡 GIẢI PHÁP ĐỀ XUẤT
+          description: Mong muốn hệ thống hoạt động như thế nào.
+
+    - type: textarea
+      id: alternatives
+      attributes:
+          label: 🔀 PHƯƠNG ÁN THAY THẾ
+          description: Các cách khác đã cân nhắc, nếu có.
+
+    - type: checkboxes
+      id: scope
+      attributes:
+          label: 📦 PHẠM VI ẢNH HƯỞNG
+          description: Đánh dấu các thành phần liên quan.
+          options:
+              - label: Frontend
+              - label: Backend
+              - label: API
+              - label: Cơ sở dữ liệu
+              - label: Hệ thống xác thực hoặc phân quyền
+              - label: Hạ tầng hoặc quy trình triển khai
+              - label: Tài liệu
+              - label: Chưa xác định
+
+    - type: dropdown
+      id: priority
+      attributes:
+          label: 🔥 MỨC ĐỘ ƯU TIÊN
+          options:
+              - Cao — cần sớm, ảnh hưởng nhiều người dùng
+              - Trung bình — hữu ích, có thể lên kế hoạch
+              - Thấp — cải tiến nhỏ
+      validations:
+          required: true
+
+    - type: input
+      id: repository
+      attributes:
+          label: 📁 DỰ ÁN / REPOSITORY
+      validations:
+          required: true
+
+    - type: checkboxes
+      id: checklist
+      attributes:
+          label: ✅ CHECKLIST
+          options:
+              - label: Tôi đã tìm kiếm và không thấy Issue nào trùng lặp.
+                required: true
+              - label: Tôi đã mô tả rõ vấn đề và lợi ích của đề xuất.
+                required: true
+              - label: Tôi không đưa mật khẩu, khóa API, token truy cập hoặc thông tin bảo mật vào Issue.
+                required: true
+              - label: Tôi không đưa dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue.
+                required: true
+
+    - type: textarea
+      id: notes
+      attributes:
+          label: 💬 GHI CHÚ
+          description: Thông tin bổ sung, liên kết tham khảo hoặc Issue/Pull Request liên quan.

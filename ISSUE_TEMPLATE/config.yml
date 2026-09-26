@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+    - name: 🔐 Báo cáo vấn đề bảo mật
+      url: https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md
+      about: Không tạo Issue công khai — báo cáo riêng qua email theo chính sách bảo mật.
+    - name: 📞 Liên hệ CÔNG TY TNHH TOÀN QUỲNH
+      url: https://toanquynh.com
+      about: Thông tin liên hệ và giới thiệu công ty.

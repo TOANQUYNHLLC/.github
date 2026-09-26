@@ -1,0 +1,12 @@
+# Giữ các GitHub Action (đang ghim theo commit SHA) luôn được cập nhật.
+version: 2
+updates:
+    - package-ecosystem: github-actions
+      directory: /
+      schedule:
+          interval: monthly
+      labels:
+          - dependencies
+          - github_actions
+      commit-message:
+          prefix: chore

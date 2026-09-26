@@ -1,0 +1,132 @@
+name: 🐛 Báo lỗi
+description: Một chức năng chạy sai, không chạy hoặc hiển thị không đúng
+title: "[Lỗi] "
+labels:
+    - bug
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Cảm ơn bạn đã dành thời gian báo lỗi cho dự án.
+
+              > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue.
+              > 🔐 Vấn đề bảo mật: **không** tạo Issue công khai — báo cáo riêng theo [chính sách bảo mật](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md).
+
+    - type: textarea
+      id: description
+      attributes:
+          label: 📋 MÔ TẢ
+          description: Lỗi gì, xảy ra ở chức năng hoặc màn hình nào.
+      validations:
+          required: true
+
+    - type: textarea
+      id: steps
+      attributes:
+          label: 🔁 CÁC BƯỚC TÁI HIỆN
+          value: |
+              1.
+              2.
+              3.
+      validations:
+          required: true
+
+    - type: textarea
+      id: expected
+      attributes:
+          label: ✅ KẾT QUẢ MONG ĐỢI
+          description: Hệ thống lẽ ra phải hoạt động như thế nào.
+      validations:
+          required: true
+
+    - type: textarea
+      id: actual
+      attributes:
+          label: ❌ KẾT QUẢ THỰC TẾ
+          description: Hệ thống đang hoạt động như thế nào. Đính kèm thông báo lỗi nếu có.
+      validations:
+          required: true
+
+    - type: checkboxes
+      id: scope
+      attributes:
+          label: 📦 PHẠM VI ẢNH HƯỞNG
+          description: Đánh dấu các thành phần liên quan.
+          options:
+              - label: Frontend
+              - label: Backend
+              - label: API
+              - label: Cơ sở dữ liệu
+              - label: Hệ thống xác thực hoặc phân quyền
+              - label: Hạ tầng hoặc quy trình triển khai
+              - label: Tài liệu
+              - label: Chưa xác định
+
+    - type: dropdown
+      id: priority
+      attributes:
+          label: 🔥 MỨC ĐỘ ƯU TIÊN
+          options:
+              - Khẩn cấp — hệ thống ngừng hoạt động hoặc mất dữ liệu
+              - Cao — ảnh hưởng lớn, chưa có cách xử lý tạm
+              - Trung bình — có cách xử lý tạm
+              - Thấp — cải tiến nhỏ
+      validations:
+          required: true
+
+    - type: input
+      id: repository
+      attributes:
+          label: 📁 DỰ ÁN / REPOSITORY
+      validations:
+          required: true
+
+    - type: input
+      id: version
+      attributes:
+          label: 🏷️ PHIÊN BẢN HOẶC COMMIT
+
+    - type: dropdown
+      id: environment
+      attributes:
+          label: 🖥️ MÔI TRƯỜNG
+          options:
+              - Phát triển
+              - Kiểm thử
+              - Production
+      validations:
+          required: true
+
+    - type: input
+      id: device
+      attributes:
+          label: 💻 THIẾT BỊ, HỆ ĐIỀU HÀNH VÀ TRÌNH DUYỆT
+          placeholder: "Ví dụ: MacBook, macOS 15, Chrome 130"
+
+    - type: textarea
+      id: attachments
+      attributes:
+          label: 📷 HÌNH ẢNH, VIDEO, NHẬT KÝ
+          description: Ảnh chụp màn hình, video hoặc log. Che toàn bộ thông tin cá nhân và dữ liệu nhạy cảm trước khi đính kèm.
+
+    - type: checkboxes
+      id: checklist
+      attributes:
+          label: ✅ CHECKLIST
+          options:
+              - label: Tôi đã tìm kiếm và không thấy Issue nào trùng lặp.
+                required: true
+              - label: Tôi đã cung cấp đủ thông tin để tái hiện lỗi.
+                required: true
+              - label: Đây không phải vấn đề bảo mật (vấn đề bảo mật gửi riêng qua email).
+                required: true
+              - label: Tôi không đưa mật khẩu, khóa API, token truy cập hoặc thông tin bảo mật vào Issue.
+                required: true
+              - label: Tôi không đưa dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue.
+                required: true
+
+    - type: textarea
+      id: notes
+      attributes:
+          label: 💬 GHI CHÚ
+          description: Thông tin bổ sung, liên kết tham khảo hoặc Issue/Pull Request liên quan.

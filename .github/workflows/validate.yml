@@ -1,0 +1,54 @@
+name: Kiểm tra repository
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: validate-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    content:
+        name: Liên kết, biểu mẫu, nhãn và mẫu email
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Kiểm tra nội dung
+              run: python3 scripts/validate.py
+
+            - name: Test các script kiểm tra
+              run: python3 -m unittest discover -s scripts -p 'test_*.py'
+
+    lint:
+        name: YAML, shell script và workflow
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: yamllint
+              run: |
+                  python3 -m pip install --user --disable-pip-version-check yamllint==1.38.0
+                  python3 -m yamllint -c .yamllint.yml --strict .
+
+            - name: shellcheck
+              run: shellcheck scripts/*.sh
+
+            - name: actionlint
+              run: |
+                  go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+                  "$(go env GOPATH)/bin/actionlint" .github/workflows/*.yml workflow-templates/*.yml

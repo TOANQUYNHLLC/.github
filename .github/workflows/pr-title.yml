@@ -1,0 +1,30 @@
+name: Tiêu đề Pull Request
+
+on:
+    pull_request:
+        types:
+            - opened
+            - edited
+            - reopened
+            - synchronize
+
+permissions:
+    contents: read
+
+jobs:
+    title:
+        name: Tiêu đề theo quy ước commit
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        steps:
+            - name: Kiểm tra tiêu đề
+              env:
+                  PR_TITLE: ${{ github.event.pull_request.title }}
+              run: |
+                  pattern='^(feat|fix|docs|refactor|perf|test|chore)(\([a-z0-9-]+\))?!?: .+'
+                  if [[ "$PR_TITLE" =~ $pattern ]]; then
+                      echo "Tiêu đề hợp lệ: $PR_TITLE"
+                  else
+                      echo "::error::Tiêu đề Pull Request phải theo dạng '<loại>: <mô tả>' với loại là feat, fix, docs, refactor, perf, test hoặc chore — xem CONTRIBUTING.md. Tiêu đề hiện tại: $PR_TITLE"
+                      exit 1
+                  fi

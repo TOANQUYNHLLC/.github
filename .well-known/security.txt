@@ -1,0 +1,8 @@
+# Chính sách công bố lỗ hổng của CÔNG TY TNHH TOÀN QUỲNH (RFC 9116).
+# Đăng tệp này tại https://toanquynh.com/.well-known/security.txt
+# Gia hạn trường Expires trước khi hết hạn (tối đa 1 năm).
+Contact: mailto:toanquynhvn@gmail.com
+Expires: 2027-09-26T00:00:00.000Z
+Preferred-Languages: vi, en
+Policy: https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md
+Canonical: https://toanquynh.com/.well-known/security.txt

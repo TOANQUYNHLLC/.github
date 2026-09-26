@@ -1,0 +1,11 @@
+{
+	"name": "Kiểm tra tài liệu — TOÀN QUỲNH",
+	"description": "Báo lỗi khi tài liệu Markdown có liên kết nội bộ trỏ tới file không tồn tại.",
+	"iconName": "docs-check",
+	"categories": [
+		"Markdown"
+	],
+	"filePatterns": [
+		"README.md$"
+	]
+}

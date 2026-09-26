@@ -1,0 +1,39 @@
+name: Node.js CI
+
+on:
+    push:
+        branches:
+            - $default-branch
+    pull_request:
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        name: Cài đặt, lint và kiểm thử
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Cài Node.js
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+              with:
+                  node-version-file: .nvmrc
+                  cache: npm
+
+            - name: Cài thư viện
+              run: npm ci --no-audit --no-fund
+
+            - name: Lint
+              run: npm run lint --if-present
+
+            - name: Kiểm thử
+              run: npm test --if-present
+
+            - name: Build
+              run: npm run build --if-present

@@ -1,0 +1,19 @@
+# Hệ điều hành
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Trình soạn thảo
+.vscode/
+.idea/
+.history/
+*.swp
+*~
+
+# Python
+__pycache__/
+*.pyc
+
+# Biến môi trường và bí mật — không bao giờ commit
+.env
+.env.*

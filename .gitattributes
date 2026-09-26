@@ -1,0 +1,19 @@
+# Git attributes — repository .github của CÔNG TY TNHH TOÀN QUỲNH
+# Mọi file văn bản lưu và checkout với LF, thống nhất với .editorconfig và runner Linux của GitHub.
+
+* text=auto eol=lf
+
+# Shell script bắt buộc LF để chạy được trên Linux/macOS.
+*.sh text eol=lf
+
+# Tài nguyên nhị phân: không chuẩn hóa xuống dòng, không diff dạng văn bản.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+
+# Diff dễ đọc hơn cho tài liệu và mã nguồn.
+*.md diff=markdown
+*.py diff=python

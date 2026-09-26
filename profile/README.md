@@ -2,6 +2,11 @@
 
 ### 🌱 KẾT NỐI CÔNG NGHỆ – KIẾN TẠO GIÁ TRỊ – CHĂM SÓC BẰNG SỰ TẬN TÂM
 
+[![Website](https://img.shields.io/badge/Website-toanquynh.com-0969da?logo=googlechrome&logoColor=white)](https://toanquynh.com)
+[![Facebook](https://img.shields.io/badge/Facebook-To%C3%A0n%20Qu%E1%BB%B3nh%20LLC-1877f2?logo=facebook&logoColor=white)](https://www.facebook.com/ToanQuynhLLC)
+[![Email](https://img.shields.io/badge/Email-toanquynhvn%40gmail.com-ea4335?logo=gmail&logoColor=white)](mailto:toanquynhvn@gmail.com)
+[![Phone](https://img.shields.io/badge/%C4%90i%E1%BB%87n%20tho%E1%BA%A1i-0332%20911%20829-2ea44f?logo=phone&logoColor=white)](tel:+84332911829)
+
 ---
 
 ## 📋 GIỚI THIỆU CHUNG
@@ -136,7 +141,7 @@ Phòng khám được định hướng xây dựng theo mô hình:
 - 🔐 Tôn trọng quyền riêng tư và bảo mật thông tin người bệnh.
 - 🤝 Đồng hành cùng gia đình trong quá trình theo dõi và chăm sóc sức khỏe của trẻ.
 
-**👩‍⚕️ Người phụ trách chuyên môn:**  
+**👩‍⚕️ Người phụ trách chuyên môn:**\
 **BS CKI Ngô Lê Như Quỳnh**
 
 ---
@@ -159,6 +164,17 @@ CÔNG TY TNHH TOÀN QUỲNH cam kết:
 ## 💬 THÔNG ĐIỆP
 
 > **CÔNG TY TNHH TOÀN QUỲNH – Kết nối sức mạnh công nghệ với sự tận tâm trong chăm sóc sức khỏe, tạo nên những giá trị thiết thực và bền vững cho cộng đồng.**
+
+---
+
+## 🌐 ABOUT US (ENGLISH)
+
+**TOAN QUYNH CO., LTD** was founded on **26 May 2026**, bringing together **technology, management and healthcare**, with a special focus on paediatrics. The name combines the names of its two founders:
+
+- 👨‍💻 **Nguyen Trong Toan** – Software engineer, leading technology, management and system development.
+- 👩‍⚕️ **Dr. Ngo Le Nhu Quynh** – Paediatric specialist, leading medical practice and children's healthcare services.
+
+Our flagship project is **DR. MOON Paediatric Clinic**, where technology supports safe, transparent and caring medical services for children and their families.
 
 ---
 

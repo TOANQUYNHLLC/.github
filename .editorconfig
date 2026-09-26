@@ -1,0 +1,61 @@
+# EditorConfig — repository .github của CÔNG TY TNHH TOÀN QUỲNH
+# Đồng bộ thiết lập giữa các trình soạn thảo: bảng mã, xuống dòng, thụt lề, khoảng trắng cuối dòng.
+# Tham khảo: https://editorconfig.org
+#
+# Quy tắc định dạng:
+# - Thụt lề bằng tab, độ rộng tab 4.
+# - Ngôn ngữ bắt buộc dùng dấu cách (YAML) thì dùng dấu cách, mỗi cấp 4.
+# - UTF-8, xuống dòng LF, có dòng trống cuối file, không khoảng trắng cuối dòng.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = tab
+indent_size = 4
+tab_width = 4
+
+# YAML không cho phép thụt lề bằng tab.
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# Tài liệu: không ép xuống dòng văn bản, liên kết hoặc bảng.
+[*.md]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+max_line_length = unset
+
+[*.py]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+max_line_length = 120
+
+[*.json]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+
+[*.sh]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+
+# Công thức trong Makefile bắt buộc dùng tab.
+[Makefile]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+
+# Đường dẫn SVG có thể được nén trên một dòng.
+[*.svg]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+max_line_length = unset
