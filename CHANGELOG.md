@@ -10,6 +10,8 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ✨ THÊM
 
+- Workflow `codeql.yml` (actions, JavaScript, Python), `dependency-review.yml`, `stale.yml` cho chính repository `.github`.
+- `.gitmessage` (mẫu commit, bật bằng `make hooks`), `.npmrc` (`engine-strict`, `save-exact`), `.github/copilot-instructions.md`.
 - `trongtoandl81` được thêm vào `MAINTAINERS.md`, `CODEOWNERS` và mẫu `CODEOWNERS`, khớp quyền admin thực tế trên GitHub.
 - `scripts/org-setup.py` và `make org-preview` — áp dụng cấu hình chung lên mọi repository của tổ chức bằng GitHub CLI: mở Pull Request thêm tệp dùng chung còn thiếu (`dependabot.yml` chỉ gồm ecosystem repository dùng), chỉ cho phép Squash and merge, tạo hoặc cập nhật ruleset, tạo team maintainers, bật Discussions; mặc định chỉ xem trước.
 - `docs/adr/` — bản ghi quyết định kiến trúc: thụt lề bằng tab, LF/CRLF, tên branch, Squash and merge và ruleset.

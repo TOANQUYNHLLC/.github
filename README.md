@@ -71,6 +71,10 @@ GitHub tự động áp dụng nội dung của repository này cho toàn tổ c
 | [`.github/workflows/pr-title.yml`](.github/workflows/pr-title.yml)                                                                          | Bắt buộc tiêu đề Pull Request theo quy ước commit (`feat:`, `fix:`…)                                                                                                                                            |
 | [`.github/workflows/release.yml`](.github/workflows/release.yml)                                                                            | Gắn tag `v*` là tự tạo GitHub Release với nội dung lấy từ `CHANGELOG.md`                                                                                                                                        |
 | [`.github/workflows/links.yml`](.github/workflows/links.yml)                                                                                | Kiểm tra liên kết bên ngoài (website, Facebook…) hằng tuần                                                                                                                                                      |
+| [`.github/workflows/codeql.yml`](.github/workflows/codeql.yml)                                                                              | Quét bảo mật CodeQL cho workflow, JavaScript và Python khi push, mở Pull Request và hằng tuần                                                                                                                   |
+| [`.github/workflows/dependency-review.yml`](.github/workflows/dependency-review.yml)                                                        | Chặn Pull Request thêm dependency có lỗ hổng mức cao trở lên                                                                                                                                                    |
+| [`.github/workflows/stale.yml`](.github/workflows/stale.yml)                                                                                | Hằng tuần đánh dấu và đóng Issue, Pull Request không hoạt động                                                                                                                                                  |
+| [`.github/copilot-instructions.md`](.github/copilot-instructions.md)                                                                        | Hướng dẫn cho GitHub Copilot khi đánh giá Pull Request                                                                                                                                                          |
 | [`.github/release.yml`](.github/release.yml)                                                                                                | Nhóm nội dung GitHub Release tự tạo theo nhãn                                                                                                                                                                   |
 | [`.github/dependabot.yml`](.github/dependabot.yml)                                                                                          | Tự động đề xuất cập nhật các GitHub Action đang ghim theo commit SHA và công cụ Node.js                                                                                                                         |
 | [`.github/CODEOWNERS`](.github/CODEOWNERS)                                                                                                  | Người quản trị bắt buộc duyệt mọi thay đổi                                                                                                                                                                      |
@@ -92,6 +96,7 @@ GitHub tự động áp dụng nội dung của repository này cho toàn tổ c
 | [`.devcontainer/`](.devcontainer/) · [`mise.toml`](mise.toml)                                                                               | Dev Container/Codespaces có sẵn công cụ kiểm tra; phiên bản Node, Python, ruff, ShellCheck, actionlint khớp CI                                                                                                  |
 | [`.git-blame-ignore-revs`](.git-blame-ignore-revs) · [`.mailmap`](.mailmap)                                                                 | `git blame` bỏ qua commit chỉ đổi định dạng; gộp các cách viết tên tác giả                                                                                                                                      |
 | [`.shellcheckrc`](.shellcheckrc) · [`CLAUDE.md`](CLAUDE.md)                                                                                 | Cấu hình ShellCheck; Claude Code dùng chung hướng dẫn trong `AGENTS.md`                                                                                                                                         |
+| [`.gitmessage`](.gitmessage) · [`.npmrc`](.npmrc)                                                                                           | Mẫu commit theo quy ước (bật bằng `make hooks`); npm chặn phiên bản Node.js sai và ghi phiên bản thư viện chính xác                                                                                             |
 | [`CHANGELOG.md`](CHANGELOG.md)                                                                                                              | Nhật ký thay đổi của repository này, theo phiên bản                                                                                                                                                             |
 | [`LICENSE`](LICENSE)                                                                                                                        | Giấy phép MIT cho nội dung của repository này                                                                                                                                                                   |
 
@@ -121,20 +126,20 @@ Chạy toàn bộ kiểm tra giống CI trước khi tạo Pull Request:
 make check
 ```
 
-| Lệnh                       | Tác dụng                                                                  |
-| -------------------------- | ------------------------------------------------------------------------- |
-| `make`                     | Xem danh sách lệnh                                                        |
-| `make validate`            | Kiểm tra nội dung bằng `scripts/validate.py`                              |
-| `make test`                | Chạy test tự động của các script kiểm tra                                 |
-| `make format`              | Định dạng lại toàn bộ bằng Prettier và ruff                               |
-| `make format-check`        | Kiểm tra định dạng giống CI                                               |
-| `make lint`                | ESLint, shellcheck và actionlint                                          |
-| `make links`               | Kiểm tra liên kết bên ngoài còn hoạt động                                 |
-| `make release-notes TAG=…` | Xem trước nội dung GitHub Release của một tag                             |
-| `make labels-preview`      | Xem trước việc đồng bộ nhãn lên các repository                            |
-| `make labels-apply`        | Đồng bộ nhãn (cần GitHub CLI và quyền quản trị)                           |
-| `make hooks`               | Cài pre-commit hook, cấu hình `git blame` bỏ qua commit chỉ đổi định dạng |
-| `make org-preview`         | Xem trước việc áp dụng cấu hình chung lên mọi repository (cần GitHub CLI) |
+| Lệnh                       | Tác dụng                                                                                            |
+| -------------------------- | --------------------------------------------------------------------------------------------------- |
+| `make`                     | Xem danh sách lệnh                                                                                  |
+| `make validate`            | Kiểm tra nội dung bằng `scripts/validate.py`                                                        |
+| `make test`                | Chạy test tự động của các script kiểm tra                                                           |
+| `make format`              | Định dạng lại toàn bộ bằng Prettier và ruff                                                         |
+| `make format-check`        | Kiểm tra định dạng giống CI                                                                         |
+| `make lint`                | ESLint, shellcheck và actionlint                                                                    |
+| `make links`               | Kiểm tra liên kết bên ngoài còn hoạt động                                                           |
+| `make release-notes TAG=…` | Xem trước nội dung GitHub Release của một tag                                                       |
+| `make labels-preview`      | Xem trước việc đồng bộ nhãn lên các repository                                                      |
+| `make labels-apply`        | Đồng bộ nhãn (cần GitHub CLI và quyền quản trị)                                                     |
+| `make hooks`               | Cài pre-commit hook, mẫu commit `.gitmessage`, cấu hình `git blame` bỏ qua commit chỉ đổi định dạng |
+| `make org-preview`         | Xem trước việc áp dụng cấu hình chung lên mọi repository (cần GitHub CLI)                           |
 
 ---
 
