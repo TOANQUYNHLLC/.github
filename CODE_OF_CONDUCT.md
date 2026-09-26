@@ -43,6 +43,6 @@ Hành vi vi phạm được báo cáo riêng qua email [toanquynhvn@gmail.com](m
 ---
 
 <p align="center">
-	<strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
-	Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
+    <strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
+    Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
 </p>

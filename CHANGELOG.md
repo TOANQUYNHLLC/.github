@@ -10,6 +10,11 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ✨ THÊM
 
+- Prettier (`.prettierrc.json`, `.prettierignore`) là formatter chính: tab độ rộng 4; Markdown và YAML dùng 4 dấu cách. CI chạy `prettier --check .`.
+- ESLint (`eslint.config.js`) với `@eslint/js` và `eslint-config-prettier`, quy tắc chất lượng mã riêng của dự án (`eqeqeq`, `curly`, `no-var`, `prefer-const`…); không có quy tắc định dạng.
+- ruff (`ruff.toml`) định dạng Python với 4 dấu cách; CI chạy `ruff format --check`.
+- `package.json`, `package-lock.json`, `.nvmrc` — công cụ Node.js cố định phiên bản.
+- `scripts/validate.py` chặn mọi thay đổi `.prettierrc.json`, `.editorconfig`, `ruff.toml` trái quy tắc (vd. độ rộng 2).
 - `SECURITY.md` — chính sách bảo mật áp dụng cho mọi repository của tổ chức: thông tin cần cung cấp, cách gửi báo cáo kèm liên kết soạn email sẵn mẫu, cam kết xử lý và phiên bản được hỗ trợ.
 - `CONTRIBUTING.md` — hướng dẫn đóng góp: quy trình, quy ước đặt tên branch, quy ước commit và yêu cầu đối với Pull Request.
 - `CODE_OF_CONDUCT.md` — quy tắc ứng xử trong không gian cộng tác của tổ chức.
@@ -18,11 +23,11 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - `ISSUE_TEMPLATE/` — ba biểu mẫu Issue dạng form có trường bắt buộc (🐛 Báo lỗi, ✨ Đề xuất tính năng, ❓ Câu hỏi hoặc cần hỗ trợ) và `config.yml` tắt Issue trống, thêm liên kết báo cáo bảo mật và liên hệ công ty.
 - `workflow-templates/` — workflow mẫu dùng chung: Node.js CI và kiểm tra liên kết tài liệu.
 - `labels.yml` và `scripts/sync-labels.sh` — bộ 15 nhãn chuẩn và công cụ đồng bộ lên các repository (mặc định chỉ xem trước).
-- CI `.github/workflows/validate.yml` — kiểm tra nội dung bằng `scripts/validate.py` và lint bằng yamllint, shellcheck, actionlint.
+- CI `.github/workflows/validate.yml` — kiểm tra nội dung bằng `scripts/validate.py`, định dạng, ESLint, shellcheck và actionlint.
 - `.github/dependabot.yml` — tự động đề xuất cập nhật các GitHub Action ghim theo commit SHA.
 - `.github/CODEOWNERS` — bắt buộc người quản trị duyệt mọi thay đổi.
 - `Makefile` — `make check` chạy toàn bộ kiểm tra giống CI trên máy cục bộ.
-- `.editorconfig`, `.gitattributes`, `.gitignore`, `.yamllint.yml` — quy ước định dạng: UTF-8, xuống dòng LF, thụt lề bằng tab độ rộng 4; YAML bắt buộc dùng dấu cách nên dùng dấu cách, mỗi cấp 4. `scripts/validate.py` kiểm tra quy tắc này trên mọi loại file.
+- `.editorconfig`, `.gitattributes`, `.gitignore` — quy ước định dạng: UTF-8, xuống dòng LF, tab độ rộng 4; Python, YAML, Markdown dùng 4 dấu cách.
 - `profile/README.md` — badge liên hệ và phần giới thiệu tiếng Anh (**ABOUT US**).
 - Quy trình phát hành: workflow `release.yml` tự tạo GitHub Release khi gắn tag, nội dung lấy từ `CHANGELOG.md` qua `scripts/release-notes.py`.
 - Workflow `pr-title.yml` bắt buộc tiêu đề Pull Request theo quy ước commit.
@@ -44,6 +49,8 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### 🗑️ LOẠI BỎ
 
+- `.yamllint.yml` và bước yamllint trong CI — Prettier đã định dạng YAML.
+- Luật thụt lề tự viết trong `scripts/validate.py` — thay bằng Prettier, ruff và kiểm tra cấu hình.
 - `ISSUE_TEMPLATE.md` dạng một tệp — thay bằng thư mục biểu mẫu `ISSUE_TEMPLATE/`.
 
 ---
@@ -60,6 +67,6 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 ---
 
 <p align="center">
-	<strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
-	Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
+    <strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
+    Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
 </p>

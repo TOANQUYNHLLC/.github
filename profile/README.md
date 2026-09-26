@@ -194,6 +194,6 @@ Our flagship project is **DR. MOON Paediatric Clinic**, where technology support
 ---
 
 <p align="center">
-	<strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
-	Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
+    <strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
+    Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
 </p>

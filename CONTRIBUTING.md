@@ -19,11 +19,11 @@ Cảm ơn bạn đã dành thời gian đóng góp cho dự án. Khi tham gia, b
 
 Tạo Issue mới và chọn biểu mẫu phù hợp:
 
-| Biểu mẫu | Khi nào dùng |
-|---|---|
-| 🐛 Báo lỗi | Một chức năng chạy sai, không chạy hoặc hiển thị không đúng |
-| ✨ Đề xuất tính năng | Ý tưởng mới hoặc cải thiện chức năng, giao diện, hiệu năng, tài liệu |
-| ❓ Câu hỏi hoặc cần hỗ trợ | Cần hỏi về cách sử dụng, cấu hình hoặc hoạt động của dự án |
+| Biểu mẫu                   | Khi nào dùng                                                         |
+| -------------------------- | -------------------------------------------------------------------- |
+| 🐛 Báo lỗi                 | Một chức năng chạy sai, không chạy hoặc hiển thị không đúng          |
+| ✨ Đề xuất tính năng       | Ý tưởng mới hoặc cải thiện chức năng, giao diện, hiệu năng, tài liệu |
+| ❓ Câu hỏi hoặc cần hỗ trợ | Cần hỏi về cách sử dụng, cấu hình hoặc hoạt động của dự án           |
 
 ---
 
@@ -40,13 +40,13 @@ Tạo Issue mới và chọn biểu mẫu phù hợp:
 
 ## 🌿 QUY ƯỚC ĐẶT TÊN BRANCH
 
-| Tiền tố | Mục đích | Ví dụ |
-|---|---|---|
-| `feature/` | Tính năng mới | `feature/dat-lich-kham` |
-| `fix/` | Sửa lỗi | `fix/loi-dang-nhap` |
-| `docs/` | Tài liệu | `docs/cap-nhat-readme` |
+| Tiền tố     | Mục đích                        | Ví dụ                             |
+| ----------- | ------------------------------- | --------------------------------- |
+| `feature/`  | Tính năng mới                   | `feature/dat-lich-kham`           |
+| `fix/`      | Sửa lỗi                         | `fix/loi-dang-nhap`               |
+| `docs/`     | Tài liệu                        | `docs/cap-nhat-readme`            |
 | `refactor/` | Tái cấu trúc, không đổi hành vi | `refactor/tach-module-thanh-toan` |
-| `chore/` | Cấu hình, phụ thuộc, bảo trì | `chore/nang-cap-thu-vien` |
+| `chore/`    | Cấu hình, phụ thuộc, bảo trì    | `chore/nang-cap-thu-vien`         |
 
 Tên branch dùng chữ thường, không dấu, các từ nối bằng dấu gạch ngang.
 
@@ -56,15 +56,15 @@ Tên branch dùng chữ thường, không dấu, các từ nối bằng dấu g�
 
 Viết commit theo dạng `<loại>: <mô tả ngắn>`, ví dụ `fix: sửa lỗi không lưu được lịch hẹn`. Tiêu đề Pull Request dùng cùng quy ước và được kiểm tra tự động; có thể thêm phạm vi `fix(api): …` hoặc dấu `!` cho thay đổi phá vỡ tương thích `feat!: …`.
 
-| Loại | Ý nghĩa |
-|---|---|
-| `feat` | Thêm tính năng |
-| `fix` | Sửa lỗi |
-| `docs` | Cập nhật tài liệu |
-| `refactor` | Tái cấu trúc mã nguồn |
-| `perf` | Cải thiện hiệu năng |
-| `test` | Bổ sung hoặc cập nhật kiểm thử |
-| `chore` | Cấu hình, phụ thuộc, công việc bảo trì |
+| Loại       | Ý nghĩa                                |
+| ---------- | -------------------------------------- |
+| `feat`     | Thêm tính năng                         |
+| `fix`      | Sửa lỗi                                |
+| `docs`     | Cập nhật tài liệu                      |
+| `refactor` | Tái cấu trúc mã nguồn                  |
+| `perf`     | Cải thiện hiệu năng                    |
+| `test`     | Bổ sung hoặc cập nhật kiểm thử         |
+| `chore`    | Cấu hình, phụ thuộc, công việc bảo trì |
 
 Mỗi commit chỉ chứa một thay đổi có ý nghĩa; mô tả rõ **làm gì** và **vì sao**.
 
@@ -87,6 +87,6 @@ Mọi thắc mắc về việc đóng góp, vui lòng tạo Issue với biểu m
 ---
 
 <p align="center">
-	<strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
-	Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
+    <strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
+    Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
 </p>

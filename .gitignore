@@ -17,3 +17,6 @@ __pycache__/
 # Biến môi trường và bí mật — không bao giờ commit
 .env
 .env.*
+
+# Node.js
+node_modules/

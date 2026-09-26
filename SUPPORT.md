@@ -6,13 +6,13 @@ Hướng dẫn này áp dụng cho **mọi repository** của **CÔNG TY TNHH TO
 
 ## 🧭 CHỌN ĐÚNG KÊNH
 
-| Nhu cầu | Kênh |
-|---|---|
-| ❓ Hỏi cách sử dụng, cấu hình hoặc hoạt động của dự án | Tạo Issue với biểu mẫu **❓ Câu hỏi hoặc cần hỗ trợ** |
-| 🐛 Một chức năng chạy sai hoặc không chạy | Tạo Issue với biểu mẫu **🐛 Báo lỗi** |
-| ✨ Ý tưởng hoặc cải tiến | Tạo Issue với biểu mẫu **✨ Đề xuất tính năng** |
-| 🔐 Lỗ hổng hoặc vấn đề bảo mật | **Không** tạo Issue — báo cáo riêng theo [`SECURITY.md`](SECURITY.md) |
-| 🏢 Hợp tác, dịch vụ hoặc thông tin công ty | Email [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com) hoặc [toanquynh.com](https://toanquynh.com) |
+| Nhu cầu                                                | Kênh                                                                                                    |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| ❓ Hỏi cách sử dụng, cấu hình hoặc hoạt động của dự án | Tạo Issue với biểu mẫu **❓ Câu hỏi hoặc cần hỗ trợ**                                                   |
+| 🐛 Một chức năng chạy sai hoặc không chạy              | Tạo Issue với biểu mẫu **🐛 Báo lỗi**                                                                   |
+| ✨ Ý tưởng hoặc cải tiến                               | Tạo Issue với biểu mẫu **✨ Đề xuất tính năng**                                                         |
+| 🔐 Lỗ hổng hoặc vấn đề bảo mật                         | **Không** tạo Issue — báo cáo riêng theo [`SECURITY.md`](SECURITY.md)                                   |
+| 🏢 Hợp tác, dịch vụ hoặc thông tin công ty             | Email [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com) hoặc [toanquynh.com](https://toanquynh.com) |
 
 ---
 
@@ -33,6 +33,6 @@ Các yêu cầu được xem xét trong giờ làm việc và phản hồi sớm
 ---
 
 <p align="center">
-	<strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
-	Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
+    <strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
+    Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
 </p>

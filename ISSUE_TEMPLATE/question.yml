@@ -1,6 +1,6 @@
 name: ❓ Câu hỏi hoặc cần hỗ trợ
 description: Hỏi về cách sử dụng, cấu hình hoặc hoạt động của dự án
-title: "[Câu hỏi] "
+title: '[Câu hỏi] '
 labels:
     - question
 body:

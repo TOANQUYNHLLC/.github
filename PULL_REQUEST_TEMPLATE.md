@@ -11,11 +11,9 @@ Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Reque
 
 <!-- Mô tả ngắn gọn những nội dung đã thay đổi và kết quả mong muốn. -->
 
-
 ## 🎯 MỤC ĐÍCH
 
 <!-- Giải thích lý do cần thực hiện thay đổi này và vấn đề mà Pull Request giải quyết. -->
-
 
 ## 🔗 VẤN ĐỀ LIÊN QUAN
 
@@ -96,7 +94,6 @@ Không áp dụng.
 
 <!-- Nêu cách hoàn tác hoặc khôi phục nếu thay đổi gây lỗi sau khi triển khai. -->
 
-
 ## ✅ CHECKLIST TRƯỚC KHI GỬI
 
 - [ ] Tôi đã tự kiểm tra lại mã nguồn và nội dung thay đổi.
@@ -114,8 +111,7 @@ Không áp dụng.
 
 <!-- Nêu những phần cần được chú ý hoặc cần người đánh giá hỗ trợ kiểm tra kỹ hơn. -->
 
-
 ---
 
 **CÔNG TY TNHH TOÀN QUỲNH**\
-*Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm*
+_Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm_

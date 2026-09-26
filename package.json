@@ -1,0 +1,21 @@
+{
+	"name": "toanquynh-github",
+	"private": true,
+	"description": "Công cụ định dạng và kiểm tra cho repository .github của CÔNG TY TNHH TOÀN QUỲNH",
+	"type": "module",
+	"engines": {
+		"node": ">=24"
+	},
+	"scripts": {
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"lint": "eslint ."
+	},
+	"devDependencies": {
+		"@eslint/js": "10.0.1",
+		"eslint": "10.11.0",
+		"eslint-config-prettier": "10.1.8",
+		"globals": "17.12.0",
+		"prettier": "3.9.9"
+	}
+}

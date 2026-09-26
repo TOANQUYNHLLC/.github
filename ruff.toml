@@ -1,0 +1,7 @@
+# Formatter chính thức cho Python: ruff format — 4 dấu cách mỗi cấp.
+line-length = 100
+indent-width = 4
+
+[format]
+indent-style = "space"
+quote-style = "single"

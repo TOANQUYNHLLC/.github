@@ -1,0 +1,5 @@
+# Sinh tự động hoặc không phải mã nguồn
+node_modules/
+package-lock.json
+.history/
+LICENSE
