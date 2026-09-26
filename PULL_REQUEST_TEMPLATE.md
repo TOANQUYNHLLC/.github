@@ -1,4 +1,4 @@
-# 🔀 Yêu cầu hợp nhất mã nguồn
+# 🔀 YÊU CẦU HỢP NHẤT MÃ NGUỒN
 
 <!--
 Cảm ơn bạn đã đóng góp cho dự án.
@@ -6,23 +6,23 @@ Vui lòng điền đầy đủ các nội dung phù hợp và xóa những phầ
 Không đưa mật khẩu, khóa API, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Pull Request.
 -->
 
-## 📋 Tóm tắt thay đổi
+## 📋 TÓM TẮT THAY ĐỔI
 
 <!-- Mô tả ngắn gọn những nội dung đã thay đổi và kết quả mong muốn. -->
 
 
-## 🎯 Mục đích
+## 🎯 MỤC ĐÍCH
 
 <!-- Giải thích lý do cần thực hiện thay đổi này và vấn đề mà Pull Request giải quyết. -->
 
 
-## 🔗 Vấn đề liên quan
+## 🔗 VẤN ĐỀ LIÊN QUAN
 
 <!-- Ví dụ: Closes #123, Fixes #123 hoặc Related to #123. -->
 
 - Issue/Ticket: 
 
-## 🏷️ Loại thay đổi
+## 🏷️ LOẠI THAY ĐỔI
 
 <!-- Đánh dấu [x] vào các lựa chọn phù hợp. -->
 
@@ -38,7 +38,7 @@ Không đưa mật khẩu, khóa API, dữ liệu cá nhân, hồ sơ bệnh án
 - [ ] 🧪 Bổ sung hoặc cập nhật kiểm thử
 - [ ] 🔧 Công việc bảo trì khác
 
-## 📦 Phạm vi ảnh hưởng
+## 📦 PHẠM VI ẢNH HƯỞNG
 
 <!-- Đánh dấu các thành phần bị ảnh hưởng. -->
 
@@ -51,7 +51,7 @@ Không đưa mật khẩu, khóa API, dữ liệu cá nhân, hồ sơ bệnh án
 - [ ] Tài liệu
 - [ ] Không ảnh hưởng đến chức năng hiện có
 
-## 🛠️ Nội dung đã thực hiện
+## 🛠️ NỘI DUNG ĐÃ THỰC HIỆN
 
 <!-- Liệt kê những thay đổi chính để người đánh giá dễ kiểm tra. -->
 
@@ -59,9 +59,9 @@ Không đưa mật khẩu, khóa API, dữ liệu cá nhân, hồ sơ bệnh án
 - 
 - 
 
-## 🧪 Kiểm thử
+## 🧪 KIỂM THỬ
 
-### Cách kiểm thử
+### CÁCH KIỂM THỬ
 
 <!-- Mô tả các bước để kiểm tra thay đổi này. -->
 
@@ -69,20 +69,20 @@ Không đưa mật khẩu, khóa API, dữ liệu cá nhân, hồ sơ bệnh án
 2. 
 3. 
 
-### Kết quả
+### KẾT QUẢ
 
 - [ ] Đã kiểm thử trên môi trường phát triển
 - [ ] Các kiểm thử tự động đã chạy thành công
 - [ ] Đã kiểm tra các trường hợp biên liên quan
 - [ ] Chưa thể kiểm thử đầy đủ và đã nêu rõ lý do bên dưới
 
-## 📷 Hình ảnh hoặc video minh họa
+## 📷 HÌNH ẢNH HOẶC VIDEO MINH HỌA
 
 <!-- Bổ sung ảnh chụp màn hình hoặc video nếu thay đổi liên quan đến giao diện. -->
 
 Không áp dụng.
 
-## ⚠️ Rủi ro và khả năng tương thích
+## ⚠️ RỦI RO VÀ KHẢ NĂNG TƯƠNG THÍCH
 
 <!-- Mô tả ảnh hưởng có thể xảy ra, thay đổi phá vỡ tương thích hoặc yêu cầu cập nhật dữ liệu. -->
 
@@ -91,12 +91,12 @@ Không áp dụng.
 - Có yêu cầu migration dữ liệu: Có / Không
 - Có yêu cầu cập nhật biến môi trường: Có / Không
 
-## ↩️ Phương án khôi phục
+## ↩️ PHƯƠNG ÁN KHÔI PHỤC
 
 <!-- Nêu cách hoàn tác hoặc khôi phục nếu thay đổi gây lỗi sau khi triển khai. -->
 
 
-## ✅ Checklist trước khi gửi
+## ✅ CHECKLIST TRƯỚC KHI GỬI
 
 - [ ] Tôi đã tự kiểm tra lại mã nguồn và nội dung thay đổi.
 - [ ] Thay đổi chỉ bao gồm những nội dung cần thiết cho Pull Request này.
@@ -109,7 +109,7 @@ Không áp dụng.
 - [ ] Tôi đã kiểm tra các tệp cấu hình và biến môi trường liên quan.
 - [ ] Pull Request đã sẵn sàng để được đánh giá.
 
-## 💬 Ghi chú cho người đánh giá
+## 💬 GHI CHÚ CHO NGƯỜI ĐÁNH GIÁ
 
 <!-- Nêu những phần cần được chú ý hoặc cần người đánh giá hỗ trợ kiểm tra kỹ hơn. -->
 
