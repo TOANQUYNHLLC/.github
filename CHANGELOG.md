@@ -10,6 +10,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ✨ THÊM
 
+- Kênh báo cáo lỗ hổng riêng tư qua GitHub (**Security → Report a vulnerability**) trong `SECURITY.md`, `security.txt` và biểu mẫu Issue; `scripts/org-setup.py settings` bật secret scanning, push protection, Dependabot security updates và báo cáo lỗ hổng riêng tư.
 - Mẫu cho repository dự án trong `repository-templates/`: `rustfmt.toml`, `.clang-format` (tab độ rộng 4), `.python-version`, `.dockerignore`, `.env.example`, `PRIVACY.md`. `scripts/org-setup.py files` thêm `.editorconfig`, `.gitattributes` cho mọi repository và tệp định dạng theo ngôn ngữ repository dùng.
 - Workflow `codeql.yml` (actions, JavaScript, Python), `dependency-review.yml`, `stale.yml` cho chính repository `.github`.
 - `.gitmessage` (mẫu commit, bật bằng `make hooks`), `.npmrc` (`engine-strict`, `save-exact`), `.github/copilot-instructions.md`.
@@ -54,7 +55,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - Quy trình phát hành: workflow `release.yml` tự tạo GitHub Release khi gắn tag, nội dung lấy từ `CHANGELOG.md` qua `scripts/release-notes.py`.
 - Workflow `pr-title.yml` bắt buộc tiêu đề Pull Request theo quy ước commit.
 - Workflow `links.yml` và `scripts/check-external-links.py` kiểm tra liên kết bên ngoài hằng tuần.
-- `scripts/test_validate.py` — 41 test tự động cho các script kiểm tra.
+- `scripts/test_validate.py` — 42 test tự động cho các script kiểm tra.
 - `.well-known/security.txt` (RFC 9116) với email chung của công ty.
 - `scripts/validate.py` khoá email chung `toanquynhvn@gmail.com`, kiểm tra hạn `security.txt` và cấu trúc `CHANGELOG.md`.
 - `make help` (mặc định khi gõ `make`), `make test`, `make links`, `make release-notes`; `make lint` báo rõ công cụ còn thiếu.

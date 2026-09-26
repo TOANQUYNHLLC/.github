@@ -468,8 +468,10 @@ def check_security_txt(path, text):
 	for key in ('Contact', 'Expires'):
 		if key not in fields:
 			error(path, f'thiếu trường bắt buộc "{key}" (RFC 9116)')
-	if fields.get('Contact') and fields['Contact'] != f'mailto:{COMPANY_EMAIL}':
-		error(path, f'Contact phải là mailto:{COMPANY_EMAIL}')
+	# RFC 9116 cho phép nhiều Contact; email chung của công ty phải là một trong số đó.
+	contacts = re.findall(r'^Contact:\s*(.+)$', text, re.MULTILINE)
+	if contacts and f'mailto:{COMPANY_EMAIL}' not in contacts:
+		error(path, f'Contact phải có mailto:{COMPANY_EMAIL}')
 	expires = fields.get('Expires', '')
 	try:
 		moment = datetime.fromisoformat(expires.replace('Z', '+00:00'))
