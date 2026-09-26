@@ -9,6 +9,7 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0003](0003-branch-naming.md)             | Tên branch bằng tiếng Anh, nối từ bằng dấu gạch dưới               | Chấp nhận  | 2026-09-26 |
 | [0004](0004-squash-merge-and-rulesets.md) | Squash and merge và ruleset bảo vệ nhánh chính                     | Chấp nhận  | 2026-09-26 |
 | [0005](0005-merge-protect-main.md)        | Gộp hai ruleset thành Protect Main; danh sách bỏ qua của `.github` | Chấp nhận  | 2026-09-26 |
+| [0006](0006-allow-all-merge-methods.md)   | Cho phép cả ba cách hợp nhất; bỏ lịch sử tuyến tính                | Chấp nhận  | 2026-09-26 |
 
 ## ✍️ CÁCH THÊM ADR
 

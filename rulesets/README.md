@@ -5,7 +5,7 @@ Mỗi repository của tổ chức có **một** [ruleset](https://docs.github.c
 ## ⚙️ QUY TẮC
 
 - Mọi thay đổi phải qua Pull Request, có ít nhất **1** phê duyệt của người trong `CODEOWNERS`; phê duyệt cũ bị hủy khi có commit mới; cần phê duyệt lại sau lần đẩy cuối; chỉ người quản trị được hủy phê duyệt.
-- Mọi góp ý phải được giải quyết; chỉ cho phép **Squash and merge**, lịch sử tuyến tính.
+- Mọi góp ý phải được giải quyết; cho phép **Merge**, **Squash** và **Rebase** ([ADR 0006](../docs/adr/0006-allow-all-merge-methods.md)).
 - Kiểm tra tự động bắt buộc thành công trên branch đã cập nhật với nhánh chính; code quality.
 - Commit phải có chữ ký (GPG hoặc SSH).
 - Cấm force push, cấm xóa; chặn tạo và cập nhật nhánh chính ngoài danh sách bỏ qua.

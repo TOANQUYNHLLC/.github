@@ -8,7 +8,7 @@ Lệnh (nên chạy theo thứ tự):
 	files: mở Pull Request thêm các tệp dùng chung còn thiếu — workflow kiểm tra tiêu đề
 		Pull Request và tên branch, CODEOWNERS, dependabot.yml (chỉ ecosystem repository dùng),
 		release.yml. Không ghi đè tệp đã có.
-	settings: chỉ cho phép Squash and merge, tự xóa branch sau khi hợp nhất;
+	settings: cho phép Merge, Squash và Rebase, tự xóa branch sau khi hợp nhất;
 		--discussions bật thêm GitHub Discussions.
 	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json); repository khác
 		chỉ giữ kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
@@ -41,8 +41,8 @@ ECOSYSTEM_MANIFESTS = {
 }
 MERGE_SETTINGS = {
 	'allow_squash_merge': True,
-	'allow_merge_commit': False,
-	'allow_rebase_merge': False,
+	'allow_merge_commit': True,
+	'allow_rebase_merge': True,
 	'delete_branch_on_merge': True,
 	'squash_merge_commit_title': 'PR_TITLE',
 	'squash_merge_commit_message': 'PR_BODY',
