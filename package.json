@@ -3,8 +3,16 @@
 	"private": true,
 	"description": "Công cụ định dạng và kiểm tra cho repository .github của CÔNG TY TNHH TOÀN QUỲNH",
 	"type": "module",
-	"engines": {
-		"node": ">=24"
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"version": ">=24",
+			"onFail": "error"
+		},
+		"packageManager": {
+			"name": "npm",
+			"onFail": "error"
+		}
 	},
 	"scripts": {
 		"format": "prettier --write .",

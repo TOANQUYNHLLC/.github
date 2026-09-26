@@ -71,7 +71,9 @@ class ValidateTest(unittest.TestCase):
 	def edit_re(self, name, pattern, new):
 		"""Như edit() nhưng tìm bằng regex — dùng cho giá trị sẽ đổi theo thời gian (SHA, ngày, số)."""
 		path = self.repo / name
-		text, count = re.subn(pattern, new, path.read_text(encoding='utf-8'), count=1, flags=re.M)
+		text, count = re.subn(
+			pattern, new, path.read_text(encoding='utf-8'), count=1, flags=re.MULTILINE
+		)
 		self.assertEqual(count, 1, f'{name} không còn khớp mẫu {pattern!r}')
 		path.write_text(text, encoding='utf-8')
 
@@ -416,6 +418,10 @@ class ValidateTest(unittest.TestCase):
 			"eqeqeq: ['error', 'always'],\n\t\t\tindent: ['error', 'tab'],",
 		)
 		self.assert_fails('eslint.config.js: không bật quy tắc indent')
+
+	def test_bieu_mau_issue_type_phai_ton_tai(self):
+		self.edit('.github/ISSUE_TEMPLATE/bug_report.yml', 'type: Bug', 'type: Loi')
+		self.assert_fails('type "Loi" không phải Issue Type của tổ chức')
 
 	def test_action_phai_ghim_sha(self):
 		# Không gắn cứng SHA: Dependabot nâng action hằng tháng, test phải chạy với mọi SHA.

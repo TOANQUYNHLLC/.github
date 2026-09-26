@@ -1,5 +1,5 @@
 # Lệnh tiện ích — chạy giống hệt CI trên máy cục bộ. Gõ `make` để xem danh sách lệnh.
-# Yêu cầu: Node.js (theo .nvmrc), python3, ruby, git, ruff, shellcheck, actionlint
+# Yêu cầu: Node.js (theo .nvmrc), Python ≥ 3.11 (mise.toml), ruby, git, ruff, shellcheck, actionlint
 # Cài đúng phiên bản trong mise.toml và .nvmrc: mise install; sau đó chạy `npm install`.
 
 .DEFAULT_GOAL := help
