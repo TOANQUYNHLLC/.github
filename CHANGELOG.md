@@ -58,6 +58,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ♻️ THAY ĐỔI
 
+- `ROADMAP.md` đưa việc cập nhật ruleset **Protect Main** lên ưu tiên, kèm hướng dẫn từng bước trên web và lệnh kiểm tra.
 - `CODEOWNERS`, mẫu `CODEOWNERS` và `MAINTAINERS.md` chuyển sang team `@TOANQUYNHLLC/maintainers`; `scripts/org-setup.py team` cấp quyền maintain thay cho admin.
 - Quy ước đặt tên branch: tên viết bằng tiếng Anh, các từ nối bằng dấu gạch dưới (`feature/appointment_booking`).
 - `CONTRIBUTING.md` bổ sung hướng dẫn viết báo lỗi, phong cách mã nguồn, kiểm thử, giữ branch cập nhật, đánh giá mã nguồn, hợp nhất, sửa lỗi khẩn cấp và quản lý phụ thuộc; thêm tiền tố branch `hotfix/`, `perf/`, `test/`, `ci/`, `release/`.
