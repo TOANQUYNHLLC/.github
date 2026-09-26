@@ -30,8 +30,8 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 **Cấu hình và kiểm tra của repository này**
 
 - Định dạng: `.editorconfig`, `.gitattributes`, `.prettierrc.json`, `ruff.toml`, `eslint.config.js`, `.shellcheckrc` — UTF-8, LF, tab độ rộng 4 (kể cả Python); dấu cách chỉ cho ngôn ngữ bắt buộc; CRLF chỉ cho loại tệp bắt buộc.
-- CI: `validate.yml` (nội dung, 42 test, Prettier, ruff, ESLint, shellcheck, actionlint), `pr-title.yml`, `branch-name.yml`, `codeql.yml`, `dependency-review.yml`, `links.yml`, `stale.yml`, `release.yml` (GitHub Release từ `CHANGELOG.md`).
-- `scripts/validate.py` — liên kết, tiêu đề viết hoa, nhãn, biểu mẫu, workflow, ruleset, định dạng và mã hóa từng loại tệp; các danh sách trong `CONTRIBUTING.md`, workflow, `.editorconfig`, `.gitattributes` phải khớp nhau.
+- CI: `validate.yml` (nội dung, 43 test, Prettier, ruff, ESLint, shellcheck, actionlint), `pr-title.yml`, `branch-name.yml`, `codeql.yml`, `dependency-review.yml`, `links.yml`, `stale.yml`, `release.yml` (GitHub Release từ `CHANGELOG.md`).
+- `scripts/validate.py` — liên kết, tiêu đề viết hoa, nhãn, biểu mẫu, workflow, ruleset, định dạng và mã hóa từng loại tệp, chữ tiếng Việt dạng NFC; các danh sách trong `CONTRIBUTING.md`, workflow, `.editorconfig`, `.gitattributes` phải khớp nhau.
 - `.github/`: `CODEOWNERS`, `dependabot.yml` (GitHub Actions, npm), `release.yml`, `copilot-instructions.md`.
 - Công cụ: `package.json`, `.nvmrc`, `.npmrc` (không tạo `package-lock.json`), `mise.toml`, `Makefile`, `.devcontainer/`, `.vscode/extensions.json`; `make hooks` cài pre-commit hook, mẫu commit `.gitmessage` và `.git-blame-ignore-revs`; `.mailmap`.
 - `AGENTS.md`, `CLAUDE.md` — hướng dẫn cho AI coding agent.

@@ -206,6 +206,14 @@ class ValidateTest(unittest.TestCase):
 		self.edit('rulesets/protect-main.json', '"Shell script và workflow"', '"Shell script"')
 		self.assert_fails('kiểm tra bắt buộc "Shell script" không trùng tên job nào')
 
+	def test_tieng_viet_phai_la_nfc(self):
+		import unicodedata
+
+		path = self.repo / 'SUPPORT.md'
+		text = path.read_text(encoding='utf-8')
+		path.write_text(unicodedata.normalize('NFD', text), encoding='utf-8')
+		self.assert_fails('dạng tách dấu (NFD)')
+
 	def test_xuong_dong_crlf(self):
 		path = self.repo / 'SUPPORT.md'
 		path.write_bytes(path.read_bytes().replace(b'\n', b'\r\n'))
