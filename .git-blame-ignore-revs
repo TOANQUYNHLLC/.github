@@ -1,0 +1,6 @@
+# Commit chỉ đổi định dạng — git blame bỏ qua để giữ đúng tác giả của từng dòng.
+# GitHub tự đọc tệp này. Trên máy: git config blame.ignoreRevsFile .git-blame-ignore-revs (make hooks đã làm).
+# Thêm commit: ghi SHA đầy đủ kèm một dòng chú thích phía trên.
+
+# chore: chuyển Python sang thụt lề bằng tab (ruff format), thống nhất quy tắc định dạng
+0f3765d01cc177d8cc5e03c1103c106edfb3f8ae

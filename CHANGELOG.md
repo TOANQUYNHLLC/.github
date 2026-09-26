@@ -10,6 +10,16 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ✨ THÊM
 
+- `trongtoandl81` được thêm vào `MAINTAINERS.md`, `CODEOWNERS` và mẫu `CODEOWNERS`, khớp quyền admin thực tế trên GitHub.
+- `scripts/org-setup.py` và `make org-preview` — áp dụng cấu hình chung lên mọi repository của tổ chức bằng GitHub CLI: mở Pull Request thêm tệp dùng chung còn thiếu (`dependabot.yml` chỉ gồm ecosystem repository dùng), chỉ cho phép Squash and merge, tạo hoặc cập nhật ruleset, tạo team maintainers, bật Discussions; mặc định chỉ xem trước.
+- `docs/adr/` — bản ghi quyết định kiến trúc: thụt lề bằng tab, LF/CRLF, tên branch, Squash and merge và ruleset.
+- `.devcontainer/` và `mise.toml` — môi trường phát triển có sẵn công cụ kiểm tra, phiên bản khớp CI.
+- `.git-blame-ignore-revs` (bỏ qua commit chuyển Python sang tab), `.mailmap` (gộp tên tác giả viết hoa và dạng Unicode tách dấu), `.shellcheckrc`, `CLAUDE.md` (dùng chung `AGENTS.md`).
+- `GOVERNANCE.md` — vai trò, cách ra quyết định, đánh giá và hợp nhất, thay đổi người quản trị; `MAINTAINERS.md` — danh sách người quản trị.
+- `DISCUSSION_TEMPLATE/` — biểu mẫu GitHub Discussions cho Ý tưởng, Hỏi đáp và Thảo luận chung.
+- `FUNDING.yml` (chưa bật kênh tài trợ), `ROADMAP.md`, `CITATION.cff`, `NOTICE`.
+- `.github/release.yml` và mẫu `repository-templates/release.yml` — nhóm nội dung GitHub Release tự tạo theo nhãn.
+- `AGENTS.md` — hướng dẫn cho AI coding agent; `.vscode/extensions.json` — extension VS Code khuyến nghị.
 - Workflow `branch-name.yml` (kèm bản mẫu) bắt buộc tên branch theo quy ước trong `CONTRIBUTING.md`; bỏ qua branch của Dependabot.
 - Workflow mẫu `release.yml` tạo GitHub Release từ mục tương ứng trong `CHANGELOG.md` khi gắn tag.
 - `rulesets/` — ruleset mẫu bảo vệ nhánh chính để import: Pull Request bắt buộc, phê duyệt của `CODEOWNERS`, chỉ Squash and merge, commit có chữ ký, cấm force push.
@@ -41,7 +51,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - Quy trình phát hành: workflow `release.yml` tự tạo GitHub Release khi gắn tag, nội dung lấy từ `CHANGELOG.md` qua `scripts/release-notes.py`.
 - Workflow `pr-title.yml` bắt buộc tiêu đề Pull Request theo quy ước commit.
 - Workflow `links.yml` và `scripts/check-external-links.py` kiểm tra liên kết bên ngoài hằng tuần.
-- `scripts/test_validate.py` — 35 test tự động cho các script kiểm tra.
+- `scripts/test_validate.py` — 39 test tự động cho các script kiểm tra.
 - `.well-known/security.txt` (RFC 9116) với email chung của công ty.
 - `scripts/validate.py` khoá email chung `toanquynhvn@gmail.com`, kiểm tra hạn `security.txt` và cấu trúc `CHANGELOG.md`.
 - `make help` (mặc định khi gõ `make`), `make test`, `make links`, `make release-notes`; `make lint` báo rõ công cụ còn thiếu.

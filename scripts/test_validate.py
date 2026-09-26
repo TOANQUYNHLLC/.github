@@ -6,6 +6,8 @@ validate.py phát hiện đúng lỗi — để việc sửa script không vô t
 """
 
 import importlib.util
+import json
+import re
 import shutil
 import subprocess
 import sys
@@ -254,3 +256,59 @@ class ReleaseNotesTest(unittest.TestCase):
 
 if __name__ == '__main__':
 	unittest.main()
+
+
+def load_org_setup():
+	spec = importlib.util.spec_from_file_location('org_setup', ROOT / 'scripts' / 'org-setup.py')
+	module = importlib.util.module_from_spec(spec)
+	spec.loader.exec_module(module)
+	return module
+
+
+class OrgSetupTest(unittest.TestCase):
+	def setUp(self):
+		self.module = load_org_setup()
+		self.template = (ROOT / 'repository-templates' / 'dependabot.yml').read_text(
+			encoding='utf-8'
+		)
+
+	def ecosystems(self, text):
+		return re.findall(r'package-ecosystem: (\S+)', text)
+
+	def test_dependabot_chi_giu_ecosystem_repository_dung(self):
+		text = self.module.filter_dependabot(self.template, {'package.json', 'README.md'})
+		self.assertEqual(self.ecosystems(text), ['github-actions', 'npm'])
+
+	def test_dependabot_nhan_dien_python_go_docker(self):
+		text = self.module.filter_dependabot(
+			self.template, {'pyproject.toml', 'go.mod', 'Dockerfile'}
+		)
+		self.assertEqual(self.ecosystems(text), ['github-actions', 'pip', 'gomod', 'docker'])
+
+	def test_dependabot_sinh_ra_la_yaml_hop_le(self):
+		text = self.module.filter_dependabot(self.template, {'package.json'})
+		result = subprocess.run(
+			['ruby', '-ryaml', '-rjson', '-e', 'puts JSON.dump(YAML.load(STDIN.read))'],
+			input=text,
+			capture_output=True,
+			text=True,
+			check=True,
+		)
+		self.assertEqual(json.loads(result.stdout)['version'], 2)
+
+	def test_tep_dung_chung_du_va_ruleset_dung_repository(self):
+		files = self.module.planned_files(set())
+		self.assertEqual(
+			sorted(files),
+			sorted(
+				[
+					'.github/workflows/pr-title.yml',
+					'.github/workflows/branch-name.yml',
+					'.github/CODEOWNERS',
+					'.github/dependabot.yml',
+					'.github/release.yml',
+				]
+			),
+		)
+		self.assertEqual(self.module.ruleset_file('.github').name, 'dot-github.json')
+		self.assertEqual(self.module.ruleset_file('app').name, 'default-branch.json')

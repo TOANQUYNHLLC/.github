@@ -1,0 +1,24 @@
+{
+	"name": "TOÀN QUỲNH — .github",
+	"image": "mcr.microsoft.com/devcontainers/python:3",
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "24"
+		},
+		"ghcr.io/devcontainers/features/ruby:1": {}
+	},
+	"postCreateCommand": "bash .devcontainer/post-create.sh",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"editorconfig.editorconfig",
+				"esbenp.prettier-vscode",
+				"dbaeumer.vscode-eslint",
+				"charliermarsh.ruff",
+				"timonwong.shellcheck",
+				"github.vscode-github-actions",
+				"redhat.vscode-yaml"
+			]
+		}
+	}
+}
