@@ -1,10 +1,42 @@
 # Git attributes — repository .github của CÔNG TY TNHH TOÀN QUỲNH
-# Mọi file văn bản lưu và checkout với LF, thống nhất với .editorconfig và runner Linux của GitHub.
+# Mặc định LF cho mọi file văn bản, thống nhất với .editorconfig và runner Linux của GitHub.
+# Chỉ các loại file bắt buộc CRLF bên dưới mới dùng CRLF.
 
 * text=auto eol=lf
 
-# Shell script bắt buộc LF để chạy được trên Linux/macOS.
-*.sh text eol=lf
+# Batch script của Windows: cmd.exe đọc sai nhãn GOTO/CALL nếu xuống dòng bằng LF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Project Visual C++ 6: IDE không mở được file .dsp/.dsw xuống dòng bằng LF.
+*.dsp text eol=crlf
+*.dsw text eol=crlf
+
+# Chuẩn định dạng quy định CRLF: iCalendar/vCalendar (RFC 5545), vCard (RFC 6350),
+# email (RFC 5322), MHTML (RFC 2557), CSV (RFC 4180).
+*.ics text eol=crlf
+*.vcs text eol=crlf
+*.vcf text eol=crlf
+*.eml text eol=crlf
+*.mht text eol=crlf
+*.mhtml text eol=crlf
+*.csv text eol=crlf
+
+# Solution và project của Visual Studio: luôn ghi lại bằng CRLF (kèm BOM UTF-8), giữ CRLF để diff không bẩn.
+*.sln text eol=crlf
+*.csproj text eol=crlf
+*.vbproj text eol=crlf
+*.vcxproj text eol=crlf
+*.vcxproj.filters text eol=crlf
+*.vcproj text eol=crlf
+*.fsproj text eol=crlf
+*.sqlproj text eol=crlf
+*.wixproj text eol=crlf
+
+# Registry và INF của Windows: regedit/Windows Setup đọc UTF-16 LE có BOM.
+# Git lưu bản UTF-8 trong repository (diff đọc được), checkout ra UTF-16 LE.
+*.reg text eol=crlf working-tree-encoding=UTF-16LE-BOM
+*.inf text eol=crlf working-tree-encoding=UTF-16LE-BOM
 
 # Tài nguyên nhị phân: không chuẩn hóa xuống dòng, không diff dạng văn bản.
 *.png binary
@@ -13,7 +45,15 @@
 *.gif binary
 *.ico binary
 *.pdf binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.zip binary
 
 # Diff dễ đọc hơn cho tài liệu và mã nguồn.
 *.md diff=markdown
 *.py diff=python
+*.sh diff=bash
+
+# File sinh tự động: thu gọn trong diff của pull request.
+package-lock.json linguist-generated=true -diff

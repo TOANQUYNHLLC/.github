@@ -1,5 +1,4 @@
-# Sinh tự động hoặc không phải mã nguồn
-node_modules/
+# Prettier 3 đã tự bỏ qua mọi thứ trong .gitignore (node_modules/, .history/…).
+# File sinh tự động hoặc văn bản pháp lý giữ nguyên nguyên bản:
 package-lock.json
-.history/
 LICENSE

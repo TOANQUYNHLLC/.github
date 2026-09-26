@@ -13,10 +13,15 @@ Desktop.ini
 # Python
 __pycache__/
 *.pyc
-
-# Biến môi trường và bí mật — không bao giờ commit
-.env
-.env.*
+.ruff_cache/
 
 # Node.js
 node_modules/
+
+# Log
+*.log
+
+# Biến môi trường và bí mật — không bao giờ commit (trừ file mẫu)
+.env
+.env.*
+!.env.example

@@ -1,7 +1,8 @@
-# Formatter chính thức cho Python: ruff format — 4 dấu cách mỗi cấp.
+# Formatter chính thức cho Python: ruff format — thụt lề bằng tab, độ rộng 4.
 line-length = 100
 indent-width = 4
 
 [format]
-indent-style = "space"
+indent-style = "tab"
+line-ending = "lf"
 quote-style = "single"

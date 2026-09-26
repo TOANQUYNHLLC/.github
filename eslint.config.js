@@ -7,7 +7,8 @@ import globals from 'globals';
 
 export default [
 	{
-		ignores: ['node_modules/', '.history/'],
+		// node_modules/ đã được ESLint bỏ qua mặc định.
+		ignores: ['.history/'],
 	},
 	js.configs.recommended,
 	{

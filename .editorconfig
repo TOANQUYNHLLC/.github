@@ -1,5 +1,6 @@
 root = true
 
+# Mặc định: UTF-8, LF, thụt lề bằng tab, độ rộng 4.
 [*]
 charset = utf-8
 end_of_line = lf
@@ -9,14 +10,33 @@ indent_style = tab
 indent_size = 4
 tab_width = 4
 
-[*.{py,yml,yaml,md}]
+# Bắt buộc dấu cách, độ rộng 4: YAML (đặc tả cấm tab; .cff là YAML), Markdown (Prettier luôn
+# thụt lề danh sách bằng dấu cách), F#, Elm, Nim (trình biên dịch báo lỗi khi gặp tab),
+# Zig (zig fmt cố định 4 dấu cách).
+[*.{yml,yaml,cff,md,fs,fsi,fsx,elm,nim,nims,nimble,zig,zon}]
 indent_style = space
-indent_size = 4
-tab_width = 4
 
-[Makefile]
-indent_style = tab
-tab_width = 4
+# Bắt buộc dấu cách, độ rộng 2 — formatter chính thức cố định, không cấu hình được:
+# Dart (dart format), Elixir (mix format), Terraform (terraform fmt), Crystal (crystal tool format),
+# Gleam (gleam format), Nix (nixfmt).
+[*.{dart,ex,exs,tf,tfvars,cr,gleam,nix}]
+indent_style = space
+indent_size = 2
 
-[*.md]
+# Bắt buộc CRLF: batch script Windows, Visual C++ 6, chuẩn MIME/iCalendar/vCard/CSV.
+[*.{bat,cmd,dsp,dsw,ics,vcs,vcf,eml,mht,mhtml,csv}]
+end_of_line = crlf
+
+# Khoảng trắng cuối dòng là dữ liệu: ô CSV không có dấu nháy, email format=flowed (RFC 3676).
+[*.{csv,eml,mht,mhtml}]
 trim_trailing_whitespace = false
+
+# Visual Studio: CRLF kèm BOM UTF-8.
+[*.{sln,csproj,vbproj,vcxproj,vcxproj.filters,vcproj,fsproj,sqlproj,wixproj}]
+charset = utf-8-bom
+end_of_line = crlf
+
+# Registry và INF của Windows: UTF-16 LE, CRLF.
+[*.{reg,inf}]
+charset = utf-16le
+end_of_line = crlf
