@@ -1,10 +1,10 @@
 # 🏢 CÔNG TY TNHH TOÀN QUỲNH
 
-### 🌱 Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
+### 🌱 KẾT NỐI CÔNG NGHỆ – KIẾN TẠO GIÁ TRỊ – CHĂM SÓC BẰNG SỰ TẬN TÂM
 
 ---
 
-## 📋 Giới thiệu chung
+## 📋 GIỚI THIỆU CHUNG
 
 **CÔNG TY TNHH TOÀN QUỲNH** được thành lập ngày **26/05/2026**, với định hướng phát triển các hoạt động liên quan đến **công nghệ, quản trị và chăm sóc sức khỏe**, đặc biệt chú trọng lĩnh vực Nhi khoa.
 
@@ -17,7 +17,7 @@ Công ty được xây dựng trên sự kết hợp giữa **tư duy công ngh�
 
 ---
 
-## 📖 Câu chuyện thương hiệu
+## 📖 CÂU CHUYỆN THƯƠNG HIỆU
 
 **TOÀN QUỲNH** không chỉ là tên của một doanh nghiệp mà còn thể hiện sự đồng hành giữa hai lĩnh vực có khả năng bổ trợ chặt chẽ cho nhau: **công nghệ và y tế**.
 
@@ -29,9 +29,9 @@ Sự kết hợp này là nền tảng để CÔNG TY TNHH TOÀN QUỲNH hướn
 
 ---
 
-## 🧭 Lĩnh vực và định hướng hoạt động
+## 🧭 LĨNH VỰC VÀ ĐỊNH HƯỚNG HOẠT ĐỘNG
 
-### 🩺 1. Chăm sóc sức khỏe trẻ em
+### 🩺 1. CHĂM SÓC SỨC KHỎE TRẺ EM
 
 Công ty định hướng phát triển các dịch vụ chăm sóc sức khỏe trẻ em với những tiêu chí:
 
@@ -43,7 +43,7 @@ Công ty định hướng phát triển các dịch vụ chăm sóc sức khỏe
 
 Một trong những dự án trọng tâm của công ty là xây dựng và phát triển **Phòng khám chuyên khoa Nhi DR. MOON**, do **BS CKI Ngô Lê Như Quỳnh** phụ trách chuyên môn.
 
-### 💻 2. Ứng dụng công nghệ trong quản lý và vận hành
+### 💻 2. ỨNG DỤNG CÔNG NGHỆ TRONG QUẢN LÝ VÀ VẬN HÀNH
 
 Với nền tảng chuyên môn của kỹ sư phần mềm, công ty hướng đến việc ứng dụng công nghệ trong:
 
@@ -55,7 +55,7 @@ Với nền tảng chuyên môn của kỹ sư phần mềm, công ty hướng �
 - 📈 Tối ưu hóa hiệu quả vận hành.
 - 🖥️ Xây dựng các công cụ và giải pháp số phục vụ hoạt động doanh nghiệp.
 
-### 🌍 3. Phát triển giải pháp thiết thực cho cộng đồng
+### 🌍 3. PHÁT TRIỂN GIẢI PHÁP THIẾT THỰC CHO CỘNG ĐỒNG
 
 Công ty hướng đến những sản phẩm và dịch vụ có tính ứng dụng cao, giải quyết các nhu cầu thực tế của khách hàng, gia đình và cộng đồng.
 
@@ -69,7 +69,7 @@ Mỗi giải pháp đều được xây dựng trên cơ sở:
 
 ---
 
-## 👁️ Tầm nhìn
+## 👁️ TẦM NHÌN
 
 Trở thành doanh nghiệp uy tín, phát triển bền vững trên nền tảng kết hợp giữa **công nghệ, quản trị và chăm sóc sức khỏe**, góp phần tạo ra những sản phẩm, dịch vụ an toàn, thuận tiện và có giá trị lâu dài cho cộng đồng.
 
@@ -77,7 +77,7 @@ Trong lĩnh vực Nhi khoa, công ty hướng đến xây dựng **Phòng khám 
 
 ---
 
-## 🎯 Sứ mệnh
+## 🎯 SỨ MỆNH
 
 - 🩺 Cung cấp dịch vụ chăm sóc sức khỏe trẻ em an toàn và có trách nhiệm.
 - ⚖️ Lấy chuyên môn, đạo đức nghề nghiệp và quyền lợi người bệnh làm nền tảng.
@@ -88,39 +88,39 @@ Trong lĩnh vực Nhi khoa, công ty hướng đến xây dựng **Phòng khám 
 
 ---
 
-## 💎 Giá trị cốt lõi
+## 💎 GIÁ TRỊ CỐT LÕI
 
-### ❤️ Tận tâm
+### ❤️ TẬN TÂM
 
 Luôn lắng nghe, thấu hiểu và phục vụ khách hàng bằng tinh thần trách nhiệm.
 
-### 🎓 Chuyên môn
+### 🎓 CHUYÊN MÔN
 
 Mọi hoạt động chuyên môn đều được thực hiện trên cơ sở kiến thức, kinh nghiệm và các nguyên tắc nghề nghiệp phù hợp.
 
-### 🤝 Chính trực
+### 🤝 CHÍNH TRỰC
 
 Trung thực, minh bạch và có trách nhiệm trong mọi hoạt động của doanh nghiệp.
 
-### 🛡️ An toàn
+### 🛡️ AN TOÀN
 
 Ưu tiên sự an toàn, bảo mật thông tin và quyền lợi chính đáng của khách hàng.
 
-### 💡 Đổi mới
+### 💡 ĐỔI MỚI
 
 Chủ động ứng dụng công nghệ, cải tiến quy trình và tìm kiếm những giải pháp hiệu quả hơn.
 
-### 👨‍👩‍👧‍👦 Đồng hành
+### 👨‍👩‍👧‍👦 ĐỒNG HÀNH
 
 Xây dựng mối quan hệ lâu dài dựa trên sự tin tưởng, tôn trọng và hợp tác.
 
-### 🌿 Phát triển bền vững
+### 🌿 PHÁT TRIỂN BỀN VỮNG
 
 Cân bằng giữa hiệu quả hoạt động, trách nhiệm xã hội và giá trị lâu dài đối với cộng đồng.
 
 ---
 
-## 🚀 Dự án tiêu biểu
+## 🚀 DỰ ÁN TIÊU BIỂU
 
 ### 🌙 PHÒNG KHÁM CHUYÊN KHOA NHI DR. MOON
 
@@ -141,7 +141,7 @@ Phòng khám được định hướng xây dựng theo mô hình:
 
 ---
 
-## 🤝 Cam kết của chúng tôi
+## 🤝 CAM KẾT CỦA CHÚNG TÔI
 
 CÔNG TY TNHH TOÀN QUỲNH cam kết:
 
@@ -156,18 +156,18 @@ CÔNG TY TNHH TOÀN QUỲNH cam kết:
 
 ---
 
-## 💬 Thông điệp
+## 💬 THÔNG ĐIỆP
 
 > **CÔNG TY TNHH TOÀN QUỲNH – Kết nối sức mạnh công nghệ với sự tận tâm trong chăm sóc sức khỏe, tạo nên những giá trị thiết thực và bền vững cho cộng đồng.**
 
 ---
 
-## 📞 Thông tin liên hệ
+## 📞 THÔNG TIN LIÊN HỆ
 
 **🏢 CÔNG TY TNHH TOÀN QUỲNH**
 
 - 👤 **Người đại diện theo pháp luật:** Nguyễn Trọng Toàn
-- 🌙 **Dự án chuyên môn:** Phòng khám chuyên khoa Nhi DR.MOON
+- 🌙 **Dự án chuyên môn:** Phòng khám chuyên khoa Nhi DR. MOON
 - 👩‍⚕️ **Bác sĩ phụ trách chuyên môn:** BS CKI Ngô Lê Như Quỳnh
 - 📍 **Địa chỉ:** Đường Huỳnh Tấn Phát, Phường Hoà Hiệp, Tỉnh Đắk Lắk, Việt Nam
 - 📱 **Điện thoại:** [0332 911 829](tel:+84332911829)
@@ -178,6 +178,6 @@ CÔNG TY TNHH TOÀN QUỲNH cam kết:
 ---
 
 <p align="center">
-  <strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
-  Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
+	<strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
+	Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
 </p>

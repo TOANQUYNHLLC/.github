@@ -3,7 +3,8 @@
 <!--
 Cảm ơn bạn đã đóng góp cho dự án.
 Vui lòng điền đầy đủ các nội dung phù hợp và xóa những phần không áp dụng.
-Không đưa mật khẩu, khóa API, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Pull Request.
+Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Pull Request.
+Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Request công khai — gửi email tới toanquynhvn@gmail.com theo mục "BẢO MẬT" trong README.md.
 -->
 
 ## 📋 TÓM TẮT THAY ĐỔI
@@ -104,7 +105,7 @@ Không áp dụng.
 - [ ] Tôi đã bổ sung hoặc cập nhật kiểm thử khi cần thiết.
 - [ ] Tôi đã cập nhật tài liệu liên quan khi cần thiết.
 - [ ] Tôi đã kiểm tra khả năng tương thích với chức năng hiện có.
-- [ ] Tôi không đưa mật khẩu, khóa API, token hoặc thông tin bảo mật vào mã nguồn.
+- [ ] Tôi không đưa mật khẩu, khóa API, token truy cập hoặc thông tin bảo mật vào mã nguồn.
 - [ ] Tôi không đưa dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào repository.
 - [ ] Tôi đã kiểm tra các tệp cấu hình và biến môi trường liên quan.
 - [ ] Pull Request đã sẵn sàng để được đánh giá.

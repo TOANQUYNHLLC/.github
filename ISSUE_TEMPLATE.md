@@ -3,8 +3,8 @@
 <!--
 Cảm ơn bạn đã dành thời gian đóng góp ý kiến cho dự án.
 Vui lòng điền đầy đủ các nội dung phù hợp và xóa những phần không áp dụng.
-Không đưa mật khẩu, khóa API, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue.
-Vấn đề bảo mật: KHÔNG tạo Issue công khai — gửi email tới toanquynhvn@gmail.com theo hướng dẫn trong README.md.
+Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue.
+Vấn đề bảo mật: KHÔNG tạo Issue công khai — gửi email tới toanquynhvn@gmail.com theo mục "BẢO MẬT" trong README.md.
 -->
 
 ## 🏷️ LOẠI VẤN ĐỀ
@@ -95,7 +95,7 @@ Không áp dụng.
 - [ ] Tiêu đề Issue mô tả ngắn gọn và rõ ràng nội dung.
 - [ ] Tôi đã cung cấp đủ thông tin để tái hiện hoặc đánh giá đề xuất.
 - [ ] Đây không phải vấn đề bảo mật (vấn đề bảo mật gửi riêng qua email).
-- [ ] Tôi không đưa mật khẩu, khóa API, token hoặc thông tin bảo mật vào Issue.
+- [ ] Tôi không đưa mật khẩu, khóa API, token truy cập hoặc thông tin bảo mật vào Issue.
 - [ ] Tôi không đưa dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue.
 
 ## 💬 GHI CHÚ
