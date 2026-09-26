@@ -1,6 +1,7 @@
 """Kiểm tra tính nhất quán của repository .github.
 
-Chạy: python3 scripts/validate.py  (cần Ruby để đọc YAML; có sẵn trên runner GitHub).
+Chạy: python3 scripts/validate.py  (cần Python ≥ 3.11 — tomllib, datetime.UTC — và Ruby để đọc YAML;
+cả hai có sẵn trên runner GitHub; trên máy dùng Python do mise cài, không dùng Python 3.9 của macOS).
 """
 
 import json
@@ -10,11 +11,13 @@ import sys
 import tomllib
 import unicodedata
 import urllib.parse
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FORM_TYPES = {'markdown', 'textarea', 'input', 'dropdown', 'checkboxes'}
+# Issue Type của tổ chức (gh api orgs/TOANQUYNHLLC/issue-types) — gõ sai tên thì GitHub bỏ qua không báo.
+ISSUE_TYPES = {'Bug', 'Feature', 'Task'}
 # Biểu mẫu Discussion chỉ nhận các khóa này ở cấp cao nhất (không có name, description như Issue).
 DISCUSSION_FORM_KEYS = {'title', 'labels', 'body'}
 # Email liên hệ chung của công ty — mọi tài liệu phải dùng đúng địa chỉ này.
@@ -244,6 +247,11 @@ def check_form(path, required=('name', 'description', 'body')):
 	if path.parent.name == 'DISCUSSION_TEMPLATE':
 		for key in sorted(set(form) - DISCUSSION_FORM_KEYS):
 			error(path, f'biểu mẫu Discussion không hỗ trợ khóa "{key}"')
+	if 'type' in form and form['type'] not in ISSUE_TYPES:
+		error(
+			path,
+			f'type "{form["type"]}" không phải Issue Type của tổ chức ({", ".join(sorted(ISSUE_TYPES))})',
+		)
 	for label in form.get('labels') or []:
 		FORM_LABELS.append((path, label))
 	ids = set()
@@ -657,7 +665,9 @@ def config_labels():
 		if not path.exists():
 			continue
 		text = path.read_text(encoding='utf-8')
-		for match in re.finditer(r'^\s*(?:stale|exempt)-(?:issue|pr)-labels?:\s*(.+)$', text, re.M):
+		for match in re.finditer(
+			r'^\s*(?:stale|exempt)-(?:issue|pr)-labels?:\s*(.+)$', text, re.MULTILINE
+		):
 			names = match.group(1).strip().strip('\'"').split(',')
 			found += [(path, name.strip()) for name in names if name.strip()]
 	return found
@@ -682,11 +692,11 @@ def check_security_txt(path, text):
 		error(path, f'Contact phải có mailto:{COMPANY_EMAIL}')
 	expires = fields.get('Expires', '')
 	try:
-		moment = datetime.fromisoformat(expires.replace('Z', '+00:00'))
+		moment = datetime.fromisoformat(expires)
 	except ValueError:
 		error(path, f'Expires không đúng định dạng ISO 8601: {expires}')
 		return
-	remaining = (moment - datetime.now(timezone.utc)).days
+	remaining = (moment - datetime.now(UTC)).days
 	if remaining < 0:
 		error(path, 'Expires đã hết hạn — gia hạn tối đa 1 năm')
 	elif remaining > 366:

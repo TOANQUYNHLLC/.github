@@ -144,10 +144,10 @@ Khi nhánh chính có thay đổi mới, rebase branch của bạn lên nhánh c
 git fetch origin
 git rebase origin/main
 # … xử lý xung đột, rồi: git add <file> && git rebase --continue
-git push --force-with-lease
+git push --force-with-lease --force-if-includes
 ```
 
-Chỉ dùng `--force-with-lease` trên branch của chính mình, **không** force push lên `main` hoặc branch người khác đang làm.
+Chỉ force push bằng `--force-with-lease --force-if-includes` (git ≥ 2.30: từ chối ghi đè commit trên GitHub mà bạn chưa kéo về) trên branch của chính mình, **không** force push lên `main` hoặc branch người khác đang làm.
 
 ---
 
