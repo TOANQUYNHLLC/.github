@@ -1,4 +1,4 @@
-# Git attributes — repository .github của CÔNG TY TNHH TOÀN QUỲNH
+# Git attributes — CÔNG TY TNHH TOÀN QUỲNH (dùng chung cho mọi repository, chép bằng scripts/org-setup.py)
 # Mặc định LF cho mọi file văn bản, thống nhất với .editorconfig và runner Linux của GitHub.
 # Chỉ các loại file bắt buộc CRLF bên dưới mới dùng CRLF.
 

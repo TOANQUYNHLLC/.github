@@ -302,6 +302,8 @@ class OrgSetupTest(unittest.TestCase):
 			sorted(files),
 			sorted(
 				[
+					'.editorconfig',
+					'.gitattributes',
 					'.github/workflows/pr-title.yml',
 					'.github/workflows/branch-name.yml',
 					'.github/CODEOWNERS',
@@ -310,6 +312,22 @@ class OrgSetupTest(unittest.TestCase):
 				]
 			),
 		)
+
+	def test_tep_theo_ngon_ngu(self):
+		files = self.module.planned_files(
+			{'package.json', 'pyproject.toml', 'Cargo.toml', 'Dockerfile'}
+		)
+		for path in (
+			'.prettierrc.json',
+			'ruff.toml',
+			'.python-version',
+			'rustfmt.toml',
+			'.dockerignore',
+		):
+			self.assertIn(path, files)
+		self.assertNotIn('.clang-format', files)
+		self.assertIn('indent-style = "tab"', files['ruff.toml'])
+		self.assertIn('hard_tabs = true', files['rustfmt.toml'])
 
 	def test_ruleset_protect_main_cho_moi_repository(self):
 		def checks(ruleset):

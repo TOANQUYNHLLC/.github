@@ -5,9 +5,9 @@ Mặc định chỉ xem trước, không thay đổi gì; thêm --apply để á
 Yêu cầu: gh đã đăng nhập bằng tài khoản có quyền quản trị tổ chức.
 
 Lệnh (nên chạy theo thứ tự):
-	files: mở Pull Request thêm các tệp dùng chung còn thiếu — workflow kiểm tra tiêu đề
-		Pull Request và tên branch, CODEOWNERS, dependabot.yml (chỉ ecosystem repository dùng),
-		release.yml. Không ghi đè tệp đã có.
+	files: mở Pull Request thêm các tệp dùng chung còn thiếu — .editorconfig, .gitattributes,
+		workflow kiểm tra tiêu đề Pull Request và tên branch, CODEOWNERS, dependabot.yml, release.yml
+		và tệp định dạng theo ngôn ngữ repository dùng. Không ghi đè tệp đã có.
 	settings: cho phép Merge, Squash và Rebase, tự xóa branch sau khi hợp nhất;
 		--discussions bật thêm GitHub Discussions.
 	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json); repository khác
@@ -39,6 +39,15 @@ ECOSYSTEM_MANIFESTS = {
 	'gomod': ('go.mod',),
 	'docker': ('Dockerfile',),
 }
+# Tệp cấu hình theo ngôn ngữ: tệp khai báo ở thư mục gốc → tệp thêm vào repository (nguồn trong repository này).
+LANGUAGE_FILES = (
+	(('package.json',), '.prettierrc.json', '.prettierrc.json'),
+	(ECOSYSTEM_MANIFESTS['pip'], 'ruff.toml', 'ruff.toml'),
+	(ECOSYSTEM_MANIFESTS['pip'], '.python-version', 'repository-templates/.python-version'),
+	(('Cargo.toml',), 'rustfmt.toml', 'repository-templates/rustfmt.toml'),
+	(('CMakeLists.txt', 'meson.build'), '.clang-format', 'repository-templates/.clang-format'),
+	(('Dockerfile', 'compose.yaml'), '.dockerignore', 'repository-templates/.dockerignore'),
+)
 MERGE_SETTINGS = {
 	'allow_squash_merge': True,
 	'allow_merge_commit': True,
@@ -95,7 +104,9 @@ def planned_files(root_names):
 	def read(path):
 		return (ROOT / path).read_text(encoding='utf-8')
 
-	return {
+	files = {
+		'.editorconfig': read('.editorconfig'),
+		'.gitattributes': read('.gitattributes'),
 		'.github/workflows/pr-title.yml': read('workflow-templates/pr-title.yml'),
 		'.github/workflows/branch-name.yml': read('workflow-templates/branch-name.yml'),
 		'.github/CODEOWNERS': read('repository-templates/CODEOWNERS'),
@@ -104,6 +115,10 @@ def planned_files(root_names):
 		),
 		'.github/release.yml': read('repository-templates/release.yml'),
 	}
+	for manifests, target, source in LANGUAGE_FILES:
+		if any(name in root_names for name in manifests):
+			files[target] = read(source)
+	return files
 
 
 def template_jobs():
