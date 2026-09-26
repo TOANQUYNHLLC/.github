@@ -10,8 +10,8 @@ Cảm ơn bạn đã dành thời gian đóng góp cho dự án. Khi tham gia, b
 
 - Đọc `README.md` của repository để nắm mục đích, cách cài đặt và quy ước riêng của dự án.
 - Cài môi trường theo `README.md` và chạy các kiểm tra tự động một lần **trước khi sửa**, để biết lỗi nào có sẵn từ trước.
-- Tìm trong Issues xem vấn đề hoặc ý tưởng đã được nêu chưa, tránh tạo trùng lặp.
-- Với thay đổi lớn, tạo Issue để trao đổi hướng xử lý trước khi viết mã.
+- Tìm trong Issues và Discussions xem vấn đề hoặc ý tưởng đã được nêu chưa, tránh tạo trùng lặp.
+- Với thay đổi lớn, tạo Issue (hoặc Discussion mục Ý tưởng nếu repository đã bật) để trao đổi hướng xử lý trước khi viết mã.
 - Vấn đề bảo mật **không** tạo Issue công khai — làm theo [`SECURITY.md`](SECURITY.md).
 
 ---
@@ -30,7 +30,7 @@ Một báo lỗi tốt gồm:
 
 - **Các bước tái hiện** cụ thể, đánh số theo thứ tự.
 - **Kết quả mong đợi** và **kết quả thực tế**.
-- **Môi trường**: hệ điều hành, trình duyệt hoặc thiết bị, phiên bản ứng dụng.
+- **Môi trường** (phát triển, kiểm thử, production), **thiết bị, hệ điều hành và trình duyệt**, **phiên bản hoặc commit**.
 - Ảnh chụp màn hình hoặc log liên quan — **che** mọi thông tin cá nhân, dữ liệu bệnh nhân, mật khẩu và token trước khi đính kèm.
 
 ---
@@ -100,8 +100,8 @@ Viết commit theo dạng [Conventional Commits](https://www.conventionalcommits
 - Dòng tiêu đề tối đa 72 ký tự, không kết thúc bằng dấu chấm, mô tả **làm gì**.
 - Phần thân (cách tiêu đề một dòng trống) giải thích **vì sao** và ảnh hưởng của thay đổi.
 - Phần cuối liên kết Issue (`Closes #123`) và ghi thay đổi phá vỡ tương thích bằng dấu `!` sau loại hoặc dòng `BREAKING CHANGE:`.
-- Mỗi commit chỉ chứa một thay đổi có ý nghĩa; không commit file sinh tự động, log, file bí mật (`.env`).
-- Khuyến khích ký commit (GPG hoặc SSH) để GitHub hiển thị **Verified**.
+- Mỗi commit chỉ chứa một thay đổi có ý nghĩa; không commit file sinh tự động (trừ lockfile, xem mục Phụ thuộc), log, file bí mật (`.env`).
+- Ký commit bằng GPG hoặc SSH để GitHub hiển thị **Verified** — **bắt buộc** trên repository áp dụng ruleset **Protect Main** (commit chưa ký không hợp nhất được vào `main`).
 - Nếu repository có tệp `.gitmessage`, dùng làm mẫu commit: `git config commit.template .gitmessage`.
 
 ```text

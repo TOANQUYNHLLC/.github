@@ -14,23 +14,40 @@ Chính sách này áp dụng cho `<tên sản phẩm>` do **CÔNG TY TNHH TOÀN 
 | Thông tin sức khỏe | `<triệu chứng, lịch sử khám>`              | `<khám bệnh, tư vấn>` |
 | Dữ liệu kỹ thuật   | `<địa chỉ IP, thiết bị, nhật ký truy cập>` | `<bảo mật, vận hành>` |
 
+---
+
 ## 🎯 MỤC ĐÍCH VÀ CƠ SỞ XỬ LÝ
 
 `<Nêu từng mục đích và cơ sở pháp lý: sự đồng ý của chủ thể dữ liệu, thực hiện hợp đồng, nghĩa vụ pháp luật…>`
 
+---
+
 ## 🤝 CHIA SẺ DỮ LIỆU
 
 `<Bên nhận (nhà cung cấp hạ tầng, đối tác xét nghiệm…), mục đích chia sẻ, chuyển dữ liệu ra nước ngoài nếu có.>`
+
+---
 
 ## 🗄️ LƯU TRỮ VÀ BẢO MẬT
 
 - Thời gian lưu trữ: `<…>`.
 - Biện pháp bảo vệ: `<mã hóa, phân quyền truy cập, sao lưu…>`.
 
+---
+
 ## 🙋 QUYỀN CỦA CHỦ THỂ DỮ LIỆU
 
 `<Quyền được biết, đồng ý, truy cập, chỉnh sửa, xóa, rút lại sự đồng ý, hạn chế xử lý, khiếu nại — và cách thực hiện.>`
 
+---
+
 ## 📞 LIÊN HỆ
 
 `<Bộ phận phụ trách bảo vệ dữ liệu cá nhân, email, số điện thoại.>` Báo cáo lỗ hổng bảo mật: xem `SECURITY.md`.
+
+---
+
+<p align="center">
+    <strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
+    Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
+</p>

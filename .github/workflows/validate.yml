@@ -1,4 +1,4 @@
-name: Kiểm tra Repository
+name: Kiểm tra repository
 
 on:
     push:

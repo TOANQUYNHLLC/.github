@@ -1,3 +1,4 @@
+title: '[Thảo luận] '
 body:
     - type: markdown
       attributes:
@@ -10,5 +11,6 @@ body:
       id: content
       attributes:
           label: 💬 NỘI DUNG
+          description: Chủ đề muốn thảo luận, bối cảnh và liên kết liên quan.
       validations:
           required: true

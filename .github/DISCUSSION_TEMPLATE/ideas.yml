@@ -3,7 +3,7 @@ body:
     - type: markdown
       attributes:
           value: |
-              Chia sẻ ý tưởng để cùng thảo luận trước khi tạo Issue đề xuất tính năng.
+              Chia sẻ ý tưởng để cùng thảo luận trước khi tạo Issue **✨ Đề xuất tính năng**.
 
               > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào thảo luận.
 
@@ -19,13 +19,12 @@ body:
       id: problem
       attributes:
           label: 🎯 VẤN ĐỀ CẦN GIẢI QUYẾT
-          description: Ý tưởng giúp giải quyết vấn đề hoặc nhu cầu nào?
+          description: Vì sao cần thay đổi này, ai được hưởng lợi.
       validations:
           required: true
 
     - type: textarea
       id: alternatives
       attributes:
-          label: 🔁 CÁCH LÀM KHÁC ĐÃ CÂN NHẮC
-      validations:
-          required: false
+          label: 🔀 PHƯƠNG ÁN THAY THẾ
+          description: Các cách khác đã cân nhắc, nếu có.

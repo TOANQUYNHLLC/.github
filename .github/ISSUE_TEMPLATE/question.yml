@@ -10,6 +10,7 @@ body:
               Cảm ơn bạn đã đặt câu hỏi cho dự án.
 
               > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue.
+              > 🔐 Vấn đề bảo mật: **không** tạo Issue công khai — báo cáo riêng theo [chính sách bảo mật](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md).
 
     - type: textarea
       id: question

@@ -371,7 +371,9 @@ def cmd_team(repos, apply):
 			'permission=maintain',
 		)
 		print(f'   ✔ maintain {ORG}/{repo}')
-	print(f'   Bước tiếp: đổi CODEOWNERS và MAINTAINERS.md sang @{ORG}/{TEAM}.')
+	print(
+		f'   CODEOWNERS dùng @{ORG}/{TEAM}; đổi thành viên thì cập nhật MAINTAINERS.md và MAINTAINERS trong script này.'
+	)
 
 
 def main():

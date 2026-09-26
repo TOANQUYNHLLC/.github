@@ -22,3 +22,10 @@ Chưa có.
 ## 📞 LIÊN HỆ
 
 Liên hệ người quản trị qua Issue với biểu mẫu **❓ Câu hỏi hoặc cần hỗ trợ** hoặc email [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com). Vấn đề bảo mật: làm theo [`SECURITY.md`](SECURITY.md).
+
+---
+
+<p align="center">
+    <strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
+    Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
+</p>

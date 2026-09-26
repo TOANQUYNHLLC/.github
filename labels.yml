@@ -2,7 +2,7 @@
 # Áp dụng bằng: scripts/sync-labels.sh (xem hướng dẫn trong script).
 # color: mã hex 6 ký tự trong dấu nháy (tránh YAML đọc thành số), không có dấu #. description: tối đa 100 ký tự.
 
-# Loại vấn đề — khớp với biểu mẫu trong ISSUE_TEMPLATE/
+# Loại vấn đề — khớp với biểu mẫu trong .github/ISSUE_TEMPLATE/
 - name: bug
   color: 'd73a4a'
   description: Một chức năng chạy sai, không chạy hoặc hiển thị không đúng
