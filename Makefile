@@ -36,10 +36,11 @@ lint: tools ## ESLint, shellcheck và actionlint
 	shellcheck scripts/*.sh .devcontainer/*.sh
 	actionlint .github/workflows/*.yml workflow-templates/*.yml
 
-hooks: ## Cài pre-commit hook và để git blame bỏ qua commit chỉ đổi định dạng
+hooks: ## Cài pre-commit hook, mẫu commit và để git blame bỏ qua commit chỉ đổi định dạng
 	ln -sf ../../scripts/pre-commit.sh .git/hooks/pre-commit
 	git config blame.ignoreRevsFile .git-blame-ignore-revs
-	@echo "Đã cài .git/hooks/pre-commit và cấu hình blame.ignoreRevsFile"
+	git config commit.template .gitmessage
+	@echo "Đã cài .git/hooks/pre-commit, blame.ignoreRevsFile và commit.template"
 
 links: ## Kiểm tra liên kết bên ngoài (website, Facebook…) còn hoạt động
 	python3 scripts/check-external-links.py

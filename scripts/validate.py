@@ -536,6 +536,8 @@ for file in tracked_files():
 			'.editorconfig',
 			'.gitattributes',
 			'.gitignore',
+			'.gitmessage',
+			'.npmrc',
 			'Makefile',
 			'CODEOWNERS',
 			'LICENSE',

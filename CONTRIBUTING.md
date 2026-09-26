@@ -102,6 +102,7 @@ Viết commit theo dạng [Conventional Commits](https://www.conventionalcommits
 - Phần cuối liên kết Issue (`Closes #123`) và ghi thay đổi phá vỡ tương thích bằng dấu `!` sau loại hoặc dòng `BREAKING CHANGE:`.
 - Mỗi commit chỉ chứa một thay đổi có ý nghĩa; không commit file sinh tự động, log, file bí mật (`.env`).
 - Khuyến khích ký commit (GPG hoặc SSH) để GitHub hiển thị **Verified**.
+- Nếu repository có tệp `.gitmessage`, dùng làm mẫu commit: `git config commit.template .gitmessage`.
 
 ```text
 feat(booking)!: cho phép đặt lịch theo khung 15 phút

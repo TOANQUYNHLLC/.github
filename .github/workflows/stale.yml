@@ -1,0 +1,36 @@
+name: Đóng Issue và Pull Request không hoạt động
+
+on:
+    schedule:
+        - cron: '0 2 * * 1'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    stale:
+        name: Đánh dấu và đóng mục không hoạt động
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        permissions:
+            issues: write
+            pull-requests: write
+        steps:
+            - name: Đánh dấu và đóng
+              uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
+              with:
+                  days-before-stale: 60
+                  days-before-close: 14
+                  stale-issue-label: stale
+                  stale-pr-label: stale
+                  exempt-issue-labels: 'security,priority: khẩn cấp,priority: cao'
+                  exempt-pr-labels: 'security,priority: khẩn cấp,priority: cao'
+                  stale-issue-message: >-
+                      Issue này không có hoạt động trong 60 ngày nên được đánh dấu **stale**.
+                      Issue sẽ tự đóng sau 14 ngày nếu không có phản hồi mới.
+                  stale-pr-message: >-
+                      Pull Request này không có hoạt động trong 60 ngày nên được đánh dấu **stale**.
+                      Pull Request sẽ tự đóng sau 14 ngày nếu không có cập nhật mới.
+                  close-issue-message: Đóng vì không có hoạt động. Mở lại nếu vấn đề vẫn còn.
+                  close-pr-message: Đóng vì không có hoạt động. Mở lại khi sẵn sàng tiếp tục.
