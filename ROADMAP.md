@@ -4,26 +4,9 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ---
 
-## 🔥 ƯU TIÊN: TẠO RULESET PROTECT MAIN
-
-Repository `.github` hiện **không có ruleset nào** — nhánh chính chưa được bảo vệ. Người quản trị tạo ruleset **Protect Main** duy nhất từ [`rulesets/protect-main.json`](rulesets/protect-main.json) ([ADR 0005](docs/adr/0005-merge-protect-main.md)) bằng một trong hai cách:
-
-- **Lệnh:** `python3 scripts/org-setup.py rulesets --apply --repo .github`
-- **Trên web:** **Settings → Rules → Rulesets → New ruleset → Import a ruleset** → chọn `rulesets/protect-main.json` → **Create**.
-
-Kiểm tra chỉ có một ruleset và đủ quy tắc:
-
-```sh
-gh api repos/TOANQUYNHLLC/.github/rulesets --jq '.[].name'
-gh api repos/TOANQUYNHLLC/.github/rules/branches/main --jq '[.[].type] | unique'
-```
-
-Kết quả: chỉ `Protect Main`; 9 quy tắc `code_quality`, `creation`, `deletion`, `non_fast_forward`, `pull_request`, `required_linear_history`, `required_signatures`, `required_status_checks`, `update`.
-
----
-
 ## ✅ ĐÃ HOÀN THÀNH GẦN ĐÂY
 
+- [x] Ruleset **Protect Main** duy nhất trên `.github`, tạo từ [`rulesets/protect-main.json`](rulesets/protect-main.json): chỉ Squash and merge, 5 kiểm tra bắt buộc, phê duyệt của `CODEOWNERS` và phê duyệt lại sau lần đẩy cuối, commit có chữ ký, lịch sử tuyến tính, code quality, chặn tạo/cập nhật/xóa/force push; danh sách bỏ qua hai tài khoản quản trị (2026-09-26).
 - [x] Team **maintainers** (`nguyentrongtoandl`, `trongtoandl81`, quyền **Maintain**) là chủ sở hữu mã trong `CODEOWNERS` (2026-09-26).
 - [x] Chỉ cho phép **Squash and merge**, tự xóa branch sau khi hợp nhất; đồng bộ 16 nhãn chuẩn; Discussions đã bật; cả hai tài khoản đã đăng ký khóa ký commit (2026-09-26).
 
