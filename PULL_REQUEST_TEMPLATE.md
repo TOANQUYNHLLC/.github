@@ -99,6 +99,8 @@ Không áp dụng.
 - [ ] Tôi đã tự kiểm tra lại mã nguồn và nội dung thay đổi.
 - [ ] Thay đổi chỉ bao gồm những nội dung cần thiết cho Pull Request này.
 - [ ] Mã nguồn tuân thủ quy ước và tiêu chuẩn của dự án.
+- [ ] Tôi đã chạy formatter và lint của dự án, không còn lỗi.
+- [ ] Tên branch, commit và tiêu đề Pull Request theo quy ước trong `CONTRIBUTING.md`.
 - [ ] Tôi đã bổ sung hoặc cập nhật kiểm thử khi cần thiết.
 - [ ] Tôi đã cập nhật tài liệu liên quan và `CHANGELOG.md` (nếu dự án có) khi cần thiết.
 - [ ] Tôi đã kiểm tra khả năng tương thích với chức năng hiện có.

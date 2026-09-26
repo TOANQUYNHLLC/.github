@@ -5,7 +5,7 @@
 .DEFAULT_GOAL := help
 TOOLS := git python3 ruby npx ruff shellcheck actionlint
 
-.PHONY: help check validate test format format-check lint tools links release-notes labels-preview labels-apply
+.PHONY: help check validate test format format-check lint tools links release-notes labels-preview labels-apply hooks
 
 help: ## Hiển thị danh sách lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-15s %s\n", $$1, $$2}'
@@ -35,6 +35,10 @@ lint: tools ## ESLint, shellcheck và actionlint
 	npx eslint .
 	shellcheck scripts/*.sh
 	actionlint .github/workflows/*.yml workflow-templates/*.yml
+
+hooks: ## Cài pre-commit hook kiểm tra định dạng file được stage
+	ln -sf ../../scripts/pre-commit.sh .git/hooks/pre-commit
+	@echo "Đã cài .git/hooks/pre-commit"
 
 links: ## Kiểm tra liên kết bên ngoài (website, Facebook…) còn hoạt động
 	python3 scripts/check-external-links.py

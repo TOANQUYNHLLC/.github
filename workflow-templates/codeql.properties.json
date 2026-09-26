@@ -1,0 +1,6 @@
+{
+	"name": "CodeQL — TOÀN QUỲNH",
+	"description": "Quét lỗ hổng bảo mật mã nguồn bằng CodeQL khi push, mở Pull Request và hằng tuần. Sửa danh sách ngôn ngữ theo dự án.",
+	"iconName": "codeql",
+	"categories": ["Code Scanning", "JavaScript", "TypeScript", "Python", "Go", "Java", "C#"]
+}

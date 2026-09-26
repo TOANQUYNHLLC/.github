@@ -1,0 +1,6 @@
+{
+	"name": "Kiểm tra tiêu đề Pull Request — TOÀN QUỲNH",
+	"description": "Bắt buộc tiêu đề Pull Request theo quy ước commit <loại>: <mô tả> trong CONTRIBUTING.md.",
+	"iconName": "pr-title",
+	"categories": ["Automation"]
+}

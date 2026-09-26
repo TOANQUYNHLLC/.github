@@ -46,6 +46,9 @@
 - name: good first issue
   color: '7057ff'
   description: Phù hợp cho người mới tham gia
+- name: stale
+  color: 'dadada'
+  description: Không có hoạt động trong thời gian dài, sẽ tự đóng nếu không có phản hồi
 
 # Dùng bởi Dependabot
 - name: dependencies

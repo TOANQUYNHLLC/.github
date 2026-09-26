@@ -1,0 +1,7 @@
+{
+	"name": "Python CI — TOÀN QUỲNH",
+	"description": "Cài thư viện, kiểm tra định dạng và lint bằng ruff, chạy pytest. Phiên bản Python lấy từ .python-version.",
+	"iconName": "python-ci",
+	"categories": ["Python"],
+	"filePatterns": ["pyproject.toml$", "requirements.txt$", "setup.py$"]
+}

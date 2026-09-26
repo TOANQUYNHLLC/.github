@@ -1,0 +1,7 @@
+{
+	"name": "Go CI — TOÀN QUỲNH",
+	"description": "Kiểm tra gofmt, go vet, chạy kiểm thử với -race và build. Phiên bản Go lấy từ go.mod.",
+	"iconName": "go-ci",
+	"categories": ["Go"],
+	"filePatterns": ["go.mod$"]
+}
