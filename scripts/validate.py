@@ -250,6 +250,25 @@ def check_workflow_template(path):
 		error(properties, f'không tìm thấy biểu tượng {icon}.svg')
 
 
+def check_tool_versions():
+	"""Phiên bản ruff, ShellCheck, actionlint chỉ ở mise.toml; Node.js chỉ ở .nvmrc (ADR 0007)."""
+	mise = (ROOT / 'mise.toml').read_text(encoding='utf-8') if (ROOT / 'mise.toml').exists() else ''
+	for tool in ('ruff', 'shellcheck', 'actionlint'):
+		if not re.search(rf'^{tool} = "[^"]+"$', mise, re.MULTILINE):
+			errors.append(f'mise.toml: thiếu phiên bản {tool}')
+	if re.search(r'^node = ', mise, re.MULTILINE):
+		errors.append('mise.toml: Node.js khai báo trong .nvmrc, không lặp trong mise.toml')
+	pinned = re.compile(r'ruff==|pipx install ruff|actionlint@v|download-actionlint|shellcheck-v\d')
+	sources = [
+		*(ROOT / '.github' / 'workflows').glob('*.yml'),
+		*(ROOT / '.devcontainer').glob('*.sh'),
+	]
+	for path in sorted(sources):
+		for number, line in enumerate(path.read_text(encoding='utf-8').split('\n'), start=1):
+			if pinned.search(line):
+				error(path, f'dòng {number}: phiên bản công cụ phải lấy từ mise.toml (ADR 0007)')
+
+
 def check_format_config():
 	"""Cấu hình định dạng không được trái quy tắc: tab, độ rộng 4; dấu cách chỉ cho ngôn ngữ bắt buộc."""
 	try:
@@ -595,6 +614,7 @@ for file in tracked_files():
 			error(file, f'JSON không hợp lệ: {exc}')
 
 check_format_config()
+check_tool_versions()
 check_suffix_lists()
 check_conventions()
 check_rulesets()

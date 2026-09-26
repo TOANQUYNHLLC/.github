@@ -28,6 +28,7 @@ Repository `.github` đặc biệt của tổ chức: tệp cộng đồng (`CON
 - **Commit và tiêu đề Pull Request:** `<loại>(<phạm vi>): <mô tả>` với loại trong bảng của `CONTRIBUTING.md`.
 - **Workflow:** mọi action ghim theo commit SHA đầy đủ kèm chú thích phiên bản; khai báo `permissions` tối thiểu; job nào cũng có `timeout-minutes`. Không đoán SHA — lấy bằng `git ls-remote`.
 - **Danh sách phải khớp nhau:** loại commit và tiền tố branch giữa `CONTRIBUTING.md` và các workflow `pr-title.yml`, `branch-name.yml`; đuôi file giữa `scripts/validate.py`, `.editorconfig`, `.gitattributes`. Sửa một nơi thì sửa cả các nơi còn lại.
+- **Phiên bản công cụ:** chỉ khai báo trong `mise.toml` (ruff, ShellCheck, actionlint), `.nvmrc` (Node.js) và `package.json` (thư viện Node.js); không ghi phiên bản trong workflow hay script.
 - **CHANGELOG:** thay đổi đáng chú ý ghi vào mục **CHƯA PHÁT HÀNH** của `CHANGELOG.md`.
 - **Quyết định lớn:** đọc `docs/adr/` trước khi đổi quy ước; đổi quyết định thì thêm ADR mới, không sửa ADR đã chấp nhận.
 - **Commit chỉ đổi định dạng:** thêm SHA vào `.git-blame-ignore-revs`.

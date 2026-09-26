@@ -93,7 +93,7 @@ GitHub tự động áp dụng nội dung của repository này cho toàn tổ c
 | [`.vscode/extensions.json`](.vscode/extensions.json)                                                                                        | Gợi ý extension VS Code: EditorConfig, Prettier, ESLint, ruff, ShellCheck, GitHub Actions, YAML                                                                                                                 |
 | [`CITATION.cff`](CITATION.cff) · [`NOTICE`](NOTICE)                                                                                         | Cách trích dẫn repository; ghi chú bản quyền và giấy phép công cụ bên thứ ba                                                                                                                                    |
 | [`docs/adr/`](docs/adr/)                                                                                                                    | Bản ghi quyết định kiến trúc: vì sao dùng tab, LF/CRLF, quy ước branch, Squash and merge                                                                                                                        |
-| [`.devcontainer/`](.devcontainer/) · [`mise.toml`](mise.toml)                                                                               | Dev Container/Codespaces có sẵn công cụ kiểm tra; phiên bản Node, Python, ruff, ShellCheck, actionlint khớp CI                                                                                                  |
+| [`.devcontainer/`](.devcontainer/) · [`mise.toml`](mise.toml)                                                                               | Nguồn phiên bản duy nhất của ruff, ShellCheck, actionlint (Node.js lấy từ `.nvmrc`) cho máy cục bộ, Dev Container và CI                                                                                         |
 | [`.git-blame-ignore-revs`](.git-blame-ignore-revs) · [`.mailmap`](.mailmap)                                                                 | `git blame` bỏ qua commit chỉ đổi định dạng; gộp các cách viết tên tác giả                                                                                                                                      |
 | [`.shellcheckrc`](.shellcheckrc) · [`CLAUDE.md`](CLAUDE.md)                                                                                 | Cấu hình ShellCheck; Claude Code dùng chung hướng dẫn trong `AGENTS.md`                                                                                                                                         |
 | [`.gitmessage`](.gitmessage) · [`.npmrc`](.npmrc)                                                                                           | Mẫu commit theo quy ước (bật bằng `make hooks`); npm chặn phiên bản Node.js sai và ghi phiên bản thư viện chính xác                                                                                             |
@@ -104,11 +104,12 @@ GitHub tự động áp dụng nội dung của repository này cho toàn tổ c
 
 ## 🛠️ PHÁT TRIỂN CỤC BỘ
 
-Cài công cụ (macOS):
+Cài công cụ đúng phiên bản trong [`mise.toml`](mise.toml) và [`.nvmrc`](.nvmrc) — cùng phiên bản với CI:
 
 ```bash
-brew install ruff shellcheck actionlint
+mise install
 npm install
+make hooks
 ```
 
 **Quy tắc định dạng** (khai báo trong [`.editorconfig`](.editorconfig) và [`.prettierrc.json`](.prettierrc.json), kiểm tra tự động bằng `make check`):
