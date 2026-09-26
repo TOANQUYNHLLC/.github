@@ -373,30 +373,28 @@ def check_conventions():
 
 
 def check_rulesets():
-	"""Kiểm tra bắt buộc trong ruleset mẫu phải trùng tên một job có thật, nếu không PR chờ mãi."""
-	sources = {
-		'default-branch.json': ROOT / 'workflow-templates',
-		'dot-github.json': ROOT / '.github' / 'workflows',
-	}
-	for name, folder in sources.items():
-		path = ROOT / 'rulesets' / name
-		if not path.exists():
-			continue
-		try:
-			ruleset = json.loads(path.read_text(encoding='utf-8'))
-		except json.JSONDecodeError:
-			continue
-		jobs = set()
-		for workflow in sorted(folder.glob('*.yml')):
-			for job in ((load_yaml(workflow) or {}).get('jobs') or {}).values():
-				jobs.add(job.get('name'))
-		for rule in ruleset.get('rules', []):
-			for check in (rule.get('parameters') or {}).get('required_status_checks', []):
-				if check.get('context') not in jobs:
-					error(
-						path,
-						f'kiểm tra bắt buộc "{check.get("context")}" không trùng tên job nào trong {folder.relative_to(ROOT)}',
-					)
+	"""Kiểm tra bắt buộc trong ruleset Protect Main phải trùng tên một job có thật, nếu không PR chờ mãi."""
+	path = ROOT / 'rulesets' / 'protect-main.json'
+	if not path.exists():
+		errors.append('thiếu tệp bắt buộc rulesets/protect-main.json')
+		return
+	try:
+		ruleset = json.loads(path.read_text(encoding='utf-8'))
+	except json.JSONDecodeError:
+		return
+	if ruleset.get('name') != 'Protect Main':
+		error(path, 'ruleset phải tên "Protect Main"')
+	jobs = set()
+	for workflow in sorted((ROOT / '.github' / 'workflows').glob('*.yml')):
+		for job in ((load_yaml(workflow) or {}).get('jobs') or {}).values():
+			jobs.add(job.get('name'))
+	for rule in ruleset.get('rules', []):
+		for check in (rule.get('parameters') or {}).get('required_status_checks', []):
+			if check.get('context') not in jobs:
+				error(
+					path,
+					f'kiểm tra bắt buộc "{check.get("context")}" không trùng tên job nào trong .github/workflows',
+				)
 
 
 def check_space_only(path, text):

@@ -199,7 +199,7 @@ class ValidateTest(unittest.TestCase):
 		)
 
 	def test_ruleset_phai_trung_ten_job(self):
-		self.edit('rulesets/dot-github.json', '"Shell script và workflow"', '"Shell script"')
+		self.edit('rulesets/protect-main.json', '"Shell script và workflow"', '"Shell script"')
 		self.assert_fails('kiểm tra bắt buộc "Shell script" không trùng tên job nào')
 
 	def test_xuong_dong_crlf(self):
@@ -310,5 +310,21 @@ class OrgSetupTest(unittest.TestCase):
 				]
 			),
 		)
-		self.assertEqual(self.module.ruleset_file('.github').name, 'dot-github.json')
-		self.assertEqual(self.module.ruleset_file('app').name, 'default-branch.json')
+
+	def test_ruleset_protect_main_cho_moi_repository(self):
+		def checks(ruleset):
+			return [
+				check['context']
+				for rule in ruleset['rules']
+				if rule['type'] == 'required_status_checks'
+				for check in rule['parameters']['required_status_checks']
+			]
+
+		own = self.module.ruleset_for('.github')
+		other = self.module.ruleset_for('app')
+		self.assertEqual(own['name'], 'Protect Main')
+		self.assertEqual(other['name'], 'Protect Main')
+		self.assertEqual(len(checks(own)), 5)
+		self.assertEqual(
+			sorted(checks(other)), ['Kiểm tra tiêu đề Pull Request', 'Kiểm tra tên branch']
+		)
