@@ -4,7 +4,8 @@ Thumbs.db
 Desktop.ini
 
 # Trình soạn thảo
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 .idea/
 .history/
 *.swp
@@ -25,3 +26,6 @@ node_modules/
 .env
 .env.*
 !.env.example
+
+# Các file lock của package manager (npm, yarn, pnpm) — không commit trừ khi bạn muốn khóa phiên bản
+package-lock.json

@@ -291,9 +291,9 @@ def editorconfig_suffixes(editorconfig, setting):
 	"""Đuôi file của mọi mục .editorconfig dạng [*.x] hoặc [*.{x,y}] có chứa `setting`."""
 	suffixes = set()
 	for header, body in re.findall(
-		r'^\[\*\.\{?([^\]}]+)\}?\]\n((?:[^\[].*\n?)*)', editorconfig, re.M
+		r'^\[\*\.\{?([^\]}]+)\}?\]\n((?:[^\[].*\n?)*)', editorconfig, re.MULTILINE
 	):
-		if re.search(rf'^{re.escape(setting)}$', body, re.M):
+		if re.search(rf'^{re.escape(setting)}$', body, re.MULTILINE):
 			suffixes.update(f'.{name}' for name in header.split(','))
 	return suffixes
 
@@ -319,12 +319,12 @@ def check_suffix_lists():
 	for suffix in sorted(set(SPACE_SUFFIXES) ^ spaces):
 		where = 'thiếu' if suffix in SPACE_SUFFIXES else 'thừa'
 		errors.append(f'.editorconfig: {where} {suffix} trong mục dấu cách so với validate.py')
-	crlf = {m for m in re.findall(r'^\*(\.\S+) .*\beol=crlf\b', attributes, re.M)}
+	crlf = {m for m in re.findall(r'^\*(\.\S+) .*\beol=crlf\b', attributes, re.MULTILINE)}
 	for suffix in sorted(set(CRLF_SUFFIXES) ^ crlf):
 		where = 'thiếu' if suffix in CRLF_SUFFIXES else 'thừa'
 		errors.append(f'.gitattributes: {where} {suffix} text eol=crlf so với validate.py')
 	utf16 = set(
-		re.findall(r'^\*(\.\S+) .*\bworking-tree-encoding=UTF-16LE-BOM\b', attributes, re.M)
+		re.findall(r'^\*(\.\S+) .*\bworking-tree-encoding=UTF-16LE-BOM\b', attributes, re.MULTILINE)
 	)
 	for suffix in sorted(set(UTF16_SUFFIXES) ^ utf16):
 		where = 'thiếu' if suffix in UTF16_SUFFIXES else 'thừa'
@@ -335,7 +335,9 @@ def check_suffix_lists():
 
 def contributing_section(text, heading):
 	"""Nội dung một mục `## …` của CONTRIBUTING.md, tới mục kế tiếp."""
-	match = re.search(rf'^## .*{re.escape(heading)}\n(.*?)(?=^## |\Z)', text, re.M | re.S)
+	match = re.search(
+		rf'^## .*{re.escape(heading)}\n(.*?)(?=^## |\Z)', text, re.MULTILINE | re.DOTALL
+	)
 	return match.group(1) if match else ''
 
 
@@ -350,11 +352,15 @@ def check_conventions():
 	"""Loại commit và tiền tố branch trong CONTRIBUTING.md phải khớp các workflow kiểm tra."""
 	contributing = (ROOT / 'CONTRIBUTING.md').read_text(encoding='utf-8')
 	types = set(
-		re.findall(r'^\| `([a-z]+)` ', contributing_section(contributing, 'QUY ƯỚC COMMIT'), re.M)
+		re.findall(
+			r'^\| `([a-z]+)` ', contributing_section(contributing, 'QUY ƯỚC COMMIT'), re.MULTILINE
+		)
 	)
 	prefixes = set(
 		re.findall(
-			r'^\| `([a-z]+)/` ', contributing_section(contributing, 'QUY ƯỚC ĐẶT TÊN BRANCH'), re.M
+			r'^\| `([a-z]+)/` ',
+			contributing_section(contributing, 'QUY ƯỚC ĐẶT TÊN BRANCH'),
+			re.MULTILINE,
 		)
 	)
 	for name, expected in (('pr-title.yml', types), ('branch-name.yml', prefixes)):

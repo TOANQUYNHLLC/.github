@@ -1,0 +1,28 @@
+# Nhóm nội dung GitHub Release tự tạo (--generate-notes hoặc nút "Generate release notes") theo nhãn.
+# Chỉ áp dụng cho repository này; mẫu cho repository khác: repository-templates/release.yml.
+changelog:
+    exclude:
+        labels:
+            - duplicate
+            - invalid
+            - wontfix
+    categories:
+        - title: 🔐 Bảo mật
+          labels:
+              - security
+        - title: ✨ Tính năng
+          labels:
+              - enhancement
+        - title: 🐛 Sửa lỗi
+          labels:
+              - bug
+        - title: 📝 Tài liệu
+          labels:
+              - documentation
+        - title: 📦 Phụ thuộc
+          labels:
+              - dependencies
+              - github_actions
+        - title: 🔧 Thay đổi khác
+          labels:
+              - '*'

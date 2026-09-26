@@ -1,0 +1,5 @@
+# Gộp các cách viết tên của cùng một người trong git log, git shortlog và git blame.
+# Định dạng: Tên chuẩn <email chuẩn> Tên đã dùng <email đã dùng>
+# Dòng thứ hai trông giống tên chuẩn nhưng dùng Unicode dạng tách dấu (NFD) do macOS tạo.
+Nguyễn Trọng Toàn <108377655+nguyentrongtoandl@users.noreply.github.com> NGUYỄN TRỌNG TOÀN <108377655+nguyentrongtoandl@users.noreply.github.com>
+Nguyễn Trọng Toàn <108377655+nguyentrongtoandl@users.noreply.github.com> Nguyễn Trọng Toàn <108377655+nguyentrongtoandl@users.noreply.github.com>

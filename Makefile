@@ -5,7 +5,7 @@
 .DEFAULT_GOAL := help
 TOOLS := git python3 ruby npx ruff shellcheck actionlint
 
-.PHONY: help check validate test format format-check lint tools links release-notes labels-preview labels-apply hooks
+.PHONY: help check validate test format format-check lint tools links release-notes labels-preview labels-apply hooks org-preview
 
 help: ## Hiển thị danh sách lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-15s %s\n", $$1, $$2}'
@@ -33,12 +33,13 @@ format-check: tools ## Kiểm tra định dạng (Prettier, ruff) giống CI
 
 lint: tools ## ESLint, shellcheck và actionlint
 	npx eslint .
-	shellcheck scripts/*.sh
+	shellcheck scripts/*.sh .devcontainer/*.sh
 	actionlint .github/workflows/*.yml workflow-templates/*.yml
 
-hooks: ## Cài pre-commit hook kiểm tra định dạng file được stage
+hooks: ## Cài pre-commit hook và để git blame bỏ qua commit chỉ đổi định dạng
 	ln -sf ../../scripts/pre-commit.sh .git/hooks/pre-commit
-	@echo "Đã cài .git/hooks/pre-commit"
+	git config blame.ignoreRevsFile .git-blame-ignore-revs
+	@echo "Đã cài .git/hooks/pre-commit và cấu hình blame.ignoreRevsFile"
 
 links: ## Kiểm tra liên kết bên ngoài (website, Facebook…) còn hoạt động
 	python3 scripts/check-external-links.py
@@ -51,3 +52,6 @@ labels-preview: ## Xem trước việc đồng bộ nhãn lên các repository
 
 labels-apply: ## Đồng bộ nhãn lên các repository (cần GitHub CLI và quyền quản trị)
 	scripts/sync-labels.sh --apply
+
+org-preview: ## Xem trước việc áp dụng tệp, cài đặt, ruleset, team lên mọi repository (cần gh)
+	for command in files settings rulesets team; do python3 scripts/org-setup.py $$command; done

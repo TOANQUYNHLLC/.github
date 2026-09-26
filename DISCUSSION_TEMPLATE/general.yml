@@ -1,0 +1,14 @@
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thảo luận chung về dự án. Vui lòng tuân thủ [Quy tắc ứng xử](https://github.com/TOANQUYNHLLC/.github/blob/main/CODE_OF_CONDUCT.md).
+
+              > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào thảo luận.
+
+    - type: textarea
+      id: content
+      attributes:
+          label: 💬 NỘI DUNG
+      validations:
+          required: true

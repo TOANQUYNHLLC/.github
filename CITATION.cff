@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: 'Nếu dùng lại nội dung của repository này, vui lòng trích dẫn như sau.'
+title: 'TOANQUYNHLLC/.github — tệp cộng đồng, biểu mẫu và workflow mẫu dùng chung'
+type: software
+authors:
+    - name: 'CÔNG TY TNHH TOÀN QUỲNH'
+      website: 'https://toanquynh.com'
+      email: toanquynhvn@gmail.com
+repository-code: 'https://github.com/TOANQUYNHLLC/.github'
+url: 'https://toanquynh.com'
+license: MIT
+keywords:
+    - github
+    - community-health-files
+    - workflow-templates

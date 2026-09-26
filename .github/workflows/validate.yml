@@ -71,7 +71,7 @@ jobs:
                   persist-credentials: false
 
             - name: shellcheck
-              run: shellcheck scripts/*.sh
+              run: shellcheck scripts/*.sh .devcontainer/*.sh
 
             - name: actionlint
               run: |
