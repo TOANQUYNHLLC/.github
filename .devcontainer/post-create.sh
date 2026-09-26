@@ -11,5 +11,5 @@ pipx install ruff==0.16.9
 mkdir -p "$HOME/.local/bin"
 bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12 "$HOME/.local/bin"
 
-npm ci --no-audit --no-fund
+npm install --no-audit --no-fund
 make hooks

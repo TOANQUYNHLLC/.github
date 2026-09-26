@@ -27,5 +27,5 @@ node_modules/
 .env.*
 !.env.example
 
-# Các file lock của package manager (npm, yarn, pnpm) — không commit trừ khi bạn muốn khóa phiên bản
+# Lockfile của npm: repository này không commit (.npmrc đặt package-lock=false); package.json đã ghi phiên bản chính xác.
 package-lock.json

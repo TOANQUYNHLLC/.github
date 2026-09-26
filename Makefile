@@ -1,6 +1,6 @@
 # Lệnh tiện ích — chạy giống hệt CI trên máy cục bộ. Gõ `make` để xem danh sách lệnh.
 # Yêu cầu: Node.js (theo .nvmrc), python3, ruby, git, ruff, shellcheck, actionlint
-# (macOS: brew install ruff shellcheck actionlint; sau đó chạy `npm ci`).
+# (macOS: brew install ruff shellcheck actionlint; sau đó chạy `npm install`).
 
 .DEFAULT_GOAL := help
 TOOLS := git python3 ruby npx ruff shellcheck actionlint
@@ -21,7 +21,7 @@ test: ## Chạy test tự động của các script kiểm tra
 tools: ## Kiểm tra đã cài đủ công cụ
 	@missing=""; for tool in $(TOOLS); do command -v $$tool >/dev/null || missing="$$missing $$tool"; done; \
 	if [ -n "$$missing" ]; then echo "Thiếu công cụ:$$missing — macOS: brew install ruff shellcheck actionlint; Node.js cho npx"; exit 1; fi; \
-	[ -d node_modules ] || npm ci --no-audit --no-fund
+	[ -d node_modules ] || npm install --no-audit --no-fund
 
 format: tools ## Định dạng lại toàn bộ bằng Prettier và ruff
 	npx prettier --write .

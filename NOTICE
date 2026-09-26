@@ -4,7 +4,7 @@ Copyright (c) 2026 TOAN QUYNH CO., LTD
 Nội dung repository này được cấp phép theo MIT License — xem tệp LICENSE.
 
 Repository không phân phối mã nguồn của bên thứ ba. Các công cụ phát triển sau chỉ được
-cài khi chạy kiểm tra (npm ci, pip, Homebrew) và thuộc giấy phép riêng của từng dự án:
+cài khi chạy kiểm tra (npm install, pip, Homebrew) và thuộc giấy phép riêng của từng dự án:
 
 - Prettier, ESLint, @eslint/js, eslint-config-prettier, globals — MIT License
 - ruff — MIT License

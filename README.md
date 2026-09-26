@@ -108,7 +108,7 @@ Cài công cụ (macOS):
 
 ```bash
 brew install ruff shellcheck actionlint
-npm ci
+npm install
 ```
 
 **Quy tắc định dạng** (khai báo trong [`.editorconfig`](.editorconfig) và [`.prettierrc.json`](.prettierrc.json), kiểm tra tự động bằng `make check`):
