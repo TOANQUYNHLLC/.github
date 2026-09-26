@@ -6,7 +6,7 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ## 🔥 ƯU TIÊN: GỘP HAI RULESET THÀNH PROTECT MAIN
 
-[`rulesets/dot-github.json`](rulesets/dot-github.json) đã gộp toàn bộ cài đặt của **Protect Main** hiện tại và ruleset mới, tên **Protect Main** ([ADR 0005](docs/adr/0005-merge-protect-main.md)). Người quản trị làm trên [Settings → Rules → Rulesets](https://github.com/TOANQUYNHLLC/.github/settings/rules) theo thứ tự để nhánh chính luôn được bảo vệ:
+[`rulesets/dot-github.json`](rulesets/dot-github.json) đã gộp toàn bộ cài đặt của **Protect Main** hiện tại và ruleset mới, tên **Protect Main** ([ADR 0005](docs/adr/0005-merge-protect-main.md)). Người quản trị làm trong **Settings → Rules → Rulesets** của repository `.github` (trang chỉ người quản trị mở được) theo thứ tự để nhánh chính luôn được bảo vệ:
 
 1. Mở **Protect Main** hiện tại → đổi tên thành `Protect Main (cũ)` → **Save changes**.
 2. **New ruleset → Import a ruleset** → chọn `rulesets/dot-github.json` → **Create**. Ruleset mới tên **Protect Main**.
