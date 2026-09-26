@@ -23,7 +23,7 @@ Repository `.github` đặc biệt của tổ chức: tệp cộng đồng (`CON
 ## 📐 QUY ƯỚC BẮT BUỘC
 
 - **Định dạng:** theo `.editorconfig` — UTF-8, LF, thụt lề bằng **tab** độ rộng 4 (kể cả Python, JSON, shell, `Makefile`); YAML và Markdown dùng 4 dấu cách. Không tự đổi sang dấu cách hay độ rộng 2.
-- **Ngôn ngữ:** nội dung tài liệu và thông báo viết bằng tiếng Việt; tiêu đề Markdown viết HOA (được `scripts/validate.py` kiểm tra).
+- **Ngôn ngữ:** nội dung tài liệu và thông báo viết bằng tiếng Việt, chữ dạng dựng sẵn (NFC); tiêu đề Markdown viết HOA (cả hai được `scripts/validate.py` kiểm tra).
 - **Branch:** `<tiền tố>/<mô_tả>` bằng tiếng Anh, nối từ bằng `_` (ví dụ `docs/update_readme`). Không commit thẳng lên `main`.
 - **Commit và tiêu đề Pull Request:** `<loại>(<phạm vi>): <mô tả>` với loại trong bảng của `CONTRIBUTING.md`.
 - **Workflow:** mọi action ghim theo commit SHA đầy đủ kèm chú thích phiên bản; khai báo `permissions` tối thiểu; job nào cũng có `timeout-minutes`. Không đoán SHA — lấy bằng `git ls-remote`.

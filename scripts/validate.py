@@ -7,6 +7,7 @@ import json
 import re
 import subprocess
 import sys
+import unicodedata
 import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -135,6 +136,10 @@ def check_text(path):
 		return None
 	if text and not text.endswith('\n'):
 		error(path, 'thiếu dòng trống cuối file')
+	# Tiếng Việt gõ trên macOS có thể ở dạng tách dấu (NFD): trông giống nhưng khác byte, làm hỏng tìm kiếm.
+	# .mailmap cố ý chứa tên dạng NFD để ánh xạ về tên chuẩn.
+	if name != '.mailmap' and not unicodedata.is_normalized('NFC', text):
+		error(path, 'có chữ Unicode dạng tách dấu (NFD) — chuyển sang dạng dựng sẵn (NFC)')
 	if name.endswith(CRLF_SUFFIXES):
 		bare = text.replace('\r\n', '')
 		if '\n' in bare or '\r' in bare:
