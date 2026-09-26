@@ -2,13 +2,13 @@
 # Dòng khớp sau cùng được ưu tiên. Người sở hữu phải có quyền ghi vào repository.
 # Tài liệu: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# Mặc định: người quản trị duyệt mọi thay đổi.
-* @nguyentrongtoandl @trongtoandl81
+# Mặc định: team người quản trị duyệt mọi thay đổi.
+* @TOANQUYNHLLC/maintainers
 
 # Workflow, cấu hình CI/CD và quyền sở hữu mã: luôn cần người quản trị duyệt.
-/.github/ @nguyentrongtoandl @trongtoandl81
+/.github/ @TOANQUYNHLLC/maintainers
 
 # Ví dụ phân công theo thư mục khi tổ chức đã có team trên GitHub:
 # /frontend/ @TOANQUYNHLLC/frontend
 # /backend/ @TOANQUYNHLLC/backend
-# /docs/ @TOANQUYNHLLC/maintainers
+# /docs/ @TOANQUYNHLLC/developer

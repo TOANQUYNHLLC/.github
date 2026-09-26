@@ -12,7 +12,7 @@ Lệnh (nên chạy theo thứ tự):
 		--discussions bật thêm GitHub Discussions.
 	rulesets: tạo hoặc cập nhật ruleset bảo vệ nhánh chính (rulesets/*.json). Bỏ qua repository
 		chưa có workflow kiểm tra bắt buộc — hợp nhất Pull Request của lệnh files trước.
-	team: tạo team maintainers, thêm người quản trị và cấp quyền admin mọi repository.
+	team: tạo team maintainers, thêm người quản trị và cấp quyền maintain mọi repository.
 """
 
 import argparse
@@ -262,7 +262,7 @@ def cmd_team(repos, apply):
 	print(f'== team {ORG}/{TEAM}: {"đã có" if exists else "chưa có"}')
 	if not apply:
 		print(
-			f'   (xem trước) {"" if exists else "tạo team, "}thêm {", ".join(MAINTAINERS)}, cấp admin {len(repos)} repository'
+			f'   (xem trước) {"" if exists else "tạo team, "}thêm {", ".join(MAINTAINERS)}, cấp maintain {len(repos)} repository'
 		)
 		return
 	if not exists:
@@ -292,9 +292,9 @@ def cmd_team(repos, apply):
 			'PUT',
 			f'orgs/{ORG}/teams/{TEAM}/repos/{ORG}/{repo}',
 			'-f',
-			'permission=admin',
+			'permission=maintain',
 		)
-		print(f'   ✔ admin {ORG}/{repo}')
+		print(f'   ✔ maintain {ORG}/{repo}')
 	print(f'   Bước tiếp: đổi CODEOWNERS và MAINTAINERS.md sang @{ORG}/{TEAM}.')
 
 

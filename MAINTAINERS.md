@@ -1,6 +1,6 @@
 # 🧑‍💼 NGƯỜI QUẢN TRỊ
 
-Danh sách người quản trị các repository của **CÔNG TY TNHH TOÀN QUỲNH** trên GitHub. Vai trò và quy trình thay đổi: xem [`GOVERNANCE.md`](GOVERNANCE.md).
+Danh sách người quản trị các repository của **CÔNG TY TNHH TOÀN QUỲNH** trên GitHub. Người quản trị thuộc team [`@TOANQUYNHLLC/maintainers`](https://github.com/orgs/TOANQUYNHLLC/teams/maintainers) — team được ghi trong `CODEOWNERS` nên mọi thành viên đều duyệt được Pull Request. Vai trò và quy trình thay đổi: xem [`GOVERNANCE.md`](GOVERNANCE.md).
 
 ---
 

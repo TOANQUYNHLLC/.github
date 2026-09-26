@@ -21,12 +21,12 @@ Các việc cấp quyền hoặc thay đổi bảo vệ nhánh do người quả
 
 - [ ] **Settings → Rules → Rulesets → Protect Main**: chỉ cho phép Squash and merge; thêm 5 kiểm tra bắt buộc trong [`dot-github.json`](rulesets/dot-github.json) (tên phải trùng tên job); giữ `nguyentrongtoandl` và `trongtoandl81` trong **Bypass list**.
 - [x] **Settings → SSH and GPG keys**: cả `nguyentrongtoandl` và `trongtoandl81` đã đăng ký khóa ký commit ED25519 (2026-09-26).
-- [ ] Tạo team **maintainers** (tổ chức đang có các team `developer`, `marketing`, `seo`, `ui-ux`): `gh auth refresh -s admin:org` rồi `python3 scripts/org-setup.py team --apply`, hoặc **Organization → Teams → New team**.
+- [x] Team **maintainers** gồm `nguyentrongtoandl`, `trongtoandl81`, quyền **Maintain** trên `.github` (2026-09-26).
 - [x] **Settings → General → Features**: Discussions đã bật cho `.github` (2026-09-26).
 
 ---
 
 ## 💡 CÂN NHẮC
 
-- [ ] Tạo team **maintainers** (`python3 scripts/org-setup.py team --apply`), rồi chuyển `CODEOWNERS`, [`MAINTAINERS.md`](MAINTAINERS.md) sang `@TOANQUYNHLLC/maintainers`.
+- [x] Chuyển `CODEOWNERS` và [`MAINTAINERS.md`](MAINTAINERS.md) sang team `@TOANQUYNHLLC/maintainers` (2026-09-26).
 - [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`DISCUSSION_TEMPLATE/`](DISCUSSION_TEMPLATE/).
