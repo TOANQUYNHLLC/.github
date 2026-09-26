@@ -24,7 +24,7 @@ Tài liệu này mô tả ai ra quyết định và cách thay đổi được c
 
 ## 🔀 ĐÁNH GIÁ VÀ HỢP NHẤT
 
-- Nhánh chính được bảo vệ bằng ruleset trong [`rulesets/`](rulesets/): bắt buộc Pull Request, phê duyệt, kiểm tra tự động, chỉ **Squash and merge**, commit có chữ ký.
+- Nhánh chính được bảo vệ bằng ruleset trong [`rulesets/`](rulesets/): bắt buộc Pull Request, phê duyệt, kiểm tra tự động, cho phép Merge, Squash và Rebase (ưu tiên Squash), commit có chữ ký.
 - Người quản trị được bỏ qua yêu cầu phê duyệt khi không có người quản trị khác để duyệt. Với repository `.github`, hai tài khoản quản trị nằm trong danh sách bỏ qua của ruleset (xem [ADR 0005](docs/adr/0005-merge-protect-main.md)) nhưng chỉ dùng khi thật cần: thay đổi thông thường vẫn qua Pull Request và kiểm tra tự động, không đẩy thẳng lên nhánh chính.
 - Sửa lỗi khẩn cấp theo quy trình **Sửa lỗi khẩn cấp** trong [`CONTRIBUTING.md`](CONTRIBUTING.md).
 

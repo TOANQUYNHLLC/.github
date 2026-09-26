@@ -182,6 +182,7 @@ Chỉ dùng `--force-with-lease` trên branch của chính mình, **không** for
 ## 🔀 HỢP NHẤT
 
 - Ưu tiên **Squash and merge**: toàn bộ Pull Request thành một commit trên `main`, tiêu đề commit là tiêu đề Pull Request.
+- Dùng **Merge** hoặc **Rebase** khi cần giữ các commit riêng của Pull Request; khi đó mọi commit phải theo quy ước commit.
 - Chỉ hợp nhất khi đã được phê duyệt, mọi kiểm tra tự động thành công và mọi góp ý đã được giải quyết.
 - Xóa branch sau khi hợp nhất.
 
