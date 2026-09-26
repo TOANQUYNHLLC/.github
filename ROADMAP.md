@@ -4,51 +4,50 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ---
 
-## 🔥 ƯU TIÊN: CẬP NHẬT RULESET PROTECT MAIN
+## 🔥 ƯU TIÊN: GỘP HAI RULESET THÀNH PROTECT MAIN
 
-Ruleset **Protect Main** của `.github` hiện vẫn cho phép cả 3 cách hợp nhất và **chưa bắt buộc kiểm tra tự động nào** — Pull Request có thể được hợp nhất dù CI thất bại. Việc thay đổi bảo vệ nhánh do người quản trị làm trên web:
+[`rulesets/dot-github.json`](rulesets/dot-github.json) đã gộp toàn bộ cài đặt của **Protect Main** hiện tại và ruleset mới, tên **Protect Main** ([ADR 0005](docs/adr/0005-merge-protect-main.md)). Người quản trị làm trong **Settings → Rules → Rulesets** của repository `.github` (trang chỉ người quản trị mở được) theo thứ tự để nhánh chính luôn được bảo vệ:
 
-1. Mở [Settings → Rules → Rulesets](https://github.com/TOANQUYNHLLC/.github/settings/rules) → **Protect Main**.
-2. Mục **Require a pull request before merging** → **Allowed merge methods**: chỉ giữ **Squash**.
-3. Mục **Require status checks to pass** → **Add checks**, thêm đủ 5 kiểm tra (gõ đúng tên job; chọn nguồn **GitHub Actions**):
-    - `Liên kết, biểu mẫu, nhãn, cấu hình định dạng và mẫu email`
-    - `Định dạng (Prettier, ruff) và ESLint`
-    - `Shell script và workflow`
-    - `Kiểm tra tiêu đề Pull Request`
-    - `Kiểm tra tên branch`
-4. Giữ **Require branches to be up to date before merging**; giữ `nguyentrongtoandl` và `trongtoandl81` trong **Bypass list**.
-5. Chọn **Save changes**.
-6. Kiểm tra lại (kết quả phải liệt kê `squash` và 5 kiểm tra trên):
+1. Mở **Protect Main** hiện tại → đổi tên thành `Protect Main (cũ)` → **Save changes**.
+2. **New ruleset → Import a ruleset** → chọn `rulesets/dot-github.json` → **Create**. Ruleset mới tên **Protect Main**.
+3. Xóa ruleset `Protect Main (cũ)` và ruleset **Bảo vệ nhánh chính — repository .github**.
+4. Kiểm tra chỉ còn một ruleset và đủ quy tắc:
 
     ```sh
-    id=$(gh api repos/TOANQUYNHLLC/.github/rulesets --jq '.[] | select(.name=="Protect Main") | .id')
-    gh api repos/TOANQUYNHLLC/.github/rulesets/$id --jq '[.rules[] | select(.type=="pull_request" or .type=="required_status_checks") | .parameters | .allowed_merge_methods // [.required_status_checks[].context]]'
+    gh api repos/TOANQUYNHLLC/.github/rulesets --jq '.[].name'
+    gh api repos/TOANQUYNHLLC/.github/rules/branches/main --jq '[.[].type] | unique'
     ```
 
----
-
-## 🚧 ĐANG THỰC HIỆN
-
-Công cụ đã sẵn sàng trong [`scripts/org-setup.py`](scripts/org-setup.py) — cần người quản trị chạy với GitHub CLI đã đăng nhập. Xem trước toàn bộ: `make org-preview`. Thứ tự áp dụng:
-
-- [ ] Chép tệp dùng chung (workflow kiểm tra tiêu đề Pull Request và tên branch, `CODEOWNERS`, `dependabot.yml`, `release.yml`) vào mọi repository qua Pull Request: `python3 scripts/org-setup.py files --apply`, rồi đánh giá và hợp nhất từng Pull Request. Hiện tổ chức chỉ có repository `.github` (đã có sẵn các tệp này) — chạy lệnh khi tạo repository mới.
-- [x] Chỉ cho phép **Squash and merge**, tự xóa branch sau khi hợp nhất: `python3 scripts/org-setup.py settings --apply` — đã áp dụng cho `.github` (2026-09-26).
-- [ ] Ruleset cho repository khác: `python3 scripts/org-setup.py rulesets --apply` (sau khi đã hợp nhất Pull Request của lệnh `files`).
-- [x] Đồng bộ bộ nhãn chuẩn: `make labels-apply` — đã áp dụng cho `.github` (2026-09-26).
+    Kết quả: chỉ `Protect Main`; 9 quy tắc `code_quality`, `creation`, `deletion`, `non_fast_forward`, `pull_request`, `required_linear_history`, `required_signatures`, `required_status_checks`, `update`.
 
 ---
 
-## 🌐 KIỂM TRA TRÊN WEB
+## ✅ ĐÃ HOÀN THÀNH GẦN ĐÂY
 
-Các việc cấp quyền hoặc thay đổi bảo vệ nhánh do người quản trị tự làm trên GitHub:
+- [x] Ruleset **Bảo vệ nhánh chính — repository .github** (import từ [`dot-github.json`](rulesets/dot-github.json)) đang áp dụng cho `main` cùng ruleset **Protect Main**: chỉ Squash and merge, bắt buộc 5 kiểm tra tự động, phê duyệt của `CODEOWNERS`, commit có chữ ký, lịch sử tuyến tính (2026-09-26). Hai ruleset cùng áp dụng — quy tắc chặt hơn được dùng.
+- [x] Team **maintainers** (`nguyentrongtoandl`, `trongtoandl81`, quyền **Maintain**) là chủ sở hữu mã trong `CODEOWNERS` (2026-09-26).
+- [x] Chỉ cho phép **Squash and merge**, tự xóa branch sau khi hợp nhất; đồng bộ 16 nhãn chuẩn; Discussions đã bật; cả hai tài khoản đã đăng ký khóa ký commit (2026-09-26).
 
-- [x] **Settings → SSH and GPG keys**: cả `nguyentrongtoandl` và `trongtoandl81` đã đăng ký khóa ký commit ED25519 (2026-09-26).
-- [x] Team **maintainers** gồm `nguyentrongtoandl`, `trongtoandl81`, quyền **Maintain** trên `.github` (2026-09-26).
-- [x] **Settings → General → Features**: Discussions đã bật cho `.github` (2026-09-26).
+Kiểm tra lại các quy tắc đang áp dụng cho `main`:
+
+```sh
+gh api repos/TOANQUYNHLLC/.github/rules/branches/main --jq '[.[].type] | unique'
+```
+
+---
+
+## 🚧 KHI TẠO REPOSITORY MỚI
+
+Hiện tổ chức chỉ có repository `.github`. Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.py`](scripts/org-setup.py) (GitHub CLI đã đăng nhập; xem trước bằng `make org-preview`) theo thứ tự:
+
+- [ ] `python3 scripts/org-setup.py files --apply --repo <tên>` — Pull Request thêm workflow kiểm tra tiêu đề và tên branch, `CODEOWNERS`, `dependabot.yml`, `release.yml`; đánh giá rồi hợp nhất.
+- [ ] `python3 scripts/org-setup.py settings --apply --repo <tên>` — chỉ Squash and merge, tự xóa branch.
+- [ ] `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — ruleset [`default-branch.json`](rulesets/default-branch.json); kiểm tra **Bypass list** hiển thị **Repository admin**.
+- [ ] `scripts/sync-labels.sh --apply <tên>` — bộ nhãn chuẩn.
+- [ ] Cấp quyền cho team **maintainers** trên repository mới (**Maintain** trở lên) để `CODEOWNERS` có hiệu lực.
 
 ---
 
 ## 💡 CÂN NHẮC
 
-- [x] Chuyển `CODEOWNERS` và [`MAINTAINERS.md`](MAINTAINERS.md) sang team `@TOANQUYNHLLC/maintainers` (2026-09-26).
 - [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`DISCUSSION_TEMPLATE/`](DISCUSSION_TEMPLATE/).

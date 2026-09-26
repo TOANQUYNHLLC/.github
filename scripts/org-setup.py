@@ -252,8 +252,9 @@ def cmd_rulesets(repos, apply):
 			)
 		else:
 			gh('api', '-X', 'POST', f'repos/{ORG}/{repo}/rulesets', '--input', str(path))
+		expected = 'hai tài khoản quản trị' if repo == '.github' else 'Repository admin'
 		print(
-			f'   ✔ đã {action} ruleset "{ruleset["name"]}" — kiểm tra Bypass list hiển thị Repository admin'
+			f'   ✔ đã {action} ruleset "{ruleset["name"]}" — kiểm tra Bypass list hiển thị {expected}'
 		)
 
 
