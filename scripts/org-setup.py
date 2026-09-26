@@ -10,7 +10,8 @@ Lệnh (nên chạy theo thứ tự):
 		release.yml. Không ghi đè tệp đã có.
 	settings: chỉ cho phép Squash and merge, tự xóa branch sau khi hợp nhất;
 		--discussions bật thêm GitHub Discussions.
-	rulesets: tạo hoặc cập nhật ruleset bảo vệ nhánh chính (rulesets/*.json). Bỏ qua repository
+	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json); repository khác
+		chỉ giữ kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
 		chưa có workflow kiểm tra bắt buộc — hợp nhất Pull Request của lệnh files trước.
 	team: tạo team maintainers, thêm người quản trị và cấp quyền maintain mọi repository.
 """
@@ -28,7 +29,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SYNC_BRANCH = 'chore/sync_org_files'
 TEAM = 'maintainers'
 MAINTAINERS = ('nguyentrongtoandl', 'trongtoandl81')
-# Workflow mà ruleset default-branch.json bắt buộc phải có kết quả.
+RULESET_FILE = ROOT / 'rulesets' / 'protect-main.json'
+# Workflow mà lệnh files thêm vào repository; ruleset của repository khác chỉ bắt buộc job của chúng.
 REQUIRED_WORKFLOWS = ('.github/workflows/pr-title.yml', '.github/workflows/branch-name.yml')
 # Ecosystem Dependabot và tệp khai báo phụ thuộc ở thư mục gốc cho biết repository dùng nó.
 ECOSYSTEM_MANIFESTS = {
@@ -47,8 +49,8 @@ MERGE_SETTINGS = {
 }
 
 
-def gh(*args):
-	result = subprocess.run(['gh', *args], capture_output=True, text=True, check=False)
+def gh(*args, stdin=None):
+	result = subprocess.run(['gh', *args], input=stdin, capture_output=True, text=True, check=False)
 	if result.returncode != 0:
 		raise RuntimeError(result.stderr.strip() or f'gh {" ".join(args)} thất bại')
 	return result.stdout
@@ -104,8 +106,27 @@ def planned_files(root_names):
 	}
 
 
-def ruleset_file(repo):
-	return ROOT / 'rulesets' / ('dot-github.json' if repo == '.github' else 'default-branch.json')
+def template_jobs():
+	"""Tên job trong các workflow mà lệnh files thêm vào repository khác."""
+	names = set()
+	for workflow in REQUIRED_WORKFLOWS:
+		text = (ROOT / 'workflow-templates' / Path(workflow).name).read_text(encoding='utf-8')
+		names.update(re.findall(r'^ {8}name: (.+)$', text, re.MULTILINE))
+	return names
+
+
+def ruleset_for(repo):
+	"""Ruleset Protect Main cho repository: repository khác chỉ giữ kiểm tra bắt buộc có job tương ứng."""
+	ruleset = json.loads(RULESET_FILE.read_text(encoding='utf-8'))
+	if repo != '.github':
+		jobs = template_jobs()
+		for rule in ruleset['rules']:
+			if rule['type'] == 'required_status_checks':
+				checks = rule['parameters']['required_status_checks']
+				rule['parameters']['required_status_checks'] = [
+					check for check in checks if check['context'] in jobs
+				]
+	return ruleset
 
 
 def list_repos(only):
@@ -217,8 +238,7 @@ def cmd_settings(repos, apply, discussions):
 def cmd_rulesets(repos, apply):
 	for repo in repos:
 		print(f'== {ORG}/{repo}')
-		path = ruleset_file(repo)
-		ruleset = json.loads(path.read_text(encoding='utf-8'))
+		ruleset = ruleset_for(repo)
 		if repo != '.github':
 			base = default_branch(repo)
 			absent = [
@@ -235,27 +255,32 @@ def cmd_rulesets(repos, apply):
 			item['name']: item['id']
 			for item in gh_json('api', f'repos/{ORG}/{repo}/rulesets') or []
 		}
-		action = 'cập nhật' if ruleset['name'] in existing else 'tạo'
+		name = ruleset['name']
+		action = 'cập nhật' if name in existing else 'tạo'
+		others = sorted(set(existing) - {name})
 		if not apply:
-			print(
-				f'   (xem trước) {action} ruleset "{ruleset["name"]}" từ {path.relative_to(ROOT)}'
-			)
+			print(f'   (xem trước) {action} ruleset "{name}" từ {RULESET_FILE.relative_to(ROOT)}')
+			if others:
+				print(
+					f'   ⚠ còn ruleset khác: {", ".join(others)} — xóa trên web để chỉ còn "{name}"'
+				)
 			continue
-		if ruleset['name'] in existing:
+		body = json.dumps(ruleset, ensure_ascii=False)
+		if name in existing:
 			gh(
 				'api',
 				'-X',
 				'PUT',
-				f'repos/{ORG}/{repo}/rulesets/{existing[ruleset["name"]]}',
+				f'repos/{ORG}/{repo}/rulesets/{existing[name]}',
 				'--input',
-				str(path),
+				'-',
+				stdin=body,
 			)
 		else:
-			gh('api', '-X', 'POST', f'repos/{ORG}/{repo}/rulesets', '--input', str(path))
-		expected = 'hai tài khoản quản trị' if repo == '.github' else 'Repository admin'
-		print(
-			f'   ✔ đã {action} ruleset "{ruleset["name"]}" — kiểm tra Bypass list hiển thị {expected}'
-		)
+			gh('api', '-X', 'POST', f'repos/{ORG}/{repo}/rulesets', '--input', '-', stdin=body)
+		print(f'   ✔ đã {action} ruleset "{name}"')
+		if others:
+			print(f'   ⚠ còn ruleset khác: {", ".join(others)} — xóa trên web để chỉ còn "{name}"')
 
 
 def cmd_team(repos, apply):

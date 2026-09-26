@@ -51,16 +51,16 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - Quy trình phát hành: workflow `release.yml` tự tạo GitHub Release khi gắn tag, nội dung lấy từ `CHANGELOG.md` qua `scripts/release-notes.py`.
 - Workflow `pr-title.yml` bắt buộc tiêu đề Pull Request theo quy ước commit.
 - Workflow `links.yml` và `scripts/check-external-links.py` kiểm tra liên kết bên ngoài hằng tuần.
-- `scripts/test_validate.py` — 39 test tự động cho các script kiểm tra.
+- `scripts/test_validate.py` — 40 test tự động cho các script kiểm tra.
 - `.well-known/security.txt` (RFC 9116) với email chung của công ty.
 - `scripts/validate.py` khoá email chung `toanquynhvn@gmail.com`, kiểm tra hạn `security.txt` và cấu trúc `CHANGELOG.md`.
 - `make help` (mặc định khi gõ `make`), `make test`, `make links`, `make release-notes`; `make lint` báo rõ công cụ còn thiếu.
 
 ### ♻️ THAY ĐỔI
 
-- Sửa liên kết trang Settings trong `ROADMAP.md` (trả về 404 với người chưa đăng nhập, làm hỏng kiểm tra liên kết hằng tuần); `rulesets/README.md` ghi đủ quy tắc riêng của `dot-github.json`; `org-setup.py` nhắc đúng danh sách bỏ qua theo repository.
-- `rulesets/dot-github.json` gộp toàn bộ cài đặt của ruleset Protect Main trên web (chặn tạo/cập nhật nhánh chính, phê duyệt lại sau lần đẩy cuối, code quality, danh sách bỏ qua) với ruleset mẫu, đặt tên **Protect Main**; thêm ADR 0005, cập nhật `GOVERNANCE.md`, `rulesets/README.md`, `ROADMAP.md`.
-- `ROADMAP.md` cập nhật sau khi import ruleset `dot-github.json`: các việc cấu hình `.github` đã hoàn thành, còn lại quy trình cho repository mới và việc gộp hai ruleset.
+- Sửa liên kết trang Settings trong `ROADMAP.md` (trả về 404 với người chưa đăng nhập, làm hỏng kiểm tra liên kết hằng tuần); `rulesets/README.md` ghi đủ quy tắc của ruleset; `org-setup.py` nhắc đúng danh sách bỏ qua theo repository.
+- `rulesets/protect-main.json` thay cho hai tệp `dot-github.json` và `default-branch.json`: một ruleset **Protect Main** duy nhất cho mọi repository (`org-setup.py` chỉ giữ kiểm tra bắt buộc mà repository có job); gộp toàn bộ cài đặt của ruleset Protect Main trên web (chặn tạo/cập nhật nhánh chính, phê duyệt lại sau lần đẩy cuối, code quality, danh sách bỏ qua) với ruleset mẫu, đặt tên **Protect Main**; thêm ADR 0005, cập nhật `GOVERNANCE.md`, `rulesets/README.md`, `ROADMAP.md`.
+- `ROADMAP.md` cập nhật sau khi import ruleset mẫu: các việc cấu hình `.github` đã hoàn thành, còn lại quy trình cho repository mới và việc gộp hai ruleset.
 - `ROADMAP.md` đưa việc cập nhật ruleset **Protect Main** lên ưu tiên, kèm hướng dẫn từng bước trên web và lệnh kiểm tra.
 - `CODEOWNERS`, mẫu `CODEOWNERS` và `MAINTAINERS.md` chuyển sang team `@TOANQUYNHLLC/maintainers`; `scripts/org-setup.py team` cấp quyền maintain thay cho admin.
 - Quy ước đặt tên branch: tên viết bằng tiếng Anh, các từ nối bằng dấu gạch dưới (`feature/appointment_booking`).
