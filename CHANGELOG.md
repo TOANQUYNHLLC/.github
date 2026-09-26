@@ -34,7 +34,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - Prettier (`.prettierrc.json`, `.prettierignore`) là formatter chính: tab độ rộng 4; Markdown và YAML dùng 4 dấu cách. CI chạy `prettier --check .`.
 - ESLint (`eslint.config.js`) với `@eslint/js` và `eslint-config-prettier`, quy tắc chất lượng mã riêng của dự án (`eqeqeq`, `curly`, `no-var`, `prefer-const`…); không có quy tắc định dạng.
 - ruff (`ruff.toml`) định dạng Python bằng tab độ rộng 4, xuống dòng LF; CI chạy `ruff format --check`.
-- `package.json`, `package-lock.json`, `.nvmrc` — công cụ Node.js cố định phiên bản.
+- `package.json`, `.nvmrc` — công cụ Node.js cố định phiên bản.
 - `scripts/validate.py` chặn mọi thay đổi `.prettierrc.json`, `.editorconfig`, `ruff.toml` trái quy tắc (vd. độ rộng 2 ngoài nhóm ngôn ngữ bắt buộc), kiểm tra thụt lề, kiểu xuống dòng, mã hoá và BOM theo từng loại file, và đối chiếu danh sách đuôi file với `.editorconfig`, `.gitattributes`.
 - `SECURITY.md` — chính sách bảo mật áp dụng cho mọi repository của tổ chức: thông tin cần cung cấp, cách gửi báo cáo kèm liên kết soạn email sẵn mẫu, cam kết xử lý và phiên bản được hỗ trợ.
 - `CONTRIBUTING.md` — hướng dẫn đóng góp: quy trình, quy ước đặt tên branch, quy ước commit và yêu cầu đối với Pull Request.
@@ -60,6 +60,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ♻️ THAY ĐỔI
 
+- Không commit `package-lock.json`: gỡ khỏi Git, `.npmrc` đặt `package-lock=false`; CI, `Makefile` và Dev Container cài bằng `npm install`. `package.json` vẫn ghi phiên bản chính xác.
 - Ruleset **Protect Main** và cài đặt repository cho phép Merge, Squash và Rebase; bỏ **Require linear history** vì chặn merge commit (ADR 0006).
 - `ROADMAP.md`: repository `.github` chưa có ruleset — ưu tiên tạo **Protect Main** từ `rulesets/protect-main.json`.
 - Sửa liên kết trang Settings trong `ROADMAP.md` (trả về 404 với người chưa đăng nhập, làm hỏng kiểm tra liên kết hằng tuần); `rulesets/README.md` ghi đủ quy tắc của ruleset; `org-setup.py` nhắc đúng danh sách bỏ qua theo repository.
