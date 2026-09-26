@@ -1,4 +1,4 @@
-name: Kiểm Tra Liên Kết
+name: Kiểm tra liên kết
 
 on:
     schedule:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
     links:
-        name: Kiểm Tra Liên Kết
+        name: Kiểm tra liên kết
         runs-on: ubuntu-latest
         timeout-minutes: 10
         steps:

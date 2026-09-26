@@ -10,6 +10,8 @@ Nếu phát hiện lỗ hổng hoặc vấn đề liên quan đến bảo mật,
 
 > ⚠️ Không gửi mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm qua bất kỳ kênh công khai nào.
 
+---
+
 ## 📝 THÔNG TIN CẦN CUNG CẤP
 
 Để hỗ trợ việc xác minh và xử lý, vui lòng cung cấp:
@@ -21,6 +23,8 @@ Nếu phát hiện lỗ hổng hoặc vấn đề liên quan đến bảo mật,
 5. Phiên bản hoặc môi trường phát hiện lỗi.
 6. Hình ảnh, video, nhật ký hoặc tài liệu minh họa nếu có.
 7. Thông tin liên hệ của người báo cáo.
+
+---
 
 ## 📧 CÁCH GỬI BÁO CÁO
 
@@ -55,6 +59,8 @@ Trân trọng,
 
 </details>
 
+---
+
 ## 🤝 CAM KẾT XỬ LÝ
 
 CÔNG TY TNHH TOÀN QUỲNH sẽ:
@@ -64,6 +70,8 @@ CÔNG TY TNHH TOÀN QUỲNH sẽ:
 - Giữ bí mật thông tin người báo cáo khi được yêu cầu.
 - Phối hợp xác minh và khắc phục vấn đề.
 - Thông báo kết quả xử lý khi có thể.
+
+---
 
 ## 🛡️ PHIÊN BẢN ĐƯỢC HỖ TRỢ
 

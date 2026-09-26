@@ -1,7 +1,8 @@
 # NNNN. TIÊU ĐỀ QUYẾT ĐỊNH
 
-- **Trạng thái:** Đề xuất | Chấp nhận | Bị thay thế bởi NNNN
+- **Trạng thái:** Đề xuất | Chấp nhận | Bị thay thế bởi NNNN | Bị thay thế một phần bởi NNNN (phần bị thay thế)
 - **Ngày:** YYYY-MM-DD
+- **Điều chỉnh:** NNNN — phần quyết định cũ mà ADR này thay đổi (xóa dòng nếu không có)
 
 ## 📌 BỐI CẢNH
 

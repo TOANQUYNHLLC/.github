@@ -118,7 +118,7 @@ body:
                 required: true
               - label: Tôi đã cung cấp đủ thông tin để tái hiện lỗi.
                 required: true
-              - label: Đây không phải vấn đề bảo mật (vấn đề bảo mật gửi riêng qua email).
+              - label: Đây không phải vấn đề bảo mật (vấn đề bảo mật báo cáo riêng theo chính sách bảo mật).
                 required: true
               - label: Tôi không đưa mật khẩu, khóa API, token truy cập hoặc thông tin bảo mật vào Issue.
                 required: true

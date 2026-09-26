@@ -11,7 +11,7 @@ permissions:
 
 jobs:
     docs:
-        name: Liên kết nội bộ và định dạng Markdown
+        name: Liên kết nội bộ trong Markdown
         runs-on: ubuntu-latest
         timeout-minutes: 5
         steps:

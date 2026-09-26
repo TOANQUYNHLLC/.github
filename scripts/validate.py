@@ -7,6 +7,7 @@ import json
 import re
 import subprocess
 import sys
+import tomllib
 import unicodedata
 import urllib.parse
 from datetime import datetime, timezone
@@ -14,6 +15,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FORM_TYPES = {'markdown', 'textarea', 'input', 'dropdown', 'checkboxes'}
+# Biểu mẫu Discussion chỉ nhận các khóa này ở cấp cao nhất (không có name, description như Issue).
+DISCUSSION_FORM_KEYS = {'title', 'labels', 'body'}
 # Email liên hệ chung của công ty — mọi tài liệu phải dùng đúng địa chỉ này.
 COMPANY_EMAIL = 'toanquynhvn@gmail.com'
 errors = []
@@ -111,6 +114,45 @@ UTF8_BOM_SUFFIXES = (
 UTF16_SUFFIXES = ('.reg', '.inf')
 # Khoảng trắng cuối dòng là dữ liệu: ô CSV, email format=flowed (RFC 3676).
 KEEP_TRAILING_SPACE_SUFFIXES = ('.csv', '.eml', '.mht', '.mhtml')
+# Cấu hình định dạng chuẩn của tổ chức (quy tắc chung): đổi giá trị nào là CI thất bại.
+PRETTIER_STANDARD = {
+	'useTabs': True,
+	'tabWidth': 4,
+	'semi': True,
+	'singleQuote': True,
+	'trailingComma': 'all',
+	'printWidth': 100,
+	'endOfLine': 'lf',
+	'overrides': [{'files': ['*.md', '*.yml', '*.yaml'], 'options': {'useTabs': False}}],
+}
+RUFF_STANDARD = {
+	'line-length': 100,
+	'indent-width': 4,
+	'format': {'indent-style': 'tab', 'line-ending': 'lf', 'quote-style': 'single'},
+}
+EDITORCONFIG_STANDARD = (
+	'root = true',
+	'charset = utf-8',
+	'end_of_line = lf',
+	'insert_final_newline = true',
+	'trim_trailing_whitespace = true',
+	'indent_style = tab',
+	'indent_size = 4',
+	'tab_width = 4',
+)
+# Tệp nhị phân (khai báo binary trong .gitattributes): không kiểm tra như văn bản.
+BINARY_SUFFIXES = (
+	'.png',
+	'.jpg',
+	'.jpeg',
+	'.gif',
+	'.ico',
+	'.pdf',
+	'.webp',
+	'.woff',
+	'.woff2',
+	'.zip',
+)
 
 
 def check_text(path):
@@ -165,6 +207,16 @@ def check_links(path, text):
 			error(path, f'liên kết hỏng: {target}')
 
 
+def check_absolute_links(path, text):
+	"""Biểu mẫu hiển thị trong repository khác: liên kết tương đối sẽ trỏ sai repository."""
+	for match in re.finditer(r'\]\(([^)\s]+)\)', text):
+		if not re.match(r'(https?|mailto):', match.group(1)):
+			error(
+				path,
+				f'liên kết "{match.group(1)}" phải là URL tuyệt đối (biểu mẫu dùng ở mọi repository)',
+			)
+
+
 def check_security_mailto(path, text):
 	link = re.search(r'mailto:[^?)\s]+\?([^)\s]+)', text)
 	details = re.search(r'<details>.*?<br>\s*\n(.*?)\n\s*</details>', text, re.DOTALL)
@@ -181,13 +233,17 @@ def check_security_mailto(path, text):
 		error(path, 'nội dung liên kết email khác mẫu "Xem Mẫu Nội Dung Email"')
 
 
-def check_issue_form(path):
+def check_form(path, required=('name', 'description', 'body')):
 	form = load_yaml(path)
 	if form is None:
 		return
-	for key in ('name', 'description', 'body'):
+	for key in required:
 		if not form.get(key):
 			error(path, f'thiếu khóa bắt buộc "{key}"')
+	check_absolute_links(path, path.read_text(encoding='utf-8'))
+	if path.parent.name == 'DISCUSSION_TEMPLATE':
+		for key in sorted(set(form) - DISCUSSION_FORM_KEYS):
+			error(path, f'biểu mẫu Discussion không hỗ trợ khóa "{key}"')
 	for label in form.get('labels') or []:
 		FORM_LABELS.append((path, label))
 	ids = set()
@@ -227,6 +283,9 @@ def check_workflow(path, text):
 	if not re.search(r'^permissions:', text, re.MULTILINE):
 		error(path, 'thiếu khai báo "permissions" ở cấp workflow')
 	workflow = load_yaml(path)
+	top = (workflow or {}).get('permissions')
+	if top == 'write-all' or (isinstance(top, dict) and 'write' in top.values()):
+		error(path, 'quyền ghi chỉ cấp ở job cần dùng, không cấp ở cấp workflow')
 	for name, job in ((workflow or {}).get('jobs') or {}).items():
 		if 'timeout-minutes' not in job:
 			error(path, f'job "{name}" thiếu timeout-minutes')
@@ -259,11 +318,14 @@ def check_tool_versions():
 	if re.search(r'^node = ', mise, re.MULTILINE):
 		errors.append('mise.toml: Node.js khai báo trong .nvmrc, không lặp trong mise.toml')
 	pinned = re.compile(r'ruff==|pipx install ruff|actionlint@v|download-actionlint|shellcheck-v\d')
+	# Không quét scripts/*.py: validate.py và test chứa chính các mẫu này để so khớp.
 	sources = [
 		*(ROOT / '.github' / 'workflows').glob('*.yml'),
 		*(ROOT / '.devcontainer').glob('*.sh'),
+		*(ROOT / 'scripts').glob('*.sh'),
+		ROOT / 'Makefile',
 	]
-	for path in sorted(sources):
+	for path in sorted(path for path in sources if path.exists()):
 		for number, line in enumerate(path.read_text(encoding='utf-8').split('\n'), start=1):
 			if pinned.search(line):
 				error(path, f'dòng {number}: phiên bản công cụ phải lấy từ mise.toml (ADR 0007)')
@@ -309,6 +371,54 @@ def check_format_config():
 	ruff = ruff_path.read_text(encoding='utf-8') if ruff_path.exists() else ''
 	if 'indent-width = 4' not in ruff or 'indent-style = "tab"' not in ruff:
 		errors.append('ruff.toml: bắt buộc indent-width = 4 và indent-style = "tab"')
+	# Đối chiếu đầy đủ với cấu hình chuẩn.
+	for key, value in PRETTIER_STANDARD.items():
+		if key in prettier and prettier[key] != value:
+			errors.append(
+				f'.prettierrc.json: "{key}" phải là {json.dumps(value, ensure_ascii=False)}'
+			)
+		elif key not in prettier:
+			errors.append(f'.prettierrc.json: thiếu "{key}"')
+	try:
+		ruff_config = tomllib.loads(ruff)
+	except tomllib.TOMLDecodeError as exc:
+		errors.append(f'ruff.toml: TOML không hợp lệ ({exc})')
+		ruff_config = {}
+	for key, value in RUFF_STANDARD.items():
+		pairs = value.items() if isinstance(value, dict) else [(None, value)]
+		for sub, expected in pairs:
+			actual = (ruff_config.get(key) or {}).get(sub) if sub else ruff_config.get(key)
+			if actual != expected:
+				name = f'{key}.{sub}' if sub else key
+				errors.append(f'ruff.toml: {name} phải là {json.dumps(expected)}')
+	default = re.search(r'^\[\*\]\n((?:[^\[].*\n?)*)', editorconfig, re.MULTILINE)
+	head = editorconfig.split('[', 1)[0]
+	for setting in EDITORCONFIG_STANDARD:
+		where = head if setting == 'root = true' else (default.group(1) if default else '')
+		if not re.search(rf'^{re.escape(setting)}$', where, re.MULTILINE):
+			errors.append(
+				f'.editorconfig: mục {"đầu tệp" if setting == "root = true" else "[*]"} thiếu "{setting}"'
+			)
+
+
+def check_lint_ignore_config():
+	""".prettierignore không lặp .gitignore (Prettier 3 tự đọc); ESLint dùng eslint-config-prettier, không bật indent."""
+
+	def entries(name):
+		path = ROOT / name
+		text = path.read_text(encoding='utf-8') if path.exists() else ''
+		return {
+			line.strip() for line in text.split('\n') if line.strip() and not line.startswith('#')
+		}
+
+	for entry in sorted(entries('.prettierignore') & entries('.gitignore')):
+		errors.append(f'.prettierignore: "{entry}" đã có trong .gitignore — Prettier 3 tự bỏ qua')
+	eslint_path = ROOT / 'eslint.config.js'
+	eslint = eslint_path.read_text(encoding='utf-8') if eslint_path.exists() else ''
+	if "from 'eslint-config-prettier'" not in eslint:
+		errors.append('eslint.config.js: phải dùng eslint-config-prettier để tắt quy tắc định dạng')
+	if re.search(r"""['"]?\bindent['"]?\s*:""", eslint):
+		errors.append('eslint.config.js: không bật quy tắc indent — định dạng do Prettier đảm nhận')
 
 
 def editorconfig_suffixes(editorconfig, setting):
@@ -355,6 +465,10 @@ def check_suffix_lists():
 		errors.append(
 			f'.gitattributes: {where} working-tree-encoding cho {suffix} so với validate.py'
 		)
+	binary = set(re.findall(r'^\*(\.\S+) binary$', attributes, re.MULTILINE))
+	for suffix in sorted(set(BINARY_SUFFIXES) ^ binary):
+		where = 'thiếu' if suffix in BINARY_SUFFIXES else 'thừa'
+		errors.append(f'.gitattributes: {where} {suffix} binary so với validate.py')
 
 
 def contributing_section(text, heading):
@@ -421,6 +535,46 @@ def check_rulesets():
 				)
 
 
+def check_adr_index():
+	"""Bảng trong docs/adr/README.md phải liệt kê mọi ADR, cùng ngày và cùng trạng thái với từng tệp."""
+	folder = ROOT / 'docs' / 'adr'
+	index_path = folder / 'README.md'
+	if not index_path.exists():
+		return
+	rows = {
+		number: (status.strip(), date.strip())
+		for number, status, date in re.findall(
+			r'^\| \[(\d{4})\]\([^)]+\) +\|[^|]+\|([^|]+)\|([^|]+)\|$',
+			index_path.read_text(encoding='utf-8'),
+			re.MULTILINE,
+		)
+	}
+	for path in sorted(folder.glob('[0-9][0-9][0-9][0-9]-*.md')):
+		number = path.name[:4]
+		text = path.read_text(encoding='utf-8')
+		status = re.search(r'^- \*\*Trạng thái:\*\* (.+)$', text, re.MULTILINE)
+		date = re.search(r'^- \*\*Ngày:\*\* (.+)$', text, re.MULTILINE)
+		if not status or not date:
+			error(path, 'thiếu dòng "Trạng thái" hoặc "Ngày"')
+			continue
+		if number not in rows:
+			error(index_path, f'bảng thiếu ADR {number}')
+			continue
+		row_status, row_date = rows[number]
+		if row_date != date.group(1).strip():
+			error(index_path, f'ADR {number}: ngày "{row_date}" khác tệp ADR ({date.group(1)})')
+		superseded = 'thay thế' in status.group(1).lower()
+		if superseded != ('thay thế' in row_status.lower()) or (
+			superseded
+			and set(re.findall(r'\b\d{4}\b', row_status))
+			!= set(re.findall(r'\[(\d{4})\]', status.group(1)))
+		):
+			error(
+				index_path,
+				f'ADR {number}: trạng thái "{row_status}" khác tệp ADR ({status.group(1)})',
+			)
+
+
 def check_space_only(path, text):
 	"""Ngôn ngữ bắt buộc dấu cách (4 hoặc 2 mỗi cấp theo formatter chính thức): không dùng tab."""
 	width = 2 if path.suffix in TWO_SPACE_SUFFIXES else 4
@@ -438,9 +592,12 @@ def check_space_only(path, text):
 
 
 def check_tab_only(path, text):
-	"""Shell, Makefile, Python: thụt lề chỉ bằng tab."""
+	"""Mọi tệp mặc định dùng tab (theo .editorconfig): thụt lề chỉ bằng tab, không trộn dấu cách."""
 	for number, line in enumerate(text.split('\n'), start=1):
 		indent = re.match(r'^[ \t]*', line).group(0)
+		# Dòng tiếp nối chú thích khối (/** … */) do Prettier sinh ra: tab rồi " *".
+		if re.match(r'^\t* \*', line):
+			continue
 		if ' ' in indent and line.strip():
 			error(path, f'dòng {number}: thụt lề phải dùng tab theo .editorconfig')
 			return
@@ -477,6 +634,33 @@ def check_labels(path):
 		if len(str(label.get('description') or '')) > 100:
 			error(path, f'nhãn "{name}": description vượt quá 100 ký tự')
 	return names
+
+
+def config_labels():
+	"""Nhãn dùng trong dependabot.yml, release.yml và workflow stale (bản của repository này và bản mẫu)."""
+	found = []
+	for path in (
+		ROOT / '.github' / 'dependabot.yml',
+		ROOT / 'repository-templates' / 'dependabot.yml',
+	):
+		for update in ((load_yaml(path) if path.exists() else None) or {}).get('updates') or []:
+			found += [(path, label) for label in update.get('labels') or []]
+	for path in (ROOT / '.github' / 'release.yml', ROOT / 'repository-templates' / 'release.yml'):
+		changelog = ((load_yaml(path) if path.exists() else None) or {}).get('changelog') or {}
+		found += [(path, label) for label in (changelog.get('exclude') or {}).get('labels') or []]
+		for category in changelog.get('categories') or []:
+			found += [(path, label) for label in category.get('labels') or [] if label != '*']
+	for path in (
+		ROOT / '.github' / 'workflows' / 'stale.yml',
+		ROOT / 'workflow-templates' / 'stale.yml',
+	):
+		if not path.exists():
+			continue
+		text = path.read_text(encoding='utf-8')
+		for match in re.finditer(r'^\s*(?:stale|exempt)-(?:issue|pr)-labels?:\s*(.+)$', text, re.M):
+			names = match.group(1).strip().strip('\'"').split(',')
+			found += [(path, name.strip()) for name in names if name.strip()]
+	return found
 
 
 def check_emails(path, text):
@@ -536,48 +720,26 @@ def check_issue_config(path):
 
 
 for file in tracked_files():
+	# GitHub chỉ nhận biểu mẫu Issue, Discussion và FUNDING.yml trong thư mục .github/.
+	if (
+		file.parent.name in ('ISSUE_TEMPLATE', 'DISCUSSION_TEMPLATE')
+		and file.parent.parent != ROOT / '.github'
+	) or (file.name == 'FUNDING.yml' and file.parent != ROOT / '.github'):
+		error(file, 'phải nằm trong thư mục .github/ để GitHub nhận diện')
 	if file.suffix == '.sh':
 		check_shell(file)
-	if file.suffix in ('.sh', '.py') or file.name == 'Makefile':
-		check_tab_only(file, file.read_text(encoding='utf-8'))
 	if file.suffix in SPACE_SUFFIXES + TWO_SPACE_SUFFIXES:
 		check_space_only(file, file.read_text(encoding='utf-8'))
-	if (
-		file.suffix
-		not in (
-			'.md',
-			'.yml',
-			'.yaml',
-			'.py',
-			'.json',
-			'.sh',
-			'.svg',
-			'.txt',
-			'.js',
-			'.toml',
-		)
-		and not file.name.endswith(CRLF_SUFFIXES)
-		and file.name
-		not in (
-			'.editorconfig',
-			'.gitattributes',
-			'.gitignore',
-			'.gitmessage',
-			'.clang-format',
-			'.dockerignore',
-			'.env.example',
-			'.python-version',
-			'.npmrc',
-			'Makefile',
-			'CODEOWNERS',
-			'LICENSE',
-		)
-	):
+	if file.suffix in BINARY_SUFFIXES:
 		continue
 	content = check_text(file)
 	if content is None:
 		continue
-	check_emails(file, content)
+	if not file.name.endswith(SPACE_SUFFIXES + TWO_SPACE_SUFFIXES + KEEP_TRAILING_SPACE_SUFFIXES):
+		check_tab_only(file, content)
+	# .mailmap ánh xạ email tác giả commit (kể cả địa chỉ noreply của GitHub), không phải email liên hệ.
+	if file.name != '.mailmap':
+		check_emails(file, content)
 	if file.name == 'security.txt':
 		check_security_txt(file, content)
 	if file.name == 'CHANGELOG.md':
@@ -593,11 +755,15 @@ for file in tracked_files():
 		check_headings(file, content)
 	if file.name == 'SECURITY.md':
 		check_security_mailto(file, content)
+	if file.name == 'PULL_REQUEST_TEMPLATE.md':
+		check_absolute_links(file, content)
 	if file.parent.name == 'ISSUE_TEMPLATE' and file.suffix in ('.yml', '.yaml'):
 		if file.stem == 'config':
 			check_issue_config(file)
 		else:
-			check_issue_form(file)
+			check_form(file)
+	elif file.parent.name == 'DISCUSSION_TEMPLATE' and file.suffix in ('.yml', '.yaml'):
+		check_form(file, required=('body',))
 	elif file.suffix in ('.yml', '.yaml') and (
 		file.parent.name == 'workflow-templates'
 		or file.parent.parts[-2:] == ('.github', 'workflows')
@@ -614,10 +780,12 @@ for file in tracked_files():
 			error(file, f'JSON không hợp lệ: {exc}')
 
 check_format_config()
+check_lint_ignore_config()
 check_tool_versions()
 check_suffix_lists()
 check_conventions()
 check_rulesets()
+check_adr_index()
 
 for required in (
 	'README.md',
@@ -634,7 +802,7 @@ for required in (
 label_file = ROOT / 'labels.yml'
 if label_file.exists():
 	known = check_labels(label_file)
-	for form_path, label in FORM_LABELS:
+	for form_path, label in FORM_LABELS + config_labels():
 		if label.lower() not in known:
 			error(form_path, f'nhãn "{label}" chưa có trong labels.yml')
 

@@ -1,4 +1,4 @@
-"""Kiểm tra các liên kết http(s) trong tài liệu Markdown còn hoạt động.
+"""Kiểm tra các liên kết http(s) trong tài liệu Markdown, YAML, CITATION.cff và security.txt còn hoạt động.
 
 Chạy: python3 scripts/check-external-links.py
 Workflow links.yml chạy định kỳ hằng tuần. Trang chặn truy cập tự động (403, 429, 999)
@@ -16,12 +16,15 @@ ROOT = Path(__file__).resolve().parents[1]
 BLOCKED = {401, 403, 429, 999}
 HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; TOANQUYNH-link-check/1.0)'}
 # Liên kết cần gắn tag hoặc chỉ tồn tại sau khi phát hành — không kiểm tra.
-SKIP = ('/compare/', '/releases/tag/', 'img.shields.io', '/actions/workflows/')
+# /.well-known/: security.txt chưa được đăng lên website (xem ROADMAP.md).
+SKIP = ('/compare/', '/releases/tag/', 'img.shields.io', '/actions/workflows/', '/.well-known/')
+# Tệp ngoài Markdown: URL đứng trần (khóa YAML, trường của security.txt), không nằm trong (…).
+PATTERNS = ('*.md', '*.yml', '*.yaml', '*.cff', '*.txt')
 
 
-def markdown_files():
+def text_files():
 	output = subprocess.run(
-		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '*.md'],
+		['git', 'ls-files', '--cached', '--others', '--exclude-standard', *PATTERNS],
 		cwd=ROOT,
 		capture_output=True,
 		text=True,
@@ -32,9 +35,19 @@ def markdown_files():
 
 def collect_links():
 	links = {}
-	for path in markdown_files():
-		text = re.sub(r'```.*?```', '', path.read_text(encoding='utf-8'), flags=re.DOTALL)
-		for url in re.findall(r'\((https?://[^)\s]+)\)', text):
+	for path in text_files():
+		text = path.read_text(encoding='utf-8')
+		if path.suffix == '.md':
+			urls = re.findall(
+				r'\((https?://[^)\s]+)\)', re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+			)
+		else:
+			urls = [
+				url.rstrip('.,;:')
+				for url in re.findall(r'https?://[^\s)\]\'"<>`]+', text)
+				if '${' not in url
+			]
+		for url in urls:
 			if not any(part in url for part in SKIP):
 				links.setdefault(url, set()).add(str(path.relative_to(ROOT)))
 	return links

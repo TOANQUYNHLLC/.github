@@ -228,8 +228,172 @@ class ValidateTest(unittest.TestCase):
 		self.assert_fails('phải xuống dòng bằng LF')
 
 	def test_nhan_trong_bieu_mau_phai_co_trong_labels(self):
-		self.edit('ISSUE_TEMPLATE/question.yml', '    - question', '    - hoi-dap')
+		self.edit('.github/ISSUE_TEMPLATE/question.yml', '    - question', '    - hoi-dap')
 		self.assert_fails('chưa có trong labels.yml')
+
+	def test_bieu_mau_discussion_khong_ho_tro_name(self):
+		self.edit(
+			'.github/DISCUSSION_TEMPLATE/q-a.yml',
+			"title: '[Hỏi đáp] '",
+			"name: Hỏi đáp\ntitle: '[Hỏi đáp] '",
+		)
+		self.assert_fails('biểu mẫu Discussion không hỗ trợ khóa "name"')
+
+	def test_bieu_mau_discussion_tieu_de_truong_viet_hoa(self):
+		self.edit('.github/DISCUSSION_TEMPLATE/ideas.yml', 'label: 💡 Ý TƯỞNG', 'label: 💡 Ý tưởng')
+		self.assert_fails('phải viết hoa')
+
+	def test_bieu_mau_phai_nam_trong_thu_muc_github(self):
+		(self.repo / '.github' / 'ISSUE_TEMPLATE').rename(self.repo / 'ISSUE_TEMPLATE')
+		self.assert_fails('phải nằm trong thư mục .github/ để GitHub nhận diện')
+
+	def test_bieu_mau_khong_dung_lien_ket_tuong_doi(self):
+		self.edit(
+			'.github/DISCUSSION_TEMPLATE/general.yml',
+			'(https://github.com/TOANQUYNHLLC/.github/blob/main/CODE_OF_CONDUCT.md)',
+			'(CODE_OF_CONDUCT.md)',
+		)
+		self.assert_fails('phải là URL tuyệt đối')
+
+	def test_nhan_trong_cau_hinh_phai_co_trong_labels(self):
+		self.edit('workflow-templates/stale.yml', 'stale-pr-label: stale', 'stale-pr-label: cu')
+		self.assert_fails('nhãn "cu" chưa có trong labels.yml')
+
+	def test_quyen_ghi_khong_cap_o_cap_workflow(self):
+		self.edit(
+			'.github/workflows/release.yml',
+			'permissions:\n    contents: read\n\njobs:',
+			'permissions:\n    contents: write\n\njobs:',
+		)
+		self.assert_fails('quyền ghi chỉ cấp ở job cần dùng')
+
+	def test_tep_khong_duoi_cung_duoc_kiem_tra(self):
+		path = self.repo / 'NOTICE'
+		path.write_bytes(path.read_bytes().replace(b'\n', b'\r\n'))
+		self.assert_fails('NOTICE: phải xuống dòng bằng LF')
+
+	def test_danh_sach_nhi_phan_khop_gitattributes(self):
+		self.edit('.gitattributes', '*.zip binary\n', '')
+		self.assert_fails('.gitattributes: thiếu .zip binary so với validate.py')
+
+	def test_workflow_phai_khai_bao_permissions(self):
+		self.edit('.github/workflows/links.yml', 'permissions:\n    contents: read\n\n', '')
+		self.assert_fails('thiếu khai báo "permissions" ở cấp workflow')
+
+	def test_job_phai_co_timeout(self):
+		self.edit('.github/workflows/links.yml', '        timeout-minutes: 10\n', '')
+		self.assert_fails('job "links" thiếu timeout-minutes')
+
+	def test_ruff_phai_dung_tab(self):
+		self.edit('ruff.toml', 'indent-style = "tab"', 'indent-style = "space"')
+		self.assert_fails('ruff.toml: bắt buộc indent-width = 4 và indent-style = "tab"')
+
+	def test_node_khong_khai_bao_trong_mise(self):
+		self.edit('mise.toml', '[tools]\n', '[tools]\nnode = "24"\n')
+		self.assert_fails('Node.js khai báo trong .nvmrc')
+
+	def test_thieu_dong_trong_cuoi_file(self):
+		path = self.repo / 'SUPPORT.md'
+		path.write_bytes(path.read_bytes().rstrip(b'\n'))
+		self.assert_fails('SUPPORT.md: thiếu dòng trống cuối file')
+
+	def test_khong_duoc_co_bom_utf8(self):
+		path = self.repo / 'SUPPORT.md'
+		path.write_bytes(b'\xef\xbb\xbf' + path.read_bytes())
+		self.assert_fails('SUPPORT.md: có BOM UTF-8')
+
+	def test_shell_phai_co_shebang(self):
+		self.edit('scripts/pre-commit.sh', '#!/usr/bin/env bash\n', '')
+		self.assert_fails('shell script thiếu shebang')
+
+	def test_security_txt_han_toi_da_mot_nam(self):
+		self.edit(
+			'.well-known/security.txt',
+			'Expires: 2027-09-26T00:00:00.000Z',
+			'Expires: 2099-01-01T00:00:00.000Z',
+		)
+		self.assert_fails('Expires vượt quá 1 năm')
+
+	def test_changelog_khong_lap_phien_ban(self):
+		path = self.repo / 'CHANGELOG.md'
+		path.write_text(
+			path.read_text(encoding='utf-8') + '\n## [v2026.09.Stable]\n', encoding='utf-8'
+		)
+		self.assert_fails('có phiên bản bị lặp')
+
+	def test_mau_nhan_phai_la_hex(self):
+		self.edit('labels.yml', "color: 'd73a4a'", "color: 'do'")
+		self.assert_fails('nhãn "bug": color phải là mã hex 6 ký tự')
+
+	def test_bieu_mau_khong_trung_id(self):
+		self.edit('.github/ISSUE_TEMPLATE/bug_report.yml', 'id: expected', 'id: description')
+		self.assert_fails('id "description" bị trùng')
+
+	def test_contact_links_du_truong(self):
+		self.edit(
+			'.github/ISSUE_TEMPLATE/config.yml',
+			'      about: Thông tin liên hệ và giới thiệu công ty.\n',
+			'',
+		)
+		self.assert_fails('contact_links thiếu "about"')
+
+	def test_ruleset_phai_ten_protect_main(self):
+		self.edit('rulesets/protect-main.json', '"name": "Protect Main"', '"name": "Bảo vệ"')
+		self.assert_fails('ruleset phải tên "Protect Main"')
+
+	def test_muc_luc_adr_khop_trang_thai(self):
+		self.edit(
+			'docs/adr/0006-allow-all-merge-methods.md',
+			'- **Trạng thái:** Chấp nhận',
+			'- **Trạng thái:** Bị thay thế bởi [0008](0008-x.md)',
+		)
+		self.assert_fails('ADR 0006: trạng thái')
+
+	def test_muc_luc_adr_du_moi_adr(self):
+		(self.repo / 'docs' / 'adr' / '0008-thu.md').write_text(
+			'# 0008. THỬ\n\n- **Trạng thái:** Đề xuất\n- **Ngày:** 2026-09-27\n', encoding='utf-8'
+		)
+		self.assert_fails('bảng thiếu ADR 0008')
+
+	def test_toml_phai_thut_le_bang_tab(self):
+		self.edit('mise.toml', '[tools]\n', '[tools]\n    ')
+		self.assert_fails('mise.toml: dòng 5: thụt lề phải dùng tab')
+
+	def test_chu_thich_khoi_js_hop_le(self):
+		path = self.repo / 'eslint.config.js'
+		path.write_text(
+			path.read_text(encoding='utf-8') + '\n/**\n * Chú thích khối.\n */\n', encoding='utf-8'
+		)
+		code, output = self.run_validate()
+		self.assertEqual(code, 0, output)
+
+	def test_prettier_khop_cau_hinh_chuan(self):
+		self.edit('.prettierrc.json', '"printWidth": 100', '"printWidth": 120')
+		self.assert_fails('.prettierrc.json: "printWidth" phải là 100')
+
+	def test_ruff_khop_cau_hinh_chuan(self):
+		self.edit('ruff.toml', 'line-ending = "lf"', 'line-ending = "cr-lf"')
+		self.assert_fails('ruff.toml: format.line-ending phải là "lf"')
+
+	def test_editorconfig_khop_cau_hinh_chuan(self):
+		self.edit(
+			'.editorconfig',
+			'[*]\ncharset = utf-8\nend_of_line = lf\n',
+			'[*]\ncharset = utf-8\nend_of_line = crlf\n',
+		)
+		self.assert_fails('.editorconfig: mục [*] thiếu "end_of_line = lf"')
+
+	def test_prettierignore_khong_lap_gitignore(self):
+		self.edit('.prettierignore', 'LICENSE\n', 'LICENSE\nnode_modules/\n')
+		self.assert_fails('.prettierignore: "node_modules/" đã có trong .gitignore')
+
+	def test_eslint_khong_bat_indent(self):
+		self.edit(
+			'eslint.config.js',
+			"eqeqeq: ['error', 'always'],",
+			"eqeqeq: ['error', 'always'],\n\t\t\tindent: ['error', 'tab'],",
+		)
+		self.assert_fails('eslint.config.js: không bật quy tắc indent')
 
 	def test_action_phai_ghim_sha(self):
 		self.edit(

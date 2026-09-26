@@ -26,6 +26,8 @@ updates:
       groups:
           # Gộp bản cập nhật minor/patch vào một Pull Request; bản major tách riêng để đánh giá kỹ.
           minor-and-patch:
+              patterns:
+                  - '*'
               update-types:
                   - minor
                   - patch

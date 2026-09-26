@@ -4,33 +4,17 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ---
 
-## 🔥 ƯU TIÊN: TẠO RULESET PROTECT MAIN
-
-Repository `.github` hiện **không có ruleset nào** — nhánh chính chưa được bảo vệ. Người quản trị tạo ruleset **Protect Main** duy nhất từ [`rulesets/protect-main.json`](rulesets/protect-main.json) ([ADR 0005](docs/adr/0005-merge-protect-main.md)) bằng một trong hai cách:
-
-- **Lệnh:** `python3 scripts/org-setup.py rulesets --apply --repo .github`
-- **Trên web:** **Settings → Rules → Rulesets → New ruleset → Import a ruleset** → chọn `rulesets/protect-main.json` → **Create**.
-
-Kiểm tra chỉ có một ruleset và đủ quy tắc:
-
-```sh
-gh api repos/TOANQUYNHLLC/.github/rulesets --jq '.[].name'
-gh api repos/TOANQUYNHLLC/.github/rules/branches/main --jq '[.[].type] | unique'
-```
-
-Kết quả: chỉ `Protect Main`; 9 quy tắc `code_quality`, `creation`, `deletion`, `non_fast_forward`, `pull_request`, `required_signatures`, `required_status_checks`, `update`.
-
----
-
 ## ✅ ĐÃ HOÀN THÀNH GẦN ĐÂY
 
+- [x] Ruleset **Protect Main** duy nhất cho `main` của `.github`, tạo từ [`rulesets/protect-main.json`](rulesets/protect-main.json) ([ADR 0005](docs/adr/0005-merge-protect-main.md)), đang áp dụng 8 quy tắc: `code_quality`, `creation`, `deletion`, `non_fast_forward`, `pull_request`, `required_signatures`, `required_status_checks`, `update` (2026-09-26).
 - [x] Team **maintainers** (`nguyentrongtoandl`, `trongtoandl81`, quyền **Maintain**) là chủ sở hữu mã trong `CODEOWNERS` (2026-09-26).
 - [x] Cho phép Merge, Squash và Rebase, tự xóa branch sau khi hợp nhất ([ADR 0006](docs/adr/0006-allow-all-merge-methods.md)); đồng bộ 16 nhãn chuẩn; Discussions đã bật; cả hai tài khoản đã đăng ký khóa ký commit (2026-09-26).
 - [x] Bật secret scanning, push protection, Dependabot security updates và báo cáo lỗ hổng riêng tư (**Security → Report a vulnerability**) cho `.github`; `SECURITY.md` và `security.txt` thêm kênh báo cáo qua GitHub (2026-09-26).
 
-Kiểm tra lại các quy tắc đang áp dụng cho `main`:
+Kiểm tra lại ruleset và các quy tắc đang áp dụng cho `main`:
 
 ```sh
+gh api repos/TOANQUYNHLLC/.github/rulesets --jq '.[].name'
 gh api repos/TOANQUYNHLLC/.github/rules/branches/main --jq '[.[].type] | unique'
 ```
 
@@ -50,5 +34,13 @@ Hiện tổ chức chỉ có repository `.github`. Với mỗi repository mới,
 
 ## 💡 CÂN NHẮC
 
-- [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`DISCUSSION_TEMPLATE/`](DISCUSSION_TEMPLATE/).
+- [ ] Đăng [`.well-known/security.txt`](.well-known/security.txt) lên `https://toanquynh.com/.well-known/security.txt` — URL hiện trả về 404 trong khi trường `Canonical` trỏ tới đó; đăng xong thì bỏ `/.well-known/` khỏi `SKIP` trong [`scripts/check-external-links.py`](scripts/check-external-links.py).
+- [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`.github/DISCUSSION_TEMPLATE/`](.github/DISCUSSION_TEMPLATE/).
 - [ ] Quét bí mật theo mẫu tùy chỉnh (non-provider patterns) và kiểm tra bí mật còn hiệu lực (validity checks): cần gói **GitHub Secret Protection**.
+
+---
+
+<p align="center">
+    <strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
+    Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm
+</p>
