@@ -1,6 +1,6 @@
 # 0004. SQUASH AND MERGE VÀ RULESET BẢO VỆ NHÁNH CHÍNH
 
-- **Trạng thái:** Chấp nhận
+- **Trạng thái:** Bị thay thế một phần bởi [0005](0005-merge-protect-main.md) (danh sách bỏ qua) và [0006](0006-allow-all-merge-methods.md) (cách hợp nhất)
 - **Ngày:** 2026-09-26
 
 ## 📌 BỐI CẢNH
