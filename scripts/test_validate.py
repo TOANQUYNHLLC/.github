@@ -68,10 +68,24 @@ class ValidateTest(unittest.TestCase):
 		self.assertIn(old, text, f'{name} không còn chứa đoạn cần sửa trong test')
 		path.write_text(text.replace(old, new, 1), encoding='utf-8')
 
+	def edit_re(self, name, pattern, new):
+		"""Như edit() nhưng tìm bằng regex — dùng cho giá trị sẽ đổi theo thời gian (SHA, ngày, số)."""
+		path = self.repo / name
+		text, count = re.subn(pattern, new, path.read_text(encoding='utf-8'), count=1, flags=re.M)
+		self.assertEqual(count, 1, f'{name} không còn khớp mẫu {pattern!r}')
+		path.write_text(text, encoding='utf-8')
+
 	def assert_fails(self, message):
 		code, output = self.run_validate()
 		self.assertEqual(code, 1, output)
 		self.assertIn(message, output)
+
+	def test_khong_gan_cung_sha_action_trong_test(self):
+		# SHA gắn cứng làm mọi Pull Request Dependabot nâng action bị chặn vì test mất đoạn neo.
+		source = Path(__file__).read_text(encoding='utf-8')
+		self.assertIsNone(
+			re.search(r'@[0-9a-f]{40}', source), 'dùng edit_re() với mẫu [0-9a-f]{40}'
+		)
 
 	def test_repository_hien_tai_hop_le(self):
 		code, output = self.run_validate()
@@ -99,7 +113,9 @@ class ValidateTest(unittest.TestCase):
 		self.assert_fails('Contact phải có mailto:toanquynhvn@gmail.com')
 
 	def test_security_txt_het_han(self):
-		self.edit('.well-known/security.txt', 'Expires: 2027', 'Expires: 2020')
+		self.edit_re(
+			'.well-known/security.txt', r'^Expires: .+$', 'Expires: 2020-01-01T00:00:00.000Z'
+		)
 		self.assert_fails('Expires đã hết hạn')
 
 	def test_shell_phai_thut_le_bang_tab(self):
@@ -281,7 +297,7 @@ class ValidateTest(unittest.TestCase):
 		self.assert_fails('thiếu khai báo "permissions" ở cấp workflow')
 
 	def test_job_phai_co_timeout(self):
-		self.edit('.github/workflows/links.yml', '        timeout-minutes: 10\n', '')
+		self.edit_re('.github/workflows/links.yml', r'^ +timeout-minutes: \d+\n', '')
 		self.assert_fails('job "links" thiếu timeout-minutes')
 
 	def test_ruff_phai_dung_tab(self):
@@ -307,10 +323,8 @@ class ValidateTest(unittest.TestCase):
 		self.assert_fails('shell script thiếu shebang')
 
 	def test_security_txt_han_toi_da_mot_nam(self):
-		self.edit(
-			'.well-known/security.txt',
-			'Expires: 2027-09-26T00:00:00.000Z',
-			'Expires: 2099-01-01T00:00:00.000Z',
+		self.edit_re(
+			'.well-known/security.txt', r'^Expires: .+$', 'Expires: 2099-01-01T00:00:00.000Z'
 		)
 		self.assert_fails('Expires vượt quá 1 năm')
 
@@ -322,19 +336,15 @@ class ValidateTest(unittest.TestCase):
 		self.assert_fails('có phiên bản bị lặp')
 
 	def test_mau_nhan_phai_la_hex(self):
-		self.edit('labels.yml', "color: 'd73a4a'", "color: 'do'")
-		self.assert_fails('nhãn "bug": color phải là mã hex 6 ký tự')
+		self.edit_re('labels.yml', r"color: '[0-9a-fA-F]{6}'", "color: 'do'")
+		self.assert_fails('color phải là mã hex 6 ký tự')
 
 	def test_bieu_mau_khong_trung_id(self):
 		self.edit('.github/ISSUE_TEMPLATE/bug_report.yml', 'id: expected', 'id: description')
 		self.assert_fails('id "description" bị trùng')
 
 	def test_contact_links_du_truong(self):
-		self.edit(
-			'.github/ISSUE_TEMPLATE/config.yml',
-			'      about: Thông tin liên hệ và giới thiệu công ty.\n',
-			'',
-		)
+		self.edit_re('.github/ISSUE_TEMPLATE/config.yml', r'^ +about: .+\n', '')
 		self.assert_fails('contact_links thiếu "about"')
 
 	def test_ruleset_phai_ten_protect_main(self):
@@ -349,6 +359,16 @@ class ValidateTest(unittest.TestCase):
 		)
 		self.assert_fails('ADR 0006: trạng thái')
 
+	def test_muc_luc_adr_nhan_so_khong_lien_ket(self):
+		# Mẫu ADR ghi "Bị thay thế bởi NNNN" không kèm liên kết — phải hợp lệ.
+		self.edit(
+			'docs/adr/0005-merge-protect-main.md',
+			'Bị thay thế một phần bởi [0006](0006-allow-all-merge-methods.md)',
+			'Bị thay thế một phần bởi 0006',
+		)
+		code, output = self.run_validate()
+		self.assertEqual(code, 0, output)
+
 	def test_muc_luc_adr_du_moi_adr(self):
 		(self.repo / 'docs' / 'adr' / '0008-thu.md').write_text(
 			'# 0008. THỬ\n\n- **Trạng thái:** Đề xuất\n- **Ngày:** 2026-09-27\n', encoding='utf-8'
@@ -357,7 +377,9 @@ class ValidateTest(unittest.TestCase):
 
 	def test_toml_phai_thut_le_bang_tab(self):
 		self.edit('mise.toml', '[tools]\n', '[tools]\n    ')
-		self.assert_fails('mise.toml: dòng 5: thụt lề phải dùng tab')
+		code, output = self.run_validate()
+		self.assertEqual(code, 1, output)
+		self.assertRegex(output, r'mise\.toml: dòng \d+: thụt lề phải dùng tab')
 
 	def test_chu_thich_khoi_js_hop_le(self):
 		path = self.repo / 'eslint.config.js'
@@ -396,9 +418,10 @@ class ValidateTest(unittest.TestCase):
 		self.assert_fails('eslint.config.js: không bật quy tắc indent')
 
 	def test_action_phai_ghim_sha(self):
-		self.edit(
+		# Không gắn cứng SHA: Dependabot nâng action hằng tháng, test phải chạy với mọi SHA.
+		self.edit_re(
 			'.github/workflows/validate.yml',
-			'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1',
+			r'actions/checkout@[0-9a-f]{40}',
 			'actions/checkout@v4',
 		)
 		self.assert_fails('phải ghim theo commit SHA đầy đủ')

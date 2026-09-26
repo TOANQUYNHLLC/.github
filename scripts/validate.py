@@ -567,7 +567,7 @@ def check_adr_index():
 		if superseded != ('thay thế' in row_status.lower()) or (
 			superseded
 			and set(re.findall(r'\b\d{4}\b', row_status))
-			!= set(re.findall(r'\[(\d{4})\]', status.group(1)))
+			!= set(re.findall(r'\b\d{4}\b', status.group(1)))
 		):
 			error(
 				index_path,
