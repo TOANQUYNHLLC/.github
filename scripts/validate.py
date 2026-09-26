@@ -290,6 +290,11 @@ def check_workflow(path, text):
 			)
 	if not re.search(r'^permissions:', text, re.MULTILINE):
 		error(path, 'thiếu khai báo "permissions" ở cấp workflow')
+	# GitHub chỉ thay $default-branch khi tạo workflow từ mẫu; trong workflow thật nó là chuỗi nguyên văn.
+	if path.parent.parts[-2:] == ('.github', 'workflows') and '$default-branch' in text:
+		error(
+			path, '$default-branch chỉ dùng trong workflow-templates/ — ghi tên nhánh thật (main)'
+		)
 	workflow = load_yaml(path)
 	top = (workflow or {}).get('permissions')
 	if top == 'write-all' or (isinstance(top, dict) and 'write' in top.values()):

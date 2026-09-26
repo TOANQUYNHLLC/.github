@@ -1,4 +1,4 @@
-"""Test tự động cho scripts/validate.py và scripts/release-notes.py.
+"""Test tự động cho scripts/validate.py, scripts/release-notes.py và scripts/org-setup.py.
 
 Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make test)
 Mỗi test chép repository sang thư mục tạm, cố ý làm hỏng một điểm rồi khẳng định
@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import unicodedata
 import unittest
 from pathlib import Path
 
@@ -22,6 +23,13 @@ def load_release_notes():
 	spec = importlib.util.spec_from_file_location(
 		'release_notes', ROOT / 'scripts' / 'release-notes.py'
 	)
+	module = importlib.util.module_from_spec(spec)
+	spec.loader.exec_module(module)
+	return module
+
+
+def load_org_setup():
+	spec = importlib.util.spec_from_file_location('org_setup', ROOT / 'scripts' / 'org-setup.py')
 	module = importlib.util.module_from_spec(spec)
 	spec.loader.exec_module(module)
 	return module
@@ -225,8 +233,6 @@ class ValidateTest(unittest.TestCase):
 		self.assert_fails('kiểm tra bắt buộc "Shell script" không trùng tên job nào')
 
 	def test_tieng_viet_phai_la_nfc(self):
-		import unicodedata
-
 		path = self.repo / 'SUPPORT.md'
 		text = path.read_text(encoding='utf-8')
 		path.write_text(unicodedata.normalize('NFD', text), encoding='utf-8')
@@ -423,6 +429,14 @@ class ValidateTest(unittest.TestCase):
 		self.edit('.github/ISSUE_TEMPLATE/bug_report.yml', 'type: Bug', 'type: Loi')
 		self.assert_fails('type "Loi" không phải Issue Type của tổ chức')
 
+	def test_workflow_that_khong_dung_default_branch(self):
+		self.edit(
+			'.github/workflows/validate.yml',
+			'            - main\n',
+			'            - $default-branch\n',
+		)
+		self.assert_fails('$default-branch chỉ dùng trong workflow-templates/')
+
 	def test_action_phai_ghim_sha(self):
 		# Không gắn cứng SHA: Dependabot nâng action hằng tháng, test phải chạy với mọi SHA.
 		self.edit_re(
@@ -465,17 +479,6 @@ class ReleaseNotesTest(unittest.TestCase):
 
 	def test_phien_ban_chua_co_trong_changelog(self):
 		self.assertIsNone(self.module.release_notes(self.changelog, 'v1999.01.Stable'))
-
-
-if __name__ == '__main__':
-	unittest.main()
-
-
-def load_org_setup():
-	spec = importlib.util.spec_from_file_location('org_setup', ROOT / 'scripts' / 'org-setup.py')
-	module = importlib.util.module_from_spec(spec)
-	spec.loader.exec_module(module)
-	return module
 
 
 class OrgSetupTest(unittest.TestCase):
@@ -559,3 +562,7 @@ class OrgSetupTest(unittest.TestCase):
 		self.assertEqual(
 			sorted(checks(other)), ['Kiểm tra tiêu đề Pull Request', 'Kiểm tra tên branch']
 		)
+
+
+if __name__ == '__main__':
+	unittest.main()

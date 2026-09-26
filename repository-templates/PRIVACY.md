@@ -43,7 +43,7 @@ Chính sách này áp dụng cho `<tên sản phẩm>` do **CÔNG TY TNHH TOÀN 
 
 ## 📞 LIÊN HỆ
 
-`<Bộ phận phụ trách bảo vệ dữ liệu cá nhân, email, số điện thoại.>` Báo cáo lỗ hổng bảo mật: xem `SECURITY.md`.
+`<Bộ phận phụ trách bảo vệ dữ liệu cá nhân, email, số điện thoại.>` Báo cáo lỗ hổng bảo mật: theo [chính sách bảo mật](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md).
 
 ---
 

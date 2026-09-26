@@ -28,8 +28,8 @@ jobs:
             - name: Cài thư viện
               run: |
                   python -m pip install --upgrade pip
-                  if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-                  if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+                  if [[ -f requirements.txt ]]; then pip install -r requirements.txt; fi
+                  if [[ -f requirements-dev.txt ]]; then pip install -r requirements-dev.txt; fi
                   pip install ruff pytest
 
             - name: Kiểm tra định dạng và lint (ruff)
@@ -39,7 +39,7 @@ jobs:
 
             - name: Kiểm thử
               run: |
-                  if [ -d tests ]; then
+                  if [[ -d tests ]]; then
                       python -m pytest
                   else
                       echo "Không có thư mục tests — bỏ qua kiểm thử."
