@@ -28,7 +28,7 @@ jobs:
             - name: Kiểm tra định dạng (gofmt)
               run: |
                   unformatted=$(gofmt -l .)
-                  if [ -n "$unformatted" ]; then
+                  if [[ -n "$unformatted" ]]; then
                       echo "::error::Các file chưa chạy gofmt:"
                       echo "$unformatted"
                       exit 1

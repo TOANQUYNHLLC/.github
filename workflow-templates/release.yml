@@ -26,14 +26,14 @@ jobs:
                   TAG: ${{ github.ref_name }}
               run: |
                   # Lấy mục "## [<tag>] …" (định dạng Keep a Changelog) tới mục kế tiếp.
-                  if [ -f CHANGELOG.md ]; then
+                  if [[ -f CHANGELOG.md ]]; then
                       awk -v tag="[$TAG]" '
                           index($0, "## " tag) == 1 { found = 1; next }
                           found && /^## / { exit }
                           found { print }
                       ' CHANGELOG.md > release-notes.md
                   fi
-                  if [ -s release-notes.md ]; then
+                  if [[ -s release-notes.md ]]; then
                       echo "Dùng nội dung mục [$TAG] trong CHANGELOG.md."
                   else
                       echo "::warning::CHANGELOG.md không có mục [$TAG] — GitHub tự tạo nội dung từ các Pull Request."
@@ -45,7 +45,7 @@ jobs:
                   GH_TOKEN: ${{ github.token }}
                   TAG: ${{ github.ref_name }}
               run: |
-                  if [ -f release-notes.md ]; then
+                  if [[ -f release-notes.md ]]; then
                       gh release create "$TAG" --title "$TAG" --notes-file release-notes.md --verify-tag
                   else
                       gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
