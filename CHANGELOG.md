@@ -25,15 +25,15 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - `repository-templates/` — `CODEOWNERS` (team `@TOANQUYNHLLC/maintainers`), `dependabot.yml`, `release.yml`, `rustfmt.toml`, `.clang-format`, `.python-version`, `.dockerignore`, `.env.example`, `PRIVACY.md`.
 - `labels.yml` và `scripts/sync-labels.sh` — bộ 16 nhãn chuẩn.
 - `scripts/org-setup.py` và `make org-preview` — áp dụng lên các repository: Pull Request thêm tệp dùng chung (theo ngôn ngữ repository dùng), cài đặt hợp nhất và tính năng bảo mật, ruleset, team maintainers; mặc định chỉ xem trước.
-- `docs/adr/` — bản ghi quyết định: thụt lề bằng tab, LF/CRLF, tên branch, ruleset Protect Main, cách hợp nhất.
+- `docs/adr/` — bản ghi quyết định: thụt lề bằng tab, LF/CRLF, tên branch, ruleset Protect Main, cách hợp nhất, nguồn phiên bản công cụ.
 
 **Cấu hình và kiểm tra của repository này**
 
 - Định dạng: `.editorconfig`, `.gitattributes`, `.prettierrc.json`, `ruff.toml`, `eslint.config.js`, `.shellcheckrc` — UTF-8, LF, tab độ rộng 4 (kể cả Python); dấu cách chỉ cho ngôn ngữ bắt buộc; CRLF chỉ cho loại tệp bắt buộc.
-- CI: `validate.yml` (nội dung, 43 test, Prettier, ruff, ESLint, shellcheck, actionlint), `pr-title.yml`, `branch-name.yml`, `codeql.yml`, `dependency-review.yml`, `links.yml`, `stale.yml`, `release.yml` (GitHub Release từ `CHANGELOG.md`).
+- CI: `validate.yml` (nội dung, 44 test, Prettier, ruff, ESLint, shellcheck, actionlint), `pr-title.yml`, `branch-name.yml`, `codeql.yml`, `dependency-review.yml`, `links.yml`, `stale.yml`, `release.yml` (GitHub Release từ `CHANGELOG.md`).
 - `scripts/validate.py` — liên kết, tiêu đề viết hoa, nhãn, biểu mẫu, workflow, ruleset, định dạng và mã hóa từng loại tệp, chữ tiếng Việt dạng NFC; các danh sách trong `CONTRIBUTING.md`, workflow, `.editorconfig`, `.gitattributes` phải khớp nhau.
 - `.github/`: `CODEOWNERS`, `dependabot.yml` (GitHub Actions, npm), `release.yml`, `copilot-instructions.md`.
-- Công cụ: `package.json`, `.nvmrc`, `.npmrc` (không tạo `package-lock.json`), `mise.toml`, `Makefile`, `.devcontainer/`, `.vscode/extensions.json`; `make hooks` cài pre-commit hook, mẫu commit `.gitmessage` và `.git-blame-ignore-revs`; `.mailmap`.
+- Công cụ: `package.json`, `.nvmrc`, `.npmrc` (không tạo `package-lock.json`), `mise.toml` — nguồn phiên bản duy nhất cho máy cục bộ, Dev Container và CI (`jdx/mise-action`, ADR 0007), `Makefile`, `.devcontainer/`, `.vscode/extensions.json`; `make hooks` cài pre-commit hook, mẫu commit `.gitmessage` và `.git-blame-ignore-revs`; `.mailmap`.
 - `AGENTS.md`, `CLAUDE.md` — hướng dẫn cho AI coding agent.
 
 ### ♻️ THAY ĐỔI

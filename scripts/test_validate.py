@@ -214,6 +214,14 @@ class ValidateTest(unittest.TestCase):
 		path.write_text(unicodedata.normalize('NFD', text), encoding='utf-8')
 		self.assert_fails('dạng tách dấu (NFD)')
 
+	def test_phien_ban_cong_cu_chi_o_mise(self):
+		self.edit(
+			'.github/workflows/validate.yml',
+			'run: ruff format --check scripts',
+			'run: pip install ruff==0.1.0',
+		)
+		self.assert_fails('phiên bản công cụ phải lấy từ mise.toml')
+
 	def test_xuong_dong_crlf(self):
 		path = self.repo / 'SUPPORT.md'
 		path.write_bytes(path.read_bytes().replace(b'\n', b'\r\n'))

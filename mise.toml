@@ -1,8 +1,11 @@
-# Phiên bản công cụ trên máy cục bộ, khớp CI (.github/workflows/validate.yml).
+# Phiên bản công cụ — nguồn duy nhất cho máy cục bộ, Dev Container và CI (jdx/mise-action).
 # Cài mise (https://mise.jdx.dev) rồi chạy: mise install
+# Node.js lấy từ .nvmrc (dùng chung với actions/setup-node); thư viện Node.js ghi trong package.json.
 [tools]
-node = "24"
 python = "3"
 ruff = "0.16.9"
 shellcheck = "0.11.0"
 actionlint = "1.7.12"
+
+[settings]
+idiomatic_version_file_enable_tools = ["node"]

@@ -55,10 +55,13 @@ jobs:
             - name: ESLint
               run: npx eslint .
 
+            - name: Cài ruff (phiên bản trong mise.toml)
+              uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+              with:
+                  install_args: ruff
+
             - name: ruff format
-              run: |
-                  python3 -m pip install --user --disable-pip-version-check ruff==0.16.9
-                  python3 -m ruff format --check scripts
+              run: ruff format --check scripts
 
     lint:
         name: Shell script và workflow
@@ -70,10 +73,13 @@ jobs:
               with:
                   persist-credentials: false
 
+            - name: Cài shellcheck, actionlint (phiên bản trong mise.toml)
+              uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+              with:
+                  install_args: shellcheck actionlint
+
             - name: shellcheck
               run: shellcheck scripts/*.sh .devcontainer/*.sh
 
             - name: actionlint
-              run: |
-                  go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-                  "$(go env GOPATH)/bin/actionlint" .github/workflows/*.yml workflow-templates/*.yml
+              run: actionlint .github/workflows/*.yml workflow-templates/*.yml
