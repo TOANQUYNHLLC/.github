@@ -8,7 +8,8 @@ Lệnh (nên chạy theo thứ tự):
 	files: mở Pull Request thêm các tệp dùng chung còn thiếu — .editorconfig, .gitattributes,
 		workflow kiểm tra tiêu đề Pull Request và tên branch, CODEOWNERS, dependabot.yml, release.yml
 		và tệp định dạng theo ngôn ngữ repository dùng. Không ghi đè tệp đã có.
-	settings: cho phép Merge, Squash và Rebase, tự xóa branch sau khi hợp nhất;
+	settings: cho phép Merge, Squash và Rebase, tự xóa branch sau khi hợp nhất; bật secret scanning,
+		push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư;
 		--discussions bật thêm GitHub Discussions.
 	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json); repository khác
 		chỉ giữ kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
@@ -48,6 +49,12 @@ LANGUAGE_FILES = (
 	(('CMakeLists.txt', 'meson.build'), '.clang-format', 'repository-templates/.clang-format'),
 	(('Dockerfile', 'compose.yaml'), '.dockerignore', 'repository-templates/.dockerignore'),
 )
+SECURITY_FEATURES = ('secret_scanning', 'secret_scanning_push_protection')
+# Endpoint bật bằng PUT, đọc trạng thái qua trường enabled.
+SECURITY_ENDPOINTS = {
+	'Dependabot security updates': 'automated-security-fixes',
+	'báo cáo lỗ hổng riêng tư': 'private-vulnerability-reporting',
+}
 MERGE_SETTINGS = {
 	'allow_squash_merge': True,
 	'allow_merge_commit': True,
@@ -235,7 +242,8 @@ def cmd_settings(repos, apply, discussions):
 		current = gh_json('api', f'repos/{ORG}/{repo}')
 		changes = {key: value for key, value in wanted.items() if current.get(key) != value}
 		if not changes:
-			print('   ✔ đã đúng cấu hình')
+			print('   ✔ cài đặt hợp nhất đã đúng')
+			cmd_security(repo, current, apply)
 			continue
 		for key, value in changes.items():
 			print(f'   {"" if apply else "(xem trước) "}{key}: {current.get(key)} → {value}')
@@ -248,6 +256,33 @@ def cmd_settings(repos, apply, discussions):
 					args += ['-f', f'{key}={value}']
 			gh('api', '-X', 'PATCH', f'repos/{ORG}/{repo}', *args)
 			print('   ✔ đã cập nhật')
+		cmd_security(repo, current, apply)
+
+
+def cmd_security(repo, current, apply):
+	"""Bật tính năng bảo mật còn tắt; tính năng cần gói trả phí thì GitHub từ chối và chỉ cảnh báo."""
+	analysis = current.get('security_and_analysis') or {}
+	off = [
+		name for name in SECURITY_FEATURES if (analysis.get(name) or {}).get('status') != 'enabled'
+	]
+	endpoints = {
+		label: endpoint
+		for label, endpoint in SECURITY_ENDPOINTS.items()
+		if not (gh_json('api', f'repos/{ORG}/{repo}/{endpoint}') or {}).get('enabled')
+	}
+	for name in off + list(endpoints):
+		print(f'   {"" if apply else "(xem trước) "}bật {name}')
+	if not apply:
+		return
+	if off:
+		body = json.dumps({'security_and_analysis': {name: {'status': 'enabled'} for name in off}})
+		try:
+			gh('api', '-X', 'PATCH', f'repos/{ORG}/{repo}', '--input', '-', stdin=body)
+		except RuntimeError as exc:
+			print(f'   ⚠ không bật được {", ".join(off)}: {exc}')
+	for label, endpoint in endpoints.items():
+		gh('api', '-X', 'PUT', f'repos/{ORG}/{repo}/{endpoint}')
+		print(f'   ✔ đã bật {label}')
 
 
 def cmd_rulesets(repos, apply):

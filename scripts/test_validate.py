@@ -94,6 +94,10 @@ class ValidateTest(unittest.TestCase):
 		self.edit('SUPPORT.md', 'toanquynhvn@gmail.com', 'lienhe' + '@' + 'example.com')
 		self.assert_fails('khác email chung của công ty')
 
+	def test_security_txt_phai_co_email_cong_ty(self):
+		self.edit('.well-known/security.txt', 'Contact: mailto:toanquynhvn@gmail.com\n', '')
+		self.assert_fails('Contact phải có mailto:toanquynhvn@gmail.com')
+
 	def test_security_txt_het_han(self):
 		self.edit('.well-known/security.txt', 'Expires: 2027', 'Expires: 2020')
 		self.assert_fails('Expires đã hết hạn')
