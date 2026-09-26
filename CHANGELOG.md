@@ -33,7 +33,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - CI: `validate.yml` (nội dung, 44 test, Prettier, ruff, ESLint, shellcheck, actionlint), `pr-title.yml`, `branch-name.yml`, `codeql.yml`, `dependency-review.yml`, `links.yml`, `stale.yml`, `release.yml` (GitHub Release từ `CHANGELOG.md`).
 - `scripts/validate.py` — liên kết, tiêu đề viết hoa, nhãn, biểu mẫu, workflow, ruleset, định dạng và mã hóa từng loại tệp, chữ tiếng Việt dạng NFC; các danh sách trong `CONTRIBUTING.md`, workflow, `.editorconfig`, `.gitattributes` phải khớp nhau.
 - `.github/`: `CODEOWNERS`, `dependabot.yml` (GitHub Actions, npm), `release.yml`, `copilot-instructions.md`.
-- Công cụ: `package.json`, `.nvmrc`, `.npmrc` (không tạo `package-lock.json`), `mise.toml` — nguồn phiên bản duy nhất cho máy cục bộ, Dev Container và CI (`jdx/mise-action`, ADR 0007), `Makefile`, `.devcontainer/`, `.vscode/extensions.json`; `make hooks` cài pre-commit hook, mẫu commit `.gitmessage` và `.git-blame-ignore-revs`; `.mailmap`.
+- Công cụ: `package.json`, `.nvmrc`, `.npmrc` (không tạo `package-lock.json`), `mise.toml` — nguồn phiên bản duy nhất cho máy cục bộ, Dev Container và CI (`jdx/mise-action`, ADR 0007), `Makefile`, `.devcontainer/` (image và feature theo `latest`, không commit `devcontainer-lock.json`), `.vscode/extensions.json`; `make hooks` cài pre-commit hook, mẫu commit `.gitmessage` và `.git-blame-ignore-revs`; `.mailmap`.
 - `AGENTS.md`, `CLAUDE.md` — hướng dẫn cho AI coding agent.
 
 ### ♻️ THAY ĐỔI

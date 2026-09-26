@@ -1,8 +1,8 @@
 {
 	"name": "TOÀN QUỲNH — .github",
-	"image": "mcr.microsoft.com/devcontainers/python:3",
+	"image": "mcr.microsoft.com/devcontainers/python:latest",
 	"features": {
-		"ghcr.io/devcontainers/features/ruby:1": {}
+		"ghcr.io/devcontainers/features/ruby:latest": {}
 	},
 	"postCreateCommand": "bash .devcontainer/post-create.sh",
 	"customizations": {

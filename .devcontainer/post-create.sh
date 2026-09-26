@@ -6,6 +6,8 @@ curl -fsSL https://mise.run | sh
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 # shellcheck disable=SC2016 # Biểu thức được chạy khi mở shell, không phải lúc này.
 echo 'eval "$(~/.local/bin/mise activate bash)"' >>"$HOME/.bashrc"
+# shellcheck disable=SC2016 # Như trên, cho zsh (image có sẵn zsh).
+echo 'eval "$(~/.local/bin/mise activate zsh)"' >>"$HOME/.zshrc"
 
 mise trust --yes
 mise install

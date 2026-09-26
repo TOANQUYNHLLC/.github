@@ -50,6 +50,9 @@
 *.woff2 binary
 *.zip binary
 
+# File sinh tự động: GitHub thu gọn trong Pull Request, không diff dạng văn bản.
+package-lock.json linguist-generated=true -diff
+
 # Diff dễ đọc hơn cho tài liệu và mã nguồn.
 *.md diff=markdown
 *.py diff=python
