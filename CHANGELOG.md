@@ -58,6 +58,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ♻️ THAY ĐỔI
 
+- `ROADMAP.md`: repository `.github` chưa có ruleset — ưu tiên tạo **Protect Main** từ `rulesets/protect-main.json`.
 - Sửa liên kết trang Settings trong `ROADMAP.md` (trả về 404 với người chưa đăng nhập, làm hỏng kiểm tra liên kết hằng tuần); `rulesets/README.md` ghi đủ quy tắc của ruleset; `org-setup.py` nhắc đúng danh sách bỏ qua theo repository.
 - `rulesets/protect-main.json` thay cho hai tệp `dot-github.json` và `default-branch.json`: một ruleset **Protect Main** duy nhất cho mọi repository (`org-setup.py` chỉ giữ kiểm tra bắt buộc mà repository có job); gộp toàn bộ cài đặt của ruleset Protect Main trên web (chặn tạo/cập nhật nhánh chính, phê duyệt lại sau lần đẩy cuối, code quality, danh sách bỏ qua) với ruleset mẫu, đặt tên **Protect Main**; thêm ADR 0005, cập nhật `GOVERNANCE.md`, `rulesets/README.md`, `ROADMAP.md`.
 - `ROADMAP.md` cập nhật sau khi import ruleset mẫu: các việc cấu hình `.github` đã hoàn thành, còn lại quy trình cho repository mới và việc gộp hai ruleset.
