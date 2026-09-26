@@ -66,7 +66,6 @@ Nếu phát hiện vấn đề liên quan đến bảo mật, vui lòng không �
 
 Hãy liên hệ trực tiếp với công ty qua email để vấn đề được tiếp nhận và xử lý phù hợp:
 
-📧 [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com)
 ## 🔐 Báo cáo vấn đề bảo mật
 
 Nếu phát hiện lỗ hổng hoặc vấn đề liên quan đến bảo mật, vui lòng **không đăng tải công khai** thông tin nhạy cảm trong phần Issues, Discussions hoặc Pull Requests.
@@ -76,7 +75,7 @@ Hãy gửi thông tin trực tiếp cho **CÔNG TY TNHH TOÀN QUỲNH** để v�
 ### 📧 Thông tin liên hệ
 
 - **Email:** [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com)
-- **Gửi báo cáo:** [📨 Soạn email báo cáo bảo mật](mailto:toanquynhvn@gmail.com?subject=B%C3%A1o%20c%C3%A1o%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20b%E1%BA%A3o%20m%E1%BA%ADt%20-%20%5BT%C3%AAn%20d%E1%BB%B1%20%C3%A1n%5D&body=K%C3%ADnh%20g%E1%BB%ADi%20C%C3%94NG%20TY%20TNHH%20TO%C3%80N%20QU%E1%BB%B2NH%2C%0A%0AT%C3%B4i%20xin%20b%C3%A1o%20c%C3%A1o%20m%E1%BB%99t%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20b%E1%BA%A3o%20m%E1%BA%ADt%20v%E1%BB%9Bi%20th%C3%B4ng%20tin%20nh%C6%B0%20sau%3A%0A%0A-%20D%E1%BB%B1%20%C3%A1n%2FRepository%3A%0A-%20M%C3%B4%20t%E1%BA%A3%20v%E1%BA%A5n%20%C4%91%E1%BB%81%3A%0A-%20C%C3%A1c%20b%C6%B0%E1%BB%9Bc%20t%C3%A1i%20hi%E1%BB%87n%3A%0A-%20M%E1%BB%A9c%20%C4%91%E1%BB%99%20%E1%BA%A3nh%20h%C6%B0%E1%BB%9Fng%3A%0A-%20Phi%C3%AAn%20b%E1%BA%A3n%2FM%C3%B4i%20tr%C6%B0%E1%BB%9Dng%3A%0A-%20T%C3%A0i%20li%E1%BB%87u%20ho%E1%BA%B7c%20h%C3%ACnh%20%E1%BA%A3nh%20%C4%91%C3%ADnh%20k%C3%A8m%3A%0A%0AT%C3%B4i%20cam%20k%E1%BA%BFt%20ch%C6%B0a%20c%C3%B4ng%20khai%20th%C3%B4ng%20tin%20n%C3%A0y%20v%C3%A0%20s%E1%BA%B5n%20s%C3%A0ng%20ph%E1%BB%91i%20h%E1%BB%A3p%20cung%20c%E1%BA%A5p%20th%C3%AAm%20th%C3%B4ng%20tin.%0A%0ATr%C3%A2n%20tr%E1%BB%8Dng%2C%0A%5BH%E1%BB%8D%20v%C3%A0%20t%C3%AAn%5D%0A%5BTh%C3%B4ng%20tin%20li%C3%AAn%20h%E1%BB%87%5D)
+- **Gửi báo cáo:** [📨 Soạn email báo cáo bảo mật](mailto:toanquynhvn@gmail.com?subject=B%C3%A1o%20c%C3%A1o%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20b%E1%BA%A3o%20m%E1%BA%ADt%20%E2%80%93%20%5BT%C3%AAn%20d%E1%BB%B1%20%C3%A1n%5D&body=K%C3%ADnh%20g%E1%BB%ADi%20C%C3%94NG%20TY%20TNHH%20TO%C3%80N%20QU%E1%BB%B2NH%2C%0D%0A%0D%0AT%C3%B4i%20xin%20b%C3%A1o%20c%C3%A1o%20m%E1%BB%99t%20v%E1%BA%A5n%20%C4%91%E1%BB%81%20b%E1%BA%A3o%20m%E1%BA%ADt%20v%E1%BB%9Bi%20th%C3%B4ng%20tin%20nh%C6%B0%20sau%3A%0D%0A%0D%0ATH%C3%94NG%20TIN%20V%E1%BA%A4N%20%C4%90%E1%BB%80%0D%0A%0D%0A1.%20D%E1%BB%B1%20%C3%A1n%2FRepository%3A%0D%0A%0D%0A2.%20M%C3%B4%20t%E1%BA%A3%20v%E1%BA%A5n%20%C4%91%E1%BB%81%3A%0D%0A%0D%0A3.%20C%C3%A1c%20b%C6%B0%E1%BB%9Bc%20t%C3%A1i%20hi%E1%BB%87n%3A%0D%0A%0D%0A4.%20M%E1%BB%A9c%20%C4%91%E1%BB%99%20%E1%BA%A3nh%20h%C6%B0%E1%BB%9Fng%3A%0D%0A%0D%0A5.%20Phi%C3%AAn%20b%E1%BA%A3n%2FM%C3%B4i%20tr%C6%B0%E1%BB%9Dng%3A%0D%0A%0D%0A6.%20T%C3%A0i%20li%E1%BB%87u%20ho%E1%BA%B7c%20h%C3%ACnh%20%E1%BA%A3nh%20%C4%91%C3%ADnh%20k%C3%A8m%3A%0D%0A%0D%0AT%C3%B4i%20cam%20k%E1%BA%BFt%20ch%C6%B0a%20c%C3%B4ng%20khai%20th%C3%B4ng%20tin%20n%C3%A0y%20v%C3%A0%20s%E1%BA%B5n%20s%C3%A0ng%20ph%E1%BB%91i%20h%E1%BB%A3p%20cung%20c%E1%BA%A5p%20th%C3%AAm%20th%C3%B4ng%20tin.%0D%0A%0D%0ATr%C3%A2n%20tr%E1%BB%8Dng%2C%0D%0A%0D%0A%5BH%E1%BB%8D%20v%C3%A0%20t%C3%AAn%5D%0D%0A%5BTh%C3%B4ng%20tin%20li%C3%AAn%20h%E1%BB%87%5D)
 
 ### 📝 Thông tin cần cung cấp
 
