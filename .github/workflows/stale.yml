@@ -29,8 +29,8 @@ jobs:
                   days-before-close: 14
                   stale-issue-label: stale
                   stale-pr-label: stale
-                  exempt-issue-labels: 'security,priority: khẩn cấp,priority: cao,blocked,in progress,pinned'
-                  exempt-pr-labels: 'security,priority: khẩn cấp,priority: cao,blocked,in progress,pinned'
+                  exempt-issue-labels: 'security,priority: khẩn cấp,priority: cao,blocked,in progress,pinned,upstream'
+                  exempt-pr-labels: 'security,priority: khẩn cấp,priority: cao,blocked,in progress,pinned,upstream'
                   stale-issue-message: >-
                       Issue này không có hoạt động trong 60 ngày nên được đánh dấu **stale**.
                       Issue sẽ tự đóng sau 14 ngày nếu không có phản hồi mới.

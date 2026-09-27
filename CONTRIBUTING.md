@@ -26,7 +26,7 @@ Tạo Issue mới và chọn biểu mẫu phù hợp:
 | ✨ Đề xuất tính năng       | Ý tưởng mới hoặc cải thiện chức năng, giao diện, hiệu năng, tài liệu |
 | ❓ Câu hỏi hoặc cần hỗ trợ | Cần hỏi về cách sử dụng, cấu hình hoặc hoạt động của dự án           |
 
-Pull Request được tự gắn nhãn loại theo tiền tố branch (`feature/` → `enhancement`, `fix/` → `bug`…). Issue mới được gắn nhãn `needs triage`; người quản trị phân loại (mức độ ưu tiên, `help wanted`, `good first issue`…) rồi bỏ nhãn này. Khi cần người báo bổ sung, Issue được gắn `needs more info`.
+Pull Request được tự gắn nhãn loại theo tiền tố branch (`feature/` → `enhancement`, `fix/` → `bug`…). Issue mới được gắn nhãn `needs triage`; người quản trị phân loại (mức độ ưu tiên, `help wanted`, `good first issue`…), gắn `confirmed` khi đã xác nhận, rồi bỏ nhãn này. Khi cần người báo bổ sung, Issue được gắn `needs more info`; lỗi ở chức năng trước đây chạy đúng gắn `regression`; lỗi do thư viện bên ngoài gắn `upstream`.
 
 Một báo lỗi tốt gồm:
 

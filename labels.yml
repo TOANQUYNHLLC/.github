@@ -1,6 +1,8 @@
 # Bộ nhãn chuẩn cho mọi repository của CÔNG TY TNHH TOÀN QUỲNH.
 # Áp dụng bằng: scripts/sync-labels.sh (xem hướng dẫn trong script).
 # color: mã hex 6 ký tự trong dấu nháy (tránh YAML đọc thành số), không có dấu #. description: tối đa 100 ký tự.
+# Chọn theo tần suất ở 40 repository phổ biến (2026-09-27): có đủ 15 nhãn phổ biến nhất. Không dùng nhãn thay được bằng
+# tính năng GitHub (work in progress → Draft Pull Request; do not merge → Draft và phê duyệt bắt buộc).
 
 # Loại vấn đề — biểu mẫu Issue gắn bug, enhancement, question; Pull Request dùng để nhóm nội dung GitHub Release
 # (.github/release.yml). help wanted cùng 8 nhãn trên là bộ nhãn mặc định của GitHub.
@@ -8,6 +10,9 @@
 - name: bug
   color: 'd73a4a'
   description: Một chức năng chạy sai, không chạy hoặc hiển thị không đúng
+- name: regression
+  color: 'b60205'
+  description: Chức năng trước đây chạy đúng nay bị lỗi
 - name: enhancement
   color: 'a2eeef'
   description: Tính năng mới hoặc cải thiện chức năng hiện có
@@ -41,6 +46,9 @@
 - name: accessibility
   color: '0052cc'
   description: Khả năng tiếp cận — trình đọc màn hình, bàn phím, độ tương phản
+- name: build
+  color: 'bfdadc'
+  description: Hệ thống build, phụ thuộc, công cụ phát triển
 - name: chore
   color: 'e4e4e4'
   description: Cấu hình, phụ thuộc, công việc bảo trì khác
@@ -92,6 +100,12 @@
 - name: needs more info
   color: 'd4c5f9'
   description: Cần người tạo bổ sung thông tin
+- name: confirmed
+  color: '0e8a16'
+  description: Đã phân loại và xác nhận lỗi hoặc đề xuất hợp lệ
+- name: upstream
+  color: 'fbca04'
+  description: Do thư viện hoặc dịch vụ bên ngoài — chờ bên đó sửa (stale bỏ qua)
 - name: blocked
   color: 'e99695'
   description: Đang chờ việc khác xong mới làm tiếp được

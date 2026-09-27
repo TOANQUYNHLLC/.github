@@ -19,6 +19,7 @@ changelog:
         - title: 🐛 Sửa lỗi
           labels:
               - bug
+              - regression
         - title: ⚡ Hiệu năng
           labels:
               - performance

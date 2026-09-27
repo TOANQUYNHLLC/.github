@@ -20,6 +20,9 @@ ci:
     - head-branch: ['^ci/']
     - changed-files:
           - any-glob-to-any-file: ['.github/workflows/**', 'workflow-templates/**']
+build:
+    - changed-files:
+          - any-glob-to-any-file: ['package.json', 'Makefile', 'mise.toml', '.nvmrc', '.npmrc']
 chore:
     - head-branch: ['^chore/']
 release:
