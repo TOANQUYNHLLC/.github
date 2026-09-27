@@ -26,6 +26,8 @@ Tạo Issue mới và chọn biểu mẫu phù hợp:
 | ✨ Đề xuất tính năng       | Ý tưởng mới hoặc cải thiện chức năng, giao diện, hiệu năng, tài liệu |
 | ❓ Câu hỏi hoặc cần hỗ trợ | Cần hỏi về cách sử dụng, cấu hình hoặc hoạt động của dự án           |
 
+Issue mới được gắn nhãn `needs triage`; người quản trị phân loại (mức độ ưu tiên, `help wanted`, `good first issue`…) rồi bỏ nhãn này. Khi cần người báo bổ sung, Issue được gắn `needs more info`.
+
 Một báo lỗi tốt gồm:
 
 - **Các bước tái hiện** cụ thể, đánh số theo thứ tự.
@@ -99,7 +101,7 @@ Viết commit theo dạng [Conventional Commits](https://www.conventionalcommits
 
 - Dòng tiêu đề tối đa 72 ký tự, không kết thúc bằng dấu chấm, mô tả **làm gì**.
 - Phần thân (cách tiêu đề một dòng trống) giải thích **vì sao** và ảnh hưởng của thay đổi.
-- Phần cuối liên kết Issue (`Closes #123`) và ghi thay đổi phá vỡ tương thích bằng dấu `!` sau loại hoặc dòng `BREAKING CHANGE:`.
+- Phần cuối liên kết Issue (`Closes #123`) và ghi thay đổi phá vỡ tương thích bằng dấu `!` sau loại hoặc dòng `BREAKING CHANGE:`; Pull Request đó gắn nhãn `breaking change` để được nêu đầu tiên trong GitHub Release.
 - Mỗi commit chỉ chứa một thay đổi có ý nghĩa; không commit file sinh tự động (trừ lockfile, xem mục Phụ thuộc), log, file bí mật (`.env`).
 - Ký commit bằng GPG hoặc SSH để GitHub hiển thị **Verified** — **bắt buộc** trên repository áp dụng ruleset **Protect Main** (commit chưa ký không hợp nhất được vào `main`).
 - Nếu repository có tệp `.gitmessage`, dùng làm mẫu commit: `git config commit.template .gitmessage`.

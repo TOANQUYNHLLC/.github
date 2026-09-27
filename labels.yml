@@ -2,7 +2,8 @@
 # Áp dụng bằng: scripts/sync-labels.sh (xem hướng dẫn trong script).
 # color: mã hex 6 ký tự trong dấu nháy (tránh YAML đọc thành số), không có dấu #. description: tối đa 100 ký tự.
 
-# Loại vấn đề — biểu mẫu Issue gắn bug, enhancement, question; Pull Request dùng để nhóm nội dung GitHub Release.
+# Loại vấn đề — biểu mẫu Issue gắn bug, enhancement, question; Pull Request dùng để nhóm nội dung GitHub Release
+# (.github/release.yml). help wanted cùng 8 nhãn trên là bộ nhãn mặc định của GitHub.
 - name: bug
   color: 'd73a4a'
   description: Một chức năng chạy sai, không chạy hoặc hiển thị không đúng
@@ -18,6 +19,27 @@
 - name: security
   color: 'b60205'
   description: Liên quan đến bảo mật (chi tiết lỗ hổng báo cáo riêng qua SECURITY.md)
+- name: help wanted
+  color: '008672'
+  description: Cần thêm người cùng xử lý
+- name: breaking change
+  color: 'e11d21'
+  description: Thay đổi phá vỡ tương thích (commit có dấu ! hoặc BREAKING CHANGE)
+- name: performance
+  color: 'f9d0c4'
+  description: Cải thiện hiệu năng
+- name: refactor
+  color: 'c5def5'
+  description: Tái cấu trúc, không đổi hành vi
+- name: tests
+  color: 'bfd4f2'
+  description: Bổ sung hoặc sửa kiểm thử
+- name: ci
+  color: 'fef2c0'
+  description: Workflow CI/CD, build, triển khai
+- name: accessibility
+  color: '0052cc'
+  description: Khả năng tiếp cận — trình đọc màn hình, bàn phím, độ tương phản
 
 # Mức độ ưu tiên — khớp với lựa chọn trong biểu mẫu
 - name: 'priority: khẩn cấp'
@@ -34,6 +56,18 @@
   description: Cải tiến nhỏ
 
 # Trạng thái xử lý
+- name: needs triage
+  color: 'ededed'
+  description: Chờ người quản trị phân loại — biểu mẫu Issue tự gắn, bỏ nhãn sau khi phân loại
+- name: needs more info
+  color: 'd4c5f9'
+  description: Cần người tạo bổ sung thông tin
+- name: blocked
+  color: 'e99695'
+  description: Đang chờ việc khác xong mới làm tiếp được
+- name: in progress
+  color: 'c2e0c6'
+  description: Đang được xử lý
 - name: duplicate
   color: 'cfd3d7'
   description: Trùng với Issue hoặc Pull Request đã có
@@ -50,10 +84,22 @@
   color: 'dadada'
   description: Không có hoạt động trong thời gian dài, sẽ tự đóng nếu không có phản hồi
 
-# Dùng bởi Dependabot
+# Dùng bởi Dependabot — tên và màu theo nhãn Dependabot tự tạo (dependabot-core)
 - name: dependencies
   color: '0366d6'
   description: Cập nhật thư viện hoặc phụ thuộc
 - name: github_actions
   color: '000000'
   description: Cập nhật GitHub Actions
+- name: javascript
+  color: '168700'
+  description: Cập nhật thư viện JavaScript (npm)
+- name: python
+  color: '2b67c6'
+  description: Cập nhật thư viện Python (pip)
+- name: go
+  color: '16e2e2'
+  description: Cập nhật module Go
+- name: docker
+  color: '21ceff'
+  description: Cập nhật image Docker

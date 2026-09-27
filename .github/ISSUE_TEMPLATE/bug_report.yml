@@ -3,6 +3,7 @@ description: Một chức năng chạy sai, không chạy hoặc hiển thị kh
 title: '[Lỗi] '
 labels:
     - bug
+    - needs triage
 body:
     - type: markdown
       attributes:

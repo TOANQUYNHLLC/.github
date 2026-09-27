@@ -59,7 +59,7 @@ GitHub tự động áp dụng nội dung của repository này cho toàn tổ c
 | [`workflow-templates/`](workflow-templates/)       | Workflow mẫu: Node.js CI, Python CI, Go CI, CodeQL, rà soát dependency, Docker image, tạo GitHub Release, kiểm tra tiêu đề PR và tên branch, đóng mục không hoạt động, kiểm tra tài liệu |
 | [`rulesets/`](rulesets/)                           | Ruleset **Protect Main** duy nhất (`protect-main.json`) cho nhánh chính của mọi repository: Pull Request bắt buộc, phê duyệt, kiểm tra tự động, commit có chữ ký                         |
 | [`repository-templates/`](repository-templates/)   | Mẫu cho từng repository: `CODEOWNERS`, `dependabot.yml`, `release.yml`, tệp định dạng theo ngôn ngữ (Rust, C/C++, Python), `.dockerignore`, `.env.example`, `PRIVACY.md`                 |
-| [`labels.yml`](labels.yml)                         | Bộ nhãn chuẩn: loại vấn đề, mức độ ưu tiên, trạng thái                                                                                                                                   |
+| [`labels.yml`](labels.yml)                         | Bộ 31 nhãn chuẩn: 9 nhãn mặc định của GitHub, loại thay đổi, mức độ ưu tiên, trạng thái xử lý (`needs triage`…), nhãn Dependabot theo ecosystem                                          |
 | [`scripts/sync-labels.sh`](scripts/sync-labels.sh) | Đồng bộ `labels.yml` lên các repository bằng GitHub CLI (mặc định chỉ xem trước)                                                                                                         |
 
 **Cấu hình của repository này**
