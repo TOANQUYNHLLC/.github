@@ -27,13 +27,25 @@ gh api repos/TOANQUYNHLLC/.github/rules/branches/main --jq '[.[].type] | unique'
 
 ## 🚧 KHI TẠO REPOSITORY MỚI
 
-Hiện tổ chức chỉ có repository `.github`. Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.py`](scripts/org-setup.py) (GitHub CLI đã đăng nhập; xem trước bằng `make org-preview`) theo thứ tự:
+Hiện tổ chức chỉ có repository `.github`.
 
-- [ ] `python3 scripts/org-setup.py files --apply --repo <tên>` — Pull Request thêm `.editorconfig`, `.gitattributes`, workflow kiểm tra tiêu đề và tên branch, `CODEOWNERS`, `dependabot.yml`, `release.yml` và tệp định dạng theo ngôn ngữ; đánh giá rồi hợp nhất. Chép tay `.env.example`, `PRIVACY.md` khi cần ([`repository-templates/`](repository-templates/)).
+- [ ] Tạo repository ứng dụng đầu tiên (ví dụ mã nguồn website `toanquynh.com` hoặc API `api.toanquynh.com`), rồi chạy các bước dưới. Khi chọn **Private**, lưu ý giới hạn của gói GitHub Free: ruleset (**Protect Main**, **Protect Release Tags**) không được thực thi, báo cáo lỗ hổng riêng tư chỉ có ở repository công khai, secret scanning và push protection cần **GitHub Secret Protection** trên gói Team trở lên — `org-setup.py` cảnh báo các mục này rồi chạy tiếp.
+
+Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.py`](scripts/org-setup.py) (GitHub CLI đã đăng nhập; xem trước bằng `make org-preview`) theo thứ tự:
+
+- [ ] `python3 scripts/org-setup.py files --apply --repo <tên>` — Pull Request thêm `.editorconfig`, `.gitattributes`, workflow kiểm tra tiêu đề, tên branch và gắn nhãn (`labeler.yml` kèm cấu hình — sửa đường dẫn nhãn `area: …` cho khớp dự án), `CODEOWNERS`, `dependabot.yml`, `release.yml` và tệp định dạng theo ngôn ngữ; đánh giá rồi hợp nhất. Chép tay `.env.example`, `PRIVACY.md` khi cần ([`repository-templates/`](repository-templates/)).
 - [ ] `python3 scripts/org-setup.py settings --apply --repo <tên>` — cho phép Merge, Squash, Rebase; tự xóa branch; bật secret scanning, push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư.
 - [ ] `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — ruleset **Protect Release Tags** từ [`protect-release-tags.json`](rulesets/protect-release-tags.json) và **Protect Main** từ [`protect-main.json`](rulesets/protect-main.json), Protect Main chỉ giữ 2 kiểm tra bắt buộc mà repository có.
 - [ ] `scripts/sync-labels.sh --apply <tên>` — bộ nhãn chuẩn.
-- [ ] Cấp quyền cho team **maintainers** trên repository mới (**Maintain** trở lên) để `CODEOWNERS` có hiệu lực.
+- [ ] `python3 scripts/org-setup.py team --apply --repo <tên>` — cấp quyền **Maintain** cho team **maintainers** để `CODEOWNERS` có hiệu lực.
+
+---
+
+## 🏢 CÀI ĐẶT TỔ CHỨC TRÊN WEB
+
+GitHub không có API cho các mục này — người quản trị làm trên web.
+
+- [ ] Nhãn mặc định cho repository tạo mới: **Organization settings → Repository → General → Repository labels** — nhập đủ 47 nhãn theo [`labels.yml`](labels.yml) (tên, màu, mô tả; `ui/ux` `d4a5ff`, `i18n` `5319e7` là hai nhãn thêm sau cùng). Nhãn mặc định chỉ áp cho repository tạo sau đó; repository đã có đồng bộ bằng `scripts/sync-labels.sh --apply <tên>`.
 
 ---
 

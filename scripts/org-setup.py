@@ -58,6 +58,8 @@ SECURITY_ENDPOINTS = {
 	'Dependabot security updates': 'automated-security-fixes',
 	'báo cáo lỗ hổng riêng tư': 'private-vulnerability-reporting',
 }
+# Chỉ bật được cho repository công khai (báo cáo lỗ hổng riêng tư).
+PUBLIC_ONLY_ENDPOINTS = ('private-vulnerability-reporting',)
 MERGE_SETTINGS = {
 	'allow_squash_merge': True,
 	'allow_merge_commit': True,
@@ -272,17 +274,33 @@ def cmd_settings(repos, apply, discussions):
 		cmd_security(repo, current, apply)
 
 
+def security_endpoints(private):
+	"""Endpoint bảo mật áp dụng được cho repository; repository riêng tư bỏ qua endpoint chỉ dành cho công khai."""
+	return {
+		label: endpoint
+		for label, endpoint in SECURITY_ENDPOINTS.items()
+		if not (private and endpoint in PUBLIC_ONLY_ENDPOINTS)
+	}
+
+
 def cmd_security(repo, current, apply):
-	"""Bật tính năng bảo mật còn tắt; tính năng cần gói trả phí thì GitHub từ chối và chỉ cảnh báo."""
+	"""Bật tính năng bảo mật còn tắt; GitHub từ chối (gói trả phí, repository riêng tư) thì cảnh báo, không dừng."""
 	analysis = current.get('security_and_analysis') or {}
 	off = [
 		name for name in SECURITY_FEATURES if (analysis.get(name) or {}).get('status') != 'enabled'
 	]
-	endpoints = {
-		label: endpoint
-		for label, endpoint in SECURITY_ENDPOINTS.items()
-		if not (gh_json('api', f'repos/{ORG}/{repo}/{endpoint}') or {}).get('enabled')
-	}
+	private = bool(current.get('private'))
+	for label in sorted(set(SECURITY_ENDPOINTS) - set(security_endpoints(private))):
+		print(f'   – bỏ qua {label}: chỉ dành cho repository công khai')
+	endpoints = {}
+	for label, endpoint in security_endpoints(private).items():
+		try:
+			enabled = (gh_json('api', f'repos/{ORG}/{repo}/{endpoint}') or {}).get('enabled')
+		except RuntimeError as exc:
+			print(f'   ⚠ không đọc được trạng thái {label}: {exc}')
+			continue
+		if not enabled:
+			endpoints[label] = endpoint
 	for name in off + list(endpoints):
 		print(f'   {"" if apply else "(xem trước) "}bật {name}')
 	if not apply:
@@ -294,8 +312,11 @@ def cmd_security(repo, current, apply):
 		except RuntimeError as exc:
 			print(f'   ⚠ không bật được {", ".join(off)}: {exc}')
 	for label, endpoint in endpoints.items():
-		gh('api', '-X', 'PUT', f'repos/{ORG}/{repo}/{endpoint}')
-		print(f'   ✔ đã bật {label}')
+		try:
+			gh('api', '-X', 'PUT', f'repos/{ORG}/{repo}/{endpoint}')
+			print(f'   ✔ đã bật {label}')
+		except RuntimeError as exc:
+			print(f'   ⚠ không bật được {label}: {exc}')
 
 
 def cmd_rulesets(repos, apply):
@@ -325,18 +346,31 @@ def cmd_rulesets(repos, apply):
 				print(f'   (xem trước) {action} ruleset "{name}" từ {source.relative_to(ROOT)}')
 				continue
 			body = json.dumps(ruleset, ensure_ascii=False)
-			if name in existing:
-				gh(
-					'api',
-					'-X',
-					'PUT',
-					f'repos/{ORG}/{repo}/rulesets/{existing[name]}',
-					'--input',
-					'-',
-					stdin=body,
-				)
-			else:
-				gh('api', '-X', 'POST', f'repos/{ORG}/{repo}/rulesets', '--input', '-', stdin=body)
+			try:
+				if name in existing:
+					gh(
+						'api',
+						'-X',
+						'PUT',
+						f'repos/{ORG}/{repo}/rulesets/{existing[name]}',
+						'--input',
+						'-',
+						stdin=body,
+					)
+				else:
+					gh(
+						'api',
+						'-X',
+						'POST',
+						f'repos/{ORG}/{repo}/rulesets',
+						'--input',
+						'-',
+						stdin=body,
+					)
+			except RuntimeError as exc:
+				# Gói GitHub Free không hỗ trợ ruleset cho repository riêng tư.
+				print(f'   ⚠ không {action} được ruleset "{name}": {exc}')
+				continue
 			print(f'   ✔ đã {action} ruleset "{name}"')
 		names = sorted(ruleset['name'] for _, ruleset in wanted)
 		others = sorted(set(existing) - set(names))
