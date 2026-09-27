@@ -31,16 +31,18 @@ format-check: tools ## Kiểm tra định dạng (Prettier, ruff) giống CI
 	npx prettier --check .
 	ruff format --check scripts
 
-lint: tools ## ESLint, shellcheck và actionlint
+lint: tools ## ESLint, ruff check, shellcheck và actionlint
 	npx eslint .
+	ruff check --target-version py311 scripts
 	shellcheck scripts/*.sh .devcontainer/*.sh
 	actionlint .github/workflows/*.yml workflow-templates/*.yml
 
 hooks: ## Cài pre-commit hook, mẫu commit và để git blame bỏ qua commit chỉ đổi định dạng
-	ln -sf ../../scripts/pre-commit.sh .git/hooks/pre-commit
+	@# --git-path hooks: thư mục hook thật, dùng chung cho mọi git worktree (.git trong worktree là tệp).
+	ln -sf ../../scripts/pre-commit.sh "$$(git rev-parse --git-path hooks)/pre-commit"
 	git config blame.ignoreRevsFile .git-blame-ignore-revs
 	git config commit.template .gitmessage
-	@echo "Đã cài .git/hooks/pre-commit, blame.ignoreRevsFile và commit.template"
+	@echo "Đã cài pre-commit hook, blame.ignoreRevsFile và commit.template"
 
 links: ## Kiểm tra liên kết bên ngoài (website, Facebook…) còn hoạt động
 	python3 scripts/check-external-links.py
