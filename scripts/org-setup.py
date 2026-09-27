@@ -11,8 +11,9 @@ Lệnh (nên chạy theo thứ tự):
 	settings: cho phép Merge, Squash và Rebase, tự xóa branch sau khi hợp nhất; bật secret scanning,
 		push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư;
 		--discussions bật thêm GitHub Discussions.
-	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json); repository khác
-		chỉ giữ kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
+	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json) và Protect Release
+		Tags (rulesets/protect-release-tags.json, ADR 0008); Protect Main của repository khác chỉ giữ
+		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
 		chưa có workflow kiểm tra bắt buộc — hợp nhất Pull Request của lệnh files trước.
 	team: tạo team maintainers, thêm người quản trị và cấp quyền maintain mọi repository.
 """
@@ -31,6 +32,8 @@ SYNC_BRANCH = 'chore/sync_org_files'
 TEAM = 'maintainers'
 MAINTAINERS = ('nguyentrongtoandl', 'trongtoandl81')
 RULESET_FILE = ROOT / 'rulesets' / 'protect-main.json'
+# Ruleset tag: chặn tạo, dời, xóa tag phát hành v* ngoài danh sách bỏ qua (ADR 0008).
+TAG_RULESET_FILE = ROOT / 'rulesets' / 'protect-release-tags.json'
 # Workflow mà lệnh files thêm vào repository; ruleset của repository khác chỉ bắt buộc job của chúng.
 REQUIRED_WORKFLOWS = ('.github/workflows/pr-title.yml', '.github/workflows/branch-name.yml')
 # Ecosystem Dependabot và tệp khai báo phụ thuộc ở thư mục gốc cho biết repository dùng nó.
@@ -149,6 +152,14 @@ def ruleset_for(repo):
 					check for check in checks if check['context'] in jobs
 				]
 	return ruleset
+
+
+def rulesets_for(repo):
+	"""Mọi ruleset áp dụng cho repository, kèm tệp nguồn: nhánh chính rồi tag phát hành."""
+	return [
+		(RULESET_FILE, ruleset_for(repo)),
+		(TAG_RULESET_FILE, json.loads(TAG_RULESET_FILE.read_text(encoding='utf-8'))),
+	]
 
 
 def list_repos(only):
@@ -288,7 +299,6 @@ def cmd_security(repo, current, apply):
 def cmd_rulesets(repos, apply):
 	for repo in repos:
 		print(f'== {ORG}/{repo}')
-		ruleset = ruleset_for(repo)
 		if repo != '.github':
 			base = default_branch(repo)
 			absent = [
@@ -305,32 +315,33 @@ def cmd_rulesets(repos, apply):
 			item['name']: item['id']
 			for item in gh_json('api', f'repos/{ORG}/{repo}/rulesets') or []
 		}
-		name = ruleset['name']
-		action = 'cập nhật' if name in existing else 'tạo'
-		others = sorted(set(existing) - {name})
-		if not apply:
-			print(f'   (xem trước) {action} ruleset "{name}" từ {RULESET_FILE.relative_to(ROOT)}')
-			if others:
-				print(
-					f'   ⚠ còn ruleset khác: {", ".join(others)} — xóa trên web để chỉ còn "{name}"'
+		wanted = rulesets_for(repo)
+		for source, ruleset in wanted:
+			name = ruleset['name']
+			action = 'cập nhật' if name in existing else 'tạo'
+			if not apply:
+				print(f'   (xem trước) {action} ruleset "{name}" từ {source.relative_to(ROOT)}')
+				continue
+			body = json.dumps(ruleset, ensure_ascii=False)
+			if name in existing:
+				gh(
+					'api',
+					'-X',
+					'PUT',
+					f'repos/{ORG}/{repo}/rulesets/{existing[name]}',
+					'--input',
+					'-',
+					stdin=body,
 				)
-			continue
-		body = json.dumps(ruleset, ensure_ascii=False)
-		if name in existing:
-			gh(
-				'api',
-				'-X',
-				'PUT',
-				f'repos/{ORG}/{repo}/rulesets/{existing[name]}',
-				'--input',
-				'-',
-				stdin=body,
-			)
-		else:
-			gh('api', '-X', 'POST', f'repos/{ORG}/{repo}/rulesets', '--input', '-', stdin=body)
-		print(f'   ✔ đã {action} ruleset "{name}"')
+			else:
+				gh('api', '-X', 'POST', f'repos/{ORG}/{repo}/rulesets', '--input', '-', stdin=body)
+			print(f'   ✔ đã {action} ruleset "{name}"')
+		names = sorted(ruleset['name'] for _, ruleset in wanted)
+		others = sorted(set(existing) - set(names))
 		if others:
-			print(f'   ⚠ còn ruleset khác: {", ".join(others)} — xóa trên web để chỉ còn "{name}"')
+			print(
+				f'   ⚠ còn ruleset khác: {", ".join(others)} — xóa trên web để chỉ còn {", ".join(names)}'
+			)
 
 
 def cmd_team(repos, apply):

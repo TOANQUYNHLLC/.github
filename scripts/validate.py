@@ -565,6 +565,23 @@ def check_rulesets():
 	for workflow in sorted((ROOT / '.github' / 'workflows').glob('*.yml')):
 		for job in ((load_yaml(workflow) or {}).get('jobs') or {}).values():
 			jobs.add(job.get('name'))
+	tag_path = ROOT / 'rulesets' / 'protect-release-tags.json'
+	if not tag_path.exists():
+		errors.append('thiếu tệp bắt buộc rulesets/protect-release-tags.json')
+	else:
+		try:
+			tags = json.loads(tag_path.read_text(encoding='utf-8'))
+		except json.JSONDecodeError:
+			tags = {}
+		include = ((tags.get('conditions') or {}).get('ref_name') or {}).get('include') or []
+		if tags.get('name') != 'Protect Release Tags' or tags.get('target') != 'tag':
+			error(tag_path, 'ruleset phải tên "Protect Release Tags", target "tag" (ADR 0008)')
+		if 'refs/tags/v*' not in include:
+			error(tag_path, 'ruleset phải áp dụng cho refs/tags/v* (tag phát hành)')
+		if not {'creation', 'update', 'deletion'} <= {
+			rule.get('type') for rule in tags.get('rules') or []
+		}:
+			error(tag_path, 'ruleset phải chặn creation, update, deletion của tag phát hành')
 	for rule in ruleset.get('rules', []):
 		for check in (rule.get('parameters') or {}).get('required_status_checks', []):
 			if check.get('context') not in jobs:
