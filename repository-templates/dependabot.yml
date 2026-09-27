@@ -1,5 +1,7 @@
 # Mẫu Dependabot — chép vào .github/dependabot.yml của repository.
 # Giữ lại các ecosystem dự án dùng, xóa phần còn lại; "directory" là thư mục chứa tệp khai báo phụ thuộc.
+# cooldown: chờ 7 ngày sau khi một phiên bản phát hành mới đề xuất (tránh gói độc vừa phát hành);
+# không áp dụng cho cập nhật bảo mật.
 # Tài liệu: https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference
 version: 2
 updates:
@@ -8,6 +10,8 @@ updates:
       directory: /
       schedule:
           interval: monthly
+      cooldown:
+          default-days: 7
       labels:
           - dependencies
           - github_actions
@@ -19,6 +23,8 @@ updates:
       directory: /
       schedule:
           interval: weekly
+      cooldown:
+          default-days: 7
       labels:
           - dependencies
       commit-message:
@@ -37,6 +43,8 @@ updates:
       directory: /
       schedule:
           interval: weekly
+      cooldown:
+          default-days: 7
       labels:
           - dependencies
       commit-message:
@@ -47,6 +55,8 @@ updates:
       directory: /
       schedule:
           interval: weekly
+      cooldown:
+          default-days: 7
       labels:
           - dependencies
       commit-message:
@@ -57,6 +67,8 @@ updates:
       directory: /
       schedule:
           interval: monthly
+      cooldown:
+          default-days: 7
       labels:
           - dependencies
       commit-message:

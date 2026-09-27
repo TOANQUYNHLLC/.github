@@ -455,6 +455,12 @@ class ValidateTest(unittest.TestCase):
 		)
 		self.assert_fails('danh mục đầu tiên phải là danh mục chung')
 
+	def test_dependabot_phai_co_cooldown(self):
+		self.edit_re(
+			'.github/dependabot.yml', r'^      cooldown:\n          default-days: \d+\n', ''
+		)
+		self.assert_fails('github-actions: cần cooldown.default-days ≥ 7')
+
 	def test_action_phai_ghim_sha(self):
 		# Không gắn cứng SHA: Dependabot nâng action hằng tháng, test phải chạy với mọi SHA.
 		self.edit_re(
