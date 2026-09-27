@@ -593,6 +593,15 @@ class OrgSetupTest(unittest.TestCase):
 		self.assertIn('indent-style = "tab"', files['ruff.toml'])
 		self.assertIn('hard_tabs = true', files['rustfmt.toml'])
 
+	def test_repository_rieng_tu_bo_qua_bao_cao_lo_hong_rieng_tu(self):
+		self.assertIn(
+			'private-vulnerability-reporting', self.module.security_endpoints(False).values()
+		)
+		self.assertNotIn(
+			'private-vulnerability-reporting', self.module.security_endpoints(True).values()
+		)
+		self.assertIn('automated-security-fixes', self.module.security_endpoints(True).values())
+
 	def test_ruleset_protect_main_cho_moi_repository(self):
 		def checks(ruleset):
 			return [
