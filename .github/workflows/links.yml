@@ -21,3 +21,6 @@ jobs:
 
             - name: Kiểm tra liên kết
               run: python3 scripts/check-external-links.py
+
+            - name: Kiểm tra GitHub chấp nhận biểu mẫu
+              run: python3 scripts/check-github-forms.py

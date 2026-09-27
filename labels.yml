@@ -2,8 +2,7 @@
 # Áp dụng bằng: scripts/sync-labels.sh (xem hướng dẫn trong script).
 # color: mã hex 6 ký tự trong dấu nháy (tránh YAML đọc thành số), không có dấu #. description: tối đa 100 ký tự.
 
-# Loại thay đổi — gắn cho Pull Request để nhóm nội dung GitHub Release (.github/release.yml).
-# Issue phân loại bằng Issue Type của tổ chức (Bug, Feature, Task) do biểu mẫu gán; riêng question do biểu mẫu Câu hỏi gắn.
+# Loại vấn đề — biểu mẫu Issue gắn bug, enhancement, question; Pull Request dùng để nhóm nội dung GitHub Release.
 - name: bug
   color: 'd73a4a'
   description: Một chức năng chạy sai, không chạy hoặc hiển thị không đúng

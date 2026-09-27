@@ -5,7 +5,7 @@
 .DEFAULT_GOAL := help
 TOOLS := git python3 ruby npx ruff shellcheck actionlint
 
-.PHONY: help check validate test format format-check lint tools links release-notes labels-preview labels-apply hooks org-preview
+.PHONY: help check validate test format format-check lint tools links forms release-notes labels-preview labels-apply hooks org-preview
 
 help: ## Hiển thị danh sách lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-15s %s\n", $$1, $$2}'
@@ -44,6 +44,9 @@ hooks: ## Cài pre-commit hook, mẫu commit và để git blame bỏ qua commit
 
 links: ## Kiểm tra liên kết bên ngoài (website, Facebook…) còn hoạt động
 	python3 scripts/check-external-links.py
+
+forms: ## Kiểm tra GitHub chấp nhận biểu mẫu Issue, Discussion: make forms REF=<branch> (mặc định main)
+	python3 scripts/check-github-forms.py $(or $(REF),main)
 
 release-notes: ## Xem trước nội dung Release của một tag: make release-notes TAG=v2026.09.Stable
 	python3 scripts/release-notes.py $(TAG)
