@@ -1,0 +1,29 @@
+name: Gắn nhãn Pull Request
+
+on:
+    pull_request:
+        types:
+            - opened
+            - reopened
+            - synchronize
+
+permissions:
+    contents: read
+
+concurrency:
+    # Push mới trên cùng Pull Request hủy lượt chạy cũ; lượt chạy trên nhánh chính luôn chạy hết.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+    label:
+        name: Gắn nhãn theo branch và tệp thay đổi
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        permissions:
+            contents: read
+            pull-requests: write # gắn nhãn theo .github/labeler.yml
+        steps:
+            # Đọc .github/labeler.yml qua API; không checkout mã của Pull Request.
+            - name: Gắn nhãn
+              uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0

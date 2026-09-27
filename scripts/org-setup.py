@@ -6,7 +6,7 @@ Yêu cầu: gh đã đăng nhập bằng tài khoản có quyền quản trị t
 
 Lệnh (nên chạy theo thứ tự):
 	files: mở Pull Request thêm các tệp dùng chung còn thiếu — .editorconfig, .gitattributes,
-		workflow kiểm tra tiêu đề Pull Request và tên branch, CODEOWNERS, dependabot.yml, release.yml
+		workflow kiểm tra tiêu đề Pull Request, tên branch và gắn nhãn (labeler), CODEOWNERS, dependabot.yml, release.yml
 		và tệp định dạng theo ngôn ngữ repository dùng. Không ghi đè tệp đã có.
 	settings: cho phép Merge, Squash và Rebase, tự xóa branch sau khi hợp nhất; bật secret scanning,
 		push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư;
@@ -119,6 +119,8 @@ def planned_files(root_names):
 		'.gitattributes': read('.gitattributes'),
 		'.github/workflows/pr-title.yml': read('workflow-templates/pr-title.yml'),
 		'.github/workflows/branch-name.yml': read('workflow-templates/branch-name.yml'),
+		'.github/workflows/labeler.yml': read('workflow-templates/labeler.yml'),
+		'.github/labeler.yml': read('repository-templates/labeler.yml'),
 		'.github/CODEOWNERS': read('repository-templates/CODEOWNERS'),
 		'.github/dependabot.yml': filter_dependabot(
 			read('repository-templates/dependabot.yml'), root_names

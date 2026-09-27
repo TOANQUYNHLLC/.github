@@ -4,6 +4,7 @@
 
 # Loại vấn đề — biểu mẫu Issue gắn bug, enhancement, question; Pull Request dùng để nhóm nội dung GitHub Release
 # (.github/release.yml). help wanted cùng 8 nhãn trên là bộ nhãn mặc định của GitHub.
+# .github/labeler.yml tự gắn nhãn loại cho Pull Request theo tiền tố branch trong CONTRIBUTING.md.
 - name: bug
   color: 'd73a4a'
   description: Một chức năng chạy sai, không chạy hoặc hiển thị không đúng
@@ -40,6 +41,35 @@
 - name: accessibility
   color: '0052cc'
   description: Khả năng tiếp cận — trình đọc màn hình, bàn phím, độ tương phản
+- name: chore
+  color: 'e4e4e4'
+  description: Cấu hình, phụ thuộc, công việc bảo trì khác
+- name: hotfix
+  color: 'ff7619'
+  description: Sửa lỗi khẩn cấp trên bản đang chạy thật
+- name: release
+  color: '1d76db'
+  description: Chuẩn bị phát hành — CHANGELOG, số phiên bản
+
+# Phạm vi ảnh hưởng — khớp mục "Phạm vi ảnh hưởng" trong biểu mẫu Issue
+- name: 'area: frontend'
+  color: 'c2e0f4'
+  description: Giao diện người dùng
+- name: 'area: backend'
+  color: 'c2e0f4'
+  description: Xử lý phía máy chủ
+- name: 'area: api'
+  color: 'c2e0f4'
+  description: Giao diện lập trình (API)
+- name: 'area: database'
+  color: 'c2e0f4'
+  description: Cơ sở dữ liệu
+- name: 'area: auth'
+  color: 'c2e0f4'
+  description: Hệ thống xác thực hoặc phân quyền
+- name: 'area: infrastructure'
+  color: 'c2e0f4'
+  description: Hạ tầng hoặc quy trình triển khai
 
 # Mức độ ưu tiên — khớp với lựa chọn trong biểu mẫu
 - name: 'priority: khẩn cấp'
@@ -68,6 +98,9 @@
 - name: in progress
   color: 'c2e0c6'
   description: Đang được xử lý
+- name: pinned
+  color: 'fad8c7'
+  description: Giữ lâu dài — workflow stale không đánh dấu, không đóng
 - name: duplicate
   color: 'cfd3d7'
   description: Trùng với Issue hoặc Pull Request đã có

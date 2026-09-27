@@ -1,0 +1,26 @@
+# Tự gắn nhãn cho Pull Request (workflow labeler.yml, actions/labeler v5 trở lên).
+# Nhãn loại theo tiền tố branch trong CONTRIBUTING.md; nhãn phải có trong labels.yml (validate.py kiểm tra).
+enhancement:
+    - head-branch: ['^feature/']
+bug:
+    - head-branch: ['^fix/', '^hotfix/']
+hotfix:
+    - head-branch: ['^hotfix/']
+documentation:
+    - head-branch: ['^docs/']
+refactor:
+    - head-branch: ['^refactor/']
+performance:
+    - head-branch: ['^perf/']
+tests:
+    - head-branch: ['^test/']
+    - changed-files:
+          - any-glob-to-any-file: ['scripts/test_*.py']
+ci:
+    - head-branch: ['^ci/']
+    - changed-files:
+          - any-glob-to-any-file: ['.github/workflows/**', 'workflow-templates/**']
+chore:
+    - head-branch: ['^chore/']
+release:
+    - head-branch: ['^release/']

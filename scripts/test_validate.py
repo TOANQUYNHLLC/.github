@@ -471,6 +471,14 @@ class ValidateTest(unittest.TestCase):
 		self.edit('rulesets/protect-release-tags.json', '\t\t{ "type": "deletion" },\n', '')
 		self.assert_fails('ruleset phải chặn creation, update, deletion')
 
+	def test_nhan_trong_labeler_phai_co_trong_labels(self):
+		self.edit('.github/labeler.yml', 'chore:\n', 'viec-vat:\n')
+		self.assert_fails('nhãn "viec-vat" chưa có trong labels.yml')
+
+	def test_labeler_du_tien_to_branch(self):
+		self.edit('.github/labeler.yml', "release:\n    - head-branch: ['^release/']\n", '')
+		self.assert_fails('thiếu luật head-branch cho tiền tố "release/"')
+
 	def test_action_phai_ghim_sha(self):
 		# Không gắn cứng SHA: Dependabot nâng action hằng tháng, test phải chạy với mọi SHA.
 		self.edit_re(
@@ -556,6 +564,8 @@ class OrgSetupTest(unittest.TestCase):
 					'.gitattributes',
 					'.github/workflows/pr-title.yml',
 					'.github/workflows/branch-name.yml',
+					'.github/workflows/labeler.yml',
+					'.github/labeler.yml',
 					'.github/CODEOWNERS',
 					'.github/dependabot.yml',
 					'.github/release.yml',

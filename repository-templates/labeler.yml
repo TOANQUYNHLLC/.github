@@ -1,0 +1,44 @@
+# Mẫu cấu hình actions/labeler — chép vào .github/labeler.yml của repository (org-setup.py tự thêm).
+# Nhãn loại theo tiền tố branch trong CONTRIBUTING.md; nhãn area theo thư mục — sửa đường dẫn cho khớp dự án.
+# Tên nhãn khớp labels.yml của tổ chức.
+enhancement:
+    - head-branch: ['^feature/']
+bug:
+    - head-branch: ['^fix/', '^hotfix/']
+hotfix:
+    - head-branch: ['^hotfix/']
+documentation:
+    - head-branch: ['^docs/']
+    - changed-files:
+          - any-glob-to-any-file: ['docs/**']
+refactor:
+    - head-branch: ['^refactor/']
+performance:
+    - head-branch: ['^perf/']
+tests:
+    - head-branch: ['^test/']
+    - changed-files:
+          - any-glob-to-any-file: ['tests/**', '**/*.test.*', '**/*_test.*', '**/test_*.py']
+ci:
+    - head-branch: ['^ci/']
+    - changed-files:
+          - any-glob-to-any-file: ['.github/workflows/**']
+chore:
+    - head-branch: ['^chore/']
+release:
+    - head-branch: ['^release/']
+'area: frontend':
+    - changed-files:
+          - any-glob-to-any-file: ['frontend/**', 'web/**', 'src/components/**']
+'area: backend':
+    - changed-files:
+          - any-glob-to-any-file: ['backend/**', 'server/**']
+'area: api':
+    - changed-files:
+          - any-glob-to-any-file: ['api/**', '**/openapi.*']
+'area: database':
+    - changed-files:
+          - any-glob-to-any-file: ['**/migrations/**', '**/*.sql', 'prisma/**']
+'area: infrastructure':
+    - changed-files:
+          - any-glob-to-any-file: ['Dockerfile', 'compose*.yaml', 'infra/**', '**/*.tf']
