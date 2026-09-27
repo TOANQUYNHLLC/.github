@@ -6,6 +6,7 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ## ✅ ĐÃ HOÀN THÀNH GẦN ĐÂY
 
+- [x] Đồng bộ bộ 41 nhãn chuẩn (thêm `chore`, `hotfix`, `release`, `pinned`, sáu nhãn `area: …`) lên `.github`; `.github/labeler.yml` tự gắn nhãn loại cho Pull Request theo tiền tố branch (2026-09-27).
 - [x] Đồng bộ bộ 31 nhãn chuẩn (thêm 15 nhãn phổ biến: `help wanted`, loại thay đổi, trạng thái xử lý, nhãn Dependabot theo ecosystem) lên `.github` bằng `scripts/sync-labels.sh --apply` (2026-09-27).
 - [x] Đăng [`.well-known/security.txt`](.well-known/security.txt) tại `https://toanquynh.com/.well-known/security.txt` (hosting P.A Việt Nam, thư mục `public_html/.well-known/`); `links.yml` kiểm tra URL này hằng tuần (2026-09-27).
 - [x] Ruleset **Protect Main** duy nhất cho `main` của `.github`, tạo từ [`rulesets/protect-main.json`](rulesets/protect-main.json) ([ADR 0005](docs/adr/0005-merge-protect-main.md)), đang áp dụng 8 quy tắc: `code_quality`, `creation`, `deletion`, `non_fast_forward`, `pull_request`, `required_signatures`, `required_status_checks`, `update` (2026-09-26).

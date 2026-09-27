@@ -4,13 +4,14 @@ GitHub **không** kế thừa các tệp dưới đây từ repository `.github`
 
 **Mọi repository** (org-setup.py tự thêm)
 
-| Tệp nguồn                             | Chép vào                 | Nội dung                                                                 |
-| ------------------------------------- | ------------------------ | ------------------------------------------------------------------------ |
-| [`.editorconfig`](../.editorconfig)   | `.editorconfig`          | Tab độ rộng 4, LF, UTF-8; dấu cách và CRLF chỉ cho loại tệp bắt buộc     |
-| [`.gitattributes`](../.gitattributes) | `.gitattributes`         | LF mặc định, CRLF cho tệp bắt buộc, tệp nhị phân                         |
-| [`CODEOWNERS`](CODEOWNERS)            | `.github/CODEOWNERS`     | Team `@TOANQUYNHLLC/maintainers` duyệt mọi thay đổi                      |
-| [`dependabot.yml`](dependabot.yml)    | `.github/dependabot.yml` | Chỉ giữ ecosystem repository dùng (GitHub Actions, npm, pip, Go, Docker) |
-| [`release.yml`](release.yml)          | `.github/release.yml`    | Nhóm nội dung GitHub Release tự tạo theo nhãn chuẩn                      |
+| Tệp nguồn                             | Chép vào                 | Nội dung                                                                                                                           |
+| ------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| [`.editorconfig`](../.editorconfig)   | `.editorconfig`          | Tab độ rộng 4, LF, UTF-8; dấu cách và CRLF chỉ cho loại tệp bắt buộc                                                               |
+| [`.gitattributes`](../.gitattributes) | `.gitattributes`         | LF mặc định, CRLF cho tệp bắt buộc, tệp nhị phân                                                                                   |
+| [`CODEOWNERS`](CODEOWNERS)            | `.github/CODEOWNERS`     | Team `@TOANQUYNHLLC/maintainers` duyệt mọi thay đổi                                                                                |
+| [`dependabot.yml`](dependabot.yml)    | `.github/dependabot.yml` | Chỉ giữ ecosystem repository dùng (GitHub Actions, npm, pip, Go, Docker)                                                           |
+| [`release.yml`](release.yml)          | `.github/release.yml`    | Nhóm nội dung GitHub Release tự tạo theo nhãn chuẩn                                                                                |
+| [`labeler.yml`](labeler.yml)          | `.github/labeler.yml`    | Gắn nhãn loại theo tiền tố branch, nhãn `area: …` theo thư mục — sửa đường dẫn cho khớp dự án (đi cùng workflow mẫu `labeler.yml`) |
 
 **Theo ngôn ngữ** (org-setup.py thêm khi thấy tệp khai báo ở thư mục gốc)
 

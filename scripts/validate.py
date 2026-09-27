@@ -540,6 +540,14 @@ def check_conventions():
 			re.MULTILINE,
 		)
 	)
+	# Mỗi tiền tố branch có luật head-branch trong .github/labeler.yml (tự gắn nhãn loại cho Pull Request).
+	labeler = ROOT / '.github' / 'labeler.yml'
+	if labeler.exists():
+		covered = set(re.findall(r"'\^([a-z]+)/'", labeler.read_text(encoding='utf-8')))
+		for prefix in sorted(prefixes - covered):
+			errors.append(
+				f'.github/labeler.yml: thiếu luật head-branch cho tiền tố "{prefix}/" của CONTRIBUTING.md'
+			)
 	for name, expected in (('pr-title.yml', types), ('branch-name.yml', prefixes)):
 		for folder in (ROOT / '.github' / 'workflows', ROOT / 'workflow-templates'):
 			path = folder / name
@@ -705,7 +713,7 @@ def check_dependabot_cooldown():
 
 
 def config_labels():
-	"""Nhãn dùng trong dependabot.yml, release.yml và workflow stale (bản của repository này và bản mẫu)."""
+	"""Nhãn dùng trong dependabot.yml, release.yml, labeler.yml và workflow stale (bản của repository này và bản mẫu)."""
 	found = []
 	for path in (
 		ROOT / '.github' / 'dependabot.yml',
@@ -718,6 +726,8 @@ def config_labels():
 		found += [(path, label) for label in (changelog.get('exclude') or {}).get('labels') or []]
 		for category in changelog.get('categories') or []:
 			found += [(path, label) for label in category.get('labels') or [] if label != '*']
+	for path in (ROOT / '.github' / 'labeler.yml', ROOT / 'repository-templates' / 'labeler.yml'):
+		found += [(path, label) for label in ((load_yaml(path) if path.exists() else None) or {})]
 	for path in (
 		ROOT / '.github' / 'workflows' / 'stale.yml',
 		ROOT / 'workflow-templates' / 'stale.yml',
