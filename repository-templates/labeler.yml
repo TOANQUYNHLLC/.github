@@ -38,6 +38,12 @@ chore:
     - head-branch: ['^chore/']
 release:
     - head-branch: ['^release/']
+ui/ux:
+    - changed-files:
+          - any-glob-to-any-file: ['**/*.css', '**/*.scss', '**/styles/**', '**/*.figma']
+i18n:
+    - changed-files:
+          - any-glob-to-any-file: ['**/locales/**', '**/i18n/**', '**/*.po', '**/messages/*.json']
 'area: frontend':
     - changed-files:
           - any-glob-to-any-file: ['frontend/**', 'web/**', 'src/components/**']

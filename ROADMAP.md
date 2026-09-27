@@ -6,6 +6,7 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ## ✅ ĐÃ HOÀN THÀNH GẦN ĐÂY
 
+- [x] Đối chiếu thêm 30 repository ứng dụng (gồm OpenEMR, Medplum, OpenMRS, HAPI FHIR): thêm `ui/ux`, `i18n` (47 nhãn), đồng bộ lên `.github` (2026-09-27).
 - [x] Đối chiếu nhãn với 40 repository phổ biến: thêm `regression`, `build`, `confirmed`, `upstream` (45 nhãn), đồng bộ lên `.github` (2026-09-27).
 - [x] Đồng bộ bộ 41 nhãn chuẩn (thêm `chore`, `hotfix`, `release`, `pinned`, sáu nhãn `area: …`) lên `.github`; `.github/labeler.yml` tự gắn nhãn loại cho Pull Request theo tiền tố branch (2026-09-27).
 - [x] Đồng bộ bộ 31 nhãn chuẩn (thêm 15 nhãn phổ biến: `help wanted`, loại thay đổi, trạng thái xử lý, nhãn Dependabot theo ecosystem) lên `.github` bằng `scripts/sync-labels.sh --apply` (2026-09-27).

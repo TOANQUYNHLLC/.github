@@ -105,6 +105,10 @@ class ValidateTest(unittest.TestCase):
 		self.edit('README.md', '(SECURITY.md)', '(KHONG_TON_TAI.md)')
 		self.assert_fails('liên kết hỏng: KHONG_TON_TAI.md')
 
+	def test_lien_ket_toi_muc_phai_ton_tai(self):
+		self.edit('profile/README.md', '## 📞 THÔNG TIN LIÊN HỆ', '## 📞 LIÊN HỆ')
+		self.assert_fails('liên kết hỏng: profile/README.md#-thông-tin-liên-hệ')
+
 	def test_tieu_de_phai_viet_hoa(self):
 		self.edit('README.md', '## 🎯 MỤC ĐÍCH', '## 🎯 Mục đích')
 		self.assert_fails('tiêu đề phải viết hoa')

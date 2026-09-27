@@ -217,14 +217,35 @@ def check_text(path):
 	return text
 
 
+def heading_anchors(path):
+	"""Anchor GitHub tạo cho các tiêu đề Markdown: chữ thường, bỏ ký tự không phải chữ, số, khoảng trắng,
+	gạch ngang; khoảng trắng thành "-"; tiêu đề trùng thêm hậu tố -1, -2…."""
+	text = re.sub(r'```.*?```', '', path.read_text(encoding='utf-8'), flags=re.DOTALL)
+	seen, anchors = {}, set()
+	for match in re.finditer(r'^#{1,6} (.+)$', text, re.MULTILINE):
+		slug = re.sub(r'[^\w\- ]', '', re.sub(r'`([^`]*)`', r'\1', match.group(1)).strip().lower())
+		slug = slug.replace(' ', '-')
+		count = seen.get(slug, 0)
+		seen[slug] = count + 1
+		anchors.add(slug if count == 0 else f'{slug}-{count}')
+	return anchors
+
+
 def check_links(path, text):
 	body = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-	for match in re.finditer(r'\]\(([^)\s#]+)(#[^)]*)?\)', body):
-		target = match.group(1)
-		if re.match(r'[a-z]+:', target):
+	for match in re.finditer(r'\]\(([^)\s#]*)(?:#([^)\s]*))?\)', body):
+		target, fragment = match.group(1), match.group(2)
+		if re.match(r'[a-z]+:', target) or (not target and fragment is None):
 			continue
-		if not (path.parent / target).exists():
+		destination = path.parent / target if target else path
+		if not destination.exists():
 			error(path, f'liên kết hỏng: {target}')
+		elif (
+			fragment
+			and destination.suffix == '.md'
+			and fragment not in heading_anchors(destination)
+		):
+			error(path, f'liên kết hỏng: {target}#{fragment} — không có tiêu đề tương ứng')
 
 
 def check_absolute_links(path, text):
