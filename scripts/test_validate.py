@@ -495,6 +495,12 @@ class ValidateTest(unittest.TestCase):
 		self.edit('rulesets/org-protect-release-tags.json', '"~ALL"', '".github"')
 		self.assert_fails('nhắm ~ALL repository và refs/tags/v*')
 
+	def test_moi_ruleset_bat_buoc_commit_co_chu_ky(self):
+		self.edit_re(
+			'rulesets/protect-main.json', r'^\t\t\{ "type": "required_signatures" \},\n', ''
+		)
+		self.assert_fails('protect-main.json: ruleset phải có quy tắc required_signatures')
+
 	def test_action_phai_ghim_sha(self):
 		# Không gắn cứng SHA: Dependabot nâng action hằng tháng, test phải chạy với mọi SHA.
 		self.edit_re(
