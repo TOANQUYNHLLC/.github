@@ -1,8 +1,4 @@
 # Commit chỉ đổi định dạng — git blame bỏ qua để giữ đúng tác giả của từng dòng.
 # GitHub tự đọc tệp này. Trên máy: git config blame.ignoreRevsFile .git-blame-ignore-revs (make hooks đã làm).
 # Thêm commit: ghi SHA đầy đủ kèm một dòng chú thích phía trên.
-
-# 0f3765d "Refactor validate.py for improved formatting and error handling": chuyển Python sang thụt lề
-# bằng tab, nhưng KHÔNG chỉ đổi định dạng — còn thay đổi logic (+323/−52 dòng khi bỏ qua khoảng trắng).
-# git blame cũng bỏ qua phần logic đó; xem đầy đủ: git blame --ignore-revs-file= <tệp> (tên tệp rỗng)
-0f3765d01cc177d8cc5e03c1103c106edfb3f8ae
+# Chỉ ghi commit CHỈ đổi định dạng — commit có cả thay đổi logic sẽ làm git blame gán sai tác giả.
