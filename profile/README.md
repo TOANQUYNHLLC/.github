@@ -1,6 +1,6 @@
 # 🏢 CÔNG TY TNHH TOÀN QUỲNH
 
-### 🌱 KẾT NỐI CÔNG NGHỆ – KIẾN TẠO GIÁ TRỊ – CHĂM SÓC BẰNG SỰ TẬN TÂM
+**🌱 KẾT NỐI CÔNG NGHỆ – KIẾN TẠO GIÁ TRỊ – CHĂM SÓC BẰNG SỰ TẬN TÂM**
 
 [![Website](https://img.shields.io/badge/Website-toanquynh.com-0969da?logo=googlechrome&logoColor=white)](https://toanquynh.com)
 [![Facebook](https://img.shields.io/badge/Facebook-To%C3%A0n%20Qu%E1%BB%B3nh%20LLC-1877f2?logo=facebook&logoColor=white)](https://www.facebook.com/ToanQuynhLLC)

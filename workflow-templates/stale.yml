@@ -8,14 +8,19 @@ on:
 permissions:
     contents: read
 
+concurrency:
+    # Push mới trên cùng Pull Request hủy lượt chạy cũ; lượt chạy trên nhánh chính luôn chạy hết.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
     stale:
         name: Đánh dấu và đóng mục không hoạt động
         runs-on: ubuntu-latest
         timeout-minutes: 10
         permissions:
-            issues: write
-            pull-requests: write
+            issues: write # gắn nhãn stale, bình luận và đóng Issue
+            pull-requests: write # gắn nhãn stale, bình luận và đóng Pull Request
         steps:
             - name: Đánh dấu và đóng
               uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
