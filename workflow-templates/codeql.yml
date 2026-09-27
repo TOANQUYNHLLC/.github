@@ -28,9 +28,12 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                # Sửa theo ngôn ngữ của dự án. Ngôn ngữ thông dịch dùng build-mode "none";
-                # ngôn ngữ biên dịch (java-kotlin, csharp, go, c-cpp, swift) dùng "autobuild".
+                # Sửa theo ngôn ngữ của dự án; giữ actions vì repository nào cũng có workflow.
+                # build-mode "none" (không cần build): actions, ngôn ngữ thông dịch, c-cpp, csharp, java-kotlin
+                # (chỉ Java), rust; "autobuild": go, swift, java-kotlin có Kotlin.
                 include:
+                    - language: actions
+                      build-mode: none
                     - language: javascript-typescript
                       build-mode: none
                     - language: python

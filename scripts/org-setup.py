@@ -680,7 +680,8 @@ def main():
 		gh('auth', 'status')
 	except (RuntimeError, FileNotFoundError):
 		sys.exit('Cần GitHub CLI đã đăng nhập: https://cli.github.com rồi chạy gh auth login')
-	repos = list_repos(args.repo)
+	# org-rulesets áp dụng cho cả tổ chức, không cần danh sách repository.
+	repos = [] if args.command == 'org-rulesets' else list_repos(args.repo)
 	if args.command == 'files':
 		cmd_files(repos, args.apply)
 	elif args.command == 'settings':
