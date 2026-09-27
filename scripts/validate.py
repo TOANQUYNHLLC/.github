@@ -675,6 +675,18 @@ def check_labels(path):
 	return names
 
 
+def check_dependabot_cooldown():
+	"""Mọi mục Dependabot chờ ≥ 7 ngày sau khi phát hành (chống gói độc vừa phát hành; không ảnh hưởng cập nhật bảo mật)."""
+	for path in (
+		ROOT / '.github' / 'dependabot.yml',
+		ROOT / 'repository-templates' / 'dependabot.yml',
+	):
+		for update in ((load_yaml(path) if path.exists() else None) or {}).get('updates') or []:
+			days = (update.get('cooldown') or {}).get('default-days')
+			if not isinstance(days, int) or days < 7:
+				error(path, f'{update.get("package-ecosystem")}: cần cooldown.default-days ≥ 7')
+
+
 def config_labels():
 	"""Nhãn dùng trong dependabot.yml, release.yml và workflow stale (bản của repository này và bản mẫu)."""
 	found = []
@@ -822,6 +834,7 @@ for file in tracked_files():
 
 check_format_config()
 check_lint_ignore_config()
+check_dependabot_cooldown()
 check_tool_versions()
 check_suffix_lists()
 check_conventions()
