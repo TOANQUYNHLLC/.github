@@ -611,6 +611,19 @@ class OrgSetupTest(unittest.TestCase):
 		self.assertIn('indent-style = "tab"', files['ruff.toml'])
 		self.assertIn('hard_tabs = true', files['rustfmt.toml'])
 
+	def test_so_sanh_ruleset_bo_qua_truong_github_them(self):
+		wanted = json.loads((ROOT / 'rulesets' / 'protect-main.json').read_text(encoding='utf-8'))
+		live = dict(
+			wanted, id=1, node_id='RRS_x', source_type='Repository', source='o/r', _links={}
+		)
+		live['bypass_actors'] = list(reversed(wanted['bypass_actors']))
+		live['rules'] = list(reversed(wanted['rules']))
+		self.assertEqual(self.module.ruleset_summary(live), self.module.ruleset_summary(wanted))
+		changed = dict(wanted, rules=wanted['rules'][1:])
+		self.assertNotEqual(
+			self.module.ruleset_summary(changed), self.module.ruleset_summary(wanted)
+		)
+
 	def test_repository_rieng_tu_bo_qua_bao_cao_lo_hong_rieng_tu(self):
 		self.assertIn(
 			'private-vulnerability-reporting', self.module.security_endpoints(False).values()

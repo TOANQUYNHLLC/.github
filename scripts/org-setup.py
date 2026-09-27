@@ -168,6 +168,24 @@ def ruleset_for(repo):
 	return ruleset
 
 
+def ruleset_summary(ruleset):
+	"""Phần so sánh được của ruleset — bỏ id, node_id, ngày tạo, liên kết… mà GitHub thêm vào khi đọc."""
+	return {
+		'name': ruleset.get('name'),
+		'target': ruleset.get('target'),
+		'enforcement': ruleset.get('enforcement'),
+		'conditions': ruleset.get('conditions'),
+		'bypass_actors': sorted(
+			(actor.get('actor_id'), actor.get('actor_type'), actor.get('bypass_mode'))
+			for actor in ruleset.get('bypass_actors') or []
+		),
+		'rules': sorted(
+			json.dumps(rule, sort_keys=True, ensure_ascii=False)
+			for rule in ruleset.get('rules') or []
+		),
+	}
+
+
 def org_ruleset():
 	"""Protect Main cho mọi repository ở cấp tổ chức: như Protect Main của repository khác (chỉ giữ kiểm tra
 	bắt buộc có ở mọi repository), nhắm ~ALL repository, bỏ quy tắc cấp tổ chức không hỗ trợ."""
@@ -385,6 +403,11 @@ def cmd_rulesets(repos, apply):
 		for source, ruleset in wanted:
 			name = ruleset['name']
 			action = 'cập nhật' if name in existing else 'tạo'
+			if name in existing:
+				live = gh_json('api', f'repos/{ORG}/{repo}/rulesets/{existing[name]}')
+				if ruleset_summary(live) == ruleset_summary(ruleset):
+					print(f'   ✔ ruleset "{name}" đã đúng')
+					continue
 			if not apply:
 				print(f'   (xem trước) {action} ruleset "{name}" từ {source.relative_to(ROOT)}')
 				continue
@@ -441,6 +464,11 @@ def cmd_org_rulesets(apply):
 	for source, ruleset in org_rulesets():
 		name = ruleset['name']
 		action = 'cập nhật' if name in existing else 'tạo'
+		if name in existing:
+			live = gh_json('api', f'orgs/{ORG}/rulesets/{existing[name]}')
+			if ruleset_summary(live) == ruleset_summary(ruleset):
+				print(f'   ✔ ruleset "{name}" đã đúng')
+				continue
 		if not apply:
 			print(f'   (xem trước) {action} ruleset "{name}" từ {source.relative_to(ROOT)}')
 			continue
