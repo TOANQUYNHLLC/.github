@@ -8,6 +8,8 @@ hotfix:
     - head-branch: ['^hotfix/']
 documentation:
     - head-branch: ['^docs/']
+    - changed-files:
+          - any-glob-to-any-file: ['docs/**']
 refactor:
     - head-branch: ['^refactor/']
 performance:

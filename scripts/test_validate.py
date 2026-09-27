@@ -483,6 +483,10 @@ class ValidateTest(unittest.TestCase):
 		self.edit('.github/labeler.yml', "release:\n    - head-branch: ['^release/']\n", '')
 		self.assert_fails('thiếu luật head-branch cho tiền tố "release/"')
 
+	def test_ruleset_to_chuc_nham_moi_repository(self):
+		self.edit('rulesets/org-protect-main.json', '"~ALL"', '".github"')
+		self.assert_fails('ruleset phải tên "Protect Main (Organization)" và nhắm mọi repository')
+
 	def test_ruleset_tag_to_chuc_nham_moi_repository(self):
 		self.edit('rulesets/org-protect-release-tags.json', '"~ALL"', '".github"')
 		self.assert_fails('nhắm ~ALL repository và refs/tags/v*')

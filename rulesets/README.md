@@ -22,7 +22,7 @@ Mọi ruleset — nhánh và tag, cấp repository và cấp tổ chức — có
 
 ## 🏢 RULESET CẤP TỔ CHỨC
 
-Hai ruleset cho mọi repository (`~ALL`), chuẩn bị sẵn cho khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức):
+Hai ruleset cho mọi repository (`~ALL`), đã import trên web (**Active**) nhưng chỉ được thực thi khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức):
 
 - [`org-protect-main.json`](org-protect-main.json) — **Protect Main (Organization)**: cùng quy tắc với Protect Main trên nhánh mặc định.
 - [`org-protect-release-tags.json`](org-protect-release-tags.json) — **Protect Release Tags (Organization)**: cùng quy tắc với Protect Release Tags trên tag `v*`.
