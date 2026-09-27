@@ -10,8 +10,9 @@ permissions:
     contents: read
 
 concurrency:
-    group: validate-${{ github.ref }}
-    cancel-in-progress: true
+    # Push mới trên cùng Pull Request hủy lượt chạy cũ; lượt chạy trên nhánh chính luôn chạy hết.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
     content:
@@ -62,6 +63,10 @@ jobs:
 
             - name: ruff format
               run: ruff format --check scripts
+
+            # Python ≥ 3.11 (tomllib, datetime.UTC); ruff.toml giữ đúng cấu hình chuẩn nên khai báo ở đây.
+            - name: ruff check
+              run: ruff check --target-version py311 scripts
 
     lint:
         name: Shell script và workflow

@@ -29,7 +29,7 @@ Repository `.github` đặc biệt của tổ chức: tệp cộng đồng (`CON
 - **Workflow:** mọi action ghim theo commit SHA đầy đủ kèm chú thích phiên bản; khai báo `permissions` tối thiểu; job nào cũng có `timeout-minutes`. Không đoán SHA — lấy bằng `git ls-remote`.
 - **Danh sách phải khớp nhau:** loại commit và tiền tố branch giữa `CONTRIBUTING.md` và các workflow `pr-title.yml`, `branch-name.yml`; đuôi file giữa `scripts/validate.py`, `.editorconfig`, `.gitattributes`; nhãn trong biểu mẫu, `dependabot.yml`, `release.yml`, `stale.yml` phải có trong `labels.yml`. Sửa một nơi thì sửa cả các nơi còn lại.
 - **Phiên bản công cụ:** chỉ khai báo trong `mise.toml` (ruff, ShellCheck, actionlint), `.nvmrc` (Node.js) và `package.json` (thư viện Node.js); không ghi phiên bản trong workflow hay script.
-- **Biểu mẫu:** biểu mẫu Issue, Discussion và `FUNDING.yml` phải nằm trong `.github/` (GitHub không nhận ở thư mục gốc); liên kết trong biểu mẫu và `PULL_REQUEST_TEMPLATE.md` là URL tuyệt đối vì nội dung hiển thị ở repository khác.
+- **Biểu mẫu:** biểu mẫu Issue, Discussion và `FUNDING.yml` phải nằm trong `.github/` (GitHub không nhận ở thư mục gốc); liên kết trong biểu mẫu và `PULL_REQUEST_TEMPLATE.md` là URL tuyệt đối vì nội dung hiển thị ở repository khác. Sửa biểu mẫu thì đẩy branch rồi chạy `make forms REF=<branch>` trước khi hợp nhất — GitHub có thể từ chối khóa mà tài liệu vẫn nhắc (ví dụ `type`).
 - **CHANGELOG:** thay đổi đáng chú ý ghi vào mục **CHƯA PHÁT HÀNH** của `CHANGELOG.md`.
 - **Quyết định lớn:** đọc `docs/adr/` trước khi đổi quy ước; đổi quyết định thì thêm ADR mới, không sửa ADR đã chấp nhận.
 - **Commit chỉ đổi định dạng:** thêm SHA vào `.git-blame-ignore-revs`.
