@@ -9,7 +9,8 @@
 		},
 		"repository_name": {
 			"exclude": [],
-			"include": ["~ALL"]
+			"include": ["~ALL"],
+			"protected": false
 		}
 	},
 	"bypass_actors": [
@@ -43,13 +44,8 @@
 				"required_reviewers": [],
 				"require_code_owner_review": true,
 				"dismissal_restriction": {
-					"enabled": true,
-					"allowed_actors": [
-						{
-							"id": 19737661,
-							"type": "Team"
-						}
-					]
+					"enabled": false,
+					"allowed_actors": []
 				},
 				"require_last_push_approval": true,
 				"required_review_thread_resolution": true,
@@ -72,6 +68,12 @@
 						"integration_id": 15368
 					}
 				]
+			}
+		},
+		{
+			"type": "code_quality",
+			"parameters": {
+				"severity": "all"
 			}
 		}
 	]

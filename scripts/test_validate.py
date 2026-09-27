@@ -483,14 +483,6 @@ class ValidateTest(unittest.TestCase):
 		self.edit('.github/labeler.yml', "release:\n    - head-branch: ['^release/']\n", '')
 		self.assert_fails('thiếu luật head-branch cho tiền tố "release/"')
 
-	def test_ruleset_to_chuc_khong_co_code_quality(self):
-		self.edit_re(
-			'rulesets/org-protect-main.json',
-			r'"rules": \[\n',
-			'"rules": [\n\t\t{ "type": "code_quality", "parameters": { "severity": "all" } },\n',
-		)
-		self.assert_fails('ruleset cấp tổ chức không hỗ trợ quy tắc code_quality')
-
 	def test_ruleset_tag_to_chuc_nham_moi_repository(self):
 		self.edit('rulesets/org-protect-release-tags.json', '"~ALL"', '".github"')
 		self.assert_fails('nhắm ~ALL repository và refs/tags/v*')
@@ -645,6 +637,59 @@ class OrgSetupTest(unittest.TestCase):
 		# Tệp để import trên web phải đúng bằng org_ruleset() sinh từ Protect Main.
 		for source, ruleset in self.module.org_rulesets():
 			self.assertEqual(json.loads(source.read_text(encoding='utf-8')), ruleset, source.name)
+
+	def test_so_ruleset_to_chuc_doc_qua_graphql(self):
+		# Dạng GraphQL trả về cho Protect Release Tags (Organization) trên web.
+		node = {
+			'name': 'Protect Release Tags (Organization)',
+			'target': 'TAG',
+			'enforcement': 'ACTIVE',
+			'conditions': {
+				'refName': {'include': ['refs/tags/v*'], 'exclude': []},
+				'repositoryName': {'include': ['~ALL'], 'exclude': [], 'protected': False},
+			},
+			'bypassActors': {
+				'nodes': [
+					{
+						'bypassMode': 'ALWAYS',
+						'organizationAdmin': True,
+						'repositoryRoleDatabaseId': None,
+						'actor': None,
+					}
+				]
+			},
+			'rules': {
+				'nodes': [
+					{'type': 'CREATION', 'parameters': None},
+					{'type': 'UPDATE', 'parameters': {'__typename': 'UpdateParameters'}},
+					{'type': 'DELETION', 'parameters': None},
+					{'type': 'NON_FAST_FORWARD', 'parameters': None},
+					{'type': 'REQUIRED_SIGNATURES', 'parameters': None},
+					{
+						'type': 'REQUIRED_STATUS_CHECKS',
+						'parameters': {
+							'__typename': 'RequiredStatusChecksParameters',
+							'doNotEnforceOnCreate': False,
+							'strictRequiredStatusChecksPolicy': True,
+							'requiredStatusChecks': [],
+						},
+					},
+				]
+			},
+		}
+		wanted = self.module.graphql_visible(self.module.org_tag_ruleset())
+		live = self.module.graphql_ruleset(node)
+		self.assertEqual(self.module.ruleset_summary(live), self.module.ruleset_summary(wanted))
+		node['rules']['nodes'].pop()
+		self.assertNotEqual(
+			self.module.ruleset_summary(self.module.graphql_ruleset(node)),
+			self.module.ruleset_summary(wanted),
+		)
+		main = self.module.graphql_visible(self.module.org_ruleset())
+		for rule in main['rules']:
+			self.assertNotIn(
+				'require_extra_approval_for_unattributed_changes', rule.get('parameters', {})
+			)
 
 	def test_ruleset_protect_main_cho_moi_repository(self):
 		def checks(ruleset):

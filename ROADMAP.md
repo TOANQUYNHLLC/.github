@@ -6,6 +6,7 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ## ✅ ĐÃ HOÀN THÀNH GẦN ĐÂY
 
+- [x] Ruleset cấp tổ chức **Protect Main (Organization)** và **Protect Release Tags (Organization)** đã import trên web (**Active**); [`rulesets/org-protect-main.json`](rulesets/org-protect-main.json), [`rulesets/org-protect-release-tags.json`](rulesets/org-protect-release-tags.json) khớp bản trên web. GitHub chỉ thực thi khi tổ chức nâng lên gói **Team** (2026-09-27).
 - [x] Đối chiếu thêm 30 repository ứng dụng (gồm OpenEMR, Medplum, OpenMRS, HAPI FHIR): thêm `ui/ux`, `i18n` (47 nhãn), đồng bộ lên `.github` (2026-09-27).
 - [x] Đối chiếu nhãn với 40 repository phổ biến: thêm `regression`, `build`, `confirmed`, `upstream` (45 nhãn), đồng bộ lên `.github` (2026-09-27).
 - [x] Đồng bộ bộ 41 nhãn chuẩn (thêm `chore`, `hotfix`, `release`, `pinned`, sáu nhãn `area: …`) lên `.github`; `.github/labeler.yml` tự gắn nhãn loại cho Pull Request theo tiền tố branch (2026-09-27).
@@ -21,6 +22,7 @@ Kiểm tra lại ruleset và các quy tắc đang áp dụng cho `main`:
 ```sh
 gh api repos/TOANQUYNHLLC/.github/rulesets --jq '.[].name'
 gh api repos/TOANQUYNHLLC/.github/rules/branches/main --jq '[.[].type] | unique'
+python3 scripts/org-setup.py org-rulesets   # so ruleset cấp tổ chức trên web với rulesets/org-*.json
 ```
 
 ---
@@ -45,7 +47,6 @@ Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.p
 
 GitHub không có API cho các mục này (hoặc cần quyền `admin:org`) — người quản trị làm trên web.
 
-- [ ] Ruleset cấp tổ chức **Protect Main (Organization)** và **Protect Release Tags (Organization)**: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn [`rulesets/org-protect-main.json`](rulesets/org-protect-main.json), rồi [`rulesets/org-protect-release-tags.json`](rulesets/org-protect-release-tags.json). GitHub chỉ thực thi khi tổ chức nâng lên gói **Team**; khi đó cân nhắc ADR mới để bỏ ruleset cấp repository trùng lặp.
 - [ ] Nhãn mặc định cho repository tạo mới: **Organization settings → Repository → General → Repository labels** — nhập đủ 47 nhãn theo [`labels.yml`](labels.yml) (tên, màu, mô tả; `ui/ux` `d4a5ff`, `i18n` `5319e7` là hai nhãn thêm sau cùng). Nhãn mặc định chỉ áp cho repository tạo sau đó; repository đã có đồng bộ bằng `scripts/sync-labels.sh --apply <tên>`.
 
 ---
@@ -53,6 +54,8 @@ GitHub không có API cho các mục này (hoặc cần quyền `admin:org`) —
 ## 💡 CÂN NHẮC
 
 - [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`.github/DISCUSSION_TEMPLATE/`](.github/DISCUSSION_TEMPLATE/).
+- [ ] Khi nâng lên gói **Team**: ruleset cấp tổ chức được thực thi — cân nhắc ADR mới để bỏ ruleset cấp repository trùng lặp.
+- [ ] Xóa quy tắc kiểm tra bắt buộc rỗng (không chặn gì) của **Protect Release Tags (Organization)** trên web, rồi bỏ khỏi `org_tag_ruleset()` trong [`scripts/org-setup.py`](scripts/org-setup.py) và sinh lại tệp.
 - [ ] Quét bí mật theo mẫu tùy chỉnh (non-provider patterns) và kiểm tra bí mật còn hiệu lực (validity checks): cần gói **GitHub Secret Protection**.
 
 ---

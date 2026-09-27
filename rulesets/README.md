@@ -29,11 +29,11 @@ Hai ruleset cho mọi repository (`~ALL`), chuẩn bị sẵn cho khi tổ chứ
 
 Khác với bản cấp repository:
 
-- Chỉ giữ 2 kiểm tra bắt buộc có ở mọi repository (tiêu đề Pull Request, tên branch) — như Protect Main của repository khác.
-- Bỏ quy tắc `code_quality`: API ruleset cấp tổ chức không nhận, import sẽ bị từ chối.
-- Không dùng actor loại `User` (import báo "contains an invalid actor"): danh sách bỏ qua là **chủ tổ chức** (`OrganizationAdmin`), quyền hủy phê duyệt là team **maintainers** — cùng hai người quản trị như bản cấp repository.
-- Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `org_rulesets()` trong `scripts/org-setup.py`; test bảo đảm khớp nhau — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức. Cả hai hợp lệ theo schema OpenAPI của `POST /orgs/{org}/rulesets`.
-- Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json`; hoặc cấp quyền `gh auth refresh -h github.com -s admin:org` rồi chạy `python3 scripts/org-setup.py org-rulesets --apply`.
+- Chỉ giữ 2 kiểm tra bắt buộc có ở mọi repository (tiêu đề Pull Request, tên branch) — như Protect Main của repository khác; vẫn có `code_quality`.
+- Không dùng actor loại `User` (import báo "contains an invalid actor"): danh sách bỏ qua là **chủ tổ chức** (`OrganizationAdmin`) — cùng hai người quản trị như bản cấp repository; không giới hạn người hủy phê duyệt.
+- Protect Release Tags (Organization) có thêm quy tắc kiểm tra bắt buộc với danh sách rỗng như trên web — quy tắc này không chặn gì, có thể xóa trên web rồi bỏ trong `org_tag_ruleset()`.
+- Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `org_rulesets()` trong `scripts/org-setup.py` và khớp ruleset đang cài trên web; test bảo đảm tệp khớp `org_rulesets()` — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức.
+- Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json`. REST API ruleset cấp tổ chức trả HTTP 403 ở gói Free (dù token có quyền `admin:org`), nên `python3 scripts/org-setup.py org-rulesets` chỉ so tệp với ruleset trên web (đọc qua GraphQL); `--apply` chỉ tạo, cập nhật được khi tổ chức dùng gói Team.
 
 ## ✅ KIỂM TRA BẮT BUỘC
 

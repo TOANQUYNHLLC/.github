@@ -18,7 +18,8 @@ Lệnh (nên chạy theo thứ tự):
 	team: tạo team maintainers, thêm người quản trị và cấp quyền maintain mọi repository.
 	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Protect Main (Organization) và Protect Release
 		Tags (Organization) (rulesets/org-*.json) cho mọi repository; cần token có quyền admin:org
-		(gh auth refresh -h github.com -s admin:org); GitHub chỉ thực thi khi tổ chức dùng gói Team trở lên.
+		(gh auth refresh -h github.com -s admin:org) và gói GitHub Team trở lên. Gói Free: REST API
+		trả HTTP 403 nên chỉ so tệp với ruleset trên web (đọc qua GraphQL) — tạo, sửa bằng import trên web.
 """
 
 import argparse
@@ -37,17 +38,16 @@ MAINTAINERS = ('nguyentrongtoandl', 'trongtoandl81')
 RULESET_FILE = ROOT / 'rulesets' / 'protect-main.json'
 # Ruleset tag: chặn tạo, dời, xóa tag phát hành v* ngoài danh sách bỏ qua (ADR 0008).
 TAG_RULESET_FILE = ROOT / 'rulesets' / 'protect-release-tags.json'
-# Ruleset cấp tổ chức sinh từ Protect Main; tệp dùng để import trên web, org_ruleset() là nguồn.
+# Ruleset cấp tổ chức: tệp để import trên web, sinh từ bản cấp repository bằng org_rulesets(), khớp ruleset
+# đang cài trên web (lệnh org-rulesets so qua GraphQL khi REST API trả HTTP 403 ở gói Free).
 ORG_RULESET_FILE = ROOT / 'rulesets' / 'org-protect-main.json'
 ORG_RULESET_NAME = 'Protect Main (Organization)'
 ORG_TAG_RULESET_FILE = ROOT / 'rulesets' / 'org-protect-release-tags.json'
 ORG_TAG_RULESET_NAME = 'Protect Release Tags (Organization)'
-# Ruleset cấp tổ chức không nhận actor loại User khi import ("contains an invalid actor"): danh sách bỏ qua
-# dùng vai trò chủ tổ chức (actor_id bị bỏ qua), quyền hủy phê duyệt dùng team maintainers — cùng hai người quản trị.
+# Import cấp tổ chức không nhận actor loại User ("contains an invalid actor"): bỏ qua là chủ tổ chức (actor_id
+# bị bỏ qua) — cùng hai người quản trị; ruleset trên web tắt giới hạn hủy phê duyệt.
 ORG_BYPASS_ACTORS = [{'actor_id': 1, 'actor_type': 'OrganizationAdmin', 'bypass_mode': 'always'}]
-MAINTAINERS_TEAM_ID = 19737661  # gh api orgs/TOANQUYNHLLC/teams/maintainers -q .id
-# Quy tắc ruleset cấp tổ chức không nhận (theo OpenAPI của GitHub cho POST /orgs/{org}/rulesets).
-ORG_UNSUPPORTED_RULES = ('code_quality',)
+ORG_REPOSITORIES = {'exclude': [], 'include': ['~ALL'], 'protected': False}
 # Workflow mà lệnh files thêm vào repository; ruleset của repository khác chỉ bắt buộc job của chúng.
 REQUIRED_WORKFLOWS = ('.github/workflows/pr-title.yml', '.github/workflows/branch-name.yml')
 # Ecosystem Dependabot và tệp khai báo phụ thuộc ở thư mục gốc cho biết repository dùng nó.
@@ -190,28 +190,122 @@ def ruleset_summary(ruleset):
 	}
 
 
+# GraphQL đọc được ruleset cấp tổ chức ở gói Free; không có update_allows_fetch_and_merge (bỏ fragment
+# UpdateParameters) và require_extra_approval_for_unattributed_changes — bỏ hai trường này khi so.
+ORG_RULESETS_QUERY = """
+query($org: String!) { organization(login: $org) { rulesets(first: 50) { nodes {
+	name target enforcement
+	conditions { refName { include exclude } repositoryName { include exclude protected } }
+	bypassActors(first: 50) { nodes {
+		bypassMode organizationAdmin repositoryRoleDatabaseId
+		actor { __typename ... on Team { databaseId } ... on App { databaseId } }
+	} }
+	rules(first: 50) { nodes { type parameters { __typename
+		... on PullRequestParameters {
+			allowedMergeMethods dismissStaleReviewsOnPush dismissalRestriction { enabled allowedActors }
+			requireCodeOwnerReview requireLastPushApproval requiredApprovingReviewCount
+			requiredReviewThreadResolution requiredReviewers { minimumApprovals filePatterns reviewerId }
+		}
+		... on RequiredStatusChecksParameters {
+			doNotEnforceOnCreate strictRequiredStatusChecksPolicy
+			requiredStatusChecks { context integrationId }
+		}
+		... on CodeQualityParameters { severity }
+	} } }
+} } } }
+"""
+GRAPHQL_HIDDEN_PARAMETERS = (
+	'update_allows_fetch_and_merge',
+	'require_extra_approval_for_unattributed_changes',
+)
+GRAPHQL_ENUM_PARAMETERS = ('allowed_merge_methods', 'severity')
+
+
+def snake_keys(value):
+	"""Đổi khóa camelCase của GraphQL sang snake_case của REST, bỏ __typename."""
+	if isinstance(value, list):
+		return [snake_keys(item) for item in value]
+	if not isinstance(value, dict):
+		return value
+	return {
+		re.sub(r'(?<!^)(?=[A-Z])', '_', key).lower(): snake_keys(item)
+		for key, item in value.items()
+		if key != '__typename' and item is not None
+	}
+
+
+def graphql_ruleset(node):
+	"""Ruleset đọc qua GraphQL, đổi sang dạng REST của tệp ruleset."""
+	actors = []
+	for actor in node['bypassActors']['nodes']:
+		if actor['organizationAdmin']:
+			actor_id, actor_type = 1, 'OrganizationAdmin'
+		elif actor['repositoryRoleDatabaseId']:
+			actor_id, actor_type = actor['repositoryRoleDatabaseId'], 'RepositoryRole'
+		else:
+			who = actor['actor'] or {}
+			actor_id = who.get('databaseId')
+			actor_type = {'App': 'Integration'}.get(who.get('__typename'), who.get('__typename'))
+		actors.append(
+			{
+				'actor_id': actor_id,
+				'actor_type': actor_type,
+				'bypass_mode': actor['bypassMode'].lower(),
+			}
+		)
+	rules = []
+	for rule in node['rules']['nodes']:
+		parameters = snake_keys(rule['parameters'] or {})
+		for key in GRAPHQL_ENUM_PARAMETERS:
+			if key in parameters:
+				value = parameters[key]
+				parameters[key] = (
+					[item.lower() for item in value] if isinstance(value, list) else value.lower()
+				)
+		rules.append(
+			{'type': rule['type'].lower(), **({'parameters': parameters} if parameters else {})}
+		)
+	return {
+		'name': node['name'],
+		'target': node['target'].lower(),
+		'enforcement': node['enforcement'].lower(),
+		'conditions': snake_keys(node['conditions']),
+		'bypass_actors': actors,
+		'rules': rules,
+	}
+
+
+def graphql_visible(ruleset):
+	"""Ruleset bỏ các trường GraphQL không trả, để so với graphql_ruleset()."""
+	rules = []
+	for rule in ruleset['rules']:
+		parameters = {
+			key: value
+			for key, value in (rule.get('parameters') or {}).items()
+			if key not in GRAPHQL_HIDDEN_PARAMETERS
+		}
+		rules.append({'type': rule['type'], **({'parameters': parameters} if parameters else {})})
+	return dict(ruleset, rules=rules)
+
+
 def org_ruleset():
 	"""Protect Main cho mọi repository ở cấp tổ chức: như Protect Main của repository khác (chỉ giữ kiểm tra
-	bắt buộc có ở mọi repository), nhắm ~ALL repository, bỏ quy tắc cấp tổ chức không hỗ trợ."""
+	bắt buộc có ở mọi repository; giữ code_quality), nhắm ~ALL repository."""
 	ruleset = ruleset_for('app')
 	ruleset['name'] = ORG_RULESET_NAME
 	ruleset['conditions'] = {
 		'ref_name': {'exclude': [], 'include': ['~DEFAULT_BRANCH']},
-		'repository_name': {'exclude': [], 'include': ['~ALL']},
+		'repository_name': dict(ORG_REPOSITORIES),
 	}
-	ruleset['rules'] = [
-		rule for rule in ruleset['rules'] if rule['type'] not in ORG_UNSUPPORTED_RULES
-	]
 	return org_actors(ruleset)
 
 
 def org_actors(ruleset):
-	"""Đổi actor loại User (chỉ hợp lệ ở cấp repository) sang actor cấp tổ chức."""
+	"""Đổi actor loại User (chỉ hợp lệ ở cấp repository) sang actor cấp tổ chức như ruleset trên web."""
 	ruleset['bypass_actors'] = [dict(actor) for actor in ORG_BYPASS_ACTORS]
 	for rule in ruleset['rules']:
-		restriction = (rule.get('parameters') or {}).get('dismissal_restriction')
-		if restriction and restriction.get('allowed_actors'):
-			restriction['allowed_actors'] = [{'id': MAINTAINERS_TEAM_ID, 'type': 'Team'}]
+		if 'dismissal_restriction' in (rule.get('parameters') or {}):
+			rule['parameters']['dismissal_restriction'] = {'enabled': False, 'allowed_actors': []}
 	return ruleset
 
 
@@ -219,12 +313,18 @@ def org_tag_ruleset():
 	"""Protect Release Tags cho mọi repository ở cấp tổ chức: cùng quy tắc, nhắm ~ALL repository."""
 	ruleset = json.loads(TAG_RULESET_FILE.read_text(encoding='utf-8'))
 	ruleset['name'] = ORG_TAG_RULESET_NAME
-	ruleset['conditions'] = dict(
-		ruleset['conditions'], repository_name={'exclude': [], 'include': ['~ALL']}
+	ruleset['conditions'] = dict(ruleset['conditions'], repository_name=dict(ORG_REPOSITORIES))
+	# Ruleset trên web có quy tắc kiểm tra bắt buộc với danh sách rỗng (không chặn gì) — giữ để tệp khớp web.
+	ruleset['rules'].append(
+		{
+			'type': 'required_status_checks',
+			'parameters': {
+				'strict_required_status_checks_policy': True,
+				'do_not_enforce_on_create': False,
+				'required_status_checks': [],
+			},
+		}
 	)
-	ruleset['rules'] = [
-		rule for rule in ruleset['rules'] if rule['type'] not in ORG_UNSUPPORTED_RULES
-	]
 	return org_actors(ruleset)
 
 
@@ -460,20 +560,41 @@ def cmd_rulesets(repos, apply):
 			)
 
 
+def compare_org_rulesets():
+	"""So tệp ruleset cấp tổ chức với ruleset trên web (đọc qua GraphQL); sửa trên web bằng import."""
+	how = 'Organization settings → Repository → Rulesets → New ruleset → Import a ruleset'
+	try:
+		data = gh_json('api', 'graphql', '-f', f'query={ORG_RULESETS_QUERY}', '-f', f'org={ORG}')
+	except RuntimeError as exc:
+		print(f'   ⚠ không đọc được qua GraphQL: {exc}')
+		print(
+			f'   Cấp quyền: gh auth refresh -h github.com -s admin:org — hoặc import tệp tại {how}.'
+		)
+		return
+	live = {
+		node['name']: graphql_ruleset(node)
+		for node in data['data']['organization']['rulesets']['nodes']
+	}
+	for source, ruleset in org_rulesets():
+		name, path = ruleset['name'], source.relative_to(ROOT)
+		if name not in live:
+			print(f'   ✘ chưa có ruleset "{name}" — import {path} tại {how}')
+		elif ruleset_summary(live[name]) == ruleset_summary(graphql_visible(ruleset)):
+			print(f'   ✔ ruleset "{name}" đã đúng')
+		else:
+			print(f'   ✘ ruleset "{name}" khác {path} — sửa trên web hoặc xóa rồi import lại')
+
+
 def cmd_org_rulesets(apply):
-	"""Ruleset cấp tổ chức; thiếu quyền admin:org thì hướng dẫn cấp quyền hoặc import tệp trên web."""
+	"""Ruleset cấp tổ chức; REST API bị chặn (gói Free, thiếu admin:org) thì so qua GraphQL."""
 	print(f'== ruleset cấp tổ chức {ORG} (chỉ thực thi với gói GitHub Team trở lên)')
 	try:
 		existing = {
 			item['name']: item['id'] for item in gh_json('api', f'orgs/{ORG}/rulesets') or []
 		}
 	except RuntimeError as exc:
-		sources = ', '.join(str(source.relative_to(ROOT)) for source, _ in org_rulesets())
-		print(f'   ⚠ không đọc được ruleset cấp tổ chức: {exc}')
-		print(
-			'   Cấp quyền: gh auth refresh -h github.com -s admin:org — hoặc import '
-			f'{sources} tại Organization settings → Repository → Rulesets → New ruleset → Import a ruleset.'
-		)
+		print(f'   ⚠ REST API ruleset cấp tổ chức: {exc}')
+		compare_org_rulesets()
 		return
 	for source, ruleset in org_rulesets():
 		name = ruleset['name']
