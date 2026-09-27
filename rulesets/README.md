@@ -48,5 +48,5 @@ Tên kiểm tra phải trùng **tên job**, nếu không Pull Request sẽ chờ
 
 ## 📥 CÁCH ÁP DỤNG
 
-- **Bằng script** (khuyên dùng cho repository khác): `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — tạo mới hoặc cập nhật hai ruleset **Protect Main**, **Protect Release Tags** và cảnh báo nếu repository còn ruleset khác.
+- **Bằng script** (khuyên dùng cho repository khác): `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — tạo mới hoặc cập nhật hai ruleset **Protect Main**, **Protect Release Tags** (so với ruleset trên GitHub trước: giống tệp thì báo đã đúng, không ghi) và cảnh báo nếu repository còn ruleset khác.
 - **Trên web** (repository `.github`): **Settings → Rules → Rulesets → New ruleset → Import a ruleset** → chọn `protect-main.json` → **Create**; lặp lại với `protect-release-tags.json`. Import `protect-main.json` trên web giữ nguyên cả 5 kiểm tra — chỉ dùng cho repository `.github`.
