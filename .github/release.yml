@@ -7,6 +7,9 @@ changelog:
             - invalid
             - wontfix
     categories:
+        - title: 💥 Thay đổi phá vỡ tương thích
+          labels:
+              - breaking change
         - title: 🔐 Bảo mật
           labels:
               - security
@@ -16,6 +19,9 @@ changelog:
         - title: 🐛 Sửa lỗi
           labels:
               - bug
+        - title: ⚡ Hiệu năng
+          labels:
+              - performance
         - title: 📝 Tài liệu
           labels:
               - documentation

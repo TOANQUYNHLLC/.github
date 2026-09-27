@@ -27,6 +27,7 @@ updates:
           default-days: 7
       labels:
           - dependencies
+          - javascript
       commit-message:
           prefix: chore
       groups:
@@ -47,6 +48,7 @@ updates:
           default-days: 7
       labels:
           - dependencies
+          - python
       commit-message:
           prefix: chore
 
@@ -59,6 +61,7 @@ updates:
           default-days: 7
       labels:
           - dependencies
+          - go
       commit-message:
           prefix: chore
 
@@ -71,5 +74,6 @@ updates:
           default-days: 7
       labels:
           - dependencies
+          - docker
       commit-message:
           prefix: chore

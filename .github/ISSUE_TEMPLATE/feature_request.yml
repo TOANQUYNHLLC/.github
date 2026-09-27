@@ -3,6 +3,7 @@ description: Ý tưởng tính năng mới hoặc cải thiện chức năng, gi
 title: '[Đề xuất] '
 labels:
     - enhancement
+    - needs triage
 body:
     - type: markdown
       attributes:

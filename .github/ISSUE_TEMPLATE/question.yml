@@ -3,6 +3,7 @@ description: Hỏi về cách sử dụng, cấu hình hoặc hoạt động c�
 title: '[Câu hỏi] '
 labels:
     - question
+    - needs triage
 body:
     - type: markdown
       attributes:
