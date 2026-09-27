@@ -23,6 +23,17 @@ ci:
     - head-branch: ['^ci/']
     - changed-files:
           - any-glob-to-any-file: ['.github/workflows/**']
+build:
+    - changed-files:
+          - any-glob-to-any-file:
+                [
+                    'package.json',
+                    'pyproject.toml',
+                    'requirements*.txt',
+                    'go.mod',
+                    'Cargo.toml',
+                    'Makefile',
+                ]
 chore:
     - head-branch: ['^chore/']
 release:
