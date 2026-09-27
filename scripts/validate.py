@@ -21,6 +21,22 @@ FORM_TYPES = {'markdown', 'textarea', 'input', 'dropdown', 'checkboxes'}
 ISSUE_FORM_KEYS = {'name', 'description', 'title', 'labels', 'assignees', 'projects', 'body'}
 # Biểu mẫu Discussion chỉ nhận các khóa này ở cấp cao nhất (không có name, description như Issue).
 DISCUSSION_FORM_KEYS = {'title', 'labels', 'body'}
+# Danh mục chung của workflow mẫu (actions/starter-workflows): danh mục đầu tiên phải thuộc nhóm này,
+# sau đó mới tới ngôn ngữ Linguist hoặc tech stack.
+WORKFLOW_GENERAL_CATEGORIES = {
+	'Continuous integration',
+	'Deployment',
+	'Testing',
+	'Code quality',
+	'Code review',
+	'Dependency review',
+	'Dependency graph',
+	'Code Scanning',
+	'Monitoring',
+	'Automation',
+	'Utilities',
+	'Pages',
+}
 # Email liên hệ chung của công ty — mọi tài liệu phải dùng đúng địa chỉ này.
 COMPANY_EMAIL = 'toanquynhvn@gmail.com'
 errors = []
@@ -294,6 +310,11 @@ def check_workflow(path, text):
 		error(
 			path, '$default-branch chỉ dùng trong workflow-templates/ — ghi tên nhánh thật (main)'
 		)
+	if not re.search(r'^concurrency:', text, re.MULTILINE):
+		error(path, 'thiếu khai báo "concurrency" ở cấp workflow')
+	for number, line in enumerate(text.split('\n'), start=1):
+		if re.match(r'^\s+[a-z-]+: write\s*$', line):
+			error(path, f'dòng {number}: quyền ghi cần chú thích lý do (# …)')
 	workflow = load_yaml(path)
 	top = (workflow or {}).get('permissions')
 	if top == 'write-all' or (isinstance(top, dict) and 'write' in top.values()):
@@ -316,6 +337,12 @@ def check_workflow_template(path):
 	for key in ('name', 'description'):
 		if not meta.get(key):
 			error(properties, f'thiếu khóa bắt buộc "{key}"')
+	categories = meta.get('categories') or []
+	if not categories or categories[0] not in WORKFLOW_GENERAL_CATEGORIES:
+		error(
+			properties,
+			'danh mục đầu tiên phải là danh mục chung của starter-workflows (ví dụ "Continuous integration")',
+		)
 	icon = meta.get('iconName')
 	if icon and not (path.parent / f'{icon}.svg').exists():
 		error(properties, f'không tìm thấy biểu tượng {icon}.svg')

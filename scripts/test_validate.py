@@ -284,10 +284,11 @@ class ValidateTest(unittest.TestCase):
 		self.assert_fails('nhãn "cu" chưa có trong labels.yml')
 
 	def test_quyen_ghi_khong_cap_o_cap_workflow(self):
-		self.edit(
+		# Khối permissions cấp workflow (không thụt lề) — không phụ thuộc thứ tự khối phía sau.
+		self.edit_re(
 			'.github/workflows/release.yml',
-			'permissions:\n    contents: read\n\njobs:',
-			'permissions:\n    contents: write\n\njobs:',
+			r'^permissions:\n    contents: read$',
+			'permissions:\n    contents: write',
 		)
 		self.assert_fails('quyền ghi chỉ cấp ở job cần dùng')
 
@@ -437,6 +438,22 @@ class ValidateTest(unittest.TestCase):
 			'            - $default-branch\n',
 		)
 		self.assert_fails('$default-branch chỉ dùng trong workflow-templates/')
+
+	def test_workflow_phai_co_concurrency(self):
+		self.edit_re('.github/workflows/links.yml', r'^concurrency:\n(?:[ #].*\n)+', '')
+		self.assert_fails('thiếu khai báo "concurrency" ở cấp workflow')
+
+	def test_quyen_ghi_phai_co_chu_thich(self):
+		self.edit_re('.github/workflows/release.yml', r'contents: write #.*$', 'contents: write')
+		self.assert_fails('quyền ghi cần chú thích lý do')
+
+	def test_workflow_mau_danh_muc_chung_dung_dau(self):
+		self.edit(
+			'workflow-templates/docs-check.properties.json',
+			'["Continuous integration", "Markdown"]',
+			'["Markdown", "Continuous integration"]',
+		)
+		self.assert_fails('danh mục đầu tiên phải là danh mục chung')
 
 	def test_action_phai_ghim_sha(self):
 		# Không gắn cứng SHA: Dependabot nâng action hằng tháng, test phải chạy với mọi SHA.

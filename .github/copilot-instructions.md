@@ -6,7 +6,7 @@ Làm theo [`AGENTS.md`](../AGENTS.md) — lệnh kiểm tra, quy ước bắt bu
 
 - Nhận xét bằng tiếng Việt.
 - Kiểm tra định dạng theo `.editorconfig`: tab độ rộng 4, chỉ YAML và Markdown dùng 4 dấu cách; LF.
-- Action trong workflow phải ghim theo commit SHA đầy đủ, có `permissions` tối thiểu và `timeout-minutes`.
+- Action trong workflow phải ghim theo commit SHA đầy đủ, có `permissions` tối thiểu (quyền ghi chỉ ở job, có chú thích lý do), `concurrency` và `timeout-minutes`.
 - Loại commit và tiền tố branch trong `CONTRIBUTING.md` phải khớp `pr-title.yml` và `branch-name.yml`; đuôi tệp phải khớp giữa `scripts/validate.py`, `.editorconfig` và `.gitattributes`.
 - Biểu mẫu Issue, Discussion và `FUNDING.yml` phải nằm trong `.github/`; biểu mẫu Issue chỉ dùng khóa GitHub chấp nhận (không có `type`); liên kết trong biểu mẫu là URL tuyệt đối; nhãn dùng ở biểu mẫu và cấu hình phải có trong `labels.yml`.
 - Cảnh báo khi Pull Request chứa mật khẩu, token, dữ liệu cá nhân hoặc thông tin y tế.

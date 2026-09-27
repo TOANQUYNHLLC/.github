@@ -10,6 +10,11 @@ on:
 permissions:
     contents: read
 
+concurrency:
+    # Push mới trên cùng Pull Request hủy lượt chạy cũ; lượt chạy trên nhánh chính luôn chạy hết.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
     branch:
         name: Kiểm tra tên branch

@@ -16,8 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BLOCKED = {401, 403, 429, 999}
 HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; TOANQUYNH-link-check/1.0)'}
 # Liên kết cần gắn tag hoặc chỉ tồn tại sau khi phát hành — không kiểm tra.
-# /.well-known/: security.txt chưa được đăng lên website (xem ROADMAP.md).
-SKIP = ('/compare/', '/releases/tag/', 'img.shields.io', '/actions/workflows/', '/.well-known/')
+SKIP = ('/compare/', '/releases/tag/', 'img.shields.io', '/actions/workflows/')
 # Tệp ngoài Markdown: URL đứng trần (khóa YAML, trường của security.txt), không nằm trong (…).
 PATTERNS = ('*.md', '*.yml', '*.yaml', '*.cff', '*.txt')
 
