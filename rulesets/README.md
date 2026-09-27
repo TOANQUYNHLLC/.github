@@ -31,6 +31,7 @@ Khác với bản cấp repository:
 
 - Chỉ giữ 2 kiểm tra bắt buộc có ở mọi repository (tiêu đề Pull Request, tên branch) — như Protect Main của repository khác.
 - Bỏ quy tắc `code_quality`: API ruleset cấp tổ chức không nhận, import sẽ bị từ chối.
+- Không dùng actor loại `User` (import báo "contains an invalid actor"): danh sách bỏ qua là **chủ tổ chức** (`OrganizationAdmin`), quyền hủy phê duyệt là team **maintainers** — cùng hai người quản trị như bản cấp repository.
 - Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `org_rulesets()` trong `scripts/org-setup.py`; test bảo đảm khớp nhau — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức. Cả hai hợp lệ theo schema OpenAPI của `POST /orgs/{org}/rulesets`.
 - Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json`; hoặc cấp quyền `gh auth refresh -h github.com -s admin:org` rồi chạy `python3 scripts/org-setup.py org-rulesets --apply`.
 

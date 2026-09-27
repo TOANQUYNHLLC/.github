@@ -501,6 +501,14 @@ class ValidateTest(unittest.TestCase):
 		)
 		self.assert_fails('protect-main.json: ruleset phải có quy tắc required_signatures')
 
+	def test_ruleset_to_chuc_khong_dung_actor_user(self):
+		self.edit_re(
+			'rulesets/org-protect-main.json',
+			r'"actor_type": "OrganizationAdmin"',
+			'"actor_type": "User"',
+		)
+		self.assert_fails('ruleset cấp tổ chức không dùng actor loại User')
+
 	def test_action_phai_ghim_sha(self):
 		# Không gắn cứng SHA: Dependabot nâng action hằng tháng, test phải chạy với mọi SHA.
 		self.edit_re(

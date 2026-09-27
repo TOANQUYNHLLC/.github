@@ -14,13 +14,8 @@
 	},
 	"bypass_actors": [
 		{
-			"actor_id": 107941543,
-			"actor_type": "User",
-			"bypass_mode": "always"
-		},
-		{
-			"actor_id": 108377655,
-			"actor_type": "User",
+			"actor_id": 1,
+			"actor_type": "OrganizationAdmin",
 			"bypass_mode": "always"
 		}
 	],
@@ -51,12 +46,8 @@
 					"enabled": true,
 					"allowed_actors": [
 						{
-							"id": 107941543,
-							"type": "User"
-						},
-						{
-							"id": 108377655,
-							"type": "User"
+							"id": 19737661,
+							"type": "Team"
 						}
 					]
 				},
