@@ -19,6 +19,7 @@ Mọi ruleset — nhánh và tag, cấp repository và cấp tổ chức — có
 
 - Áp dụng cho `refs/tags/v*`: chặn tạo, cập nhật (dời sang commit khác), xóa tag và force push; tag chỉ trỏ tới commit có chữ ký.
 - Danh sách bỏ qua giống Protect Main — chỉ hai tài khoản quản trị tạo được tag phát hành, nên GitHub Release luôn trỏ đúng mã đã phát hành.
+- Bổ sung cho ruleset: tổ chức bắt buộc **Immutable releases** cho mọi repository — khi Release đã phát hành, không ai (kể cả người trong danh sách bỏ qua) dời được tag, sửa được tệp đính kèm, hay xóa được tag khi Release còn đó; xóa Release rồi cũng không dùng lại được tên tag.
 
 ## 🏢 RULESET CẤP TỔ CHỨC
 

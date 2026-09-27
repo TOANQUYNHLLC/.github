@@ -9,13 +9,13 @@ Lệnh (nên chạy theo thứ tự):
 		workflow kiểm tra tiêu đề Pull Request, tên branch và gắn nhãn (labeler), CODEOWNERS, dependabot.yml, release.yml
 		và tệp định dạng theo ngôn ngữ repository dùng. Không ghi đè tệp đã có.
 	settings: cho phép Merge, Squash và Rebase, tự xóa branch sau khi hợp nhất; bật secret scanning,
-		push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư;
-		--discussions bật thêm GitHub Discussions.
+		push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư, Release bất biến
+		(immutable releases); --discussions bật thêm GitHub Discussions.
 	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json) và Protect Release
 		Tags (rulesets/protect-release-tags.json, ADR 0008); Protect Main của repository khác chỉ giữ
 		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
 		chưa có workflow kiểm tra bắt buộc — hợp nhất Pull Request của lệnh files trước.
-	team: tạo team maintainers, thêm người quản trị và cấp quyền maintain mọi repository.
+	team: tạo team maintainers, thêm người quản trị và cấp quyền maintain mọi repository; đã đủ thì báo đã đúng.
 	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Protect Main (Organization) và Protect Release
 		Tags (Organization) (rulesets/org-*.json) cho mọi repository; cần token có quyền admin:org
 		(gh auth refresh -h github.com -s admin:org) và gói GitHub Team trở lên. Gói Free: REST API
@@ -71,6 +71,8 @@ SECURITY_FEATURES = ('secret_scanning', 'secret_scanning_push_protection')
 SECURITY_ENDPOINTS = {
 	'Dependabot security updates': 'automated-security-fixes',
 	'báo cáo lỗ hổng riêng tư': 'private-vulnerability-reporting',
+	# Tag và tệp đính kèm của Release đã phát hành không đổi được; tổ chức đang bắt buộc cho mọi repository.
+	'Release bất biến (immutable releases)': 'immutable-releases',
 }
 # Chỉ bật được cho repository công khai (báo cáo lỗ hổng riêng tư).
 PUBLIC_ONLY_ENDPOINTS = ('private-vulnerability-reporting',)
@@ -354,9 +356,10 @@ def default_branch(repo):
 
 def cmd_files(repos, apply):
 	for repo in repos:
-		if repo == '.github':
-			continue
 		print(f'== {ORG}/{repo}')
+		if repo == '.github':
+			print('   – bỏ qua: repository nguồn của tệp dùng chung')
+			continue
 		base = default_branch(repo)
 		try:
 			root = {
@@ -467,15 +470,18 @@ def cmd_security(repo, current, apply):
 	private = bool(current.get('private'))
 	for label in sorted(set(SECURITY_ENDPOINTS) - set(security_endpoints(private))):
 		print(f'   – bỏ qua {label}: chỉ dành cho repository công khai')
-	endpoints = {}
+	endpoints, unread = {}, False
 	for label, endpoint in security_endpoints(private).items():
 		try:
 			enabled = (gh_json('api', f'repos/{ORG}/{repo}/{endpoint}') or {}).get('enabled')
 		except RuntimeError as exc:
 			print(f'   ⚠ không đọc được trạng thái {label}: {exc}')
+			unread = True
 			continue
 		if not enabled:
 			endpoints[label] = endpoint
+	if not off and not endpoints and not unread:
+		print('   ✔ tính năng bảo mật đã bật')
 	for name in off + list(endpoints):
 		print(f'   {"" if apply else "(xem trước) "}bật {name}')
 	if not apply:
@@ -620,13 +626,48 @@ def cmd_org_rulesets(apply):
 		print(f'   ✔ đã {action} ruleset "{name}"')
 
 
+def team_role(user):
+	"""Vai trò của người dùng trong team (maintainer, member), None nếu chưa là thành viên."""
+	try:
+		return (gh_json('api', f'orgs/{ORG}/teams/{TEAM}/memberships/{user}') or {}).get('role')
+	except RuntimeError:
+		return None
+
+
+def team_permission(repo):
+	"""Quyền của team trên repository (pull, triage, push, maintain, admin), None nếu chưa được cấp."""
+	try:
+		return (
+			gh_json(
+				'api',
+				'-H',
+				'Accept: application/vnd.github.v3.repository+json',
+				f'orgs/{ORG}/teams/{TEAM}/repos/{ORG}/{repo}',
+			)
+			or {}
+		).get('role_name')
+	except RuntimeError:
+		return None
+
+
 def cmd_team(repos, apply):
 	exists = gh_exists(f'orgs/{ORG}/teams/{TEAM}')
 	print(f'== team {ORG}/{TEAM}: {"đã có" if exists else "chưa có"}')
+	users = [user for user in MAINTAINERS if not exists or team_role(user) != 'maintainer']
+	# Quyền admin đã bao gồm maintain — không hạ quyền.
+	missing = [
+		repo for repo in repos if not exists or team_permission(repo) not in ('maintain', 'admin')
+	]
+	if not users and not missing:
+		print(f'   ✔ đủ người quản trị, team có quyền maintain {len(repos)} repository')
+		return
 	if not apply:
-		print(
-			f'   (xem trước) {"" if exists else "tạo team, "}thêm {", ".join(MAINTAINERS)}, cấp maintain {len(repos)} repository'
-		)
+		if not exists:
+			print(f'   (xem trước) tạo team {TEAM}')
+		for user in users:
+			print(f'   (xem trước) thêm {user} (maintainer)')
+		for repo in missing:
+			print(f'   (xem trước) cấp maintain {ORG}/{repo}')
 		return
 	if not exists:
 		gh(
@@ -639,7 +680,7 @@ def cmd_team(repos, apply):
 			'-f',
 			'description=Người quản trị các repository — xem MAINTAINERS.md',
 		)
-	for user in MAINTAINERS:
+	for user in users:
 		gh(
 			'api',
 			'-X',
@@ -648,7 +689,8 @@ def cmd_team(repos, apply):
 			'-f',
 			'role=maintainer',
 		)
-	for repo in repos:
+		print(f'   ✔ thêm {user} (maintainer)')
+	for repo in missing:
 		gh(
 			'api',
 			'-X',
