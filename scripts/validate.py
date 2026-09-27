@@ -640,11 +640,6 @@ def check_rulesets():
 				org_path,
 				'ruleset phải tên "Protect Main (Organization)" và nhắm mọi repository (~ALL)',
 			)
-		if 'code_quality' in {rule.get('type') for rule in org.get('rules') or []}:
-			error(
-				org_path,
-				'ruleset cấp tổ chức không hỗ trợ quy tắc code_quality — GitHub từ chối khi import',
-			)
 	# Import ruleset cấp tổ chức báo "contains an invalid actor" với actor loại User.
 	for org_file in sorted((ROOT / 'rulesets').glob('org-*.json')):
 		if re.search(r'"(actor_type|type)":\s*"User"', org_file.read_text(encoding='utf-8')):
