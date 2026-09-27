@@ -379,10 +379,11 @@ class ValidateTest(unittest.TestCase):
 		self.assertEqual(code, 0, output)
 
 	def test_muc_luc_adr_du_moi_adr(self):
-		(self.repo / 'docs' / 'adr' / '0008-thu.md').write_text(
-			'# 0008. THỬ\n\n- **Trạng thái:** Đề xuất\n- **Ngày:** 2026-09-27\n', encoding='utf-8'
+		# Số 9999 không trùng ADR thật nào — test không phải sửa mỗi khi thêm ADR.
+		(self.repo / 'docs' / 'adr' / '9999-thu.md').write_text(
+			'# 9999. THỬ\n\n- **Trạng thái:** Đề xuất\n- **Ngày:** 2026-09-27\n', encoding='utf-8'
 		)
-		self.assert_fails('bảng thiếu ADR 0008')
+		self.assert_fails('bảng thiếu ADR 9999')
 
 	def test_toml_phai_thut_le_bang_tab(self):
 		self.edit('mise.toml', '[tools]\n', '[tools]\n    ')
@@ -460,6 +461,15 @@ class ValidateTest(unittest.TestCase):
 			'.github/dependabot.yml', r'^      cooldown:\n          default-days: \d+\n', ''
 		)
 		self.assert_fails('github-actions: cần cooldown.default-days ≥ 7')
+
+	def test_ruleset_tag_phai_bao_ve_tag_phat_hanh(self):
+		self.edit('rulesets/protect-release-tags.json', '"refs/tags/v*"', '"refs/tags/release-*"')
+		self.assert_fails('ruleset phải áp dụng cho refs/tags/v*')
+
+	def test_ruleset_tag_phai_chan_xoa(self):
+		# Thiếu deletion nhưng vẫn còn quy tắc khác — luật phải bắt được.
+		self.edit('rulesets/protect-release-tags.json', '\t\t{ "type": "deletion" },\n', '')
+		self.assert_fails('ruleset phải chặn creation, update, deletion')
 
 	def test_action_phai_ghim_sha(self):
 		# Không gắn cứng SHA: Dependabot nâng action hằng tháng, test phải chạy với mọi SHA.
@@ -578,6 +588,10 @@ class OrgSetupTest(unittest.TestCase):
 				for check in rule['parameters']['required_status_checks']
 			]
 
+		self.assertEqual(
+			[ruleset['name'] for _, ruleset in self.module.rulesets_for('app')],
+			['Protect Main', 'Protect Release Tags'],
+		)
 		own = self.module.ruleset_for('.github')
 		other = self.module.ruleset_for('app')
 		self.assertEqual(own['name'], 'Protect Main')

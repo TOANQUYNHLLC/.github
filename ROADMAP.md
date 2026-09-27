@@ -28,7 +28,7 @@ Hiện tổ chức chỉ có repository `.github`. Với mỗi repository mới,
 
 - [ ] `python3 scripts/org-setup.py files --apply --repo <tên>` — Pull Request thêm `.editorconfig`, `.gitattributes`, workflow kiểm tra tiêu đề và tên branch, `CODEOWNERS`, `dependabot.yml`, `release.yml` và tệp định dạng theo ngôn ngữ; đánh giá rồi hợp nhất. Chép tay `.env.example`, `PRIVACY.md` khi cần ([`repository-templates/`](repository-templates/)).
 - [ ] `python3 scripts/org-setup.py settings --apply --repo <tên>` — cho phép Merge, Squash, Rebase; tự xóa branch; bật secret scanning, push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư.
-- [ ] `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — ruleset **Protect Main** từ [`protect-main.json`](rulesets/protect-main.json), chỉ giữ 2 kiểm tra bắt buộc mà repository có.
+- [ ] `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — ruleset **Protect Release Tags** từ [`protect-release-tags.json`](rulesets/protect-release-tags.json) và **Protect Main** từ [`protect-main.json`](rulesets/protect-main.json), Protect Main chỉ giữ 2 kiểm tra bắt buộc mà repository có.
 - [ ] `scripts/sync-labels.sh --apply <tên>` — bộ nhãn chuẩn.
 - [ ] Cấp quyền cho team **maintainers** trên repository mới (**Maintain** trở lên) để `CODEOWNERS` có hiệu lực.
 

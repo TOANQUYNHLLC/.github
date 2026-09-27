@@ -1,6 +1,6 @@
 # 0005. GỘP HAI RULESET THÀNH PROTECT MAIN
 
-- **Trạng thái:** Bị thay thế một phần bởi [0006](0006-allow-all-merge-methods.md) (cách hợp nhất, lịch sử tuyến tính)
+- **Trạng thái:** Bị thay thế một phần bởi [0006](0006-allow-all-merge-methods.md) (cách hợp nhất, lịch sử tuyến tính) và [0008](0008-protect-release-tags.md) (thêm ruleset cho tag)
 - **Ngày:** 2026-09-26
 - **Điều chỉnh:** [0004](0004-squash-merge-and-rulesets.md) — danh sách bỏ qua của repository `.github`
 

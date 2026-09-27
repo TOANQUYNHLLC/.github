@@ -8,9 +8,10 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0002](0002-line-endings.md)               | Xuống dòng LF; chỉ loại tệp bắt buộc mới dùng CRLF                 | Chấp nhận                        | 2026-09-26 |
 | [0003](0003-branch-naming.md)              | Tên branch bằng tiếng Anh, nối từ bằng dấu gạch dưới               | Chấp nhận                        | 2026-09-26 |
 | [0004](0004-squash-merge-and-rulesets.md)  | Squash and merge và ruleset bảo vệ nhánh chính                     | Thay thế một phần bởi 0005, 0006 | 2026-09-26 |
-| [0005](0005-merge-protect-main.md)         | Gộp hai ruleset thành Protect Main; danh sách bỏ qua của `.github` | Thay thế một phần bởi 0006       | 2026-09-26 |
+| [0005](0005-merge-protect-main.md)         | Gộp hai ruleset thành Protect Main; danh sách bỏ qua của `.github` | Thay thế một phần bởi 0006, 0008 | 2026-09-26 |
 | [0006](0006-allow-all-merge-methods.md)    | Cho phép cả ba cách hợp nhất; bỏ lịch sử tuyến tính                | Chấp nhận                        | 2026-09-26 |
 | [0007](0007-mise-single-version-source.md) | `mise.toml` là nguồn phiên bản công cụ duy nhất                    | Chấp nhận                        | 2026-09-26 |
+| [0008](0008-protect-release-tags.md)       | Ruleset Protect Release Tags cho tag phát hành `v*`                | Chấp nhận                        | 2026-09-27 |
 
 ## ✍️ CÁCH THÊM ADR
 
