@@ -165,7 +165,7 @@ Khi cập nhật nội dung, cần bảo đảm:
 ## 🚀 PHÁT HÀNH
 
 1. Chuyển nội dung mục **CHƯA PHÁT HÀNH** trong [`CHANGELOG.md`](CHANGELOG.md) thành phiên bản mới, ví dụ `## [v2026.10.Stable] — 2026-10-01`, rồi tạo lại mục **CHƯA PHÁT HÀNH** trống.
-2. Kiểm tra trước nội dung: `make release-notes TAG=v2026.10.Stable`.
+2. Kiểm tra trước nội dung: `make release-notes TAG=v2026.10.Stable`. Tổ chức bật **Immutable releases**: sau khi phát hành, tag không dời được, không xóa được khi Release còn đó và không dùng lại được tên tag (chỉ sửa được tiêu đề, nội dung Release).
 3. Người quản trị gắn và đẩy tag (ruleset **Protect Release Tags** chỉ cho người quản trị tạo tag `v*`): `git tag v2026.10.Stable && git push origin v2026.10.Stable` — workflow tự tạo GitHub Release; khi GitHub Actions tắt, tạo bằng `gh release create v2026.10.Stable --notes-file <(python3 scripts/release-notes.py v2026.10.Stable) --verify-tag`.
 
 ---

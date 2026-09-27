@@ -6,6 +6,7 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ## ✅ ĐÃ HOÀN THÀNH GẦN ĐÂY
 
+- [x] Tổ chức bắt buộc **Immutable releases** (Release bất biến) cho mọi repository: tag và tệp đính kèm của Release đã phát hành không đổi được, tag không xóa được khi Release còn đó; `v2026.09.Stable` đã bất biến (kiểm tra 2026-09-27).
 - [x] Ruleset cấp tổ chức **Protect Main (Organization)** và **Protect Release Tags (Organization)** đã import trên web (**Active**); [`rulesets/org-protect-main.json`](rulesets/org-protect-main.json), [`rulesets/org-protect-release-tags.json`](rulesets/org-protect-release-tags.json) khớp bản trên web. GitHub chỉ thực thi khi tổ chức nâng lên gói **Team** (2026-09-27).
 - [x] Đối chiếu thêm 30 repository ứng dụng (gồm OpenEMR, Medplum, OpenMRS, HAPI FHIR): thêm `ui/ux`, `i18n` (47 nhãn), đồng bộ lên `.github` (2026-09-27).
 - [x] Đối chiếu nhãn với 40 repository phổ biến: thêm `regression`, `build`, `confirmed`, `upstream` (45 nhãn), đồng bộ lên `.github` (2026-09-27).
@@ -36,7 +37,7 @@ Hiện tổ chức chỉ có repository `.github`.
 Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.py`](scripts/org-setup.py) (GitHub CLI đã đăng nhập; xem trước bằng `make org-preview`) theo thứ tự:
 
 - [ ] `python3 scripts/org-setup.py files --apply --repo <tên>` — Pull Request thêm `.editorconfig`, `.gitattributes`, workflow kiểm tra tiêu đề, tên branch và gắn nhãn (`labeler.yml` kèm cấu hình — sửa đường dẫn nhãn `area: …` cho khớp dự án), `CODEOWNERS`, `dependabot.yml`, `release.yml` và tệp định dạng theo ngôn ngữ; đánh giá rồi hợp nhất. Chép tay `.env.example`, `PRIVACY.md` khi cần ([`repository-templates/`](repository-templates/)).
-- [ ] `python3 scripts/org-setup.py settings --apply --repo <tên>` — cho phép Merge, Squash, Rebase; tự xóa branch; bật secret scanning, push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư.
+- [ ] `python3 scripts/org-setup.py settings --apply --repo <tên>` — cho phép Merge, Squash, Rebase; tự xóa branch; bật secret scanning, push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư, Release bất biến.
 - [ ] `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — ruleset **Protect Release Tags** từ [`protect-release-tags.json`](rulesets/protect-release-tags.json) và **Protect Main** từ [`protect-main.json`](rulesets/protect-main.json), Protect Main chỉ giữ 2 kiểm tra bắt buộc mà repository có.
 - [ ] `scripts/sync-labels.sh --apply <tên>` — bộ nhãn chuẩn.
 - [ ] `python3 scripts/org-setup.py team --apply --repo <tên>` — cấp quyền **Maintain** cho team **maintainers** để `CODEOWNERS` có hiệu lực.
@@ -47,6 +48,7 @@ Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.p
 
 GitHub không có API cho các mục này — người quản trị làm trên web.
 
+- [ ] Sửa lỗi chính tả trong mô tả tổ chức (**Organization settings → General → Description**): "The Offical Repository of TOAN QUYNH Co., Ltd" → "The Official Repository of TOAN QUYNH Co., Ltd".
 - [ ] Nhãn mặc định cho repository tạo mới: **Organization settings → Repository → General → Repository labels** — nhập đủ 47 nhãn theo [`labels.yml`](labels.yml) (tên, màu, mô tả; `ui/ux` `d4a5ff`, `i18n` `5319e7` là hai nhãn thêm sau cùng). Nhãn mặc định chỉ áp cho repository tạo sau đó; repository đã có đồng bộ bằng `scripts/sync-labels.sh --apply <tên>`.
 
 ---
@@ -56,6 +58,7 @@ GitHub không có API cho các mục này — người quản trị làm trên w
 - [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`.github/DISCUSSION_TEMPLATE/`](.github/DISCUSSION_TEMPLATE/).
 - [ ] Khi nâng lên gói **Team**: ruleset cấp tổ chức được thực thi — cân nhắc ADR mới để bỏ ruleset cấp repository trùng lặp.
 - [ ] Xóa quy tắc kiểm tra bắt buộc rỗng (không chặn gì) của **Protect Release Tags (Organization)** trên web, rồi bỏ khỏi `org_tag_ruleset()` trong [`scripts/org-setup.py`](scripts/org-setup.py) và sinh lại tệp.
+- [ ] Code security configuration **GitHub recommended** (**Organization settings → Advanced Security → Configurations**): đã có nhưng chưa gắn repository nào và chưa là mặc định cho repository mới — đây là cách GitHub khuyên dùng thay cho bật từng tính năng (`org-setup.py settings`). Lưu ý cấu hình này bật code scanning default setup: cần GitHub Actions (đang tắt) và không dùng chung với workflow CodeQL (advanced setup) của repository.
 - [ ] Quét bí mật theo mẫu tùy chỉnh (non-provider patterns) và kiểm tra bí mật còn hiệu lực (validity checks): cần gói **GitHub Secret Protection**.
 
 ---

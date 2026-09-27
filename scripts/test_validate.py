@@ -5,7 +5,9 @@ Mỗi test chép repository sang thư mục tạm, cố ý làm hỏng một đi
 validate.py phát hiện đúng lỗi — để việc sửa script không vô tình làm mất một luật.
 """
 
+import contextlib
 import importlib.util
+import io
 import json
 import re
 import shutil
@@ -636,6 +638,7 @@ class OrgSetupTest(unittest.TestCase):
 			'private-vulnerability-reporting', self.module.security_endpoints(True).values()
 		)
 		self.assertIn('automated-security-fixes', self.module.security_endpoints(True).values())
+		self.assertIn('immutable-releases', self.module.security_endpoints(True).values())
 
 	def test_tep_ruleset_to_chuc_khop_protect_main(self):
 		# Tệp để import trên web phải đúng bằng org_ruleset() sinh từ Protect Main.
@@ -694,6 +697,30 @@ class OrgSetupTest(unittest.TestCase):
 			self.assertNotIn(
 				'require_extra_approval_for_unattributed_changes', rule.get('parameters', {})
 			)
+
+	def test_team_da_dung_thi_khong_ghi(self):
+		calls = []
+		self.module.gh_exists = lambda endpoint: True
+		self.module.team_role = lambda user: 'maintainer'
+		self.module.team_permission = lambda repo: 'admin' if repo == '.github' else 'maintain'
+		self.module.gh = lambda *args, **kwargs: calls.append(args)
+		output = io.StringIO()
+		with contextlib.redirect_stdout(output):
+			self.module.cmd_team(['.github', 'app'], apply=True)
+		self.assertIn('✔ đủ người quản trị', output.getvalue())
+		self.assertEqual(calls, [])
+		# Chỉ ghi phần còn thiếu: một người chưa là maintainer, một repository chưa có quyền.
+		self.module.team_role = lambda user: 'member' if user == 'trongtoandl81' else 'maintainer'
+		self.module.team_permission = lambda repo: 'push' if repo == 'app' else 'maintain'
+		with contextlib.redirect_stdout(io.StringIO()):
+			self.module.cmd_team(['.github', 'app'], apply=True)
+		self.assertEqual(
+			[args[3] for args in calls],
+			[
+				'orgs/TOANQUYNHLLC/teams/maintainers/memberships/trongtoandl81',
+				'orgs/TOANQUYNHLLC/teams/maintainers/repos/TOANQUYNHLLC/app',
+			],
+		)
 
 	def test_ruleset_protect_main_cho_moi_repository(self):
 		def checks(ruleset):

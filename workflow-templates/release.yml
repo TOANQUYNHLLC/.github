@@ -45,6 +45,8 @@ jobs:
                       rm -f release-notes.md
                   fi
 
+            # Tổ chức bật Immutable releases: sau khi phát hành không thêm, sửa được tệp đính kèm. Cần đính kèm tệp thì
+            # tạo bản nháp (--draft), tải tệp lên (gh release upload), rồi phát hành (gh release edit --draft=false).
             - name: Tạo Release
               env:
                   GH_TOKEN: ${{ github.token }}
