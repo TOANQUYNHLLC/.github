@@ -13,9 +13,11 @@ Ruleset đặt ở **cấp repository**: tổ chức dùng gói GitHub Free nên
 - Cấm force push, cấm xóa; chặn tạo và cập nhật nhánh chính ngoài danh sách bỏ qua.
 - Danh sách bỏ qua: hai tài khoản quản trị, chế độ **always** ([ADR 0005](../docs/adr/0005-merge-protect-main.md)).
 
+Mọi ruleset — nhánh và tag, cấp repository và cấp tổ chức — có quy tắc **Require signed commits** (`required_signatures`, [ADR 0009](../docs/adr/0009-rulesets-require-signed-commits.md)); `scripts/validate.py` báo lỗi khi thiếu.
+
 ## 🏷️ PROTECT RELEASE TAGS
 
-- Áp dụng cho `refs/tags/v*`: chặn tạo, cập nhật (dời sang commit khác), xóa tag và force push.
+- Áp dụng cho `refs/tags/v*`: chặn tạo, cập nhật (dời sang commit khác), xóa tag và force push; tag chỉ trỏ tới commit có chữ ký.
 - Danh sách bỏ qua giống Protect Main — chỉ hai tài khoản quản trị tạo được tag phát hành, nên GitHub Release luôn trỏ đúng mã đã phát hành.
 
 ## 🏢 RULESET CẤP TỔ CHỨC

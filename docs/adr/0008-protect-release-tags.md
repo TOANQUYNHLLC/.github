@@ -1,6 +1,6 @@
 # 0008. RULESET PROTECT RELEASE TAGS CHO TAG PHÁT HÀNH
 
-- **Trạng thái:** Chấp nhận
+- **Trạng thái:** Bị thay thế một phần bởi [0009](0009-rulesets-require-signed-commits.md) (thêm quy tắc `required_signatures`)
 - **Ngày:** 2026-09-27
 - **Điều chỉnh:** [0005](0005-merge-protect-main.md) — mỗi repository có thêm một ruleset cho tag, bên cạnh Protect Main
 
