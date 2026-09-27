@@ -611,6 +611,27 @@ def check_rulesets():
 			rule.get('type') for rule in tags.get('rules') or []
 		}:
 			error(tag_path, 'ruleset phải chặn creation, update, deletion của tag phát hành')
+	org_path = ROOT / 'rulesets' / 'org-protect-main.json'
+	if not org_path.exists():
+		errors.append('thiếu tệp bắt buộc rulesets/org-protect-main.json')
+	else:
+		try:
+			org = json.loads(org_path.read_text(encoding='utf-8'))
+		except json.JSONDecodeError:
+			org = {}
+		repositories = ((org.get('conditions') or {}).get('repository_name') or {}).get(
+			'include'
+		) or []
+		if org.get('name') != 'Protect Main (Organization)' or '~ALL' not in repositories:
+			error(
+				org_path,
+				'ruleset phải tên "Protect Main (Organization)" và nhắm mọi repository (~ALL)',
+			)
+		if 'code_quality' in {rule.get('type') for rule in org.get('rules') or []}:
+			error(
+				org_path,
+				'ruleset cấp tổ chức không hỗ trợ quy tắc code_quality — GitHub từ chối khi import',
+			)
 	for rule in ruleset.get('rules', []):
 		for check in (rule.get('parameters') or {}).get('required_status_checks', []):
 			if check.get('context') not in jobs:

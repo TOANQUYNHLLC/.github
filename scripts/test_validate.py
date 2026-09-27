@@ -483,6 +483,14 @@ class ValidateTest(unittest.TestCase):
 		self.edit('.github/labeler.yml', "release:\n    - head-branch: ['^release/']\n", '')
 		self.assert_fails('thiếu luật head-branch cho tiền tố "release/"')
 
+	def test_ruleset_to_chuc_khong_co_code_quality(self):
+		self.edit_re(
+			'rulesets/org-protect-main.json',
+			r'"rules": \[\n',
+			'"rules": [\n\t\t{ "type": "code_quality", "parameters": { "severity": "all" } },\n',
+		)
+		self.assert_fails('ruleset cấp tổ chức không hỗ trợ quy tắc code_quality')
+
 	def test_action_phai_ghim_sha(self):
 		# Không gắn cứng SHA: Dependabot nâng action hằng tháng, test phải chạy với mọi SHA.
 		self.edit_re(
@@ -601,6 +609,13 @@ class OrgSetupTest(unittest.TestCase):
 			'private-vulnerability-reporting', self.module.security_endpoints(True).values()
 		)
 		self.assertIn('automated-security-fixes', self.module.security_endpoints(True).values())
+
+	def test_tep_ruleset_to_chuc_khop_protect_main(self):
+		# Tệp để import trên web phải đúng bằng org_ruleset() sinh từ Protect Main.
+		saved = json.loads(
+			(ROOT / 'rulesets' / 'org-protect-main.json').read_text(encoding='utf-8')
+		)
+		self.assertEqual(saved, self.module.org_ruleset())
 
 	def test_ruleset_protect_main_cho_moi_repository(self):
 		def checks(ruleset):

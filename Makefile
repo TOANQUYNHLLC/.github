@@ -63,4 +63,4 @@ labels-apply: ## Đồng bộ nhãn lên các repository (cần GitHub CLI và q
 	scripts/sync-labels.sh --apply
 
 org-preview: ## Xem trước việc áp dụng tệp, cài đặt, ruleset, team lên mọi repository (cần gh)
-	for command in files settings rulesets team; do python3 scripts/org-setup.py $$command; done
+	for command in files settings rulesets team org-rulesets; do python3 scripts/org-setup.py $$command; done
