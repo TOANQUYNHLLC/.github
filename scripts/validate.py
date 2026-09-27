@@ -645,6 +645,13 @@ def check_rulesets():
 				org_path,
 				'ruleset cấp tổ chức không hỗ trợ quy tắc code_quality — GitHub từ chối khi import',
 			)
+	# Import ruleset cấp tổ chức báo "contains an invalid actor" với actor loại User.
+	for org_file in sorted((ROOT / 'rulesets').glob('org-*.json')):
+		if re.search(r'"(actor_type|type)":\s*"User"', org_file.read_text(encoding='utf-8')):
+			error(
+				org_file,
+				'ruleset cấp tổ chức không dùng actor loại User — GitHub từ chối khi import',
+			)
 	org_tag_path = ROOT / 'rulesets' / 'org-protect-release-tags.json'
 	if not org_tag_path.exists():
 		errors.append('thiếu tệp bắt buộc rulesets/org-protect-release-tags.json')

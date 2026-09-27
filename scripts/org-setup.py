@@ -42,6 +42,10 @@ ORG_RULESET_FILE = ROOT / 'rulesets' / 'org-protect-main.json'
 ORG_RULESET_NAME = 'Protect Main (Organization)'
 ORG_TAG_RULESET_FILE = ROOT / 'rulesets' / 'org-protect-release-tags.json'
 ORG_TAG_RULESET_NAME = 'Protect Release Tags (Organization)'
+# Ruleset cấp tổ chức không nhận actor loại User khi import ("contains an invalid actor"): danh sách bỏ qua
+# dùng vai trò chủ tổ chức (actor_id bị bỏ qua), quyền hủy phê duyệt dùng team maintainers — cùng hai người quản trị.
+ORG_BYPASS_ACTORS = [{'actor_id': 1, 'actor_type': 'OrganizationAdmin', 'bypass_mode': 'always'}]
+MAINTAINERS_TEAM_ID = 19737661  # gh api orgs/TOANQUYNHLLC/teams/maintainers -q .id
 # Quy tắc ruleset cấp tổ chức không nhận (theo OpenAPI của GitHub cho POST /orgs/{org}/rulesets).
 ORG_UNSUPPORTED_RULES = ('code_quality',)
 # Workflow mà lệnh files thêm vào repository; ruleset của repository khác chỉ bắt buộc job của chúng.
@@ -198,6 +202,16 @@ def org_ruleset():
 	ruleset['rules'] = [
 		rule for rule in ruleset['rules'] if rule['type'] not in ORG_UNSUPPORTED_RULES
 	]
+	return org_actors(ruleset)
+
+
+def org_actors(ruleset):
+	"""Đổi actor loại User (chỉ hợp lệ ở cấp repository) sang actor cấp tổ chức."""
+	ruleset['bypass_actors'] = [dict(actor) for actor in ORG_BYPASS_ACTORS]
+	for rule in ruleset['rules']:
+		restriction = (rule.get('parameters') or {}).get('dismissal_restriction')
+		if restriction and restriction.get('allowed_actors'):
+			restriction['allowed_actors'] = [{'id': MAINTAINERS_TEAM_ID, 'type': 'Team'}]
 	return ruleset
 
 
@@ -211,7 +225,7 @@ def org_tag_ruleset():
 	ruleset['rules'] = [
 		rule for rule in ruleset['rules'] if rule['type'] not in ORG_UNSUPPORTED_RULES
 	]
-	return ruleset
+	return org_actors(ruleset)
 
 
 def org_rulesets():
