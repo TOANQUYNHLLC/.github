@@ -16,8 +16,8 @@ Lệnh (nên chạy theo thứ tự):
 		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
 		chưa có workflow kiểm tra bắt buộc — hợp nhất Pull Request của lệnh files trước.
 	team: tạo team maintainers, thêm người quản trị và cấp quyền maintain mọi repository.
-	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Protect Main (Organization)
-		(rulesets/org-protect-main.json) cho mọi repository; cần token có quyền admin:org
+	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Protect Main (Organization) và Protect Release
+		Tags (Organization) (rulesets/org-*.json) cho mọi repository; cần token có quyền admin:org
 		(gh auth refresh -h github.com -s admin:org); GitHub chỉ thực thi khi tổ chức dùng gói Team trở lên.
 """
 
@@ -40,6 +40,8 @@ TAG_RULESET_FILE = ROOT / 'rulesets' / 'protect-release-tags.json'
 # Ruleset cấp tổ chức sinh từ Protect Main; tệp dùng để import trên web, org_ruleset() là nguồn.
 ORG_RULESET_FILE = ROOT / 'rulesets' / 'org-protect-main.json'
 ORG_RULESET_NAME = 'Protect Main (Organization)'
+ORG_TAG_RULESET_FILE = ROOT / 'rulesets' / 'org-protect-release-tags.json'
+ORG_TAG_RULESET_NAME = 'Protect Release Tags (Organization)'
 # Quy tắc ruleset cấp tổ chức không nhận (theo OpenAPI của GitHub cho POST /orgs/{org}/rulesets).
 ORG_UNSUPPORTED_RULES = ('code_quality',)
 # Workflow mà lệnh files thêm vào repository; ruleset của repository khác chỉ bắt buộc job của chúng.
@@ -179,6 +181,24 @@ def org_ruleset():
 		rule for rule in ruleset['rules'] if rule['type'] not in ORG_UNSUPPORTED_RULES
 	]
 	return ruleset
+
+
+def org_tag_ruleset():
+	"""Protect Release Tags cho mọi repository ở cấp tổ chức: cùng quy tắc, nhắm ~ALL repository."""
+	ruleset = json.loads(TAG_RULESET_FILE.read_text(encoding='utf-8'))
+	ruleset['name'] = ORG_TAG_RULESET_NAME
+	ruleset['conditions'] = dict(
+		ruleset['conditions'], repository_name={'exclude': [], 'include': ['~ALL']}
+	)
+	ruleset['rules'] = [
+		rule for rule in ruleset['rules'] if rule['type'] not in ORG_UNSUPPORTED_RULES
+	]
+	return ruleset
+
+
+def org_rulesets():
+	"""Mọi ruleset cấp tổ chức, kèm tệp để import trên web."""
+	return [(ORG_RULESET_FILE, org_ruleset()), (ORG_TAG_RULESET_FILE, org_tag_ruleset())]
 
 
 def rulesets_for(repo):
@@ -405,36 +425,36 @@ def cmd_rulesets(repos, apply):
 
 def cmd_org_rulesets(apply):
 	"""Ruleset cấp tổ chức; thiếu quyền admin:org thì hướng dẫn cấp quyền hoặc import tệp trên web."""
-	source = ORG_RULESET_FILE.relative_to(ROOT)
-	print(
-		f'== ruleset cấp tổ chức {ORG}: "{ORG_RULESET_NAME}" (chỉ thực thi với gói GitHub Team trở lên)'
-	)
+	print(f'== ruleset cấp tổ chức {ORG} (chỉ thực thi với gói GitHub Team trở lên)')
 	try:
 		existing = {
 			item['name']: item['id'] for item in gh_json('api', f'orgs/{ORG}/rulesets') or []
 		}
 	except RuntimeError as exc:
+		sources = ', '.join(str(source.relative_to(ROOT)) for source, _ in org_rulesets())
 		print(f'   ⚠ không đọc được ruleset cấp tổ chức: {exc}')
 		print(
 			'   Cấp quyền: gh auth refresh -h github.com -s admin:org — hoặc import '
-			f'{source} tại Organization settings → Repository → Rulesets → New ruleset → Import a ruleset.'
+			f'{sources} tại Organization settings → Repository → Rulesets → New ruleset → Import a ruleset.'
 		)
 		return
-	action = 'cập nhật' if ORG_RULESET_NAME in existing else 'tạo'
-	if not apply:
-		print(f'   (xem trước) {action} ruleset "{ORG_RULESET_NAME}" từ {source}')
-		return
-	body = json.dumps(org_ruleset(), ensure_ascii=False)
-	try:
-		if ORG_RULESET_NAME in existing:
-			path = f'orgs/{ORG}/rulesets/{existing[ORG_RULESET_NAME]}'
-			gh('api', '-X', 'PUT', path, '--input', '-', stdin=body)
-		else:
-			gh('api', '-X', 'POST', f'orgs/{ORG}/rulesets', '--input', '-', stdin=body)
-	except RuntimeError as exc:
-		print(f'   ⚠ không {action} được ruleset "{ORG_RULESET_NAME}": {exc}')
-		return
-	print(f'   ✔ đã {action} ruleset "{ORG_RULESET_NAME}"')
+	for source, ruleset in org_rulesets():
+		name = ruleset['name']
+		action = 'cập nhật' if name in existing else 'tạo'
+		if not apply:
+			print(f'   (xem trước) {action} ruleset "{name}" từ {source.relative_to(ROOT)}')
+			continue
+		body = json.dumps(ruleset, ensure_ascii=False)
+		try:
+			if name in existing:
+				path = f'orgs/{ORG}/rulesets/{existing[name]}'
+				gh('api', '-X', 'PUT', path, '--input', '-', stdin=body)
+			else:
+				gh('api', '-X', 'POST', f'orgs/{ORG}/rulesets', '--input', '-', stdin=body)
+		except RuntimeError as exc:
+			print(f'   ⚠ không {action} được ruleset "{name}": {exc}')
+			continue
+		print(f'   ✔ đã {action} ruleset "{name}"')
 
 
 def cmd_team(repos, apply):

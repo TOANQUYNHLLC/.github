@@ -491,6 +491,10 @@ class ValidateTest(unittest.TestCase):
 		)
 		self.assert_fails('ruleset cấp tổ chức không hỗ trợ quy tắc code_quality')
 
+	def test_ruleset_tag_to_chuc_nham_moi_repository(self):
+		self.edit('rulesets/org-protect-release-tags.json', '"~ALL"', '".github"')
+		self.assert_fails('nhắm ~ALL repository và refs/tags/v*')
+
 	def test_action_phai_ghim_sha(self):
 		# Không gắn cứng SHA: Dependabot nâng action hằng tháng, test phải chạy với mọi SHA.
 		self.edit_re(
@@ -612,10 +616,8 @@ class OrgSetupTest(unittest.TestCase):
 
 	def test_tep_ruleset_to_chuc_khop_protect_main(self):
 		# Tệp để import trên web phải đúng bằng org_ruleset() sinh từ Protect Main.
-		saved = json.loads(
-			(ROOT / 'rulesets' / 'org-protect-main.json').read_text(encoding='utf-8')
-		)
-		self.assertEqual(saved, self.module.org_ruleset())
+		for source, ruleset in self.module.org_rulesets():
+			self.assertEqual(json.loads(source.read_text(encoding='utf-8')), ruleset, source.name)
 
 	def test_ruleset_protect_main_cho_moi_repository(self):
 		def checks(ruleset):

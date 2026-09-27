@@ -20,12 +20,17 @@ Ruleset đặt ở **cấp repository**: tổ chức dùng gói GitHub Free nên
 
 ## 🏢 RULESET CẤP TỔ CHỨC
 
-[`org-protect-main.json`](org-protect-main.json) — **Protect Main (Organization)**: cùng quy tắc với Protect Main cho mọi repository (`~ALL`, nhánh mặc định), chuẩn bị sẵn cho khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức).
+Hai ruleset cho mọi repository (`~ALL`), chuẩn bị sẵn cho khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức):
+
+- [`org-protect-main.json`](org-protect-main.json) — **Protect Main (Organization)**: cùng quy tắc với Protect Main trên nhánh mặc định.
+- [`org-protect-release-tags.json`](org-protect-release-tags.json) — **Protect Release Tags (Organization)**: cùng quy tắc với Protect Release Tags trên tag `v*`.
+
+Khác với bản cấp repository:
 
 - Chỉ giữ 2 kiểm tra bắt buộc có ở mọi repository (tiêu đề Pull Request, tên branch) — như Protect Main của repository khác.
 - Bỏ quy tắc `code_quality`: API ruleset cấp tổ chức không nhận, import sẽ bị từ chối.
-- Tệp sinh từ `protect-main.json` bằng `org_ruleset()` trong `scripts/org-setup.py`; test bảo đảm hai bên khớp nhau — sửa `protect-main.json` rồi sinh lại tệp này.
-- Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**; hoặc cấp quyền `gh auth refresh -h github.com -s admin:org` rồi chạy `python3 scripts/org-setup.py org-rulesets --apply`.
+- Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `org_rulesets()` trong `scripts/org-setup.py`; test bảo đảm khớp nhau — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức. Cả hai hợp lệ theo schema OpenAPI của `POST /orgs/{org}/rulesets`.
+- Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json`; hoặc cấp quyền `gh auth refresh -h github.com -s admin:org` rồi chạy `python3 scripts/org-setup.py org-rulesets --apply`.
 
 ## ✅ KIỂM TRA BẮT BUỘC
 
