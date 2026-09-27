@@ -43,8 +43,9 @@ Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.p
 
 ## 🏢 CÀI ĐẶT TỔ CHỨC TRÊN WEB
 
-GitHub không có API cho các mục này — người quản trị làm trên web.
+GitHub không có API cho các mục này (hoặc cần quyền `admin:org`) — người quản trị làm trên web.
 
+- [ ] Ruleset cấp tổ chức **Protect Main (Organization)**: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn [`rulesets/org-protect-main.json`](rulesets/org-protect-main.json). GitHub chỉ thực thi khi tổ chức nâng lên gói **Team**; khi đó cân nhắc ADR mới để bỏ ruleset cấp repository trùng lặp.
 - [ ] Nhãn mặc định cho repository tạo mới: **Organization settings → Repository → General → Repository labels** — nhập đủ 47 nhãn theo [`labels.yml`](labels.yml) (tên, màu, mô tả; `ui/ux` `d4a5ff`, `i18n` `5319e7` là hai nhãn thêm sau cùng). Nhãn mặc định chỉ áp cho repository tạo sau đó; repository đã có đồng bộ bằng `scripts/sync-labels.sh --apply <tên>`.
 
 ---

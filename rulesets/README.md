@@ -18,6 +18,15 @@ Ruleset đặt ở **cấp repository**: tổ chức dùng gói GitHub Free nên
 - Áp dụng cho `refs/tags/v*`: chặn tạo, cập nhật (dời sang commit khác), xóa tag và force push.
 - Danh sách bỏ qua giống Protect Main — chỉ hai tài khoản quản trị tạo được tag phát hành, nên GitHub Release luôn trỏ đúng mã đã phát hành.
 
+## 🏢 RULESET CẤP TỔ CHỨC
+
+[`org-protect-main.json`](org-protect-main.json) — **Protect Main (Organization)**: cùng quy tắc với Protect Main cho mọi repository (`~ALL`, nhánh mặc định), chuẩn bị sẵn cho khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức).
+
+- Chỉ giữ 2 kiểm tra bắt buộc có ở mọi repository (tiêu đề Pull Request, tên branch) — như Protect Main của repository khác.
+- Bỏ quy tắc `code_quality`: API ruleset cấp tổ chức không nhận, import sẽ bị từ chối.
+- Tệp sinh từ `protect-main.json` bằng `org_ruleset()` trong `scripts/org-setup.py`; test bảo đảm hai bên khớp nhau — sửa `protect-main.json` rồi sinh lại tệp này.
+- Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**; hoặc cấp quyền `gh auth refresh -h github.com -s admin:org` rồi chạy `python3 scripts/org-setup.py org-rulesets --apply`.
+
 ## ✅ KIỂM TRA BẮT BUỘC
 
 | Kiểm tra                                                    | Repository `.github` | Repository khác |

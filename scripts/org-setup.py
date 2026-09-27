@@ -16,6 +16,9 @@ Lệnh (nên chạy theo thứ tự):
 		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
 		chưa có workflow kiểm tra bắt buộc — hợp nhất Pull Request của lệnh files trước.
 	team: tạo team maintainers, thêm người quản trị và cấp quyền maintain mọi repository.
+	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Protect Main (Organization)
+		(rulesets/org-protect-main.json) cho mọi repository; cần token có quyền admin:org
+		(gh auth refresh -h github.com -s admin:org); GitHub chỉ thực thi khi tổ chức dùng gói Team trở lên.
 """
 
 import argparse
@@ -34,6 +37,11 @@ MAINTAINERS = ('nguyentrongtoandl', 'trongtoandl81')
 RULESET_FILE = ROOT / 'rulesets' / 'protect-main.json'
 # Ruleset tag: chặn tạo, dời, xóa tag phát hành v* ngoài danh sách bỏ qua (ADR 0008).
 TAG_RULESET_FILE = ROOT / 'rulesets' / 'protect-release-tags.json'
+# Ruleset cấp tổ chức sinh từ Protect Main; tệp dùng để import trên web, org_ruleset() là nguồn.
+ORG_RULESET_FILE = ROOT / 'rulesets' / 'org-protect-main.json'
+ORG_RULESET_NAME = 'Protect Main (Organization)'
+# Quy tắc ruleset cấp tổ chức không nhận (theo OpenAPI của GitHub cho POST /orgs/{org}/rulesets).
+ORG_UNSUPPORTED_RULES = ('code_quality',)
 # Workflow mà lệnh files thêm vào repository; ruleset của repository khác chỉ bắt buộc job của chúng.
 REQUIRED_WORKFLOWS = ('.github/workflows/pr-title.yml', '.github/workflows/branch-name.yml')
 # Ecosystem Dependabot và tệp khai báo phụ thuộc ở thư mục gốc cho biết repository dùng nó.
@@ -155,6 +163,21 @@ def ruleset_for(repo):
 				rule['parameters']['required_status_checks'] = [
 					check for check in checks if check['context'] in jobs
 				]
+	return ruleset
+
+
+def org_ruleset():
+	"""Protect Main cho mọi repository ở cấp tổ chức: như Protect Main của repository khác (chỉ giữ kiểm tra
+	bắt buộc có ở mọi repository), nhắm ~ALL repository, bỏ quy tắc cấp tổ chức không hỗ trợ."""
+	ruleset = ruleset_for('app')
+	ruleset['name'] = ORG_RULESET_NAME
+	ruleset['conditions'] = {
+		'ref_name': {'exclude': [], 'include': ['~DEFAULT_BRANCH']},
+		'repository_name': {'exclude': [], 'include': ['~ALL']},
+	}
+	ruleset['rules'] = [
+		rule for rule in ruleset['rules'] if rule['type'] not in ORG_UNSUPPORTED_RULES
+	]
 	return ruleset
 
 
@@ -380,6 +403,40 @@ def cmd_rulesets(repos, apply):
 			)
 
 
+def cmd_org_rulesets(apply):
+	"""Ruleset cấp tổ chức; thiếu quyền admin:org thì hướng dẫn cấp quyền hoặc import tệp trên web."""
+	source = ORG_RULESET_FILE.relative_to(ROOT)
+	print(
+		f'== ruleset cấp tổ chức {ORG}: "{ORG_RULESET_NAME}" (chỉ thực thi với gói GitHub Team trở lên)'
+	)
+	try:
+		existing = {
+			item['name']: item['id'] for item in gh_json('api', f'orgs/{ORG}/rulesets') or []
+		}
+	except RuntimeError as exc:
+		print(f'   ⚠ không đọc được ruleset cấp tổ chức: {exc}')
+		print(
+			'   Cấp quyền: gh auth refresh -h github.com -s admin:org — hoặc import '
+			f'{source} tại Organization settings → Repository → Rulesets → New ruleset → Import a ruleset.'
+		)
+		return
+	action = 'cập nhật' if ORG_RULESET_NAME in existing else 'tạo'
+	if not apply:
+		print(f'   (xem trước) {action} ruleset "{ORG_RULESET_NAME}" từ {source}')
+		return
+	body = json.dumps(org_ruleset(), ensure_ascii=False)
+	try:
+		if ORG_RULESET_NAME in existing:
+			path = f'orgs/{ORG}/rulesets/{existing[ORG_RULESET_NAME]}'
+			gh('api', '-X', 'PUT', path, '--input', '-', stdin=body)
+		else:
+			gh('api', '-X', 'POST', f'orgs/{ORG}/rulesets', '--input', '-', stdin=body)
+	except RuntimeError as exc:
+		print(f'   ⚠ không {action} được ruleset "{ORG_RULESET_NAME}": {exc}')
+		return
+	print(f'   ✔ đã {action} ruleset "{ORG_RULESET_NAME}"')
+
+
 def cmd_team(repos, apply):
 	exists = gh_exists(f'orgs/{ORG}/teams/{TEAM}')
 	print(f'== team {ORG}/{TEAM}: {"đã có" if exists else "chưa có"}')
@@ -427,7 +484,9 @@ def main():
 	parser = argparse.ArgumentParser(
 		description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
 	)
-	parser.add_argument('command', choices=('files', 'settings', 'rulesets', 'team'))
+	parser.add_argument(
+		'command', choices=('files', 'settings', 'rulesets', 'team', 'org-rulesets')
+	)
 	parser.add_argument('--apply', action='store_true', help='áp dụng thay đổi trên GitHub')
 	parser.add_argument('--repo', help='chỉ xử lý một repository')
 	parser.add_argument(
@@ -445,6 +504,8 @@ def main():
 		cmd_settings(repos, args.apply, args.discussions)
 	elif args.command == 'rulesets':
 		cmd_rulesets(repos, args.apply)
+	elif args.command == 'org-rulesets':
+		cmd_org_rulesets(args.apply)
 	else:
 		cmd_team(repos, args.apply)
 	if not args.apply:
