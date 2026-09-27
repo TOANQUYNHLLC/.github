@@ -632,6 +632,24 @@ def check_rulesets():
 				org_path,
 				'ruleset cấp tổ chức không hỗ trợ quy tắc code_quality — GitHub từ chối khi import',
 			)
+	org_tag_path = ROOT / 'rulesets' / 'org-protect-release-tags.json'
+	if not org_tag_path.exists():
+		errors.append('thiếu tệp bắt buộc rulesets/org-protect-release-tags.json')
+	else:
+		try:
+			org_tags = json.loads(org_tag_path.read_text(encoding='utf-8'))
+		except json.JSONDecodeError:
+			org_tags = {}
+		conditions = org_tags.get('conditions') or {}
+		if (
+			org_tags.get('name') != 'Protect Release Tags (Organization)'
+			or '~ALL' not in (conditions.get('repository_name') or {}).get('include', [])
+			or 'refs/tags/v*' not in (conditions.get('ref_name') or {}).get('include', [])
+		):
+			error(
+				org_tag_path,
+				'ruleset phải tên "Protect Release Tags (Organization)", nhắm ~ALL repository và refs/tags/v*',
+			)
 	for rule in ruleset.get('rules', []):
 		for check in (rule.get('parameters') or {}).get('required_status_checks', []):
 			if check.get('context') not in jobs:
