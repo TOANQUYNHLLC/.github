@@ -1,7 +1,8 @@
 name: ✨ Đề xuất tính năng
 description: Ý tưởng tính năng mới hoặc cải thiện chức năng, giao diện, hiệu năng, tài liệu
 title: '[Đề xuất] '
-type: Feature
+labels:
+    - enhancement
 body:
     - type: markdown
       attributes:

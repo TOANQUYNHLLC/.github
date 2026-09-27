@@ -1,7 +1,8 @@
 name: 🐛 Báo lỗi
 description: Một chức năng chạy sai, không chạy hoặc hiển thị không đúng
 title: '[Lỗi] '
-type: Bug
+labels:
+    - bug
 body:
     - type: markdown
       attributes:

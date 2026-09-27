@@ -425,9 +425,10 @@ class ValidateTest(unittest.TestCase):
 		)
 		self.assert_fails('eslint.config.js: không bật quy tắc indent')
 
-	def test_bieu_mau_issue_type_phai_ton_tai(self):
-		self.edit('.github/ISSUE_TEMPLATE/bug_report.yml', 'type: Bug', 'type: Loi')
-		self.assert_fails('type "Loi" không phải Issue Type của tổ chức')
+	def test_bieu_mau_issue_chi_dung_khoa_duoc_chap_nhan(self):
+		# GitHub từ chối cả biểu mẫu khi gặp khóa lạ, kể cả `type` dù tài liệu có nhắc tới.
+		self.edit('.github/ISSUE_TEMPLATE/bug_report.yml', 'labels:\n    - bug\n', 'type: Bug\n')
+		self.assert_fails('khóa "type" không được GitHub chấp nhận trong biểu mẫu Issue')
 
 	def test_workflow_that_khong_dung_default_branch(self):
 		self.edit(

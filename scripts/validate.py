@@ -16,8 +16,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FORM_TYPES = {'markdown', 'textarea', 'input', 'dropdown', 'checkboxes'}
-# Issue Type của tổ chức (gh api orgs/TOANQUYNHLLC/issue-types) — gõ sai tên thì GitHub bỏ qua không báo.
-ISSUE_TYPES = {'Bug', 'Feature', 'Task'}
+# Khóa cấp cao nhất GitHub chấp nhận trong biểu mẫu Issue. `type` (Issue Type) có trong tài liệu nhưng GitHub
+# từ chối: "type is not a permitted key" và không hiện biểu mẫu (xem scripts/check-github-forms.py).
+ISSUE_FORM_KEYS = {'name', 'description', 'title', 'labels', 'assignees', 'projects', 'body'}
 # Biểu mẫu Discussion chỉ nhận các khóa này ở cấp cao nhất (không có name, description như Issue).
 DISCUSSION_FORM_KEYS = {'title', 'labels', 'body'}
 # Email liên hệ chung của công ty — mọi tài liệu phải dùng đúng địa chỉ này.
@@ -247,11 +248,9 @@ def check_form(path, required=('name', 'description', 'body')):
 	if path.parent.name == 'DISCUSSION_TEMPLATE':
 		for key in sorted(set(form) - DISCUSSION_FORM_KEYS):
 			error(path, f'biểu mẫu Discussion không hỗ trợ khóa "{key}"')
-	if 'type' in form and form['type'] not in ISSUE_TYPES:
-		error(
-			path,
-			f'type "{form["type"]}" không phải Issue Type của tổ chức ({", ".join(sorted(ISSUE_TYPES))})',
-		)
+	if path.parent.name == 'ISSUE_TEMPLATE':
+		for key in sorted(set(form) - ISSUE_FORM_KEYS):
+			error(path, f'khóa "{key}" không được GitHub chấp nhận trong biểu mẫu Issue')
 	for label in form.get('labels') or []:
 		FORM_LABELS.append((path, label))
 	ids = set()
