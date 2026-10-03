@@ -24,7 +24,7 @@ tools: ## Kiểm tra đã cài đủ công cụ, cài thư viện Node.js nếu 
 
 format: tools ## Định dạng lại toàn bộ bằng Prettier và ruff
 	npx prettier --write .
-	ruff format scripts
+	ruff format .
 
 format-check: ## Prettier, ruff format, ruff check (job "Định dạng (Prettier, ruff)")
 	python3 scripts/check.py format

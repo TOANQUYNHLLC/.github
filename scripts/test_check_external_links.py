@@ -6,6 +6,7 @@ Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make t
 import http.server
 import socket
 import socketserver
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -115,6 +116,19 @@ class ExternalLinksTest(unittest.TestCase):
 		finally:
 			server.shutdown()
 			server.server_close()
+
+	def testCollectsLinksFromFilesWithSpaces(self):
+		# Tên tệp có khoảng trắng vẫn được đọc; tệp đã xóa trên đĩa (còn trong index) bị bỏ qua.
+		module = loadScript('check-external-links')
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			(root / 'ghi chú.md').write_text('[a](https://example.com/a)\n', encoding='utf-8')
+			(root / 'xoa.md').write_text('[b](https://example.com/b)\n', encoding='utf-8')
+			subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+			subprocess.run(['git', 'add', '-A'], cwd=root, check=True)
+			(root / 'xoa.md').unlink()
+			module.ROOT = root
+			self.assertEqual(module.collectLinks(), {'https://example.com/a': {'ghi chú.md'}})
 
 
 if __name__ == '__main__':

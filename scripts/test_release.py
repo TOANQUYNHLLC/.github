@@ -146,6 +146,21 @@ class ReleaseTest(unittest.TestCase):
 			self.assertIn('Cần đứng ở main sạch', output.getvalue())
 			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
 
+	def testOpenPrReportsFetchFailure(self):
+		# Không tải được origin (mất mạng, sai remote): báo rõ thay vì văng traceback.
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			subprocess.run(
+				['git', 'remote', 'set-url', 'origin', str(Path(folder) / 'khong-co.git')],
+				cwd=clone,
+				check=True,
+			)
+			output = io.StringIO()
+			with contextlib.redirect_stdout(output):
+				code = self.module.prepareRelease('v2099.02.Stable', '2099-02-01', True)
+			self.assertEqual(code, 1)
+			self.assertIn('Không tải được origin/main', output.getvalue())
+
 	def testOpenPrCommitsPreparedChangelogThenRestores(self):
 		# make release-pr: mở Pull Request với CHANGELOG.md đã chuyển phiên bản, rồi trả tệp tại máy về như cũ.
 		with tempfile.TemporaryDirectory() as folder:

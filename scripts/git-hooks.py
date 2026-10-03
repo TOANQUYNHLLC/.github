@@ -64,7 +64,10 @@ def preCommit(root, args):
 			print('⚠️  Chưa có Prettier — chạy make tools.', file=sys.stderr)
 			failed = True
 		python = [name for name in files if name.endswith('.py')]
-		if python:
+		if python and not shutil.which('ruff'):
+			print('⚠️  Chưa có ruff — chạy mise install.', file=sys.stderr)
+			failed = True
+		elif python:
 			for command in (
 				['ruff', 'format', '--check', *python],
 				# Như nhóm format của check.py: Python ≥ 3.11 (tomllib, datetime.UTC).
