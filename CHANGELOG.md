@@ -12,6 +12,8 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 - `make links` kiểm tra song song và chờ kết nối mỗi địa chỉ tối đa 3 giây, nhớ địa chỉ hỏng (IPv6 của conventionalcommits.org không kết nối được — urllib chờ trọn thời gian cho từng địa chỉ, curl thì tự chuyển IPv4): từ khoảng 52 giây còn 7 giây.
 - `validate.py` đọc mọi tệp YAML trong một lần gọi Ruby (trước đây mỗi tệp một lần, có tệp bị đọc lại): mỗi lần chạy từ khoảng 3,3 giây còn 0,25 giây; bộ test từ khoảng 5,5 phút còn 30 giây, nên `make check` và hook `pre-push` nhanh hơn tương ứng.
+- `make org-preview` chạy 7 lệnh xem trước song song (`org-setup.py preview`, in theo thứ tự; lệnh lỗi thì mã thoát khác 0 — vòng lặp cũ chỉ lấy mã thoát lệnh cuối) và `org-setup.py team` đọc các team song song: từ khoảng 39 giây còn 7 giây. Hook sau `git pull` chạy song song `make org-preview`, `make links`, `make versions`: khoảng 8 giây.
+- Test của `validate.py` chép repository một lần cho cả lớp (trả bản chép về như cũ sau mỗi test bằng `git write-tree`) và chạy `validate.py` trong cùng tiến trình: cả bộ test từ khoảng 35 giây còn 24 giây.
 
 ### 🐛 SỬA LỖI
 
@@ -26,7 +28,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ♻️ THAY ĐỔI
 
-- Hook `post-merge`, `post-rewrite` chạy thêm `make links`, `make versions` sau `git pull` (chỉ báo) — môi trường đám mây của routine hằng tuần chặn mạng ra ngoài nên hai kiểm tra này chạy tại máy; `check-tool-versions.py` dùng token của GitHub CLI đã đăng nhập khi không có `GH_TOKEN`.
+- Hook `post-merge`, `post-rewrite` chạy thêm `make links`, `make versions` sau `git pull` (chỉ báo) — môi trường đám mây của routine chặn mạng ra ngoài nên hai kiểm tra này chạy tại máy; routine Claude Code chỉ còn kiểm tra biểu mẫu (hằng tháng) và nhắc phát hành; `check-tool-versions.py` dùng token của GitHub CLI đã đăng nhập khi không có `GH_TOKEN`.
 - Thêm `make release-pr` (`release.py prepare --open-pr`): chuẩn bị và mở Pull Request phát hành tại máy khi GitHub Actions tắt, chỉ chạy trên `main` sạch trùng `origin/main`, xong trả `CHANGELOG.md` tại máy về như cũ.
 - Tổ chức lại script: `scripts/org-setup.py` (1.070 dòng) tách thành gói `scripts/orgsetup/` — mỗi nhóm lệnh một module, `org-setup.py` chỉ còn dòng lệnh; `scripts/test_scripts.py` (1.140 dòng) tách mỗi script một tệp `test_*.py` cùng `testsupport.py`; `validate.py` gói kiểm tra trong `main()`/`runChecks()` — nạp được để gọi trực tiếp, không tự chạy khi import.
 - Git hook kiểm tra đúng nội dung (ADR 0016): `pre-commit` kiểm tra phần đã stage; `pre-push` chặn khi còn thay đổi chưa commit hoặc đẩy branch khác HEAD, bỏ qua khi chỉ đẩy tag hoặc xóa branch; thêm `post-rewrite` để chạy `make org-preview` sau `git pull --rebase`; `make hooks` gọi `git-hooks.py install` — cài vào thư mục hook chuẩn của git, cảnh báo `core.hooksPath`, hook mới tự cài sau khi kéo.

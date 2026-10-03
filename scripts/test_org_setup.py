@@ -10,12 +10,13 @@ import json
 import re
 import subprocess
 import unittest
+from unittest import mock
 
 # discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
 try:
-	from testsupport import ROOT
+	from testsupport import ROOT, loadScript
 except ModuleNotFoundError:
-	from scripts.testsupport import ROOT
+	from scripts.testsupport import ROOT, loadScript
 
 # Nạp sau testsupport: testsupport thêm scripts/ vào sys.path để import được gói orgsetup.
 from orgsetup import files, github, labels, rulesets, settings, teams
@@ -364,6 +365,34 @@ class OrgSetupTest(unittest.TestCase):
 		self.assertEqual(len(checks(own)), 5)
 		self.assertEqual(
 			sorted(checks(other)), ['Kiểm tra tiêu đề Pull Request', 'Kiểm tra tên branch']
+		)
+
+	def testPreviewRunsEveryCommandInOrder(self):
+		# make org-preview: mọi lệnh chạy song song nhưng in đúng thứ tự COMMANDS; một lệnh lỗi thì mã thoát 1.
+		module = loadScript('org-setup')
+
+		def run(command, **kwargs):
+			name = command[-1]
+			return subprocess.CompletedProcess(
+				command, int(name == 'team'), f'kết quả {name}\n', ''
+			)
+
+		output = io.StringIO()
+		with (
+			mock.patch.object(module.subprocess, 'run', run),
+			contextlib.redirect_stdout(output),
+			contextlib.redirect_stderr(io.StringIO()),
+		):
+			code = module.previewAll()
+		self.assertEqual(code, 1)
+		self.assertEqual(
+			re.findall(r'^kết quả (\S+)$', output.getvalue(), re.MULTILINE), list(module.COMMANDS)
+		)
+		self.assertEqual(
+			subprocess.run(
+				['make', '-n', 'org-preview'], cwd=ROOT, capture_output=True, text=True, check=True
+			).stdout.strip(),
+			'python3 scripts/org-setup.py preview',
 		)
 
 

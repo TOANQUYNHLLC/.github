@@ -28,12 +28,40 @@ Lệnh (nên chạy theo thứ tự):
 		repository; cần token có quyền admin:org
 		(gh auth refresh -h github.com -s admin:org) và gói GitHub Team trở lên. Gói Free: REST API
 		trả HTTP 403 nên chỉ so tệp với ruleset trên web (đọc qua GraphQL) — tạo, sửa bằng import trên web.
+	preview: xem trước mọi lệnh trên cùng lúc, in kết quả theo thứ tự trên (make org-preview).
 """
 
 import argparse
+import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 from orgsetup import files, github, labels, rulesets, settings, teams
+
+COMMANDS = ('files', 'settings', 'rulesets', 'team', 'labels', 'org-rulesets', 'org-settings')
+
+
+def previewAll():
+	"""Xem trước mọi lệnh song song — mỗi lệnh chờ GitHub vài giây, tuần tự thì gần 40 giây; mỗi lệnh chạy
+	một tiến trình riêng để kết quả in liền khối, đúng thứ tự COMMANDS."""
+
+	def preview(command):
+		return subprocess.run(
+			[sys.executable, __file__, command], capture_output=True, text=True, check=False
+		)
+
+	with ThreadPoolExecutor(max_workers=len(COMMANDS)) as pool:
+		results = list(pool.map(preview, COMMANDS))
+	failed = [
+		command for command, result in zip(COMMANDS, results, strict=True) if result.returncode
+	]
+	for command, result in zip(COMMANDS, results, strict=True):
+		print(f'##### {command}', flush=True)
+		print(result.stdout, end='', flush=True)
+		print(result.stderr, end='', file=sys.stderr, flush=True)
+	if failed:
+		print(f'❌ Lệnh lỗi: {", ".join(failed)}', file=sys.stderr)
+	return 1 if failed else 0
 
 
 def main():
@@ -42,7 +70,7 @@ def main():
 	)
 	parser.add_argument(
 		'command',
-		choices=('files', 'settings', 'rulesets', 'team', 'labels', 'org-rulesets', 'org-settings'),
+		choices=(*COMMANDS, 'preview'),
 	)
 	parser.add_argument('--apply', action='store_true', help='áp dụng thay đổi trên GitHub')
 	parser.add_argument('--repo', help='chỉ xử lý một repository')
@@ -50,6 +78,12 @@ def main():
 		'--discussions', action='store_true', help='settings: bật GitHub Discussions'
 	)
 	args = parser.parse_args()
+	if args.command == 'preview':
+		if args.apply or args.repo or args.discussions:
+			parser.error(
+				'preview chỉ xem trước mọi lệnh, không nhận --apply, --repo, --discussions'
+			)
+		return previewAll()
 	try:
 		github.gh('auth', 'status')
 	except (RuntimeError, FileNotFoundError):
@@ -72,7 +106,8 @@ def main():
 		teams.syncTeams(repos, args.apply)
 	if not args.apply:
 		print('Chế độ xem trước — chạy lại với --apply để áp dụng.')
+	return 0
 
 
 if __name__ == '__main__':
-	main()
+	sys.exit(main())

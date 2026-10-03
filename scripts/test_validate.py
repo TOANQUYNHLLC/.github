@@ -1,13 +1,16 @@
-"""Test tự động cho scripts/validate.py: mỗi test chép repository sang thư mục tạm, cố ý làm hỏng một điểm rồi
-khẳng định validate.py phát hiện đúng lỗi — để việc sửa script không vô tình làm mất một luật.
+"""Test tự động cho scripts/validate.py: chép repository sang thư mục tạm, mỗi test cố ý làm hỏng một điểm rồi
+khẳng định validate.py phát hiện đúng lỗi — để việc sửa script không vô tình làm mất một luật. Sau mỗi test bản
+chép được trả về như lúc đầu.
 
 Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make test)
 """
 
+import contextlib
+import importlib.util
+import io
 import re
 import shutil
 import subprocess
-import sys
 import tempfile
 import unicodedata
 import unittest
@@ -21,9 +24,11 @@ except ModuleNotFoundError:
 
 
 class ValidateTest(unittest.TestCase):
-	def setUp(self):
-		self.tmp = tempfile.TemporaryDirectory()
-		self.repo = Path(self.tmp.name)
+	@classmethod
+	def setUpClass(cls):
+		# Chép repository một lần cho cả lớp và lưu bản chép làm mốc; tearDown trả về đúng mốc này.
+		cls.tmp = tempfile.TemporaryDirectory()
+		cls.repo = Path(cls.tmp.name)
 		names = (
 			subprocess.run(
 				['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'],
@@ -37,23 +42,46 @@ class ValidateTest(unittest.TestCase):
 		for name in filter(None, names):
 			source = ROOT / name
 			if source.is_file():
-				target = self.repo / name
+				target = cls.repo / name
 				target.parent.mkdir(parents=True, exist_ok=True)
 				shutil.copy2(source, target)
-		subprocess.run(['git', 'init', '-q'], cwd=self.repo, check=True)
+		cls.git('init', '-q')
+		cls.git('add', '-A')
+		cls.baseline = cls.git('write-tree')
+		# Index rỗng như repository mới git init: mọi tệp là "chưa theo dõi", tệp test xóa thì biến mất khỏi
+		# git ls-files của validate.py.
+		cls.git('read-tree', '--empty')
+
+	@classmethod
+	def tearDownClass(cls):
+		cls.tmp.cleanup()
+
+	@classmethod
+	def git(cls, *args):
+		return subprocess.run(
+			['git', *args], cwd=cls.repo, capture_output=True, text=True, check=True
+		).stdout.strip()
 
 	def tearDown(self):
-		self.tmp.cleanup()
+		# Trả bản chép về mốc (cây tệp đã lưu bằng write-tree): ghi lại tệp bị sửa, xóa, đổi tên; xóa tệp
+		# test tạo thêm.
+		self.git('read-tree', self.baseline)
+		self.git('checkout-index', '--all', '--force')
+		self.git('clean', '-qfdx')
+		self.git('read-tree', '--empty')
 
 	def runValidate(self):
-		result = subprocess.run(
-			[sys.executable, 'scripts/validate.py'],
-			cwd=self.repo,
-			capture_output=True,
-			text=True,
-			check=False,
+		# Nạp validate.py của bản chép (test có thể sửa chính script) và chạy trong tiến trình này — nhanh hơn
+		# gấp đôi so với chạy python3 riêng cho mỗi test.
+		spec = importlib.util.spec_from_file_location(
+			'validate_copy', self.repo / 'scripts' / 'validate.py'
 		)
-		return result.returncode, result.stdout
+		module = importlib.util.module_from_spec(spec)
+		output = io.StringIO()
+		with contextlib.redirect_stdout(output), contextlib.redirect_stderr(io.StringIO()):
+			spec.loader.exec_module(module)
+			code = module.main()
+		return code, output.getvalue()
 
 	def edit(self, name, old, new):
 		path = self.repo / name

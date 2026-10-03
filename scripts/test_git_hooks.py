@@ -5,6 +5,7 @@ Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make t
 
 import contextlib
 import io
+import re
 import shutil
 import subprocess
 import tempfile
@@ -28,7 +29,18 @@ class GitHooksTest(unittest.TestCase):
 		for name in self.module.FORMAT_CONFIGS:
 			shutil.copy2(ROOT / name, self.repo / name)
 		self.git('add', '-A')
-		self.git('-c', 'commit.gpgsign=false', 'commit', '-qm', 'init')
+		# Không phụ thuộc cấu hình git của máy (runner chưa đặt danh tính, máy bật ký commit).
+		self.git(
+			'-c',
+			'user.name=test',
+			'-c',
+			'user.email=',
+			'-c',
+			'commit.gpgsign=false',
+			'commit',
+			'-qm',
+			'init',
+		)
 
 	def tearDown(self):
 		self.tmp.cleanup()
@@ -74,28 +86,30 @@ class GitHooksTest(unittest.TestCase):
 			self.assertEqual(self.module.preCommit(self.repo, []), 0)
 
 	def testAfterPullReportsWithoutBlocking(self):
-		# Sau khi kéo code: org-preview chỉ chạy khi gh đã đăng nhập; links, versions luôn chạy; lệnh lỗi chỉ báo.
+		# Sau khi kéo code: org-preview chỉ chạy khi gh đã đăng nhập; links, versions luôn chạy; chạy song song
+		# nhưng in theo thứ tự; lệnh lỗi chỉ báo, không chặn.
 		for signedIn, expected in (
 			(True, ['org-preview', 'links', 'versions']),
 			(False, ['links', 'versions']),
 		):
-			called = []
 
-			def run(command, *args, signedIn=signedIn, called=called, **kwargs):
-				if command[0] == 'make':
-					called.append(command[1])
-				return subprocess.CompletedProcess(command, 0 if signedIn else 1)
+			def run(command, *args, signedIn=signedIn, **kwargs):
+				code = 0 if signedIn else 1
+				return subprocess.CompletedProcess(command, code, f'kết quả {command[-1]}\n', '')
 
+			output = io.StringIO()
 			# subprocess, shutil của script là module dùng chung — vá tạm bằng mock.patch để tự hoàn lại.
 			with (
 				mock.patch.object(self.module, 'installHooks', return_value=0),
 				mock.patch.object(self.module.shutil, 'which', return_value='/usr/bin/gh'),
 				mock.patch.object(self.module.subprocess, 'run', run),
-				contextlib.redirect_stdout(io.StringIO()),
+				contextlib.redirect_stdout(output),
 				contextlib.redirect_stderr(io.StringIO()),
 			):
 				self.assertEqual(self.module.afterPull(self.repo), 0)
-			self.assertEqual(called, expected)
+			self.assertEqual(
+				re.findall(r'^kết quả (\S+)$', output.getvalue(), re.MULTILINE), expected
+			)
 
 
 if __name__ == '__main__':

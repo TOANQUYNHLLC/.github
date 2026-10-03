@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve()
@@ -132,10 +133,25 @@ def afterPull(root):
 		('links', 'liên kết bên ngoài còn hoạt động'),
 		('versions', 'công cụ trong mise.toml có bản mới'),
 	]
-	for target, purpose in reports:
+
+	def report(target):
+		return subprocess.run(
+			['make', '--no-print-directory', target],
+			cwd=root,
+			capture_output=True,
+			text=True,
+			check=False,
+		)
+
+	# Chạy song song (mỗi lệnh chờ mạng vài giây), in liền khối theo thứ tự.
+	with ThreadPoolExecutor(max_workers=len(reports)) as pool:
+		results = list(pool.map(report, [target for target, _ in reports]))
+	for (target, purpose), result in zip(reports, results, strict=True):
 		print(f'== make {target}: {purpose}', flush=True)
-		if subprocess.run(['make', target], cwd=root, check=False).returncode != 0:
-			print(f'⚠️  make {target} báo lỗi — xem thông báo ở trên.', file=sys.stderr)
+		print(result.stdout, end='', flush=True)
+		print(result.stderr, end='', file=sys.stderr, flush=True)
+		if result.returncode != 0:
+			print(f'⚠️  make {target} báo lỗi — xem thông báo ở trên.', file=sys.stderr, flush=True)
 	return 0
 
 

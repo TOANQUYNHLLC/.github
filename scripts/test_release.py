@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 # discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
 try:
@@ -82,7 +83,20 @@ class ReleaseTest(unittest.TestCase):
 		with tempfile.TemporaryDirectory() as folder:
 			subprocess.run(['git', 'init', '-q'], cwd=folder, check=True)
 			subprocess.run(
-				['git', '-c', 'commit.gpgsign=false', 'commit', '-q', '--allow-empty', '-m', 'x'],
+				[
+					'git',
+					'-c',
+					'user.name=test',
+					'-c',
+					'user.email=',
+					'-c',
+					'commit.gpgsign=false',
+					'commit',
+					'-q',
+					'--allow-empty',
+					'-m',
+					'x',
+				],
 				cwd=folder,
 				check=True,
 			)
@@ -93,28 +107,57 @@ class ReleaseTest(unittest.TestCase):
 		self.assertEqual(code, 1)
 		self.assertIn('Chưa có tag v* nào', output.getvalue())
 
+	def releaseClone(self, folder):
+		"""Repository có origin, tag v2099.01.Stable và một commit sau tag, đang ở main trùng origin/main."""
+		origin, clone = Path(folder) / 'origin.git', Path(folder) / 'clone'
+		subprocess.run(['git', 'init', '-q', '--bare', str(origin)], check=True)
+		subprocess.run(['git', 'clone', '-q', str(origin), str(clone)], check=True)
+		(clone / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
+		# Không phụ thuộc cấu hình git của máy (runner chưa đặt danh tính, máy bật ký commit, tag).
+		git = ['git', '-c', 'user.name=test', '-c', 'user.email=', '-c', 'commit.gpgsign=false']
+		for command in (
+			['add', 'CHANGELOG.md'],
+			['commit', '-q', '-m', 'đầu'],
+			['-c', 'tag.gpgsign=false', 'tag', 'v2099.01.Stable'],
+			['commit', '-q', '--allow-empty', '-m', 'sau tag'],
+			['branch', '-M', 'main'],
+			['push', '-q', 'origin', 'main'],
+		):
+			subprocess.run([*git, *command], cwd=clone, check=True)
+		self.module.ROOT = clone
+		return clone
+
 	def testOpenPrRequiresCleanMain(self):
 		# make release-pr lấy HEAD làm gốc branch phát hành: đứng ở branch khác main thì dừng trước khi sửa
 		# CHANGELOG.md hay gọi GitHub.
 		with tempfile.TemporaryDirectory() as folder:
-			origin, clone = Path(folder) / 'origin.git', Path(folder) / 'clone'
-			subprocess.run(['git', 'init', '-q', '--bare', str(origin)], check=True)
-			subprocess.run(['git', 'clone', '-q', str(origin), str(clone)], check=True)
-			(clone / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
-			for command in (
-				['add', 'CHANGELOG.md'],
-				['-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'x'],
-				['branch', '-M', 'main'],
-				['push', '-q', 'origin', 'main'],
-				['switch', '-q', '-c', 'feature'],
-			):
-				subprocess.run(['git', *command], cwd=clone, check=True)
-			self.module.ROOT = clone
+			clone = self.releaseClone(folder)
+			subprocess.run(['git', 'switch', '-q', '-c', 'feature'], cwd=clone, check=True)
 			output = io.StringIO()
 			with contextlib.redirect_stdout(output):
 				code = self.module.prepareRelease('v2099.02.Stable', '2099-02-01', True)
 			self.assertEqual(code, 1)
 			self.assertIn('Cần đứng ở main sạch', output.getvalue())
+			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
+
+	def testOpenPrCommitsPreparedChangelogThenRestores(self):
+		# make release-pr: mở Pull Request với CHANGELOG.md đã chuyển phiên bản, rồi trả tệp tại máy về như cũ.
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			opened = []
+
+			def openPullRequest(version, previous, commits):
+				changelog = (clone / 'CHANGELOG.md').read_text(encoding='utf-8')
+				opened.append((version, previous, commits, '## [v2099.02.Stable]' in changelog))
+				return 0
+
+			with (
+				mock.patch.object(self.module, 'openReleasePullRequest', openPullRequest),
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				code = self.module.prepareRelease('v2099.02.Stable', '2099-02-01', True)
+			self.assertEqual(code, 0)
+			self.assertEqual(opened, [('v2099.02.Stable', 'v2099.01.Stable', 1, True)])
 			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
 
 	def testEmptyUnreleasedSection(self):

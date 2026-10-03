@@ -1,6 +1,7 @@
 """Lệnh team: team của tổ chức, thành viên và quyền trên repository."""
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 
 from orgsetup import github
 
@@ -73,23 +74,33 @@ def teamDetails(team):
 	return github.ghJson('api', f'orgs/{github.ORG}/teams/{team}') or {}
 
 
+def teamState(team, repos):
+	"""Trạng thái team trên GitHub: (đã có, mục khác web, người chưa là maintainer, repository thiếu quyền)."""
+	name, permission, privacy, description = TEAMS[team]
+	exists = github.ghExists(f'orgs/{github.ORG}/teams/{team}')
+	details = teamDetails(team) if exists else {}
+	wanted = {'name': name, 'description': description, 'privacy': privacy}
+	drift = {key: value for key, value in wanted.items() if exists and details.get(key) != value}
+	users = [user for user in MAINTAINERS if not exists or teamRole(team, user) != 'maintainer']
+	# Không hạ quyền: admin đã bao gồm maintain, maintain bao gồm push…
+	missing = [
+		repo
+		for repo in repos
+		if not exists
+		or PERMISSION_RANK.get(teamPermission(team, repo), -1) < PERMISSION_RANK[permission]
+	]
+	return exists, details, drift, users, missing
+
+
 def syncTeams(repos, apply):
-	for team, (name, permission, privacy, description) in TEAMS.items():
-		exists = github.ghExists(f'orgs/{github.ORG}/teams/{team}')
+	# Đọc trạng thái các team song song — mỗi team vài lượt gọi gh, tuần tự thì hơn 20 giây; ghi vẫn tuần tự.
+	with ThreadPoolExecutor(max_workers=len(TEAMS)) as pool:
+		states = list(pool.map(lambda team: teamState(team, repos), TEAMS))
+	for (team, (name, permission, privacy, description)), state in zip(
+		TEAMS.items(), states, strict=True
+	):
+		exists, details, drift, users, missing = state
 		print(f'== team {github.ORG}/{team}: {"đã có" if exists else "chưa có"}')
-		details = teamDetails(team) if exists else {}
-		wanted = {'name': name, 'description': description, 'privacy': privacy}
-		drift = {
-			key: value for key, value in wanted.items() if exists and details.get(key) != value
-		}
-		users = [user for user in MAINTAINERS if not exists or teamRole(team, user) != 'maintainer']
-		# Không hạ quyền: admin đã bao gồm maintain, maintain bao gồm push…
-		missing = [
-			repo
-			for repo in repos
-			if not exists
-			or PERMISSION_RANK.get(teamPermission(team, repo), -1) < PERMISSION_RANK[permission]
-		]
 		if not users and not missing and not drift:
 			print(f'   ✔ đủ người quản trị, team có quyền {permission} {len(repos)} repository')
 			continue
