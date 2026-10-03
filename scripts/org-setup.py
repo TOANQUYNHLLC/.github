@@ -8,7 +8,7 @@ Lệnh (nên chạy theo thứ tự):
 	files: mở Pull Request thêm các tệp dùng chung còn thiếu — .editorconfig, .gitattributes,
 		workflow kiểm tra tiêu đề Pull Request, tên branch và gắn nhãn (labeler), CODEOWNERS, dependabot.yml, release.yml
 		và tệp định dạng theo ngôn ngữ repository dùng. Không ghi đè tệp đã có.
-	settings: cho phép Merge, Squash và Rebase, tự xóa branch sau khi hợp nhất; bật secret scanning,
+	settings: cho phép Merge và Squash, tắt Rebase (ADR 0011), tự xóa branch sau khi hợp nhất; bật secret scanning,
 		push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư, Release bất biến
 		(immutable releases); --discussions bật thêm GitHub Discussions.
 	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json) và Protect Release
@@ -84,7 +84,8 @@ PUBLIC_ONLY_ENDPOINTS = ('private-vulnerability-reporting',)
 MERGE_SETTINGS = {
 	'allow_squash_merge': True,
 	'allow_merge_commit': True,
-	'allow_rebase_merge': True,
+	# Rebase and merge tạo lại commit không có chữ ký (ADR 0011).
+	'allow_rebase_merge': False,
 	'delete_branch_on_merge': True,
 	'squash_merge_commit_title': 'PR_TITLE',
 	'squash_merge_commit_message': 'PR_BODY',

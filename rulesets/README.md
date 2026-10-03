@@ -7,7 +7,7 @@ Ruleset đặt ở **cấp repository**: tổ chức dùng gói GitHub Free nên
 ## ⚙️ QUY TẮC CỦA PROTECT MAIN
 
 - Mọi thay đổi phải qua Pull Request, có ít nhất **1** phê duyệt của người trong `CODEOWNERS`; phê duyệt cũ bị hủy khi có commit mới; cần phê duyệt lại sau lần đẩy cuối; chỉ người quản trị được hủy phê duyệt.
-- Mọi góp ý phải được giải quyết; cho phép **Merge**, **Squash** và **Rebase** ([ADR 0006](../docs/adr/0006-allow-all-merge-methods.md)).
+- Mọi góp ý phải được giải quyết; cho phép **Merge** và **Squash** ([ADR 0006](../docs/adr/0006-allow-all-merge-methods.md)); không cho phép **Rebase** vì commit tạo lại mất chữ ký ([ADR 0011](../docs/adr/0011-disallow-rebase-merge.md)).
 - Kiểm tra tự động bắt buộc thành công trên branch đã cập nhật với nhánh chính; code quality.
 - Commit phải có chữ ký (GPG hoặc SSH).
 - Cấm force push, cấm xóa; chặn tạo và cập nhật nhánh chính ngoài danh sách bỏ qua.

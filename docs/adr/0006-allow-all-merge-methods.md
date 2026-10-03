@@ -1,6 +1,6 @@
 # 0006. CHO PHÉP CẢ BA CÁCH HỢP NHẤT
 
-- **Trạng thái:** Chấp nhận
+- **Trạng thái:** Bị thay thế một phần bởi [0011](0011-disallow-rebase-merge.md) (bỏ Rebase)
 - **Ngày:** 2026-09-26
 - **Điều chỉnh:** [0004](0004-squash-merge-and-rulesets.md), [0005](0005-merge-protect-main.md) — cách hợp nhất và lịch sử tuyến tính
 
