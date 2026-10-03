@@ -91,6 +91,20 @@ ORG_PUSH_RULESET_NAME = 'Protect Pushes (Organization)'
 # Import cấp tổ chức không nhận actor loại User ("contains an invalid actor"): bỏ qua là chủ tổ chức (actor_id
 # bị bỏ qua) — cùng hai người quản trị; ruleset trên web tắt giới hạn hủy phê duyệt.
 ORG_BYPASS_ACTORS = [{'actor_id': 1, 'actor_type': 'OrganizationAdmin', 'bypass_mode': 'always'}]
+# Ruleset cấp tổ chức trên web (2026-10-03) có thêm code scanning: kết quả CodeQL của Pull Request không được
+# có cảnh báo mức errors hoặc cảnh báo bảo mật từ high trở lên. Bản cấp repository chưa có quy tắc này.
+ORG_CODE_SCANNING_RULE = {
+	'type': 'code_scanning',
+	'parameters': {
+		'code_scanning_tools': [
+			{
+				'tool': 'CodeQL',
+				'alerts_threshold': 'errors',
+				'security_alerts_threshold': 'high_or_higher',
+			}
+		]
+	},
+}
 ORG_REPOSITORIES = {'exclude': [], 'include': ['~ALL'], 'protected': False}
 # Workflow mà lệnh files thêm vào repository; ruleset của repository khác chỉ bắt buộc job của chúng.
 REQUIRED_WORKFLOWS = ('.github/workflows/pr-title.yml', '.github/workflows/branch-name.yml')
@@ -332,6 +346,9 @@ query($org: String!) { organization(login: $org) { rulesets(first: 50) { nodes {
 			requiredStatusChecks { context integrationId }
 		}
 		... on CodeQualityParameters { severity }
+		... on CodeScanningParameters {
+			codeScanningTools { tool alertsThreshold securityAlertsThreshold }
+		}
 		... on FilePathRestrictionParameters { restrictedFilePaths }
 		... on FileExtensionRestrictionParameters { restrictedFileExtensions }
 		... on MaxFileSizeParameters { maxFileSize }
@@ -415,13 +432,14 @@ def graphqlVisible(ruleset):
 
 def orgRuleset():
 	"""Protect Main cho mọi repository ở cấp tổ chức: như Protect Main của repository khác (chỉ giữ kiểm tra
-	bắt buộc có ở mọi repository; giữ code_quality), nhắm ~ALL repository."""
+	bắt buộc có ở mọi repository; giữ code_quality), nhắm ~ALL repository; thêm code scanning như web."""
 	ruleset = rulesetFor('app')
 	ruleset['name'] = ORG_RULESET_NAME
 	ruleset['conditions'] = {
 		'ref_name': {'exclude': [], 'include': ['~DEFAULT_BRANCH']},
 		'repository_name': dict(ORG_REPOSITORIES),
 	}
+	ruleset['rules'].append(dict(ORG_CODE_SCANNING_RULE))
 	return orgActors(ruleset)
 
 

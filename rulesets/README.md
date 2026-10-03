@@ -23,9 +23,9 @@ Mọi ruleset nhánh và tag — cấp repository và cấp tổ chức — có 
 
 ## 🏢 RULESET CẤP TỔ CHỨC
 
-Ba ruleset cho mọi repository (`~ALL`); hai ruleset đầu đã import trên web (**Active**) nhưng chỉ được thực thi khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức):
+Ba ruleset cho mọi repository (`~ALL`), cả ba đã có trên web (**Active**) và khớp tệp (kiểm tra 2026-10-03) nhưng chỉ được thực thi khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức):
 
-- [`org-protect-main.json`](org-protect-main.json) — **Protect Main (Organization)**: cùng quy tắc với Protect Main trên nhánh mặc định.
+- [`org-protect-main.json`](org-protect-main.json) — **Protect Main (Organization)**: cùng quy tắc với Protect Main trên nhánh mặc định, thêm **code scanning** như trên web: kết quả CodeQL của Pull Request không có cảnh báo mức `errors` hay cảnh báo bảo mật từ `high_or_higher` (`ORG_CODE_SCANNING_RULE` trong `scripts/org-setup.py`). Repository cần workflow CodeQL ([`workflow-templates/codeql.yml`](../workflow-templates/codeql.yml)) để có kết quả, nếu không Pull Request bị chặn khi gói Team thực thi ruleset.
 - [`org-protect-release-tags.json`](org-protect-release-tags.json) — **Protect Release Tags (Organization)**: cùng quy tắc với Protect Release Tags trên tag `v*`.
 - [`org-protect-pushes.json`](org-protect-pushes.json) — **Protect Pushes (Organization)**: push ruleset, xem [mục dưới](#-protect-pushes-cấp-tổ-chức).
 

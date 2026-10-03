@@ -155,7 +155,7 @@ Chỉ force push bằng `--force-with-lease --force-if-includes` (git ≥ 2.30: 
 
 ## ✅ YÊU CẦU ĐỐI VỚI PULL REQUEST
 
-- Điền đầy đủ [biểu mẫu Pull Request](PULL_REQUEST_TEMPLATE.md), liên kết Issue liên quan.
+- Điền đầy đủ [biểu mẫu Pull Request](.github/PULL_REQUEST_TEMPLATE.md), liên kết Issue liên quan.
 - Giữ Pull Request nhỏ, dễ đánh giá; tách thay đổi lớn thành nhiều Pull Request nối tiếp.
 - Công việc chưa xong mở dưới dạng **Draft Pull Request**, chuyển sang **Ready for review** khi hoàn tất.
 - Tự đọc lại toàn bộ diff trước khi yêu cầu đánh giá.
