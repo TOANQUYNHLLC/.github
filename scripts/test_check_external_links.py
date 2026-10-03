@@ -61,7 +61,9 @@ class ExternalLinksTest(unittest.TestCase):
 		module = loadScript('check-external-links')
 		# TCPServer thay HTTPServer: HTTPServer tra tên máy (getfqdn), trên macOS mất vài giây.
 		server = socketserver.TCPServer(('127.0.0.1', 0), QuietHandler)
-		threading.Thread(target=server.serve_forever, daemon=True).start()
+		threading.Thread(
+			target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+		).start()
 		port = server.server_address[1]
 		with socket.socket() as probe:
 			probe.bind(('127.0.0.1', 0))
@@ -82,7 +84,9 @@ class ExternalLinksTest(unittest.TestCase):
 		# Máy chủ có IPv6 hỏng (như conventionalcommits.org): thử IPv4 trước nên không phải chờ IPv6.
 		module = loadScript('check-external-links')
 		server = socketserver.TCPServer(('127.0.0.1', 0), QuietHandler)
-		threading.Thread(target=server.serve_forever, daemon=True).start()
+		threading.Thread(
+			target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+		).start()
 		port = server.server_address[1]
 		candidates = [
 			(socket.AF_INET6, socket.SOCK_STREAM, 0, '', ('::1', port, 0, 0)),
@@ -108,7 +112,9 @@ class ExternalLinksTest(unittest.TestCase):
 			server = socketserver.TCPServer(
 				('127.0.0.1', 0), handlerClass(answerWith(head), answerWith(get))
 			)
-			threading.Thread(target=server.serve_forever, daemon=True).start()
+			threading.Thread(
+				target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+			).start()
 			try:
 				url = f'http://127.0.0.1:{server.server_address[1]}/'
 				self.assertEqual(module.linkStatus(url), expected, (head, get))
@@ -129,7 +135,9 @@ class ExternalLinksTest(unittest.TestCase):
 			handler.wfile.write(body)
 
 		server = socketserver.TCPServer(('127.0.0.1', 0), handlerClass(answer))
-		threading.Thread(target=server.serve_forever, daemon=True).start()
+		threading.Thread(
+			target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+		).start()
 		url = f'http://127.0.0.1:{server.server_address[1]}/.well-known/security.txt'
 		try:
 			with tempfile.TemporaryDirectory() as folder:

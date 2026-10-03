@@ -10,22 +10,14 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ✨ THÊM
 
-- Bộ bản ghi quyết định kiến trúc trong `docs/adr/`: các quyết định đang có hiệu lực về định dạng, quy ước, ruleset, công cụ, kiểm tra, git hook và phát hành.
+- Bản ghi quyết định kiến trúc trong `docs/adr/`: định dạng, quy ước branch và commit, ruleset, commit có chữ ký, nguồn phiên bản công cụ, kiểm tra là script, quy tắc đặt tên, git hook, phát hành hằng tháng, tài liệu khớp code.
+- Kiểm tra tại máy giống GitHub Actions: `make check` chạy song song các nhóm `content`, `format`, `lint`, `conventions`, `audit` (khai báo trong `scripts/check.py`); test chia cho mọi lõi CPU (`scripts/run-tests.py`).
 - Git hook (`make hooks`): `pre-commit` kiểm tra Prettier, `ruff format`, `ruff check` trên phần đã stage; `pre-push` chạy `make check` trên đúng nội dung được đẩy; `post-merge`, `post-rewrite` chạy song song `make org-preview`, `make links`, `make versions` sau khi kéo code.
-- Quy tắc tài liệu khớp code (ADR 0013): mỗi lần sửa code phải kiểm tra tài liệu liên quan; `validate.py` báo lỗi khi tài liệu nhắc lệnh `make`, đường dẫn, hàm không có thật, hoặc `README.md` thiếu lệnh, script, workflow.
+- `validate.py` kiểm tra: định dạng, mã hóa, xuống dòng từng loại tệp; liên kết nội bộ (cả mục `#…`, liên kết mã hóa phần trăm); tiêu đề viết hoa; biểu mẫu Issue, Discussion; nhãn (đủ nhãn mặc định của GitHub); workflow (ghim SHA, quyền tối thiểu, `concurrency`, `timeout-minutes`, không viết kiểm tra trong YAML); ruleset; bảng ADR; tên tự đặt camelCase (cú pháp của ngôn ngữ giữ nguyên); tài liệu khớp code (lệnh `make`, đường dẫn, hàm được nhắc tới; `README.md` liệt kê đủ lệnh, script, workflow); người quản trị khớp `scripts/orgsetup/teams.py`; `security.txt` (báo trước 30 ngày khi sắp hết hạn); liên kết trong `CHANGELOG.md` là URL tuyệt đối.
+- `make links`: liên kết bên ngoài còn hoạt động (thử IPv4 trước, thử lại khi máy chủ lỗi tạm thời) và bản `security.txt` trên website khớp repository. `make forms`: GitHub chấp nhận biểu mẫu trên một branch. `make versions`: công cụ trong `mise.toml` có bản mới.
+- `make org-preview` (`org-setup.py preview`): xem trước cùng lúc việc áp dụng tệp dùng chung, cài đặt, ruleset, team, nhãn lên mọi repository và cài đặt tổ chức; các lệnh trong `scripts/orgsetup/` đọc GitHub song song, ghi tuần tự.
 - `make release-pr`: chuẩn bị và mở Pull Request phát hành tại máy khi GitHub Actions tắt.
-- `make org-preview` (`org-setup.py preview`): xem trước mọi lệnh áp dụng cấu hình chung cùng lúc.
-
-### ♻️ THAY ĐỔI
-
-- Mọi kiểm tra là script trong `scripts/`, ưu tiên Python, không viết trong YAML; `scripts/check.py` khai báo các nhóm kiểm tra dùng chung cho `make check` và GitHub Actions.
-- ruff (`make check`, `make format`, hook `pre-commit`) kiểm tra cùng một phạm vi: mọi tệp Python của repository.
-- `scripts/org-setup.py` chia thành các module trong `scripts/orgsetup/`; mỗi script có tệp test riêng.
-- Các lệnh gọi GitHub đọc song song những gì độc lập: `make org-preview` chạy mọi lệnh trong một tiến trình, kiểm tra đăng nhập và lấy danh sách repository một lần (khoảng 10 giây còn 4 giây); `make links` thử IPv4 trước (7 giây còn 2,5 giây); `make versions`, `make forms`, `make labels-preview` và hook sau `git pull` nhanh tương ứng.
-- `make test`, `make check` chạy test song song trên nhiều tiến trình (`scripts/run-tests.py`): các nhóm của `make check` cũng chạy song song (đầu ra vẫn theo thứ tự). `make check` từ khoảng 48 giây còn khoảng 10 giây trên máy 10 lõi.
-- Mọi kiểm tra đọc đúng tệp có tên tiếng Việt, có khoảng trắng (`git ls-files -z`) và bỏ qua tệp đã xóa trên đĩa.
-- Kiểm tra liên kết, biểu mẫu chạy song song và thử lại khi máy chủ lỗi tạm thời; `make forms` báo rõ khi branch chưa đẩy lên GitHub; `make org-preview` kiểm tra đăng nhập GitHub CLI một lần; `check-markdown-links.py` hiểu liên kết mã hóa phần trăm; `check-gofmt.py` bỏ qua `vendor/`.
-- `validate.py` kiểm tra thêm: tên hàm, tham số, biến tự đặt camelCase (đọc cây cú pháp; chỉ xét tên tự đặt, cú pháp của ngôn ngữ như `__init__`, `do_GET`, `http_open` giữ nguyên — ADR 0010); người quản trị trong `MAINTAINERS.md` khớp `org-setup.py team`; bộ nhãn chuẩn có đủ nhãn mặc định của GitHub; liên kết trong `CHANGELOG.md` là URL tuyệt đối; `security.txt` sắp hết hạn (trước 30 ngày). `make links` báo khi bản `security.txt` trên website khác bản trong repository.
+- Workflow mẫu `docs-check.yml`, `go-ci.yml` gọi `check-markdown-links.py`, `check-gofmt.py` của tổ chức (đọc đúng tên tệp tiếng Việt; bỏ qua `vendor/`).
 
 ### 🗑️ BỎ
 
