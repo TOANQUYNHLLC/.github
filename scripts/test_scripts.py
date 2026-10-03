@@ -157,47 +157,41 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails('có khoảng trắng cuối dòng')
 
 	def testBatchMustUseCrlf(self):
-		(self.repo / 'scripts' / 'build.cmd').write_bytes(b'@echo off\ngoto :eof\n')
+		(self.repo / 'build.cmd').write_bytes(b'@echo off\ngoto :eof\n')
 		self.assertFails('phải xuống dòng bằng CRLF')
 
 	def testBatchWithCrlfIsValid(self):
-		(self.repo / 'scripts' / 'build.cmd').write_bytes(b'@echo off\r\ngoto :eof\r\n')
+		(self.repo / 'build.cmd').write_bytes(b'@echo off\r\ngoto :eof\r\n')
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
 
 	def testRegistryUtf16CrlfIsValid(self):
 		content = 'Windows Registry Editor Version 5.00\r\n'
-		(self.repo / 'scripts' / 'setup.reg').write_bytes(b'\xff\xfe' + content.encode('utf-16-le'))
+		(self.repo / 'setup.reg').write_bytes(b'\xff\xfe' + content.encode('utf-16-le'))
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
 
 	def testRegistryMustBeUtf16(self):
-		(self.repo / 'scripts' / 'setup.reg').write_bytes(
-			b'Windows Registry Editor Version 5.00\r\n'
-		)
+		(self.repo / 'setup.reg').write_bytes(b'Windows Registry Editor Version 5.00\r\n')
 		self.assertFails('phải mã hóa UTF-16 LE có BOM')
 
 	def testSolutionMustHaveBom(self):
-		(self.repo / 'scripts' / 'App.sln').write_bytes(
-			b'Microsoft Visual Studio Solution File\r\n'
-		)
+		(self.repo / 'App.sln').write_bytes(b'Microsoft Visual Studio Solution File\r\n')
 		self.assertFails('thiếu BOM UTF-8')
 
 	def testSolutionWithBomCrlfIsValid(self):
-		(self.repo / 'scripts' / 'App.sln').write_bytes(
+		(self.repo / 'App.sln').write_bytes(
 			b'\xef\xbb\xbfMicrosoft Visual Studio Solution File\r\n'
 		)
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
 
 	def testFsharpMustNotIndentWithTabs(self):
-		(self.repo / 'scripts' / 'App.fs').write_text('let f x =\n\tx + 1\n', encoding='utf-8')
+		(self.repo / 'App.fs').write_text('let f x =\n\tx + 1\n', encoding='utf-8')
 		self.assertFails('phải thụt lề bằng 4 dấu cách')
 
 	def testDartMustNotIndentWithTabs(self):
-		(self.repo / 'scripts' / 'main.dart').write_text(
-			'void main() {\n\tprint(1);\n}\n', encoding='utf-8'
-		)
+		(self.repo / 'main.dart').write_text('void main() {\n\tprint(1);\n}\n', encoding='utf-8')
 		self.assertFails('phải thụt lề bằng 2 dấu cách')
 
 	def testEditorconfigWidth2OnlyForRequiredLanguages(self):
@@ -209,7 +203,7 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails('không được dùng độ rộng 2')
 
 	def testCsvKeepsTrailingWhitespace(self):
-		(self.repo / 'scripts' / 'data.csv').write_bytes(b'ten,ghi chu\r\nA,co dau cach \r\n')
+		(self.repo / 'data.csv').write_bytes(b'ten,ghi chu\r\nA,co dau cach \r\n')
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
 
