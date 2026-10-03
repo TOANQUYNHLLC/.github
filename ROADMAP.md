@@ -6,6 +6,7 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ## ✅ ĐÃ HOÀN THÀNH GẦN ĐÂY
 
+- [x] Lịch phát hành ngày 1 hằng tháng ([`monthly-release.yml`](.github/workflows/monthly-release.yml)) sẵn sàng chạy: GitHub Actions của `.github` đã bật lại; tổ chức và repository cho phép GitHub Actions tạo Pull Request, quyền mặc định của `GITHUB_TOKEN` là `read` (2026-10-03). Lần chạy đầu: 2026-11-01. Pull Request phát hành do `GITHUB_TOKEN` mở không kích hoạt kiểm tra bắt buộc nên người quản trị hợp nhất bằng quyền bỏ qua — chọn **Squash** hoặc **Merge** để commit trên `main` có chữ ký.
 - [x] Tổ chức bắt buộc **Immutable releases** (Release bất biến) cho mọi repository: tag và tệp đính kèm của Release đã phát hành không đổi được, tag không xóa được khi Release còn đó; `v2026.09.Stable` đã bất biến (kiểm tra 2026-09-27).
 - [x] Ruleset cấp tổ chức **Protect Main (Organization)** và **Protect Release Tags (Organization)** đã import trên web (**Active**); [`rulesets/org-protect-main.json`](rulesets/org-protect-main.json), [`rulesets/org-protect-release-tags.json`](rulesets/org-protect-release-tags.json) khớp bản trên web. GitHub chỉ thực thi khi tổ chức nâng lên gói **Team** (2026-09-27).
 - [x] Đối chiếu thêm 30 repository ứng dụng (gồm OpenEMR, Medplum, OpenMRS, HAPI FHIR): thêm `ui/ux`, `i18n` (47 nhãn), đồng bộ lên `.github` (2026-09-27).
@@ -56,7 +57,6 @@ GitHub không có API cho các mục này — người quản trị làm trên w
 ## 💡 CÂN NHẮC
 
 - [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`.github/DISCUSSION_TEMPLATE/`](.github/DISCUSSION_TEMPLATE/).
-- [ ] Lịch phát hành ngày 1 hằng tháng ([`monthly-release.yml`](.github/workflows/monthly-release.yml)) chỉ chạy khi bật lại GitHub Actions cho `.github` và bật **Settings → Actions → General → Allow GitHub Actions to create and approve pull requests** (đang tắt ở cả tổ chức); trước đó chạy `make release-prepare` vào ngày 1. Pull Request do `GITHUB_TOKEN` mở không kích hoạt kiểm tra bắt buộc nên người quản trị hợp nhất bằng quyền bỏ qua.
 - [ ] Import push ruleset **Protect Pushes (Organization)** từ [`rulesets/org-protect-pushes.json`](rulesets/org-protect-pushes.json) (**Organization settings → Repository → Rulesets → New ruleset → Import a ruleset**), rồi chạy `python3 scripts/org-setup.py org-rulesets` để so với tệp ([ADR 0010](docs/adr/0010-org-push-ruleset.md)).
 - [ ] Khi nâng lên gói **Team**: ruleset cấp tổ chức được thực thi — cân nhắc ADR mới để bỏ ruleset cấp repository trùng lặp.
 - [ ] Xóa quy tắc kiểm tra bắt buộc rỗng (không chặn gì) của **Protect Release Tags (Organization)** trên web, rồi bỏ khỏi `org_tag_ruleset()` trong [`scripts/org-setup.py`](scripts/org-setup.py) và sinh lại tệp.
