@@ -143,11 +143,23 @@ class OrgSetupTest(unittest.TestCase):
 		# Actions đang tắt: GitHub không trả quyền — bỏ qua, không ghi.
 		calls.clear()
 		live['repos/x/actions/permissions'] = {'enabled': False, 'sha_pinning_required': False}
-		with contextlib.redirect_stdout(io.StringIO()):
+		output = io.StringIO()
+		with contextlib.redirect_stdout(output):
 			settings.syncActions(
 				'repos/x/actions/permissions', settings.ACTIONS_PERMISSIONS, 'enabled', True
 			)
 		self.assertEqual(calls, [])
+		# Chỉ báo đúng phần đã so được (quyền GITHUB_TOKEN), không báo quyền Actions "đã đúng".
+		self.assertIn('✔ quyền GITHUB_TOKEN đã đúng', output.getvalue())
+		self.assertNotIn('quyền GitHub Actions đã đúng', output.getvalue())
+		# Không đọc được: không báo "đã đúng".
+		github.ghJson = lambda *args: (_ for _ in ()).throw(RuntimeError('HTTP 403'))
+		output = io.StringIO()
+		with contextlib.redirect_stdout(output):
+			settings.syncActions(
+				'repos/x/actions/permissions', settings.ACTIONS_PERMISSIONS, 'enabled', True
+			)
+		self.assertNotIn('đã đúng', output.getvalue())
 
 	def testOrgRulesetFilesMatchGenerated(self):
 		# Tệp để import trên web phải đúng bằng orgRulesets() sinh từ bản cấp repository.

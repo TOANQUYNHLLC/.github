@@ -165,22 +165,24 @@ def syncTopics(repo, current, apply):
 		)
 
 
-def syncActions(endpoint, wanted, enabled_key, apply):
+def syncActions(endpoint, wanted, enabledKey, apply):
 	"""Quyền GitHub Actions tại endpoint (repository hoặc tổ chức) và quyền mặc định của GITHUB_TOKEN;
-	gửi lại enabled_key đang có — API bắt buộc trường này nhưng script không bật, tắt Actions."""
-	changed = False
+	gửi lại enabledKey đang có — API bắt buộc trường này nhưng script không bật, tắt Actions."""
+	changed = skipped = unread = False
 	for path, target, keep in (
-		(endpoint, wanted, enabled_key),
+		(endpoint, wanted, enabledKey),
 		(f'{endpoint}/workflow', WORKFLOW_PERMISSIONS, None),
 	):
 		try:
 			current = github.ghJson('api', path) or {}
 		except RuntimeError as exc:
 			print(f'   ⚠ không đọc được {path}: {exc}')
+			unread = True
 			continue
 		# Actions đang tắt: GitHub không trả allowed_actions, sha_pinning_required — so khi bật lại.
 		if keep and current.get(keep) in (False, 'none'):
 			print('   – bỏ qua quyền GitHub Actions: Actions đang tắt')
+			skipped = True
 			continue
 		changes = {key: value for key, value in target.items() if current.get(key) != value}
 		for key, value in changes.items():
@@ -195,8 +197,9 @@ def syncActions(endpoint, wanted, enabled_key, apply):
 			github.gh('api', '-X', 'PUT', path, '--input', '-', stdin=json.dumps(body))
 		except RuntimeError as exc:
 			print(f'   ⚠ không cập nhật được {path}: {exc}')
-	if not changed:
-		print('   ✔ quyền GitHub Actions đã đúng')
+	# Không báo "đã đúng" cho phần chưa so được (không đọc được, Actions đang tắt).
+	if not changed and not unread:
+		print(f'   ✔ quyền {"GITHUB_TOKEN" if skipped else "GitHub Actions"} đã đúng')
 
 
 def syncOrgSettings(apply):

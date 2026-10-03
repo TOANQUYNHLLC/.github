@@ -8,32 +8,44 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2026.10.Stable...HEAD)
 
+### ✨ THÊM
+
+- `make release-pr` (`release.py prepare --open-pr`): chuẩn bị và mở Pull Request phát hành tại máy khi GitHub Actions tắt, chỉ chạy trên `main` sạch trùng `origin/main`, xong trả `CHANGELOG.md` tại máy về như cũ.
+- `org-setup.py preview` (`make org-preview`): xem trước mọi lệnh cùng lúc, in theo thứ tự.
+
+### ♻️ THAY ĐỔI
+
+- Hook `pre-commit` chạy thêm `ruff check` cho tệp Python đã stage; `make check` chạy shellcheck cho mọi script shell git quản lý, ở bất kỳ thư mục nào.
+- Hook `post-merge`, `post-rewrite` chạy thêm `make links`, `make versions` sau `git pull` (chỉ báo) — môi trường đám mây của routine chặn mạng ra ngoài nên hai kiểm tra này chạy tại máy; routine Claude Code chỉ còn kiểm tra biểu mẫu (hằng tháng) và nhắc phát hành; `check-tool-versions.py` dùng token của GitHub CLI đã đăng nhập khi không có `GH_TOKEN`.
+- Tổ chức lại script: `scripts/org-setup.py` (1.070 dòng) tách thành gói `scripts/orgsetup/` — mỗi nhóm lệnh một module, `org-setup.py` chỉ còn dòng lệnh; `scripts/test_scripts.py` (1.140 dòng) tách mỗi script một tệp `test_*.py` cùng `testsupport.py`; `validate.py` gói kiểm tra trong `main()`/`runChecks()` — nạp được để gọi trực tiếp, không tự chạy khi import.
+- Git hook kiểm tra đúng nội dung (ADR 0016): `pre-commit` kiểm tra phần đã stage; `pre-push` chặn khi còn thay đổi chưa commit hoặc đẩy branch khác HEAD, bỏ qua khi chỉ đẩy tag hoặc xóa branch; thêm `post-rewrite` để chạy `make org-preview` sau `git pull --rebase`; `make hooks` gọi `git-hooks.py install` — cài vào thư mục hook chuẩn của git, cảnh báo `core.hooksPath`, hook mới tự cài sau khi kéo.
+- Script ưu tiên Python, kể cả git hook; ngôn ngữ khác chỉ khi xử lý tốt hơn và ghi dòng `Không viết bằng Python vì: <lý do>` ở đầu tệp (ADR 0014, 0015): `scripts/pre-commit.sh` thành `scripts/git-hooks.py`, thêm hook `pre-push` (chạy `make check`, lỗi thì không đẩy) và `post-merge` (chạy `make org-preview` sau `git pull`); `validate.py` báo lỗi khi script không phải Python (mọi tệp trong `scripts/`, tệp `.sh`, `.rb`… ở bất kỳ đâu) thiếu dòng lý do.
+- Dev Container không cài Python hai lần: Python lấy từ image, `mise` bỏ qua Python (`MISE_DISABLE_TOOLS=python`).
+
 ### ⚡ HIỆU NĂNG
 
 - `make links` kiểm tra song song và chờ kết nối mỗi địa chỉ tối đa 3 giây, nhớ địa chỉ hỏng (IPv6 của conventionalcommits.org không kết nối được — urllib chờ trọn thời gian cho từng địa chỉ, curl thì tự chuyển IPv4): từ khoảng 52 giây còn 7 giây.
 - `validate.py` đọc mọi tệp YAML trong một lần gọi Ruby (trước đây mỗi tệp một lần, có tệp bị đọc lại): mỗi lần chạy từ khoảng 3,3 giây còn 0,25 giây; bộ test từ khoảng 5,5 phút còn 30 giây, nên `make check` và hook `pre-push` nhanh hơn tương ứng.
-- `make org-preview` chạy 7 lệnh xem trước song song (`org-setup.py preview`, in theo thứ tự; lệnh lỗi thì mã thoát khác 0 — vòng lặp cũ chỉ lấy mã thoát lệnh cuối) và `org-setup.py team` đọc các team song song: từ khoảng 39 giây còn 7 giây. Hook sau `git pull` chạy song song `make org-preview`, `make links`, `make versions`: khoảng 8 giây.
+- `make org-preview` chạy 7 lệnh xem trước song song và `org-setup.py team` đọc các team song song: từ khoảng 39 giây còn 7 giây. Hook sau `git pull` chạy song song `make org-preview`, `make links`, `make versions`: khoảng 8 giây.
 - Test của `validate.py` chép repository một lần cho cả lớp (trả bản chép về như cũ sau mỗi test bằng `git write-tree`) và chạy `validate.py` trong cùng tiến trình: cả bộ test từ khoảng 35 giây còn 24 giây.
-
-### 🐛 SỬA LỖI
-
-- `make check` không chặn khi `npm audit` không kết nối được máy chủ npm (mất mạng): chỉ cảnh báo; lỗ hổng thật vẫn chặn.
-- `conventions.py branch` không báo lỗi khi HEAD không ở branch nào (đang rebase); `conventions.py title` bỏ qua merge commit (nút **Update branch** của GitHub tạo "Merge branch 'main' into …") — trước đây `make check`, hook `pre-push` chặn oan.
-- `release.py prepare` báo rõ khi repository chưa có tag `v*` thay vì văng lỗi git.
-- `check.py`, `validate.py` báo rõ khi chạy bằng Python cũ hơn 3.11 (python3 của macOS là 3.9; git hook chạy từ ứng dụng giao diện có thể không có PATH của mise); `mise.toml` ghim Python 3.14 như các công cụ khác.
+- `make forms` đọc các biểu mẫu song song (khoảng 1 giây).
 
 ### 🗑️ BỎ
 
 - GitHub Pages của repository `.github` (tên miền `toanquynh.com` trỏ về hosting riêng nên Pages không phục vụ được, không có workflow triển khai): đã xóa trên web cùng môi trường `github-pages`; `org-setup.py settings` không còn so Pages.
 
-### ♻️ THAY ĐỔI
+### 🐛 SỬA LỖI
 
-- Hook `post-merge`, `post-rewrite` chạy thêm `make links`, `make versions` sau `git pull` (chỉ báo) — môi trường đám mây của routine chặn mạng ra ngoài nên hai kiểm tra này chạy tại máy; routine Claude Code chỉ còn kiểm tra biểu mẫu (hằng tháng) và nhắc phát hành; `check-tool-versions.py` dùng token của GitHub CLI đã đăng nhập khi không có `GH_TOKEN`.
-- Thêm `make release-pr` (`release.py prepare --open-pr`): chuẩn bị và mở Pull Request phát hành tại máy khi GitHub Actions tắt, chỉ chạy trên `main` sạch trùng `origin/main`, xong trả `CHANGELOG.md` tại máy về như cũ.
-- Tổ chức lại script: `scripts/org-setup.py` (1.070 dòng) tách thành gói `scripts/orgsetup/` — mỗi nhóm lệnh một module, `org-setup.py` chỉ còn dòng lệnh; `scripts/test_scripts.py` (1.140 dòng) tách mỗi script một tệp `test_*.py` cùng `testsupport.py`; `validate.py` gói kiểm tra trong `main()`/`runChecks()` — nạp được để gọi trực tiếp, không tự chạy khi import.
-- Git hook kiểm tra đúng nội dung (ADR 0016): `pre-commit` kiểm tra phần đã stage; `pre-push` chặn khi còn thay đổi chưa commit hoặc đẩy branch khác HEAD, bỏ qua khi chỉ đẩy tag hoặc xóa branch; thêm `post-rewrite` để chạy `make org-preview` sau `git pull --rebase`; `make hooks` gọi `git-hooks.py install` — cài vào thư mục hook chuẩn của git, cảnh báo `core.hooksPath`, hook mới tự cài sau khi kéo.
-- Script ưu tiên Python, kể cả git hook; ngôn ngữ khác chỉ khi xử lý tốt hơn và ghi dòng `Không viết bằng Python vì: <lý do>` ở đầu tệp (ADR 0014, 0015): `scripts/pre-commit.sh` thành `scripts/git-hooks.py`, thêm hook `pre-push` (chạy `make check`, lỗi thì không đẩy) và `post-merge` (chạy `make org-preview` sau `git pull`); `validate.py` báo lỗi khi script không phải Python (mọi tệp trong `scripts/`, tệp `.sh`, `.rb`… ở bất kỳ đâu) thiếu dòng lý do.
-- Dev Container không cài Python hai lần: Python lấy từ image, `mise` bỏ qua Python (`MISE_DISABLE_TOOLS=python`).
+- `make org-preview` báo lỗi khi một lệnh xem trước lỗi — vòng lặp cũ trong `Makefile` chỉ lấy mã thoát của lệnh cuối.
+- `org-setup.py rulesets` chỉ so ruleset của repository (`includes_parents=false`) — trước đây khi tổ chức lên gói Team, ruleset cấp tổ chức bị liệt kê lẫn và bị khuyên xóa nhầm; quyền GitHub Actions không còn báo "đã đúng" khi chưa so được (Actions đang tắt, không đọc được).
+- `check-markdown-links.py` (workflow mẫu `docs-check.yml`, `validate.py`) giải mã liên kết mã hóa phần trăm (`%20`, chữ có dấu trong tên tệp và mục `#…`); `check-gofmt.py` (workflow mẫu `go-ci.yml`) bỏ qua `vendor/`.
+- `conventions.py title` báo rõ khi không có commit nào hoặc chưa có `origin/main` thay vì lặng lẽ báo đạt.
+- Workflow `links.yml`: liên kết lỗi vẫn chạy tiếp kiểm tra biểu mẫu, phiên bản công cụ.
+- `make links`, `make forms` thử lại khi máy chủ lỗi tạm thời (5xx; GitHub trả 503 khi bị gọi dồn) thay vì báo hỏng oan; `make links` thử GET khi HEAD bị từ chối với bất kỳ mã lỗi nào (có máy chủ trả 403, 404 cho HEAD dù trang vẫn còn).
+- `make check` không chặn khi `npm audit` không kết nối được máy chủ npm (mất mạng): chỉ cảnh báo; lỗ hổng thật vẫn chặn.
+- `conventions.py branch` không báo lỗi khi HEAD không ở branch nào (đang rebase); `conventions.py title` bỏ qua merge commit (nút **Update branch** của GitHub tạo "Merge branch 'main' into …") — trước đây `make check`, hook `pre-push` chặn oan.
+- `release.py prepare` báo rõ khi repository chưa có tag `v*` thay vì văng lỗi git.
+- `check.py`, `validate.py` báo rõ khi chạy bằng Python cũ hơn 3.11 (python3 của macOS là 3.9; git hook chạy từ ứng dụng giao diện có thể không có PATH của mise); `mise.toml` ghim Python 3.14 như các công cụ khác.
 
 ---
 

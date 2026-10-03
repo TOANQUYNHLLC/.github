@@ -10,6 +10,7 @@ import re
 import socket
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -23,6 +24,8 @@ HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; TOANQUYNH-link-check/1.0)'}
 SKIP = ('img.shields.io', '/actions/workflows/')
 # Tệp ngoài Markdown: URL đứng trần (khóa YAML, trường của security.txt), không nằm trong (…).
 PATTERNS = ('*.md', '*.yml', '*.yaml', '*.cff', '*.txt')
+# Giây chờ trước khi thử lại liên kết trả lỗi máy chủ (5xx).
+RETRY_DELAY = 2
 # Giây chờ kết nối tới mỗi địa chỉ của máy chủ; chờ phản hồi vẫn 15 giây.
 CONNECT_TIMEOUT = 3
 # Địa chỉ đã không kết nối được — các lần kết nối sau (HEAD rồi GET, chuyển hướng) thử sau cùng.
@@ -113,18 +116,30 @@ def collectLinks():
 	return links
 
 
+def requestStatus(url, method):
+	"""Mã HTTP của một lần gửi, hoặc thông báo khi không kết nối được."""
+	request = urllib.request.Request(url, method=method, headers=HEADERS)
+	try:
+		with OPENER.open(request, timeout=15) as response:
+			return response.status
+	except urllib.error.HTTPError as exc:
+		exc.close()  # lỗi HTTP giữ phản hồi đang mở — chỉ cần mã
+		return exc.code
+	except (urllib.error.URLError, TimeoutError) as exc:
+		return f'không kết nối được ({getattr(exc, "reason", exc)})'
+
+
 def linkStatus(url):
-	for method in ('HEAD', 'GET'):
-		try:
-			request = urllib.request.Request(url, method=method, headers=HEADERS)
-			with OPENER.open(request, timeout=15) as response:
-				return response.status
-		except urllib.error.HTTPError as exc:
-			if method == 'GET' or exc.code not in (405, 501):
-				return exc.code
-		except (urllib.error.URLError, TimeoutError) as exc:
-			return f'không kết nối được ({getattr(exc, "reason", exc)})'
-	return None
+	"""HEAD trước cho nhẹ; HEAD lỗi thì GET (có máy chủ trả 403, 404, 405 cho HEAD dù trang vẫn còn); lỗi máy
+	chủ (5xx) thường chỉ tạm thời nên chờ rồi thử lại một lần."""
+	code = requestStatus(url, 'HEAD')
+	if isinstance(code, int) and code < 400:
+		return code
+	code = requestStatus(url, 'GET')
+	if isinstance(code, int) and code >= 500:
+		time.sleep(RETRY_DELAY)
+		code = requestStatus(url, 'GET')
+	return code
 
 
 def main():

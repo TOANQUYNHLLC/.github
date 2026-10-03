@@ -24,9 +24,16 @@ NETWORK_ERROR = re.compile(
 
 
 def shellScripts():
-	# Script ưu tiên Python; shell chỉ khi xử lý tốt hơn và có ghi lý do (ADR 0015).
-	folders = (ROOT / 'scripts', ROOT / '.devcontainer')
-	return sorted(str(path.relative_to(ROOT)) for folder in folders for path in folder.glob('*.sh'))
+	"""Mọi script shell git quản lý, ở bất kỳ thư mục nào — script ưu tiên Python, shell chỉ khi xử lý tốt hơn
+	và có ghi lý do (ADR 0015)."""
+	output = subprocess.run(
+		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '*.sh', '*.bash'],
+		cwd=ROOT,
+		capture_output=True,
+		text=True,
+		check=True,
+	).stdout
+	return sorted(name for name in output.splitlines() if (ROOT / name).is_file())
 
 
 def workflowFiles():
@@ -49,7 +56,11 @@ def checkGroups():
 			# Python ≥ 3.11 (tomllib, datetime.UTC); ruff.toml giữ đúng cấu hình chuẩn nên khai báo ở đây.
 			['ruff', 'check', '--target-version', 'py311', 'scripts'],
 		],
-		'lint': [['shellcheck', *shellScripts()], ['actionlint', *workflowFiles()]],
+		# shellcheck không nhận danh sách tệp rỗng — không có script shell thì bỏ lệnh.
+		'lint': [
+			*([['shellcheck', *scripts]] if (scripts := shellScripts()) else []),
+			['actionlint', *workflowFiles()],
+		],
 		'conventions': [
 			['python3', 'scripts/conventions.py', 'branch'],
 			['python3', 'scripts/conventions.py', 'title'],

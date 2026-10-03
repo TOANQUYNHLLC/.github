@@ -30,12 +30,12 @@ LANGUAGE_FILES = (
 )
 
 
-def filterDependabot(template, root_names):
-	"""Giữ github-actions và các ecosystem có tệp khai báo trong root_names; bỏ phần còn lại."""
+def filterDependabot(template, rootNames):
+	"""Giữ github-actions và các ecosystem có tệp khai báo trong rootNames; bỏ phần còn lại."""
 	used = {'github-actions'} | {
 		ecosystem
 		for ecosystem, manifests in ECOSYSTEM_MANIFESTS.items()
-		if any(name in root_names for name in manifests)
+		if any(name in rootNames for name in manifests)
 	}
 	_, _, updates = template.partition('updates:\n')
 	blocks = []
@@ -50,7 +50,7 @@ def filterDependabot(template, root_names):
 	return header + '\n\n'.join(blocks) + '\n'
 
 
-def plannedFiles(root_names):
+def plannedFiles(rootNames):
 	"""Đường dẫn trong repository đích → nội dung tệp dùng chung."""
 
 	def read(path):
@@ -65,12 +65,12 @@ def plannedFiles(root_names):
 		'.github/labeler.yml': read('repository-templates/labeler.yml'),
 		'.github/CODEOWNERS': read('repository-templates/CODEOWNERS'),
 		'.github/dependabot.yml': filterDependabot(
-			read('repository-templates/dependabot.yml'), root_names
+			read('repository-templates/dependabot.yml'), rootNames
 		),
 		'.github/release.yml': read('repository-templates/release.yml'),
 	}
 	for manifests, target, source in LANGUAGE_FILES:
-		if any(name in root_names for name in manifests):
+		if any(name in rootNames for name in manifests):
 			files[target] = read(source)
 	return files
 

@@ -271,7 +271,11 @@ def syncRulesets(repos, apply):
 				continue
 		existing = {
 			item['name']: item['id']
-			for item in github.ghJson('api', f'repos/{github.ORG}/{repo}/rulesets') or []
+			# Chỉ ruleset của repository: mặc định GitHub trả cả ruleset cấp tổ chức áp dụng cho nó.
+			for item in github.ghJson(
+				'api', f'repos/{github.ORG}/{repo}/rulesets?includes_parents=false'
+			)
+			or []
 		}
 		wanted = rulesetsFor(repo)
 		for source, ruleset in wanted:
