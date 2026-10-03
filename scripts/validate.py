@@ -75,17 +75,42 @@ def error(path, message):
 	errors.append(f'{path.relative_to(ROOT)}: {message}')
 
 
-def loadYaml(path):
+# Ruby đọc YAML (Python không có sẵn thư viện YAML). Một lần gọi cho mọi tệp: mỗi lần khởi động Ruby mất
+# khoảng 0,07 giây và một tệp có thể được nhiều kiểm tra đọc lại.
+YAML_BATCH = (
+	'out = {}; ARGV.each { |f| begin; out[f] = {"data" => YAML.load_file(f)}; '
+	'rescue Exception => e; out[f] = {"error" => e.message}; end }; puts JSON.dump(out)'
+)
+yamlCache = {}
+
+
+def readYamlFiles(paths):
+	"""Đọc nhiều tệp YAML trong một lần gọi Ruby; mỗi tệp trả {"data": …} hoặc {"error": …}."""
 	result = subprocess.run(
-		['ruby', '-ryaml', '-rjson', '-e', 'puts JSON.dump(YAML.load_file(ARGV[0]))', str(path)],
+		['ruby', '-ryaml', '-rjson', '-e', YAML_BATCH, *map(str, paths)],
 		capture_output=True,
 		text=True,
 		check=False,
 	)
 	if result.returncode != 0:
-		error(path, f'YAML không hợp lệ: {result.stderr.strip()}')
-		return None
+		return {str(path): {'error': result.stderr.strip()} for path in paths}
 	return json.loads(result.stdout)
+
+
+def loadYaml(path):
+	"""Nội dung YAML của tệp (đọc mọi tệp YAML được git quản lý ở lần gọi đầu); lỗi chỉ báo một lần."""
+	if not yamlCache:
+		files = [file for file in trackedFiles() if file.suffix in ('.yml', '.yaml')]
+		yamlCache.update(readYamlFiles(files))
+	if str(path) not in yamlCache:
+		yamlCache.update(readYamlFiles([path]))
+	entry = yamlCache[str(path)]
+	if 'error' in entry:
+		if not entry.get('reported'):
+			error(path, f'YAML không hợp lệ: {entry["error"]}')
+			entry['reported'] = True
+		return None
+	return entry['data']
 
 
 def trackedFiles():

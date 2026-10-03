@@ -8,6 +8,10 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2026.10.Stable...HEAD)
 
+### ⚡ HIỆU NĂNG
+
+- `validate.py` đọc mọi tệp YAML trong một lần gọi Ruby (trước đây mỗi tệp một lần, có tệp bị đọc lại): mỗi lần chạy từ khoảng 3,3 giây còn 0,25 giây; bộ test từ khoảng 5,5 phút còn 30 giây, nên `make check` và hook `pre-push` nhanh hơn tương ứng.
+
 ### 🐛 SỬA LỖI
 
 - `conventions.py branch` không báo lỗi khi HEAD không ở branch nào (đang rebase); `conventions.py title` bỏ qua merge commit (nút **Update branch** của GitHub tạo "Merge branch 'main' into …") — trước đây `make check`, hook `pre-push` chặn oan.
