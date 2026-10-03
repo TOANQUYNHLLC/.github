@@ -12,13 +12,13 @@ Repository `.github` đặc biệt của tổ chức: tệp cộng đồng (`CON
 
 ## 🛠️ LỆNH
 
-| Lệnh               | Khi nào chạy                                                                                                                                                 |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `make check`       | **Luôn chạy trước khi đẩy** (hook `pre-push` tự chạy) và trước khi báo hoàn thành — `scripts/check.py` chạy toàn bộ kiểm tra như GitHub Actions (trừ CodeQL) |
-| `make org-preview` | **Luôn chạy sau khi kéo code mới** (hook `post-merge` tự chạy sau `git pull`) — so cài đặt trên GitHub với code; chỉ xem trước                               |
-| `make hooks`       | Một lần sau khi clone: cài hook `pre-commit`, `pre-push`, `post-merge`                                                                                       |
-| `make format`      | Định dạng lại bằng Prettier và ruff                                                                                                                          |
-| `make test`        | Chỉ chạy test của `scripts/`                                                                                                                                 |
+| Lệnh               | Khi nào chạy                                                                                                                                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `make check`       | **Luôn chạy trước khi đẩy** (hook `pre-push` tự chạy trên đúng nội dung được đẩy: commit hết hoặc `git stash -u` trước; chỉ đẩy tag thì bỏ qua) và trước khi báo hoàn thành — `scripts/check.py` chạy toàn bộ kiểm tra như GitHub Actions (trừ CodeQL) |
+| `make org-preview` | **Luôn chạy sau khi kéo code mới** (hook `post-merge` sau `git pull`, `post-rewrite` sau `git pull --rebase` tự chạy) — so cài đặt trên GitHub với code; chỉ xem trước                                                                                 |
+| `make hooks`       | Một lần sau khi clone: cài hook `pre-commit`, `pre-push`, `post-merge`, `post-rewrite` (danh sách trong `scripts/git-hooks.py`; cảnh báo khi `core.hooksPath` làm git bỏ qua hook)                                                                     |
+| `make format`      | Định dạng lại bằng Prettier và ruff                                                                                                                                                                                                                    |
+| `make test`        | Chỉ chạy test của `scripts/`                                                                                                                                                                                                                           |
 
 ---
 
