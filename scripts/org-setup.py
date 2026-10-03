@@ -76,7 +76,7 @@ PERMISSION_RANK = {
 RULESET_FILE = ROOT / 'rulesets' / 'protect-main.json'
 # Ruleset tag: chặn tạo, dời, xóa tag phát hành v* ngoài danh sách bỏ qua (ADR 0008).
 TAG_RULESET_FILE = ROOT / 'rulesets' / 'protect-release-tags.json'
-# Ruleset cấp tổ chức: tệp để import trên web, sinh từ bản cấp repository bằng org_rulesets(), khớp ruleset
+# Ruleset cấp tổ chức: tệp để import trên web, sinh từ bản cấp repository bằng orgRulesets(), khớp ruleset
 # đang cài trên web (lệnh org-rulesets so qua GraphQL khi REST API trả HTTP 403 ở gói Free).
 ORG_RULESET_FILE = ROOT / 'rulesets' / 'org-protect-main.json'
 ORG_RULESET_NAME = 'Protect Main (Organization)'
@@ -210,12 +210,12 @@ def gh(*args, stdin=None):
 	return result.stdout
 
 
-def gh_json(*args):
+def ghJson(*args):
 	output = gh(*args)
 	return json.loads(output) if output.strip() else None
 
 
-def gh_exists(endpoint):
+def ghExists(endpoint):
 	try:
 		gh('api', endpoint, '--silent')
 		return True
@@ -223,7 +223,7 @@ def gh_exists(endpoint):
 		return False
 
 
-def filter_dependabot(template, root_names):
+def filterDependabot(template, root_names):
 	"""Giữ github-actions và các ecosystem có tệp khai báo trong root_names; bỏ phần còn lại."""
 	used = {'github-actions'} | {
 		ecosystem
@@ -243,7 +243,7 @@ def filter_dependabot(template, root_names):
 	return header + '\n\n'.join(blocks) + '\n'
 
 
-def planned_files(root_names):
+def plannedFiles(root_names):
 	"""Đường dẫn trong repository đích → nội dung tệp dùng chung."""
 
 	def read(path):
@@ -257,7 +257,7 @@ def planned_files(root_names):
 		'.github/workflows/labeler.yml': read('workflow-templates/labeler.yml'),
 		'.github/labeler.yml': read('repository-templates/labeler.yml'),
 		'.github/CODEOWNERS': read('repository-templates/CODEOWNERS'),
-		'.github/dependabot.yml': filter_dependabot(
+		'.github/dependabot.yml': filterDependabot(
 			read('repository-templates/dependabot.yml'), root_names
 		),
 		'.github/release.yml': read('repository-templates/release.yml'),
@@ -268,7 +268,7 @@ def planned_files(root_names):
 	return files
 
 
-def template_jobs():
+def templateJobs():
 	"""Tên job trong các workflow mà lệnh files thêm vào repository khác."""
 	names = set()
 	for workflow in REQUIRED_WORKFLOWS:
@@ -277,11 +277,11 @@ def template_jobs():
 	return names
 
 
-def ruleset_for(repo):
+def rulesetFor(repo):
 	"""Ruleset Protect Main cho repository: repository khác chỉ giữ kiểm tra bắt buộc có job tương ứng."""
 	ruleset = json.loads(RULESET_FILE.read_text(encoding='utf-8'))
 	if repo != '.github':
-		jobs = template_jobs()
+		jobs = templateJobs()
 		for rule in ruleset['rules']:
 			if rule['type'] == 'required_status_checks':
 				checks = rule['parameters']['required_status_checks']
@@ -291,7 +291,7 @@ def ruleset_for(repo):
 	return ruleset
 
 
-def ruleset_summary(ruleset):
+def rulesetSummary(ruleset):
 	"""Phần so sánh được của ruleset — bỏ id, node_id, ngày tạo, liên kết… mà GitHub thêm vào khi đọc."""
 	return {
 		'name': ruleset.get('name'),
@@ -344,20 +344,20 @@ GRAPHQL_HIDDEN_PARAMETERS = (
 GRAPHQL_ENUM_PARAMETERS = ('allowed_merge_methods', 'severity')
 
 
-def snake_keys(value):
+def snakeKeys(value):
 	"""Đổi khóa camelCase của GraphQL sang snake_case của REST, bỏ __typename."""
 	if isinstance(value, list):
-		return [snake_keys(item) for item in value]
+		return [snakeKeys(item) for item in value]
 	if not isinstance(value, dict):
 		return value
 	return {
-		re.sub(r'(?<!^)(?=[A-Z])', '_', key).lower(): snake_keys(item)
+		re.sub(r'(?<!^)(?=[A-Z])', '_', key).lower(): snakeKeys(item)
 		for key, item in value.items()
 		if key != '__typename' and item is not None
 	}
 
 
-def graphql_ruleset(node):
+def graphqlRuleset(node):
 	"""Ruleset đọc qua GraphQL, đổi sang dạng REST của tệp ruleset."""
 	actors = []
 	for actor in node['bypassActors']['nodes']:
@@ -378,7 +378,7 @@ def graphql_ruleset(node):
 		)
 	rules = []
 	for rule in node['rules']['nodes']:
-		parameters = snake_keys(rule['parameters'] or {})
+		parameters = snakeKeys(rule['parameters'] or {})
 		for key in GRAPHQL_ENUM_PARAMETERS:
 			if key in parameters:
 				value = parameters[key]
@@ -392,14 +392,14 @@ def graphql_ruleset(node):
 		'name': node['name'],
 		'target': node['target'].lower(),
 		'enforcement': node['enforcement'].lower(),
-		'conditions': snake_keys(node['conditions']),
+		'conditions': snakeKeys(node['conditions']),
 		'bypass_actors': actors,
 		'rules': rules,
 	}
 
 
-def graphql_visible(ruleset):
-	"""Ruleset bỏ các trường GraphQL không trả, để so với graphql_ruleset()."""
+def graphqlVisible(ruleset):
+	"""Ruleset bỏ các trường GraphQL không trả, để so với graphqlRuleset()."""
 	rules = []
 	for rule in ruleset['rules']:
 		parameters = {
@@ -411,19 +411,19 @@ def graphql_visible(ruleset):
 	return dict(ruleset, rules=rules)
 
 
-def org_ruleset():
+def orgRuleset():
 	"""Protect Main cho mọi repository ở cấp tổ chức: như Protect Main của repository khác (chỉ giữ kiểm tra
 	bắt buộc có ở mọi repository; giữ code_quality), nhắm ~ALL repository."""
-	ruleset = ruleset_for('app')
+	ruleset = rulesetFor('app')
 	ruleset['name'] = ORG_RULESET_NAME
 	ruleset['conditions'] = {
 		'ref_name': {'exclude': [], 'include': ['~DEFAULT_BRANCH']},
 		'repository_name': dict(ORG_REPOSITORIES),
 	}
-	return org_actors(ruleset)
+	return orgActors(ruleset)
 
 
-def org_actors(ruleset):
+def orgActors(ruleset):
 	"""Đổi actor loại User (chỉ hợp lệ ở cấp repository) sang actor cấp tổ chức như ruleset trên web."""
 	ruleset['bypass_actors'] = [dict(actor) for actor in ORG_BYPASS_ACTORS]
 	for rule in ruleset['rules']:
@@ -432,7 +432,7 @@ def org_actors(ruleset):
 	return ruleset
 
 
-def org_tag_ruleset():
+def orgTagRuleset():
 	"""Protect Release Tags cho mọi repository ở cấp tổ chức: cùng quy tắc, nhắm ~ALL repository."""
 	ruleset = json.loads(TAG_RULESET_FILE.read_text(encoding='utf-8'))
 	ruleset['name'] = ORG_TAG_RULESET_NAME
@@ -448,65 +448,65 @@ def org_tag_ruleset():
 			},
 		}
 	)
-	return org_actors(ruleset)
+	return orgActors(ruleset)
 
 
-def org_push_ruleset():
+def orgPushRuleset():
 	"""Protect Pushes cho mọi repository ở cấp tổ chức: quy tắc lấy từ tệp, danh sách bỏ qua và phạm vi
 	repository như hai ruleset cấp tổ chức kia."""
 	ruleset = json.loads(ORG_PUSH_RULESET_FILE.read_text(encoding='utf-8'))
 	ruleset['name'] = ORG_PUSH_RULESET_NAME
 	ruleset['conditions'] = {'repository_name': dict(ORG_REPOSITORIES)}
-	return org_actors(ruleset)
+	return orgActors(ruleset)
 
 
-def org_rulesets():
+def orgRulesets():
 	"""Mọi ruleset cấp tổ chức, kèm tệp để import trên web."""
 	return [
-		(ORG_RULESET_FILE, org_ruleset()),
-		(ORG_TAG_RULESET_FILE, org_tag_ruleset()),
-		(ORG_PUSH_RULESET_FILE, org_push_ruleset()),
+		(ORG_RULESET_FILE, orgRuleset()),
+		(ORG_TAG_RULESET_FILE, orgTagRuleset()),
+		(ORG_PUSH_RULESET_FILE, orgPushRuleset()),
 	]
 
 
-def rulesets_for(repo):
+def rulesetsFor(repo):
 	"""Mọi ruleset áp dụng cho repository, kèm tệp nguồn: nhánh chính rồi tag phát hành."""
 	return [
-		(RULESET_FILE, ruleset_for(repo)),
+		(RULESET_FILE, rulesetFor(repo)),
 		(TAG_RULESET_FILE, json.loads(TAG_RULESET_FILE.read_text(encoding='utf-8'))),
 	]
 
 
-def list_repos(only):
+def listRepos(only):
 	if only:
 		return [only]
 	output = gh('repo', 'list', ORG, '--limit', '500', '--no-archived', '--json', 'name')
 	return sorted(item['name'] for item in json.loads(output))
 
 
-def default_branch(repo):
-	return gh_json('api', f'repos/{ORG}/{repo}')['default_branch']
+def defaultBranch(repo):
+	return ghJson('api', f'repos/{ORG}/{repo}')['default_branch']
 
 
-def cmd_files(repos, apply):
+def syncFiles(repos, apply):
 	for repo in repos:
 		print(f'== {ORG}/{repo}')
 		if repo == '.github':
 			print('   – bỏ qua: repository nguồn của tệp dùng chung')
 			continue
-		base = default_branch(repo)
+		base = defaultBranch(repo)
 		try:
 			root = {
-				item['name'] for item in gh_json('api', f'repos/{ORG}/{repo}/contents?ref={base}')
+				item['name'] for item in ghJson('api', f'repos/{ORG}/{repo}/contents?ref={base}')
 			}
 		except RuntimeError:
 			print('   ⚠ repository trống — bỏ qua')
 			continue
-		files = planned_files(root)
+		files = plannedFiles(root)
 		missing = {
 			path: content
 			for path, content in files.items()
-			if not gh_exists(f'repos/{ORG}/{repo}/contents/{path}?ref={base}')
+			if not ghExists(f'repos/{ORG}/{repo}/contents/{path}?ref={base}')
 		}
 		if not missing:
 			print('   ✔ đã đủ tệp dùng chung')
@@ -515,10 +515,10 @@ def cmd_files(repos, apply):
 			print(f'   {"+" if apply else "(xem trước) +"} {path}')
 		if not apply:
 			continue
-		if gh_exists(f'repos/{ORG}/{repo}/git/ref/heads/{SYNC_BRANCH}'):
+		if ghExists(f'repos/{ORG}/{repo}/git/ref/heads/{SYNC_BRANCH}'):
 			print(f'   ⚠ branch {SYNC_BRANCH} đã tồn tại — kiểm tra Pull Request đang mở')
 			continue
-		sha = gh_json('api', f'repos/{ORG}/{repo}/git/ref/heads/{base}')['object']['sha']
+		sha = ghJson('api', f'repos/{ORG}/{repo}/git/ref/heads/{base}')['object']['sha']
 		gh(
 			'api',
 			f'repos/{ORG}/{repo}/git/refs',
@@ -562,14 +562,14 @@ def cmd_files(repos, apply):
 		print(f'   ✔ Pull Request: {url}')
 
 
-def citation_keywords():
+def citationKeywords():
 	"""Từ khóa trong CITATION.cff — topics của repository .github."""
 	text = (ROOT / 'CITATION.cff').read_text(encoding='utf-8')
 	block = re.search(r'^keywords:\n((?:[ \t]+- .+\n)+)', text, re.MULTILINE)
 	return re.findall(r'- (.+)', block.group(1)) if block else []
 
 
-def repository_settings(repo, discussions=False):
+def repositorySettings(repo, discussions=False):
 	"""Cài đặt mong muốn của repository: chung cho mọi repository, cộng phần riêng của nó."""
 	wanted = dict(REPOSITORY_SETTINGS, **REPOSITORY_OVERRIDES.get(repo, {}))
 	if discussions:
@@ -577,7 +577,7 @@ def repository_settings(repo, discussions=False):
 	return wanted
 
 
-def update_settings(endpoint, current, wanted, apply, what):
+def updateSettings(endpoint, current, wanted, apply, what):
 	"""So cài đặt đang có với cài đặt mong muốn; --apply thì PATCH phần khác."""
 	changes = {key: value for key, value in wanted.items() if current.get(key) != value}
 	if not changes:
@@ -590,30 +590,30 @@ def update_settings(endpoint, current, wanted, apply, what):
 		print('   ✔ đã cập nhật')
 
 
-def cmd_settings(repos, apply, discussions):
+def syncSettings(repos, apply, discussions):
 	for repo in repos:
 		print(f'== {ORG}/{repo}')
-		current = gh_json('api', f'repos/{ORG}/{repo}')
-		update_settings(
+		current = ghJson('api', f'repos/{ORG}/{repo}')
+		updateSettings(
 			f'repos/{ORG}/{repo}',
 			current,
-			repository_settings(repo, discussions),
+			repositorySettings(repo, discussions),
 			apply,
 			'cài đặt repository',
 		)
-		cmd_topics(repo, current, apply)
-		cmd_security(repo, current, apply)
-		sync_actions(
+		syncTopics(repo, current, apply)
+		syncSecurity(repo, current, apply)
+		syncActions(
 			f'repos/{ORG}/{repo}/actions/permissions', ACTIONS_PERMISSIONS, 'enabled', apply
 		)
-		cmd_pages(repo)
+		comparePages(repo)
 
 
-def cmd_topics(repo, current, apply):
+def syncTopics(repo, current, apply):
 	"""Topics của .github khớp keywords trong CITATION.cff; repository khác không quản lý."""
 	if repo != '.github':
 		return
-	wanted = citation_keywords()
+	wanted = citationKeywords()
 	if sorted(current.get('topics') or []) == sorted(wanted):
 		print('   ✔ topics khớp CITATION.cff')
 		return
@@ -623,7 +623,7 @@ def cmd_topics(repo, current, apply):
 		gh('api', '-X', 'PUT', f'repos/{ORG}/{repo}/topics', '--input', '-', stdin=body)
 
 
-def sync_actions(endpoint, wanted, enabled_key, apply):
+def syncActions(endpoint, wanted, enabled_key, apply):
 	"""Quyền GitHub Actions tại endpoint (repository hoặc tổ chức) và quyền mặc định của GITHUB_TOKEN;
 	gửi lại enabled_key đang có — API bắt buộc trường này nhưng script không bật, tắt Actions."""
 	changed = False
@@ -632,9 +632,13 @@ def sync_actions(endpoint, wanted, enabled_key, apply):
 		(f'{endpoint}/workflow', WORKFLOW_PERMISSIONS, None),
 	):
 		try:
-			current = gh_json('api', path) or {}
+			current = ghJson('api', path) or {}
 		except RuntimeError as exc:
 			print(f'   ⚠ không đọc được {path}: {exc}')
+			continue
+		# Actions đang tắt: GitHub không trả allowed_actions, sha_pinning_required — so khi bật lại.
+		if keep and current.get(keep) in (False, 'none'):
+			print('   – bỏ qua quyền GitHub Actions: Actions đang tắt')
 			continue
 		changes = {key: value for key, value in target.items() if current.get(key) != value}
 		for key, value in changes.items():
@@ -653,13 +657,13 @@ def sync_actions(endpoint, wanted, enabled_key, apply):
 		print('   ✔ quyền GitHub Actions đã đúng')
 
 
-def cmd_pages(repo):
+def comparePages(repo):
 	"""So GitHub Pages với PAGES (chỉ so — sửa trên web)."""
 	wanted = PAGES.get(repo)
 	if not wanted:
 		return
 	try:
-		current = gh_json('api', f'repos/{ORG}/{repo}/pages') or {}
+		current = ghJson('api', f'repos/{ORG}/{repo}/pages') or {}
 	except RuntimeError:
 		current = {}
 	different = [key for key, value in wanted.items() if current.get(key) != value]
@@ -669,22 +673,22 @@ def cmd_pages(repo):
 		print('   ✔ GitHub Pages đã đúng')
 
 
-def cmd_org_settings(apply):
+def syncOrgSettings(apply):
 	"""Cài đặt tổ chức và quyền GitHub Actions cấp tổ chức."""
 	print(f'== cài đặt tổ chức {ORG}')
-	current = gh_json('api', f'orgs/{ORG}')
-	update_settings(f'orgs/{ORG}', current, ORG_SETTINGS, apply, 'cài đặt tổ chức')
+	current = ghJson('api', f'orgs/{ORG}')
+	updateSettings(f'orgs/{ORG}', current, ORG_SETTINGS, apply, 'cài đặt tổ chức')
 	for key, value in ORG_WEB_ONLY_SETTINGS.items():
 		if current.get(key) != value:
 			print(
 				f'   ✘ {key}: {current.get(key)} ≠ {value} — sửa tại Organization settings trên web'
 			)
-	sync_actions(
+	syncActions(
 		f'orgs/{ORG}/actions/permissions', ORG_ACTIONS_PERMISSIONS, 'enabled_repositories', apply
 	)
 
 
-def security_endpoints(private):
+def securityEndpoints(private):
 	"""Endpoint bảo mật áp dụng được cho repository; repository riêng tư bỏ qua endpoint chỉ dành cho công khai."""
 	return {
 		label: endpoint
@@ -693,23 +697,23 @@ def security_endpoints(private):
 	}
 
 
-def cmd_security(repo, current, apply):
+def syncSecurity(repo, current, apply):
 	"""Bật tính năng bảo mật còn tắt; GitHub từ chối (gói trả phí, repository riêng tư) thì cảnh báo, không dừng."""
 	analysis = current.get('security_and_analysis') or {}
 	off = [
 		name for name in SECURITY_FEATURES if (analysis.get(name) or {}).get('status') != 'enabled'
 	]
 	private = bool(current.get('private'))
-	for label in sorted(set(SECURITY_ENDPOINTS) - set(security_endpoints(private))):
+	for label in sorted(set(SECURITY_ENDPOINTS) - set(securityEndpoints(private))):
 		print(f'   – bỏ qua {label}: chỉ dành cho repository công khai')
 	endpoints, unread = {}, False
-	for label, endpoint in security_endpoints(private).items():
+	for label, endpoint in securityEndpoints(private).items():
 		if endpoint in STATUS_ONLY_ENDPOINTS:
-			if not gh_exists(f'repos/{ORG}/{repo}/{endpoint}'):
+			if not ghExists(f'repos/{ORG}/{repo}/{endpoint}'):
 				endpoints[label] = endpoint
 			continue
 		try:
-			enabled = (gh_json('api', f'repos/{ORG}/{repo}/{endpoint}') or {}).get('enabled')
+			enabled = (ghJson('api', f'repos/{ORG}/{repo}/{endpoint}') or {}).get('enabled')
 		except RuntimeError as exc:
 			print(f'   ⚠ không đọc được trạng thái {label}: {exc}')
 			unread = True
@@ -736,15 +740,15 @@ def cmd_security(repo, current, apply):
 			print(f'   ⚠ không bật được {label}: {exc}')
 
 
-def cmd_rulesets(repos, apply):
+def syncRulesets(repos, apply):
 	for repo in repos:
 		print(f'== {ORG}/{repo}')
 		if repo != '.github':
-			base = default_branch(repo)
+			base = defaultBranch(repo)
 			absent = [
 				workflow
 				for workflow in REQUIRED_WORKFLOWS
-				if not gh_exists(f'repos/{ORG}/{repo}/contents/{workflow}?ref={base}')
+				if not ghExists(f'repos/{ORG}/{repo}/contents/{workflow}?ref={base}')
 			]
 			if absent:
 				print(
@@ -752,16 +756,15 @@ def cmd_rulesets(repos, apply):
 				)
 				continue
 		existing = {
-			item['name']: item['id']
-			for item in gh_json('api', f'repos/{ORG}/{repo}/rulesets') or []
+			item['name']: item['id'] for item in ghJson('api', f'repos/{ORG}/{repo}/rulesets') or []
 		}
-		wanted = rulesets_for(repo)
+		wanted = rulesetsFor(repo)
 		for source, ruleset in wanted:
 			name = ruleset['name']
 			action = 'cập nhật' if name in existing else 'tạo'
 			if name in existing:
-				live = gh_json('api', f'repos/{ORG}/{repo}/rulesets/{existing[name]}')
-				if ruleset_summary(live) == ruleset_summary(ruleset):
+				live = ghJson('api', f'repos/{ORG}/{repo}/rulesets/{existing[name]}')
+				if rulesetSummary(live) == rulesetSummary(ruleset):
 					print(f'   ✔ ruleset "{name}" đã đúng')
 					continue
 			if not apply:
@@ -802,11 +805,11 @@ def cmd_rulesets(repos, apply):
 			)
 
 
-def compare_org_rulesets():
+def compareOrgRulesets():
 	"""So tệp ruleset cấp tổ chức với ruleset trên web (đọc qua GraphQL); sửa trên web bằng import."""
 	how = 'Organization settings → Repository → Rulesets → New ruleset → Import a ruleset'
 	try:
-		data = gh_json('api', 'graphql', '-f', f'query={ORG_RULESETS_QUERY}', '-f', f'org={ORG}')
+		data = ghJson('api', 'graphql', '-f', f'query={ORG_RULESETS_QUERY}', '-f', f'org={ORG}')
 	except RuntimeError as exc:
 		print(f'   ⚠ không đọc được qua GraphQL: {exc}')
 		print(
@@ -814,36 +817,36 @@ def compare_org_rulesets():
 		)
 		return
 	live = {
-		node['name']: graphql_ruleset(node)
+		node['name']: graphqlRuleset(node)
 		for node in data['data']['organization']['rulesets']['nodes']
 	}
-	for source, ruleset in org_rulesets():
+	for source, ruleset in orgRulesets():
 		name, path = ruleset['name'], source.relative_to(ROOT)
 		if name not in live:
 			print(f'   ✘ chưa có ruleset "{name}" — import {path} tại {how}')
-		elif ruleset_summary(live[name]) == ruleset_summary(graphql_visible(ruleset)):
+		elif rulesetSummary(live[name]) == rulesetSummary(graphqlVisible(ruleset)):
 			print(f'   ✔ ruleset "{name}" đã đúng')
 		else:
 			print(f'   ✘ ruleset "{name}" khác {path} — sửa trên web hoặc xóa rồi import lại')
 
 
-def cmd_org_rulesets(apply):
+def syncOrgRulesets(apply):
 	"""Ruleset cấp tổ chức; REST API bị chặn (gói Free, thiếu admin:org) thì so qua GraphQL."""
 	print(f'== ruleset cấp tổ chức {ORG} (chỉ thực thi với gói GitHub Team trở lên)')
 	try:
 		existing = {
-			item['name']: item['id'] for item in gh_json('api', f'orgs/{ORG}/rulesets') or []
+			item['name']: item['id'] for item in ghJson('api', f'orgs/{ORG}/rulesets') or []
 		}
 	except RuntimeError as exc:
 		print(f'   ⚠ REST API ruleset cấp tổ chức: {exc}')
-		compare_org_rulesets()
+		compareOrgRulesets()
 		return
-	for source, ruleset in org_rulesets():
+	for source, ruleset in orgRulesets():
 		name = ruleset['name']
 		action = 'cập nhật' if name in existing else 'tạo'
 		if name in existing:
-			live = gh_json('api', f'orgs/{ORG}/rulesets/{existing[name]}')
-			if ruleset_summary(live) == ruleset_summary(ruleset):
+			live = ghJson('api', f'orgs/{ORG}/rulesets/{existing[name]}')
+			if rulesetSummary(live) == rulesetSummary(ruleset):
 				print(f'   ✔ ruleset "{name}" đã đúng')
 				continue
 		if not apply:
@@ -862,19 +865,19 @@ def cmd_org_rulesets(apply):
 		print(f'   ✔ đã {action} ruleset "{name}"')
 
 
-def team_role(team, user):
+def teamRole(team, user):
 	"""Vai trò của người dùng trong team (maintainer, member), None nếu chưa là thành viên."""
 	try:
-		return (gh_json('api', f'orgs/{ORG}/teams/{team}/memberships/{user}') or {}).get('role')
+		return (ghJson('api', f'orgs/{ORG}/teams/{team}/memberships/{user}') or {}).get('role')
 	except RuntimeError:
 		return None
 
 
-def team_permission(team, repo):
+def teamPermission(team, repo):
 	"""Quyền của team trên repository (read, triage, write, maintain, admin), None nếu chưa được cấp."""
 	try:
 		return (
-			gh_json(
+			ghJson(
 				'api',
 				'-H',
 				'Accept: application/vnd.github.v3.repository+json',
@@ -886,19 +889,17 @@ def team_permission(team, repo):
 		return None
 
 
-def cmd_team(repos, apply):
+def syncTeams(repos, apply):
 	for team, (name, permission, privacy, description) in TEAMS.items():
-		exists = gh_exists(f'orgs/{ORG}/teams/{team}')
+		exists = ghExists(f'orgs/{ORG}/teams/{team}')
 		print(f'== team {ORG}/{team}: {"đã có" if exists else "chưa có"}')
-		users = [
-			user for user in MAINTAINERS if not exists or team_role(team, user) != 'maintainer'
-		]
+		users = [user for user in MAINTAINERS if not exists or teamRole(team, user) != 'maintainer']
 		# Không hạ quyền: admin đã bao gồm maintain, maintain bao gồm push…
 		missing = [
 			repo
 			for repo in repos
 			if not exists
-			or PERMISSION_RANK.get(team_permission(team, repo), -1) < PERMISSION_RANK[permission]
+			or PERMISSION_RANK.get(teamPermission(team, repo), -1) < PERMISSION_RANK[permission]
 		]
 		if not users and not missing:
 			print(f'   ✔ đủ người quản trị, team có quyền {permission} {len(repos)} repository')
@@ -967,19 +968,19 @@ def main():
 	except (RuntimeError, FileNotFoundError):
 		sys.exit('Cần GitHub CLI đã đăng nhập: https://cli.github.com rồi chạy gh auth login')
 	# Lệnh org-* áp dụng cho cả tổ chức, không cần danh sách repository.
-	repos = [] if args.command.startswith('org-') else list_repos(args.repo)
+	repos = [] if args.command.startswith('org-') else listRepos(args.repo)
 	if args.command == 'files':
-		cmd_files(repos, args.apply)
+		syncFiles(repos, args.apply)
 	elif args.command == 'settings':
-		cmd_settings(repos, args.apply, args.discussions)
+		syncSettings(repos, args.apply, args.discussions)
 	elif args.command == 'rulesets':
-		cmd_rulesets(repos, args.apply)
+		syncRulesets(repos, args.apply)
 	elif args.command == 'org-rulesets':
-		cmd_org_rulesets(args.apply)
+		syncOrgRulesets(args.apply)
 	elif args.command == 'org-settings':
-		cmd_org_settings(args.apply)
+		syncOrgSettings(args.apply)
 	else:
-		cmd_team(repos, args.apply)
+		syncTeams(repos, args.apply)
 	if not args.apply:
 		print('Chế độ xem trước — chạy lại với --apply để áp dụng.')
 

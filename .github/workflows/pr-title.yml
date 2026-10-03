@@ -30,4 +30,4 @@ jobs:
             - name: Kiểm tra tiêu đề
               env:
                   PR_TITLE: ${{ github.event.pull_request.title }}
-              run: scripts/check-pr-title.sh "$PR_TITLE"
+              run: python3 scripts/conventions.py title "$PR_TITLE"

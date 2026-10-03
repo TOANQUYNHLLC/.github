@@ -26,34 +26,20 @@ jobs:
               with:
                   persist-credentials: false
 
-            - name: Lấy nội dung phát hành từ CHANGELOG.md
-              env:
-                  TAG: ${{ github.ref_name }}
-              run: |
-                  # Lấy mục "## [<tag>] …" (định dạng Keep a Changelog) tới mục kế tiếp.
-                  if [[ -f CHANGELOG.md ]]; then
-                      awk -v tag="[$TAG]" '
-                          index($0, "## " tag) == 1 { found = 1; next }
-                          found && /^## / { exit }
-                          found { print }
-                      ' CHANGELOG.md > release-notes.md
-                  fi
-                  if [[ -s release-notes.md ]]; then
-                      echo "Dùng nội dung mục [$TAG] trong CHANGELOG.md."
-                  else
-                      echo "::warning::CHANGELOG.md không có mục [$TAG] — GitHub tự tạo nội dung từ các Pull Request."
-                      rm -f release-notes.md
-                  fi
+            # Script kiểm tra dùng chung của tổ chức (nhánh chính của TOANQUYNHLLC/.github — được ruleset
+            # bảo vệ: Pull Request, phê duyệt, commit có chữ ký); sửa quy ước ở một nơi cho mọi repository.
+            - name: Lấy script của tổ chức
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  repository: TOANQUYNHLLC/.github
+                  path: .org
+                  persist-credentials: false
 
+            # Nội dung lấy từ mục ## [<tag>] của CHANGELOG.md; không có thì GitHub tự tạo từ các Pull Request.
             # Tổ chức bật Immutable releases: sau khi phát hành không thêm, sửa được tệp đính kèm. Cần đính kèm tệp thì
             # tạo bản nháp (--draft), tải tệp lên (gh release upload), rồi phát hành (gh release edit --draft=false).
             - name: Tạo Release
               env:
                   GH_TOKEN: ${{ github.token }}
                   TAG: ${{ github.ref_name }}
-              run: |
-                  if [[ -f release-notes.md ]]; then
-                      gh release create "$TAG" --title "$TAG" --notes-file release-notes.md --verify-tag
-                  else
-                      gh release create "$TAG" --title "$TAG" --generate-notes --verify-tag
-                  fi
+              run: python3 .org/scripts/release.py create "$TAG" --changelog CHANGELOG.md --allow-generated-notes

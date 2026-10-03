@@ -26,11 +26,8 @@ jobs:
               with:
                   persist-credentials: false
 
-            - name: Kiểm tra nội dung
-              run: python3 scripts/validate.py
-
-            - name: Test các script kiểm tra
-              run: python3 -m unittest discover -s scripts -p 'test_*.py'
+            - name: Kiểm tra nội dung và test các script
+              run: python3 scripts/check.py content
 
     format:
         name: Định dạng (Prettier, ruff) và ESLint
@@ -51,23 +48,13 @@ jobs:
             - name: Cài thư viện
               run: npm install --no-audit --no-fund
 
-            - name: Prettier
-              run: npx prettier --check .
-
-            - name: ESLint
-              run: npx eslint .
-
             - name: Cài ruff (phiên bản trong mise.toml)
               uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
               with:
                   install_args: ruff
 
-            - name: ruff format
-              run: ruff format --check scripts
-
-            # Python ≥ 3.11 (tomllib, datetime.UTC); ruff.toml giữ đúng cấu hình chuẩn nên khai báo ở đây.
-            - name: ruff check
-              run: ruff check --target-version py311 scripts
+            - name: Prettier, ESLint, ruff format, ruff check
+              run: python3 scripts/check.py format
 
     lint:
         name: Shell script và workflow
@@ -84,8 +71,5 @@ jobs:
               with:
                   install_args: shellcheck actionlint
 
-            - name: shellcheck
-              run: shellcheck scripts/*.sh .devcontainer/*.sh
-
-            - name: actionlint
-              run: actionlint .github/workflows/*.yml workflow-templates/*.yml
+            - name: shellcheck, actionlint
+              run: python3 scripts/check.py lint

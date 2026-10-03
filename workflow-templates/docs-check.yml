@@ -25,19 +25,14 @@ jobs:
               with:
                   persist-credentials: false
 
+            # Script kiểm tra dùng chung của tổ chức (nhánh chính của TOANQUYNHLLC/.github — được ruleset
+            # bảo vệ: Pull Request, phê duyệt, commit có chữ ký); sửa quy ước ở một nơi cho mọi repository.
+            - name: Lấy script của tổ chức
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  repository: TOANQUYNHLLC/.github
+                  path: .org
+                  persist-credentials: false
+
             - name: Kiểm tra liên kết nội bộ
-              shell: python
-              run: |
-                  import re, sys
-                  from pathlib import Path
-                  errors = []
-                  for path in Path('.').rglob('*.md'):
-                      if any(part in ('node_modules', '.git') for part in path.parts):
-                          continue
-                      text = re.sub(r'```.*?```', '', path.read_text(encoding='utf-8'), flags=re.S)
-                      for match in re.finditer(r'\]\(([^)\s#]+)', text):
-                          target = match.group(1)
-                          if not re.match(r'[a-z]+:', target) and not (path.parent / target).exists():
-                              errors.append(f'{path}: liên kết hỏng {target}')
-                  print('\n'.join(errors) or 'Không có liên kết hỏng.')
-                  sys.exit(1 if errors else 0)
+              run: python3 .org/scripts/check-markdown-links.py

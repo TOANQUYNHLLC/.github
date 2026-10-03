@@ -22,14 +22,16 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 2
         steps:
+            # Script kiểm tra dùng chung của tổ chức (nhánh chính của TOANQUYNHLLC/.github — được ruleset
+            # bảo vệ: Pull Request, phê duyệt, commit có chữ ký); sửa quy ước ở một nơi cho mọi repository.
+            - name: Lấy script của tổ chức
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  repository: TOANQUYNHLLC/.github
+                  path: .org
+                  persist-credentials: false
+
             - name: Kiểm tra tiêu đề
               env:
                   PR_TITLE: ${{ github.event.pull_request.title }}
-              run: |
-                  pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_-]+\))?!?: .+'
-                  if [[ "$PR_TITLE" =~ $pattern ]]; then
-                      echo "Tiêu đề hợp lệ: $PR_TITLE"
-                  else
-                      echo "::error::Tiêu đề Pull Request phải theo dạng '<loại>(<phạm vi>): <mô tả>' (phạm vi tùy chọn) với loại là feat, fix, docs, style, refactor, perf, test, build, ci, chore hoặc revert — xem CONTRIBUTING.md. Tiêu đề hiện tại: $PR_TITLE"
-                      exit 1
-                  fi
+              run: python3 .org/scripts/conventions.py title "$PR_TITLE"

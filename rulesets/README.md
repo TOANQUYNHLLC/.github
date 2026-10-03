@@ -33,8 +33,8 @@ Khác với bản cấp repository:
 
 - Chỉ giữ 2 kiểm tra bắt buộc có ở mọi repository (tiêu đề Pull Request, tên branch) — như Protect Main của repository khác; vẫn có `code_quality`.
 - Không dùng actor loại `User` (import báo "contains an invalid actor"): danh sách bỏ qua là **chủ tổ chức** (`OrganizationAdmin`) — cùng hai người quản trị như bản cấp repository; không giới hạn người hủy phê duyệt.
-- Protect Release Tags (Organization) có thêm quy tắc kiểm tra bắt buộc với danh sách rỗng như trên web — quy tắc này không chặn gì, có thể xóa trên web rồi bỏ trong `org_tag_ruleset()`.
-- Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `org_rulesets()` trong `scripts/org-setup.py` và khớp ruleset đang cài trên web; test bảo đảm tệp khớp `org_rulesets()` — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức.
+- Protect Release Tags (Organization) có thêm quy tắc kiểm tra bắt buộc với danh sách rỗng như trên web — quy tắc này không chặn gì, có thể xóa trên web rồi bỏ trong `orgTagRuleset()`.
+- Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `orgRulesets()` trong `scripts/org-setup.py` và khớp ruleset đang cài trên web; test bảo đảm tệp khớp `orgRulesets()` — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức.
 - Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json` và `org-protect-pushes.json`. REST API ruleset cấp tổ chức trả HTTP 403 ở gói Free (dù token có quyền `admin:org`), nên `python3 scripts/org-setup.py org-rulesets` chỉ so tệp với ruleset trên web (đọc qua GraphQL); `--apply` chỉ tạo, cập nhật được khi tổ chức dùng gói Team.
 
 ## 📤 PROTECT PUSHES (CẤP TỔ CHỨC)
@@ -48,7 +48,7 @@ Push ruleset ([ADR 0010](../docs/adr/0010-org-push-ruleset.md)) chặn ngay khi 
 Khác hai ruleset cấp tổ chức kia:
 
 - GitHub chỉ áp dụng push ruleset cho repository **riêng tư** hoặc **internal** (cả fork network) — repository công khai như `.github` không bị ảnh hưởng; vẫn chỉ thực thi với gói Team.
-- Không có `required_signatures` (push ruleset chỉ nhận bốn quy tắc push) và không có bản cấp repository: tệp là nguồn, `org_push_ruleset()` chỉ chuẩn hóa danh sách bỏ qua và phạm vi.
+- Không có `required_signatures` (push ruleset chỉ nhận bốn quy tắc push) và không có bản cấp repository: tệp là nguồn, `orgPushRuleset()` chỉ chuẩn hóa danh sách bỏ qua và phạm vi.
 - Import và so với web như hai tệp kia (`python3 scripts/org-setup.py org-rulesets`).
 
 ## ✅ KIỂM TRA BẮT BUỘC

@@ -6,7 +6,9 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ## ✅ ĐÃ HOÀN THÀNH GẦN ĐÂY
 
-- [x] Lịch phát hành ngày 1 hằng tháng ([`monthly-release.yml`](.github/workflows/monthly-release.yml)) sẵn sàng chạy: GitHub Actions của `.github` đã bật lại; tổ chức và repository cho phép GitHub Actions tạo Pull Request, quyền mặc định của `GITHUB_TOKEN` là `read` (2026-10-03). Lần chạy đầu: 2026-11-01. Pull Request phát hành do `GITHUB_TOKEN` mở không kích hoạt kiểm tra bắt buộc nên người quản trị hợp nhất bằng quyền bỏ qua — chọn **Squash** hoặc **Merge** để commit trên `main` có chữ ký.
+- [x] Kiểm tra viết bằng Python trong `scripts/`, chạy tại máy bằng `make check` giống GitHub Actions ([ADR 0012](docs/adr/0012-python-checks-camel-case.md)); GitHub Actions của `.github` **đang tắt** để tiết kiệm chi phí — kiểm tra tại máy trước khi đẩy, hợp nhất bằng quyền bỏ qua của người quản trị (2026-10-03).
+- [x] Tổ chức và repository cho phép GitHub Actions tạo Pull Request, quyền mặc định của `GITHUB_TOKEN` là `read` (2026-10-03); 6 team (`admins`, `maintainers`, `developers`, `qa`, `design`, `marketing`) và cài đặt web được ghi vào `scripts/org-setup.py`.
+- [x] Sửa lỗi chính tả mô tả tổ chức: "The Official Repository of TOAN QUYNH Co., Ltd" (kiểm tra 2026-10-03).
 - [x] Tổ chức bắt buộc **Immutable releases** (Release bất biến) cho mọi repository: tag và tệp đính kèm của Release đã phát hành không đổi được, tag không xóa được khi Release còn đó; `v2026.09.Stable` đã bất biến (kiểm tra 2026-09-27).
 - [x] Ruleset cấp tổ chức **Protect Main (Organization)** và **Protect Release Tags (Organization)** đã import trên web (**Active**); [`rulesets/org-protect-main.json`](rulesets/org-protect-main.json), [`rulesets/org-protect-release-tags.json`](rulesets/org-protect-release-tags.json) khớp bản trên web. GitHub chỉ thực thi khi tổ chức nâng lên gói **Team** (2026-09-27).
 - [x] Đối chiếu thêm 30 repository ứng dụng (gồm OpenEMR, Medplum, OpenMRS, HAPI FHIR): thêm `ui/ux`, `i18n` (47 nhãn), đồng bộ lên `.github` (2026-09-27).
@@ -16,7 +18,7 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 - [x] Đăng [`.well-known/security.txt`](.well-known/security.txt) tại `https://toanquynh.com/.well-known/security.txt` (hosting P.A Việt Nam, thư mục `public_html/.well-known/`); `links.yml` kiểm tra URL này hằng tuần (2026-09-27).
 - [x] Ruleset **Protect Main** duy nhất cho `main` của `.github`, tạo từ [`rulesets/protect-main.json`](rulesets/protect-main.json) ([ADR 0005](docs/adr/0005-merge-protect-main.md)), đang áp dụng 8 quy tắc: `code_quality`, `creation`, `deletion`, `non_fast_forward`, `pull_request`, `required_signatures`, `required_status_checks`, `update` (2026-09-26).
 - [x] Team **maintainers** (`nguyentrongtoandl`, `trongtoandl81`, quyền **Maintain**) là chủ sở hữu mã trong `CODEOWNERS` (2026-09-26).
-- [x] Cho phép Merge, Squash và Rebase, tự xóa branch sau khi hợp nhất ([ADR 0006](docs/adr/0006-allow-all-merge-methods.md)); đồng bộ 16 nhãn chuẩn; Discussions đã bật; cả hai tài khoản đã đăng ký khóa ký commit (2026-09-26).
+- [x] Cho phép Merge, Squash và Rebase (Rebase bỏ từ [ADR 0011](docs/adr/0011-disallow-rebase-merge.md)), tự xóa branch sau khi hợp nhất ([ADR 0006](docs/adr/0006-allow-all-merge-methods.md)); đồng bộ 16 nhãn chuẩn; Discussions đã bật; cả hai tài khoản đã đăng ký khóa ký commit (2026-09-26).
 - [x] Bật secret scanning, push protection, Dependabot security updates và báo cáo lỗ hổng riêng tư (**Security → Report a vulnerability**) cho `.github`; `SECURITY.md` và `security.txt` thêm kênh báo cáo qua GitHub (2026-09-26).
 
 Kiểm tra lại ruleset và các quy tắc đang áp dụng cho `main`:
@@ -38,28 +40,29 @@ Hiện tổ chức chỉ có repository `.github`.
 Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.py`](scripts/org-setup.py) (GitHub CLI đã đăng nhập; xem trước bằng `make org-preview`) theo thứ tự:
 
 - [ ] `python3 scripts/org-setup.py files --apply --repo <tên>` — Pull Request thêm `.editorconfig`, `.gitattributes`, workflow kiểm tra tiêu đề, tên branch và gắn nhãn (`labeler.yml` kèm cấu hình — sửa đường dẫn nhãn `area: …` cho khớp dự án), `CODEOWNERS`, `dependabot.yml`, `release.yml` và tệp định dạng theo ngôn ngữ; đánh giá rồi hợp nhất. Chép tay `.env.example`, `PRIVACY.md` khi cần ([`repository-templates/`](repository-templates/)).
-- [ ] `python3 scripts/org-setup.py settings --apply --repo <tên>` — cho phép Merge, Squash, tắt Rebase; tự xóa branch; bật secret scanning, push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư, Release bất biến.
+- [ ] `python3 scripts/org-setup.py settings --apply --repo <tên>` — cho phép Merge, Squash, tắt Rebase; tự xóa branch; bật Dependabot alerts và security updates, secret scanning, push protection, báo cáo lỗ hổng riêng tư, Release bất biến; quyền GitHub Actions.
 - [ ] `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — ruleset **Protect Release Tags** từ [`protect-release-tags.json`](rulesets/protect-release-tags.json) và **Protect Main** từ [`protect-main.json`](rulesets/protect-main.json), Protect Main chỉ giữ 2 kiểm tra bắt buộc mà repository có.
 - [ ] `scripts/sync-labels.sh --apply <tên>` — bộ nhãn chuẩn.
-- [ ] `python3 scripts/org-setup.py team --apply --repo <tên>` — cấp quyền **Maintain** cho team **maintainers** để `CODEOWNERS` có hiệu lực.
+- [ ] Áp dụng cho `.github` các thay đổi chưa có trên web: `python3 scripts/org-setup.py settings --apply --repo .github` (tắt Rebase) và `rulesets --apply --repo .github` (Protect Main bỏ Rebase); sửa **Protect Main (Organization)** trên web.
+- [ ] `python3 scripts/org-setup.py team --apply --repo <tên>` — cấp quyền cho 6 team (**maintainers** quyền **Maintain** để `CODEOWNERS` có hiệu lực).
 
 ---
 
 ## 🏢 CÀI ĐẶT TỔ CHỨC TRÊN WEB
 
-GitHub không có API cho các mục này — người quản trị làm trên web.
+GitHub không có API cho các mục này — người quản trị làm trên web (`python3 scripts/org-setup.py org-settings` báo các mục web khác `ORG_WEB_ONLY_SETTINGS`).
 
-- [ ] Sửa lỗi chính tả trong mô tả tổ chức (**Organization settings → General → Description**): "The Offical Repository of TOAN QUYNH Co., Ltd" → "The Official Repository of TOAN QUYNH Co., Ltd".
 - [ ] Nhãn mặc định cho repository tạo mới: **Organization settings → Repository → General → Repository labels** — nhập đủ 47 nhãn theo [`labels.yml`](labels.yml) (tên, màu, mô tả; `ui/ux` `d4a5ff`, `i18n` `5319e7` là hai nhãn thêm sau cùng). Nhãn mặc định chỉ áp cho repository tạo sau đó; repository đã có đồng bộ bằng `scripts/sync-labels.sh --apply <tên>`.
 
 ---
 
 ## 💡 CÂN NHẮC
 
+- [ ] Khi GitHub Actions còn tắt: ngày 1 hằng tháng chạy `make release-prepare` (bỏ qua nếu không có commit mới), mở Pull Request phát hành, hợp nhất rồi gắn tag và chạy `python3 scripts/release.py create <tag>` — workflow [`monthly-release.yml`](.github/workflows/monthly-release.yml), `release.yml` chỉ tự chạy khi bật lại Actions.
 - [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`.github/DISCUSSION_TEMPLATE/`](.github/DISCUSSION_TEMPLATE/).
 - [ ] Import push ruleset **Protect Pushes (Organization)** từ [`rulesets/org-protect-pushes.json`](rulesets/org-protect-pushes.json) (**Organization settings → Repository → Rulesets → New ruleset → Import a ruleset**), rồi chạy `python3 scripts/org-setup.py org-rulesets` để so với tệp ([ADR 0010](docs/adr/0010-org-push-ruleset.md)).
 - [ ] Khi nâng lên gói **Team**: ruleset cấp tổ chức được thực thi — cân nhắc ADR mới để bỏ ruleset cấp repository trùng lặp.
-- [ ] Xóa quy tắc kiểm tra bắt buộc rỗng (không chặn gì) của **Protect Release Tags (Organization)** trên web, rồi bỏ khỏi `org_tag_ruleset()` trong [`scripts/org-setup.py`](scripts/org-setup.py) và sinh lại tệp.
+- [ ] Xóa quy tắc kiểm tra bắt buộc rỗng (không chặn gì) của **Protect Release Tags (Organization)** trên web, rồi bỏ khỏi `orgTagRuleset()` trong [`scripts/org-setup.py`](scripts/org-setup.py) và sinh lại tệp.
 - [ ] Code security configuration **GitHub recommended** (**Organization settings → Advanced Security → Configurations**): đã có nhưng chưa gắn repository nào và chưa là mặc định cho repository mới — đây là cách GitHub khuyên dùng thay cho bật từng tính năng (`org-setup.py settings`). Lưu ý cấu hình này bật code scanning default setup: cần GitHub Actions (đang tắt) và không dùng chung với workflow CodeQL (advanced setup) của repository.
 - [ ] Quét bí mật theo mẫu tùy chỉnh (non-provider patterns) và kiểm tra bí mật còn hiệu lực (validity checks): cần gói **GitHub Secret Protection**.
 
