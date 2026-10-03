@@ -27,13 +27,14 @@ def shellScripts():
 	"""Mọi script shell git quản lý, ở bất kỳ thư mục nào — script ưu tiên Python, shell chỉ khi xử lý tốt hơn
 	và có ghi lý do (ADR 0009)."""
 	output = subprocess.run(
-		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '*.sh', '*.bash'],
+		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z', '*.sh', '*.bash'],
 		cwd=ROOT,
 		capture_output=True,
 		text=True,
 		check=True,
 	).stdout
-	return sorted(name for name in output.splitlines() if (ROOT / name).is_file())
+	# -z: tên tệp nguyên văn (không -z thì git đặt tên có ký tự đặc biệt trong dấu nháy kèm mã escape).
+	return sorted(name for name in output.split('\0') if name and (ROOT / name).is_file())
 
 
 def workflowFiles():

@@ -18,16 +18,17 @@ except ModuleNotFoundError:
 
 class GofmtTest(unittest.TestCase):
 	def testVendorIsSkipped(self):
-		# Mã của bên thứ ba trong vendor/ không thuộc trách nhiệm định dạng của repository.
+		# Mã của bên thứ ba trong vendor/ không thuộc trách nhiệm định dạng của repository; tên tệp có dấu,
+		# khoảng trắng được liệt kê nguyên văn.
 		module = loadScript('check-gofmt')
 		with tempfile.TemporaryDirectory() as folder:
-			for name in ('main.go', 'cmd/app/app.go', 'vendor/lib/lib.go', 'README.md'):
+			for name in ('main.go', 'cmd/app/ứng dụng.go', 'vendor/lib/lib.go', 'README.md'):
 				path = Path(folder) / name
 				path.parent.mkdir(parents=True, exist_ok=True)
 				path.write_text('package x\n', encoding='utf-8')
 			subprocess.run(['git', 'init', '-q'], cwd=folder, check=True)
 			with contextlib.chdir(folder):
-				self.assertEqual(sorted(module.goFiles()), ['cmd/app/app.go', 'main.go'])
+				self.assertEqual(sorted(module.goFiles()), ['cmd/app/ứng dụng.go', 'main.go'])
 
 
 if __name__ == '__main__':

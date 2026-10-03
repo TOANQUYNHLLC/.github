@@ -7,7 +7,9 @@ import contextlib
 import io
 import re
 import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 # discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
@@ -47,6 +49,17 @@ class CheckTest(unittest.TestCase):
 				contextlib.redirect_stderr(io.StringIO()),
 			):
 				self.assertEqual(module.runCommand('audit', ['npm', 'audit']), expected, case)
+
+	def testShellScriptsKeepSpecialNames(self):
+		# Script shell ở bất kỳ thư mục nào, tên có dấu vẫn được shellcheck kiểm tra.
+		module = loadScript('check')
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			(root / 'công cụ').mkdir()
+			(root / 'công cụ' / 'cài đặt.sh').write_text('#!/usr/bin/env bash\n', encoding='utf-8')
+			subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+			module.ROOT = root
+			self.assertEqual(module.shellScripts(), ['công cụ/cài đặt.sh'])
 
 
 if __name__ == '__main__':

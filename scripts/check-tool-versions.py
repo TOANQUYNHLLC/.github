@@ -6,6 +6,7 @@ Chạy: python3 scripts/check-tool-versions.py
 Thoát mã 1 khi có công cụ cũ hơn bản mới nhất, để workflow hằng tuần báo cho người quản trị.
 """
 
+import functools
 import json
 import os
 import re
@@ -26,8 +27,9 @@ REPOSITORIES = {
 }
 
 
+@functools.cache
 def cliToken():
-	"""Token của GitHub CLI đã đăng nhập; rỗng khi không có gh hoặc chưa đăng nhập."""
+	"""Token của GitHub CLI đã đăng nhập (đọc một lần); rỗng khi không có gh hoặc chưa đăng nhập."""
 	if not shutil.which('gh'):
 		return ''
 	result = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True, check=False)
@@ -58,6 +60,8 @@ def main():
 		try:
 			latest = latestRelease(repository)
 		except (urllib.error.URLError, TimeoutError, KeyError, json.JSONDecodeError) as exc:
+			if isinstance(exc, urllib.error.HTTPError):
+				exc.close()  # lỗi HTTP giữ phản hồi đang mở
 			outdated += 1
 			print(f'❌ {tool}: không đọc được bản phát hành mới nhất ({exc})')
 			continue

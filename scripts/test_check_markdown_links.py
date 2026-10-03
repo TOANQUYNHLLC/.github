@@ -3,6 +3,8 @@
 Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make test)
 """
 
+import contextlib
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -32,6 +34,19 @@ class MarkdownLinksTest(unittest.TestCase):
 					'liên kết hỏng: không có.md',
 				],
 			)
+
+	def testFindsFilesWithVietnameseNames(self):
+		# Tên tệp tiếng Việt, có khoảng trắng được liệt kê nguyên văn; tệp đã xóa trên đĩa bị bỏ qua.
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			(root / 'ghi chú.md').write_text('# GHI CHÚ\n', encoding='utf-8')
+			(root / 'xoá.md').write_text('# XOÁ\n', encoding='utf-8')
+			subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+			subprocess.run(['git', 'add', '-A'], cwd=root, check=True)
+			(root / 'xoá.md').unlink()
+			with contextlib.chdir(root):
+				self.assertEqual(module.markdownFiles(), [Path('ghi chú.md')])
 
 
 if __name__ == '__main__':
