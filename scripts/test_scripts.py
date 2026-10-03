@@ -597,6 +597,28 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails('mục đầu tiên phải là')
 
 
+RELEASE_FIXTURE = """# NHẬT KÝ THAY ĐỔI
+
+## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2099.01.Stable...HEAD)
+
+### ✨ THÊM
+
+- Mục mới.
+
+---
+
+## [v2099.01.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2099.01.Stable) — 2099-01-01
+
+### ✨ THÊM
+
+- Mục cũ.
+
+---
+
+<p align="center">© 2099</p>
+"""
+
+
 class ReleaseTest(unittest.TestCase):
 	def setUp(self):
 		self.module = loadScript('release')
@@ -613,27 +635,31 @@ class ReleaseTest(unittest.TestCase):
 		self.assertIsNone(self.module.releaseNotes(self.changelog, 'v1999.01.Stable'))
 
 	def testCutsUnreleasedIntoVersion(self):
-		notes = self.module.unreleasedNotes(self.changelog)
-		self.assertTrue(notes)
-		changelog = self.module.cutRelease(self.changelog, 'v2099.01.Stable', '2099-01-01')
+		# CHANGELOG mẫu cố định: mục CHƯA PHÁT HÀNH của tệp thật trống ngay sau mỗi lần phát hành.
+		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'v2099.02.Stable', '2099-02-01')
 		self.assertIn(
-			'## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2099.01.Stable...HEAD)',
+			'## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2099.02.Stable...HEAD)',
 			changelog,
 		)
 		self.assertIn(
-			'## [v2099.01.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2099.01.Stable)'
-			' — 2099-01-01',
+			'## [v2099.02.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2099.02.Stable)'
+			' — 2099-02-01',
 			changelog,
 		)
 		# Mục mới trống; nội dung cũ thành nội dung Release của phiên bản mới; phiên bản cũ giữ nguyên.
 		self.assertEqual(self.module.unreleasedNotes(changelog), '')
-		self.assertEqual(self.module.releaseNotes(changelog, 'v2099.01.Stable'), notes)
+		self.assertEqual(
+			self.module.releaseNotes(changelog, 'v2099.02.Stable'), '### ✨ THÊM\n\n- Mục mới.'
+		)
+		self.assertEqual(
+			self.module.releaseNotes(changelog, 'v2099.01.Stable'), '### ✨ THÊM\n\n- Mục cũ.'
+		)
 		self.assertLess(
-			changelog.index('v2099.01.Stable]'), changelog.index('## [v2026.09.Stable]')
+			changelog.index('## [v2099.02.Stable]'), changelog.index('## [v2099.01.Stable]')
 		)
 
 	def testEmptyUnreleasedSection(self):
-		changelog = self.module.cutRelease(self.changelog, 'v2099.01.Stable', '2099-01-01')
+		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'v2099.02.Stable', '2099-02-01')
 		self.assertEqual(self.module.unreleasedNotes(changelog), '')
 		self.assertIsNone(self.module.releaseNotes(changelog, 'CHƯA PHÁT HÀNH'))
 		self.assertIsNone(self.module.unreleasedNotes('# NHẬT KÝ\n'))
