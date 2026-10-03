@@ -396,7 +396,6 @@ def checkToolVersions():
 	sources = [
 		*(ROOT / '.github' / 'workflows').glob('*.yml'),
 		*(ROOT / '.devcontainer').glob('*.sh'),
-		*(ROOT / 'scripts').glob('*.sh'),
 		*(
 			path
 			for path in (ROOT / 'scripts').glob('*.py')
@@ -959,6 +958,11 @@ for file in trackedFiles():
 		and file.parent.parent != ROOT / '.github'
 	) or (file.name == 'FUNDING.yml' and file.parent != ROOT / '.github'):
 		error(file, 'phải nằm trong thư mục .github/ để GitHub nhận diện')
+	# Script viết bằng Python (ADR 0014); shell chỉ cho script cài đặt Dev Container, chạy trước khi có công cụ.
+	if file.parent == ROOT / 'scripts' and file.suffix != '.py':
+		error(file, 'script trong scripts/ phải viết bằng Python (ADR 0014)')
+	if file.suffix == '.sh' and file.parent != ROOT / '.devcontainer':
+		error(file, 'shell script chỉ dùng trong .devcontainer/ — viết bằng Python (ADR 0014)')
 	if file.suffix == '.sh':
 		checkShell(file)
 	if file.suffix == '.py':

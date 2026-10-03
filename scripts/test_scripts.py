@@ -129,7 +129,10 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails('Expires đã hết hạn')
 
 	def testShellMustIndentWithTabs(self):
-		self.edit('scripts/pre-commit.sh', '\texit 0', '    exit 0')
+		path = self.repo / '.devcontainer' / 'post-create.sh'
+		path.write_text(
+			path.read_text(encoding='utf-8') + 'if true; then\n    echo x\nfi\n', encoding='utf-8'
+		)
 		self.assertFails('thụt lề phải dùng tab')
 
 	def testPrettierMustUseTabWidth4(self):
@@ -154,47 +157,41 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails('có khoảng trắng cuối dòng')
 
 	def testBatchMustUseCrlf(self):
-		(self.repo / 'scripts' / 'build.cmd').write_bytes(b'@echo off\ngoto :eof\n')
+		(self.repo / 'build.cmd').write_bytes(b'@echo off\ngoto :eof\n')
 		self.assertFails('phải xuống dòng bằng CRLF')
 
 	def testBatchWithCrlfIsValid(self):
-		(self.repo / 'scripts' / 'build.cmd').write_bytes(b'@echo off\r\ngoto :eof\r\n')
+		(self.repo / 'build.cmd').write_bytes(b'@echo off\r\ngoto :eof\r\n')
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
 
 	def testRegistryUtf16CrlfIsValid(self):
 		content = 'Windows Registry Editor Version 5.00\r\n'
-		(self.repo / 'scripts' / 'setup.reg').write_bytes(b'\xff\xfe' + content.encode('utf-16-le'))
+		(self.repo / 'setup.reg').write_bytes(b'\xff\xfe' + content.encode('utf-16-le'))
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
 
 	def testRegistryMustBeUtf16(self):
-		(self.repo / 'scripts' / 'setup.reg').write_bytes(
-			b'Windows Registry Editor Version 5.00\r\n'
-		)
+		(self.repo / 'setup.reg').write_bytes(b'Windows Registry Editor Version 5.00\r\n')
 		self.assertFails('phải mã hóa UTF-16 LE có BOM')
 
 	def testSolutionMustHaveBom(self):
-		(self.repo / 'scripts' / 'App.sln').write_bytes(
-			b'Microsoft Visual Studio Solution File\r\n'
-		)
+		(self.repo / 'App.sln').write_bytes(b'Microsoft Visual Studio Solution File\r\n')
 		self.assertFails('thiếu BOM UTF-8')
 
 	def testSolutionWithBomCrlfIsValid(self):
-		(self.repo / 'scripts' / 'App.sln').write_bytes(
+		(self.repo / 'App.sln').write_bytes(
 			b'\xef\xbb\xbfMicrosoft Visual Studio Solution File\r\n'
 		)
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
 
 	def testFsharpMustNotIndentWithTabs(self):
-		(self.repo / 'scripts' / 'App.fs').write_text('let f x =\n\tx + 1\n', encoding='utf-8')
+		(self.repo / 'App.fs').write_text('let f x =\n\tx + 1\n', encoding='utf-8')
 		self.assertFails('phải thụt lề bằng 4 dấu cách')
 
 	def testDartMustNotIndentWithTabs(self):
-		(self.repo / 'scripts' / 'main.dart').write_text(
-			'void main() {\n\tprint(1);\n}\n', encoding='utf-8'
-		)
+		(self.repo / 'main.dart').write_text('void main() {\n\tprint(1);\n}\n', encoding='utf-8')
 		self.assertFails('phải thụt lề bằng 2 dấu cách')
 
 	def testEditorconfigWidth2OnlyForRequiredLanguages(self):
@@ -206,7 +203,7 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails('không được dùng độ rộng 2')
 
 	def testCsvKeepsTrailingWhitespace(self):
-		(self.repo / 'scripts' / 'data.csv').write_bytes(b'ten,ghi chu\r\nA,co dau cach \r\n')
+		(self.repo / 'data.csv').write_bytes(b'ten,ghi chu\r\nA,co dau cach \r\n')
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
 
@@ -239,6 +236,16 @@ class ValidateTest(unittest.TestCase):
 	def testMiseToolsMatchVersionCheck(self):
 		self.edit('mise.toml', 'actionlint = ', 'taplo = "0.10.0"\nactionlint = ')
 		self.assertFails('scripts/check-tool-versions.py: REPOSITORIES thiếu taplo')
+
+	def testScriptsMustBePython(self):
+		(self.repo / 'scripts' / 'check-x.sh').write_text(
+			'#!/usr/bin/env bash\necho x\n', encoding='utf-8'
+		)
+		self.assertFails('scripts/check-x.sh: script trong scripts/ phải viết bằng Python')
+
+	def testShellOnlyInDevcontainer(self):
+		(self.repo / 'tools.sh').write_text('#!/usr/bin/env bash\necho x\n', encoding='utf-8')
+		self.assertFails('tools.sh: shell script chỉ dùng trong .devcontainer/')
 
 	def testFunctionNamesMustBeCamelCase(self):
 		self.edit('scripts/release.py', 'def releaseNotes(', 'def release_notes(')
@@ -383,7 +390,7 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails('SUPPORT.md: có BOM UTF-8')
 
 	def testShellMustHaveShebang(self):
-		self.edit('scripts/pre-commit.sh', '#!/usr/bin/env bash\n', '')
+		self.edit('.devcontainer/post-create.sh', '#!/usr/bin/env bash\n', '')
 		self.assertFails('shell script thiếu shebang')
 
 	def testSecurityTxtExpiresWithinOneYear(self):

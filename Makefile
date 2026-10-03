@@ -38,12 +38,12 @@ conventions: ## Tên branch và tiêu đề commit theo quy ước (giống bran
 audit: ## Dependency có lỗ hổng mức high trở lên (giống dependency-review.yml)
 	python3 scripts/check.py audit
 
-hooks: ## Cài pre-commit hook, mẫu commit và để git blame bỏ qua commit chỉ đổi định dạng
+hooks: ## Cài hook (pre-commit: định dạng; pre-push: make check; post-merge: make org-preview), mẫu commit, git blame
 	@# --git-path hooks: thư mục hook thật, dùng chung cho mọi git worktree (.git trong worktree là tệp).
-	ln -sf ../../scripts/pre-commit.sh "$$(git rev-parse --git-path hooks)/pre-commit"
+	for hook in pre-commit pre-push post-merge; do ln -sf ../../scripts/git-hooks.py "$$(git rev-parse --git-path hooks)/$$hook"; done
 	git config blame.ignoreRevsFile .git-blame-ignore-revs
 	git config commit.template .gitmessage
-	@echo "Đã cài pre-commit hook, blame.ignoreRevsFile và commit.template"
+	@echo "Đã cài hook pre-commit, pre-push, post-merge, blame.ignoreRevsFile và commit.template"
 
 links: ## Kiểm tra liên kết bên ngoài (website, Facebook…) còn hoạt động
 	python3 scripts/check-external-links.py

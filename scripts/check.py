@@ -19,8 +19,8 @@ INDIRECT_TOOLS = {'content': ('ruby', 'git'), 'conventions': ('git',)}
 
 
 def shellScripts():
-	folders = (ROOT / 'scripts', ROOT / '.devcontainer')
-	return sorted(str(path.relative_to(ROOT)) for folder in folders for path in folder.glob('*.sh'))
+	# Shell chỉ dùng cho script cài đặt Dev Container (ADR 0014); script khác viết bằng Python.
+	return sorted(str(path.relative_to(ROOT)) for path in (ROOT / '.devcontainer').glob('*.sh'))
 
 
 def workflowFiles():
