@@ -805,6 +805,38 @@ class OrgSetupTest(unittest.TestCase):
 		for source, ruleset in self.module.orgRulesets():
 			self.assertEqual(json.loads(source.read_text(encoding='utf-8')), ruleset, source.name)
 
+	def testOrgCodeScanningRuleMatchesGraphql(self):
+		# Dạng GraphQL trả về cho quy tắc code scanning trên web phải khớp quy tắc trong tệp cấp tổ chức.
+		node = {
+			'type': 'CODE_SCANNING',
+			'parameters': {
+				'__typename': 'CodeScanningParameters',
+				'codeScanningTools': [
+					{
+						'tool': 'CodeQL',
+						'alertsThreshold': 'errors',
+						'securityAlertsThreshold': 'high_or_higher',
+					}
+				],
+			},
+		}
+		live = {
+			'name': 'x',
+			'target': 'BRANCH',
+			'enforcement': 'ACTIVE',
+			'conditions': {},
+			'bypassActors': {'nodes': []},
+			'rules': {'nodes': [node]},
+		}
+		self.assertEqual(
+			self.module.graphqlRuleset(live)['rules'], [self.module.ORG_CODE_SCANNING_RULE]
+		)
+		# Chỉ bản cấp tổ chức có code scanning, như trên web.
+		self.assertIn(self.module.ORG_CODE_SCANNING_RULE, self.module.orgRuleset()['rules'])
+		self.assertNotIn(
+			'code_scanning', [r['type'] for r in self.module.rulesetFor('app')['rules']]
+		)
+
 	def testCompareOrgRulesetsViaGraphql(self):
 		# Dạng GraphQL trả về cho Protect Release Tags (Organization) trên web.
 		node = {
