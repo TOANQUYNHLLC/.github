@@ -1,0 +1,88 @@
+name: Chuẩn bị phát hành hằng tháng
+
+on:
+    schedule:
+        # 07:00 ngày 1 hằng tháng giờ Việt Nam (00:00 UTC).
+        - cron: '0 0 1 * *'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}
+    cancel-in-progress: false
+
+jobs:
+    prepare:
+        name: Mở Pull Request phát hành nếu có thay đổi
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        permissions:
+            contents: write # tạo branch release/… và commit CHANGELOG.md (GitHub ký)
+            pull-requests: write # mở Pull Request phát hành
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+
+            - name: Chuyển CHƯA PHÁT HÀNH thành phiên bản của tháng
+              id: prepare
+              run: python3 scripts/prepare-release.py
+
+            - name: Tạo branch và commit có chữ ký
+              if: steps.prepare.outputs.version
+              id: commit
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  VERSION: ${{ steps.prepare.outputs.version }}
+                  BASE: ${{ github.sha }}
+              run: |
+                  branch="release/${VERSION%.Stable}"
+                  if gh api "repos/$GITHUB_REPOSITORY/branches/$branch" --silent 2>/dev/null; then
+                      echo "::notice::Branch $branch đã có — Pull Request phát hành đang chờ, bỏ qua."
+                      exit 0
+                  fi
+                  gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/heads/$branch" -f "sha=$BASE" --silent
+                  # Commit qua createCommitOnBranch được GitHub ký, thỏa quy tắc commit có chữ ký.
+                  jq -n \
+                      --arg repo "$GITHUB_REPOSITORY" --arg branch "$branch" --arg base "$BASE" \
+                      --arg headline "chore(release): phát hành $VERSION" \
+                      --arg contents "$(base64 -w0 CHANGELOG.md)" \
+                      '{query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }",
+                        variables: {input: {
+                            branch: {repositoryNameWithOwner: $repo, branchName: $branch},
+                            message: {headline: $headline}, expectedHeadOid: $base,
+                            fileChanges: {additions: [{path: "CHANGELOG.md", contents: $contents}]}}}}' \
+                      | gh api graphql --input - --silent
+                  echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+            - name: Mở Pull Request
+              if: steps.commit.outputs.branch
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  VERSION: ${{ steps.prepare.outputs.version }}
+                  PREVIOUS: ${{ steps.prepare.outputs.previous }}
+                  COMMITS: ${{ steps.prepare.outputs.commits }}
+                  BRANCH: ${{ steps.commit.outputs.branch }}
+              run: |
+                  cat > body.md <<BODY
+                  Phát hành hằng tháng **$VERSION**: $COMMITS commit kể từ \`$PREVIOUS\`. Mục **CHƯA PHÁT HÀNH** của \`CHANGELOG.md\` đã chuyển thành phiên bản này.
+
+                  Sau khi hợp nhất (**Squash** hoặc **Merge** — Rebase bỏ chữ ký commit), người quản trị gắn tag trên \`main\`:
+
+                  \`\`\`sh
+                  git switch main && git pull --ff-only && git tag $VERSION && git push origin $VERSION
+                  \`\`\`
+
+                  Workflow \`release.yml\` tạo GitHub Release từ \`CHANGELOG.md\`.
+                  BODY
+                  url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/main...$BRANCH?expand=1"
+                  if ! gh pr create --base main --head "$BRANCH" --title "chore(release): phát hành $VERSION" \
+                      --body-file body.md --label release; then
+                      echo "::error::GitHub Actions chưa được phép tạo Pull Request (Settings → Actions → General → Allow GitHub Actions to create and approve pull requests). Mở tay: $url"
+                      echo "Mở Pull Request phát hành $VERSION: $url" >> "$GITHUB_STEP_SUMMARY"
+                      exit 1
+                  fi

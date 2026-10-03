@@ -1,4 +1,4 @@
-"""Test tự động cho scripts/validate.py, scripts/release-notes.py và scripts/org-setup.py.
+"""Test tự động cho scripts/validate.py, scripts/release-notes.py, scripts/prepare-release.py và scripts/org-setup.py.
 
 Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make test)
 Mỗi test chép repository sang thư mục tạm, cố ý làm hỏng một điểm rồi khẳng định
@@ -24,6 +24,15 @@ ROOT = Path(__file__).resolve().parents[1]
 def load_release_notes():
 	spec = importlib.util.spec_from_file_location(
 		'release_notes', ROOT / 'scripts' / 'release-notes.py'
+	)
+	module = importlib.util.module_from_spec(spec)
+	spec.loader.exec_module(module)
+	return module
+
+
+def load_prepare_release():
+	spec = importlib.util.spec_from_file_location(
+		'prepare_release', ROOT / 'scripts' / 'prepare-release.py'
 	)
 	module = importlib.util.module_from_spec(spec)
 	spec.loader.exec_module(module)
@@ -553,6 +562,37 @@ class ReleaseNotesTest(unittest.TestCase):
 
 	def test_phien_ban_chua_co_trong_changelog(self):
 		self.assertIsNone(self.module.release_notes(self.changelog, 'v1999.01.Stable'))
+
+
+class PrepareReleaseTest(unittest.TestCase):
+	def setUp(self):
+		self.module = load_prepare_release()
+		self.changelog = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
+
+	def test_chuyen_chua_phat_hanh_thanh_phien_ban(self):
+		notes = self.module.unreleased_notes(self.changelog)
+		self.assertTrue(notes)
+		changelog = self.module.cut_release(self.changelog, 'v2099.01.Stable', '2099-01-01')
+		self.assertIn(
+			'## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2099.01.Stable...HEAD)',
+			changelog,
+		)
+		self.assertIn(
+			'## [v2099.01.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2099.01.Stable)'
+			' — 2099-01-01',
+			changelog,
+		)
+		# Mục mới trống; release-notes.py lấy đúng nội dung cũ cho Release; phiên bản cũ giữ nguyên.
+		self.assertEqual(self.module.unreleased_notes(changelog), '')
+		self.assertEqual(load_release_notes().release_notes(changelog, 'v2099.01.Stable'), notes)
+		self.assertLess(
+			changelog.index('v2099.01.Stable]'), changelog.index('## [v2026.09.Stable]')
+		)
+
+	def test_muc_chua_phat_hanh_trong(self):
+		changelog = self.module.cut_release(self.changelog, 'v2099.01.Stable', '2099-01-01')
+		self.assertEqual(self.module.unreleased_notes(changelog), '')
+		self.assertIsNone(self.module.unreleased_notes('# NHẬT KÝ\n'))
 
 
 class OrgSetupTest(unittest.TestCase):

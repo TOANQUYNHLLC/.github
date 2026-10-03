@@ -5,7 +5,7 @@
 .DEFAULT_GOAL := help
 TOOLS := git python3 ruby npx ruff shellcheck actionlint
 
-.PHONY: help check validate test format format-check lint tools links versions forms release-notes labels-preview labels-apply hooks org-preview
+.PHONY: help check validate test format format-check lint tools links versions forms release-notes release-prepare labels-preview labels-apply hooks org-preview
 
 help: ## Hiển thị danh sách lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-15s %s\n", $$1, $$2}'
@@ -55,6 +55,9 @@ forms: ## Kiểm tra GitHub chấp nhận biểu mẫu Issue, Discussion: make f
 
 release-notes: ## Xem trước nội dung Release của một tag: make release-notes TAG=v2026.09.Stable
 	python3 scripts/release-notes.py $(TAG)
+
+release-prepare: ## Chuyển CHƯA PHÁT HÀNH của CHANGELOG.md thành phiên bản của tháng nếu có thay đổi từ tag trước
+	python3 scripts/prepare-release.py
 
 labels-preview: ## Xem trước việc đồng bộ nhãn lên các repository
 	scripts/sync-labels.sh
