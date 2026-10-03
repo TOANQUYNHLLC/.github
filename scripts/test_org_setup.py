@@ -1,6 +1,6 @@
 """Test tự động cho scripts/org-setup.py và gói scripts/orgsetup/: tệp dùng chung, ruleset, cài đặt, team, nhãn.
 
-Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make test)
+Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
 """
 
 import contextlib
