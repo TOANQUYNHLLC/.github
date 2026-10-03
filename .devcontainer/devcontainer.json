@@ -10,7 +10,6 @@
 			"extensions": [
 				"editorconfig.editorconfig",
 				"esbenp.prettier-vscode",
-				"dbaeumer.vscode-eslint",
 				"charliermarsh.ruff",
 				"timonwong.shellcheck",
 				"github.vscode-github-actions",

@@ -28,11 +28,9 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                # Mã của repository: script Python, cấu hình JavaScript và workflow GitHub Actions.
+                # Mã của repository: script Python và workflow GitHub Actions (không có JavaScript).
                 include:
                     - language: actions
-                      build-mode: none
-                    - language: javascript-typescript
                       build-mode: none
                     - language: python
                       build-mode: none

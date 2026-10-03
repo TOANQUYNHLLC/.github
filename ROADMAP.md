@@ -43,7 +43,7 @@ Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.p
 - [ ] `python3 scripts/org-setup.py settings --apply --repo <tên>` — cho phép Merge, Squash, tắt Rebase; tự xóa branch; bật Dependabot alerts và security updates, secret scanning, push protection, báo cáo lỗ hổng riêng tư, Release bất biến; quyền GitHub Actions.
 - [ ] `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — ruleset **Protect Release Tags** từ [`protect-release-tags.json`](rulesets/protect-release-tags.json) và **Protect Main** từ [`protect-main.json`](rulesets/protect-main.json), Protect Main chỉ giữ 2 kiểm tra bắt buộc mà repository có.
 - [ ] `scripts/sync-labels.sh --apply <tên>` — bộ nhãn chuẩn.
-- [ ] Áp dụng cho `.github` các thay đổi chưa có trên web: `python3 scripts/org-setup.py settings --apply --repo .github` (tắt Rebase) và `rulesets --apply --repo .github` (Protect Main bỏ Rebase); sửa **Protect Main (Organization)** trên web.
+- [ ] Áp dụng cho `.github` các thay đổi chưa có trên web: `python3 scripts/org-setup.py settings --apply --repo .github` (tắt Rebase) và `rulesets --apply --repo .github` (Protect Main bỏ Rebase, kiểm tra bắt buộc đổi tên thành "Định dạng (Prettier, ruff)"); sửa **Protect Main (Organization)** trên web.
 - [ ] `python3 scripts/org-setup.py team --apply --repo <tên>` — cấp quyền cho 6 team (**maintainers** quyền **Maintain** để `CODEOWNERS` có hiệu lực).
 
 ---

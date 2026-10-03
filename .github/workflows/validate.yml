@@ -30,7 +30,7 @@ jobs:
               run: python3 scripts/check.py content
 
     format:
-        name: Định dạng (Prettier, ruff) và ESLint
+        name: Định dạng (Prettier, ruff)
         runs-on: ubuntu-latest
         timeout-minutes: 10
         steps:
@@ -53,7 +53,7 @@ jobs:
               with:
                   install_args: ruff
 
-            - name: Prettier, ESLint, ruff format, ruff check
+            - name: Prettier, ruff format, ruff check
               run: python3 scripts/check.py format
 
     lint:

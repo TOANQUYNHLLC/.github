@@ -26,7 +26,7 @@ format: tools ## Định dạng lại toàn bộ bằng Prettier và ruff
 	npx prettier --write .
 	ruff format scripts
 
-format-check: ## Prettier, ESLint, ruff format, ruff check (job "Định dạng (Prettier, ruff) và ESLint")
+format-check: ## Prettier, ruff format, ruff check (job "Định dạng (Prettier, ruff)")
 	python3 scripts/check.py format
 
 lint: ## shellcheck, actionlint (job "Shell script và workflow")

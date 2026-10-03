@@ -43,7 +43,7 @@
 						"context": "Liên kết, biểu mẫu, nhãn, cấu hình định dạng và mẫu email",
 						"integration_id": 15368
 					},
-					{ "context": "Định dạng (Prettier, ruff) và ESLint", "integration_id": 15368 },
+					{ "context": "Định dạng (Prettier, ruff)", "integration_id": 15368 },
 					{ "context": "Shell script và workflow", "integration_id": 15368 },
 					{ "context": "Kiểm tra tiêu đề Pull Request", "integration_id": 15368 },
 					{ "context": "Kiểm tra tên branch", "integration_id": 15368 }

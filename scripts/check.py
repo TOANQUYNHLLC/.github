@@ -39,7 +39,6 @@ def checkGroups():
 		],
 		'format': [
 			['npx', 'prettier', '--check', '.'],
-			['npx', 'eslint', '.'],
 			['ruff', 'format', '--check', 'scripts'],
 			# Python ≥ 3.11 (tomllib, datetime.UTC); ruff.toml giữ đúng cấu hình chuẩn nên khai báo ở đây.
 			['ruff', 'check', '--target-version', 'py311', 'scripts'],

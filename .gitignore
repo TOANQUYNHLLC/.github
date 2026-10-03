@@ -27,8 +27,5 @@ node_modules/
 .env.*
 !.env.example
 
-# Lockfile của npm: repository này không commit (.npmrc đặt package-lock=false); package.json đã ghi phiên bản chính xác.
-package-lock.json
-
 # Lockfile của Dev Container: repository này không commit; devcontainer.json dùng bản mới nhất (latest), không ghim phiên bản.
 devcontainer-lock.json
