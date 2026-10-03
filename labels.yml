@@ -6,7 +6,7 @@
 # do not merge → Draft và phê duyệt bắt buộc; epic → sub-issues).
 
 # Loại vấn đề — biểu mẫu Issue gắn bug, enhancement, question; Pull Request dùng để nhóm nội dung GitHub Release
-# (.github/release.yml). help wanted cùng 8 nhãn trên là bộ nhãn mặc định của GitHub.
+# (repository-templates/release.yml, chép vào .github/release.yml của repository). help wanted cùng 8 nhãn trên là bộ nhãn mặc định của GitHub.
 # .github/labeler.yml tự gắn nhãn loại cho Pull Request theo tiền tố branch trong CONTRIBUTING.md.
 - name: bug
   color: 'd73a4a'

@@ -30,7 +30,7 @@ jobs:
 
             - name: Chuyển CHƯA PHÁT HÀNH thành phiên bản của tháng
               id: prepare
-              run: python3 scripts/prepare-release.py
+              run: python3 scripts/release.py prepare
 
             - name: Mở Pull Request phát hành (commit do GitHub ký)
               if: steps.prepare.outputs.version
@@ -39,4 +39,4 @@ jobs:
                   VERSION: ${{ steps.prepare.outputs.version }}
                   PREVIOUS: ${{ steps.prepare.outputs.previous }}
                   COMMITS: ${{ steps.prepare.outputs.commits }}
-              run: scripts/open-release-pr.sh "$VERSION" "$PREVIOUS" "$COMMITS"
+              run: python3 scripts/release.py open-pr "$VERSION" "$PREVIOUS" "$COMMITS"

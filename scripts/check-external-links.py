@@ -22,7 +22,7 @@ SKIP = ('img.shields.io', '/actions/workflows/')
 PATTERNS = ('*.md', '*.yml', '*.yaml', '*.cff', '*.txt')
 
 
-def text_files():
+def textFiles():
 	output = subprocess.run(
 		['git', 'ls-files', '--cached', '--others', '--exclude-standard', *PATTERNS],
 		cwd=ROOT,
@@ -33,9 +33,9 @@ def text_files():
 	return [ROOT / name for name in output.split()]
 
 
-def collect_links():
+def collectLinks():
 	links = {}
-	for path in text_files():
+	for path in textFiles():
 		text = path.read_text(encoding='utf-8')
 		if path.suffix == '.md':
 			urls = re.findall(
@@ -53,7 +53,7 @@ def collect_links():
 	return links
 
 
-def status(url):
+def linkStatus(url):
 	for method in ('HEAD', 'GET'):
 		try:
 			request = urllib.request.Request(url, method=method, headers=HEADERS)
@@ -69,8 +69,8 @@ def status(url):
 
 def main():
 	broken = 0
-	for url, files in sorted(collect_links().items()):
-		code = status(url)
+	for url, files in sorted(collectLinks().items()):
+		code = linkStatus(url)
 		where = ', '.join(sorted(files))
 		if isinstance(code, int) and code < 400:
 			print(f'✅ {code} {url}')

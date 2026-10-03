@@ -30,4 +30,4 @@ jobs:
               env:
                   GH_TOKEN: ${{ github.token }}
                   TAG: ${{ github.ref_name }}
-              run: scripts/create-release.sh "$TAG"
+              run: python3 scripts/release.py create "$TAG"

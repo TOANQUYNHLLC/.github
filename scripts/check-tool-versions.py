@@ -23,7 +23,7 @@ REPOSITORIES = {
 }
 
 
-def latest_release(repository):
+def latestRelease(repository):
 	request = urllib.request.Request(
 		f'https://api.github.com/repos/{repository}/releases/latest',
 		headers={'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'},
@@ -35,7 +35,7 @@ def latest_release(repository):
 		return json.load(response)['tag_name'].removeprefix('v')
 
 
-def version_key(version):
+def versionKey(version):
 	return tuple(int(part) for part in re.findall(r'\d+', version))
 
 
@@ -45,12 +45,12 @@ def main():
 	for tool, repository in REPOSITORIES.items():
 		current = str(tools.get(tool, ''))
 		try:
-			latest = latest_release(repository)
+			latest = latestRelease(repository)
 		except (urllib.error.URLError, TimeoutError, KeyError, json.JSONDecodeError) as exc:
 			outdated += 1
 			print(f'❌ {tool}: không đọc được bản phát hành mới nhất ({exc})')
 			continue
-		if version_key(current) < version_key(latest):
+		if versionKey(current) < versionKey(latest):
 			outdated += 1
 			print(f'⬆️  {tool} {current} → {latest}: sửa mise.toml rồi chạy mise install')
 		else:

@@ -23,7 +23,7 @@ EMBEDDED = re.compile(
 )
 
 
-def form_paths():
+def formPaths():
 	folder = ROOT / '.github'
 	paths = [
 		*(folder / 'ISSUE_TEMPLATE').glob('*.yml'),
@@ -33,7 +33,7 @@ def form_paths():
 	return sorted(path for path in paths if path.name != 'config.yml')
 
 
-def template_data(ref, relative):
+def templateData(ref, relative):
 	url = f'https://github.com/{REPOSITORY}/blob/{ref}/{relative}'
 	request = urllib.request.Request(url, headers=HEADERS)
 	with urllib.request.urlopen(request, timeout=30) as response:
@@ -45,7 +45,7 @@ def template_data(ref, relative):
 	return route.get('issueTemplate') or route.get('discussionTemplate')
 
 
-def template_errors(template):
+def templateErrors(template):
 	messages = [error.get('message', '') for error in template.get('errors') or []]
 	for item in template.get('inputs') or []:
 		for key, value in ((item.get('input') or {}).get('errors') or {}).items():
@@ -56,10 +56,10 @@ def template_errors(template):
 def main():
 	ref = sys.argv[1] if len(sys.argv) > 1 else 'main'
 	failed = 0
-	for path in form_paths():
+	for path in formPaths():
 		relative = path.relative_to(ROOT).as_posix()
 		try:
-			template = template_data(ref, relative)
+			template = templateData(ref, relative)
 		except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
 			failed += 1
 			print(f'❌ {relative}: không đọc được trang ({exc})')
@@ -68,7 +68,7 @@ def main():
 			failed += 1
 			print(f'❌ {relative}: GitHub không nhận là biểu mẫu, hoặc cấu trúc trang đã đổi')
 			continue
-		errors = template_errors(template)
+		errors = templateErrors(template)
 		if errors:
 			failed += 1
 			print(f'❌ {relative}: ' + '; '.join(errors))

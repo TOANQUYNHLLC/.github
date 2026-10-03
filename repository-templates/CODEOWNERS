@@ -5,10 +5,9 @@
 # Mặc định: team người quản trị duyệt mọi thay đổi.
 * @TOANQUYNHLLC/maintainers
 
-# Workflow, cấu hình CI/CD và quyền sở hữu mã: luôn cần người quản trị duyệt.
-/.github/ @TOANQUYNHLLC/maintainers
-
-# Ví dụ phân công theo thư mục khi tổ chức đã có team trên GitHub:
-# /frontend/ @TOANQUYNHLLC/frontend
-# /backend/ @TOANQUYNHLLC/backend
-# /docs/ @TOANQUYNHLLC/developer
+# Ví dụ phân công theo thư mục (team có sẵn: admins, maintainers, developers, qa, design, marketing — xem
+# MAINTAINERS.md của TOANQUYNHLLC/.github). Thêm dòng /.github/ @TOANQUYNHLLC/maintainers ở cuối để
+# workflow, CI/CD vẫn cần người quản trị duyệt khi đã đổi chủ sở hữu mặc định.
+# /src/ @TOANQUYNHLLC/developers
+# /docs/ @TOANQUYNHLLC/developers
+# /design/ @TOANQUYNHLLC/design

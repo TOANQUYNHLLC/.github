@@ -21,19 +21,16 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 2
         steps:
+            # Script kiểm tra dùng chung của tổ chức (nhánh chính của TOANQUYNHLLC/.github — được ruleset
+            # bảo vệ: Pull Request, phê duyệt, commit có chữ ký); sửa quy ước ở một nơi cho mọi repository.
+            - name: Lấy script của tổ chức
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  repository: TOANQUYNHLLC/.github
+                  path: .org
+                  persist-credentials: false
+
             - name: Kiểm tra tên branch
               env:
                   BRANCH: ${{ github.head_ref }}
-              run: |
-                  # Branch do Dependabot tạo có định dạng riêng, không áp dụng quy ước.
-                  if [[ "$BRANCH" == dependabot/* ]]; then
-                      echo "Bỏ qua branch của Dependabot: $BRANCH"
-                      exit 0
-                  fi
-                  pattern='^(feature|fix|hotfix|docs|refactor|perf|test|ci|chore|release)/[a-z0-9.]+(_[a-z0-9.]+)*$'
-                  if [[ "$BRANCH" =~ $pattern ]]; then
-                      echo "Tên branch hợp lệ: $BRANCH"
-                  else
-                      echo "::error::Tên branch phải theo dạng '<tiền tố>/<mô_tả>': tiền tố là feature, fix, hotfix, docs, refactor, perf, test, ci, chore hoặc release; mô tả bằng tiếng Anh, chữ thường, các từ nối bằng dấu gạch dưới — xem CONTRIBUTING.md. Tên hiện tại: $BRANCH"
-                      exit 1
-                  fi
+              run: python3 .org/scripts/conventions.py branch "$BRANCH"

@@ -1,49 +1,42 @@
-# Lệnh tiện ích — chạy giống hệt CI trên máy cục bộ. Gõ `make` để xem danh sách lệnh.
+# Lệnh tiện ích — chạy giống hệt GitHub Actions trên máy cục bộ. Gõ `make` để xem danh sách lệnh.
 # Yêu cầu: Node.js (theo .nvmrc), Python ≥ 3.11 (mise.toml), ruby, git, ruff, shellcheck, actionlint
-# Cài đúng phiên bản trong mise.toml và .nvmrc: mise install; sau đó chạy `npm install`.
+# Cài đúng phiên bản trong mise.toml và .nvmrc: mise install; thư viện Node.js tự cài khi chạy kiểm tra.
+# Các nhóm kiểm tra khai báo một nơi trong scripts/check.py — workflow validate.yml gọi cùng script.
 
 .DEFAULT_GOAL := help
-TOOLS := git python3 ruby npx ruff shellcheck actionlint
 
 .PHONY: help check validate test format format-check lint conventions audit tools links versions forms release-notes release-prepare labels-preview labels-apply hooks org-preview
 
 help: ## Hiển thị danh sách lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-15s %s\n", $$1, $$2}'
 
-# Mọi kiểm tra GitHub Actions chạy trên Pull Request (trừ CodeQL — cần CodeQL CLI): chạy tại máy trước khi đẩy.
-check: validate test format-check lint conventions audit ## Chạy toàn bộ kiểm tra giống CI
+check: ## Mọi kiểm tra GitHub Actions chạy trên Pull Request (trừ CodeQL) — chạy trước khi đẩy
+	python3 scripts/check.py
 
 validate: ## Kiểm tra nội dung bằng scripts/validate.py
 	python3 scripts/validate.py
 
-test: ## Chạy test tự động của các script kiểm tra
+test: ## Chạy test tự động của các script
 	python3 -m unittest discover -s scripts -p 'test_*.py'
 
-tools: ## Kiểm tra đã cài đủ công cụ
-	@missing=""; for tool in $(TOOLS); do command -v $$tool >/dev/null || missing="$$missing $$tool"; done; \
-	if [ -n "$$missing" ]; then echo "Thiếu công cụ:$$missing — chạy: mise install (https://mise.jdx.dev)"; exit 1; fi; \
-	[ -d node_modules ] || npm install --no-audit --no-fund
+tools: ## Kiểm tra đã cài đủ công cụ, cài thư viện Node.js nếu thiếu
+	python3 scripts/check.py tools
 
 format: tools ## Định dạng lại toàn bộ bằng Prettier và ruff
 	npx prettier --write .
 	ruff format scripts
 
-format-check: tools ## Kiểm tra định dạng (Prettier, ruff) giống CI
-	npx prettier --check .
-	ruff format --check scripts
+format-check: ## Prettier, ESLint, ruff format, ruff check (job "Định dạng (Prettier, ruff) và ESLint")
+	python3 scripts/check.py format
 
-lint: tools ## ESLint, ruff check, shellcheck và actionlint
-	npx eslint .
-	ruff check --target-version py311 scripts
-	shellcheck scripts/*.sh .devcontainer/*.sh
-	actionlint .github/workflows/*.yml workflow-templates/*.yml
+lint: ## shellcheck, actionlint (job "Shell script và workflow")
+	python3 scripts/check.py lint
 
 conventions: ## Tên branch và tiêu đề commit theo quy ước (giống branch-name.yml, pr-title.yml)
-	scripts/check-branch-name.sh
-	scripts/check-pr-title.sh
+	python3 scripts/check.py conventions
 
-audit: tools ## Dependency có lỗ hổng mức high trở lên (giống dependency-review.yml)
-	npm audit --audit-level=high
+audit: ## Dependency có lỗ hổng mức high trở lên (giống dependency-review.yml)
+	python3 scripts/check.py audit
 
 hooks: ## Cài pre-commit hook, mẫu commit và để git blame bỏ qua commit chỉ đổi định dạng
 	@# --git-path hooks: thư mục hook thật, dùng chung cho mọi git worktree (.git trong worktree là tệp).
@@ -62,10 +55,10 @@ forms: ## Kiểm tra GitHub chấp nhận biểu mẫu Issue, Discussion: make f
 	python3 scripts/check-github-forms.py $(or $(REF),main)
 
 release-notes: ## Xem trước nội dung Release của một tag: make release-notes TAG=v2026.09.Stable
-	python3 scripts/release-notes.py $(TAG)
+	python3 scripts/release.py notes $(TAG)
 
 release-prepare: ## Chuyển CHƯA PHÁT HÀNH của CHANGELOG.md thành phiên bản của tháng nếu có thay đổi từ tag trước
-	python3 scripts/prepare-release.py
+	python3 scripts/release.py prepare
 
 labels-preview: ## Xem trước việc đồng bộ nhãn lên các repository
 	scripts/sync-labels.sh

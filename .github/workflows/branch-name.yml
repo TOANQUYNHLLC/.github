@@ -29,4 +29,4 @@ jobs:
             - name: Kiểm tra tên branch
               env:
                   BRANCH: ${{ github.head_ref }}
-              run: scripts/check-branch-name.sh "$BRANCH"
+              run: python3 scripts/conventions.py branch "$BRANCH"
