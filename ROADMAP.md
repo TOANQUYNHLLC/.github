@@ -42,7 +42,7 @@ Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.p
 - [ ] `python3 scripts/org-setup.py files --apply --repo <tên>` — Pull Request thêm `.editorconfig`, `.gitattributes`, workflow kiểm tra tiêu đề, tên branch và gắn nhãn (`labeler.yml` kèm cấu hình — sửa đường dẫn nhãn `area: …` cho khớp dự án), `CODEOWNERS`, `dependabot.yml`, `release.yml` và tệp định dạng theo ngôn ngữ; đánh giá rồi hợp nhất. Chép tay `.env.example`, `PRIVACY.md` khi cần ([`repository-templates/`](repository-templates/)).
 - [ ] `python3 scripts/org-setup.py settings --apply --repo <tên>` — cho phép Merge, Squash, tắt Rebase; tự xóa branch; bật Dependabot alerts và security updates, secret scanning, push protection, báo cáo lỗ hổng riêng tư, Release bất biến; quyền GitHub Actions.
 - [ ] `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — ruleset **Protect Release Tags** từ [`protect-release-tags.json`](rulesets/protect-release-tags.json) và **Protect Main** từ [`protect-main.json`](rulesets/protect-main.json), Protect Main chỉ giữ 2 kiểm tra bắt buộc mà repository có.
-- [ ] `scripts/sync-labels.sh --apply <tên>` — bộ nhãn chuẩn.
+- [ ] `python3 scripts/org-setup.py labels --apply --repo <tên>` — bộ nhãn chuẩn.
 - [ ] Áp dụng cho `.github` các thay đổi chưa có trên web: `python3 scripts/org-setup.py settings --apply --repo .github` (tắt Rebase) và `rulesets --apply --repo .github` (Protect Main bỏ Rebase, kiểm tra bắt buộc đổi tên thành "Định dạng (Prettier, ruff)"); sửa **Protect Main (Organization)** trên web.
 - [ ] `python3 scripts/org-setup.py team --apply --repo <tên>` — cấp quyền cho 6 team (**maintainers** quyền **Maintain** để `CODEOWNERS` có hiệu lực).
 
@@ -52,7 +52,7 @@ Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.p
 
 GitHub không có API cho các mục này — người quản trị làm trên web (`python3 scripts/org-setup.py org-settings` báo các mục web khác `ORG_WEB_ONLY_SETTINGS`).
 
-- [ ] Nhãn mặc định cho repository tạo mới: **Organization settings → Repository → General → Repository labels** — nhập đủ 47 nhãn theo [`labels.yml`](labels.yml) (tên, màu, mô tả; `ui/ux` `d4a5ff`, `i18n` `5319e7` là hai nhãn thêm sau cùng). Nhãn mặc định chỉ áp cho repository tạo sau đó; repository đã có đồng bộ bằng `scripts/sync-labels.sh --apply <tên>`.
+- [ ] Nhãn mặc định cho repository tạo mới: **Organization settings → Repository → General → Repository labels** — nhập đủ 47 nhãn theo [`labels.yml`](labels.yml) (tên, màu, mô tả; `ui/ux` `d4a5ff`, `i18n` `5319e7` là hai nhãn thêm sau cùng). Nhãn mặc định chỉ áp cho repository tạo sau đó; repository đã có đồng bộ bằng `python3 scripts/org-setup.py labels --apply --repo <tên>`.
 
 ---
 

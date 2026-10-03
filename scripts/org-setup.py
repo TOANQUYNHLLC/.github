@@ -18,8 +18,9 @@ Lệnh (nên chạy theo thứ tự):
 		Tags (rulesets/protect-release-tags.json, ADR 0008); Protect Main của repository khác chỉ giữ
 		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
 		chưa có workflow kiểm tra bắt buộc — hợp nhất Pull Request của lệnh files trước.
-	team: tạo các team trong TEAMS, thêm người quản trị và cấp quyền của từng team trên mọi repository (không
-		hạ quyền đã cao hơn); đã đủ thì báo đã đúng.
+	team: tạo các team trong TEAMS (sửa tên, mô tả, chế độ hiển thị khác web), thêm người quản trị và cấp
+		quyền của từng team trên mọi repository (không hạ quyền đã cao hơn); đã đủ thì báo đã đúng.
+	labels: tạo hoặc cập nhật màu, mô tả theo labels.yml (chỉ nhãn khác); không xóa nhãn riêng của repository.
 	org-settings: cài đặt tổ chức (ORG_SETTINGS) và quyền GitHub Actions cấp tổ chức; mục chỉ đổi được
 		trên web (ORG_WEB_ONLY_SETTINGS) thì chỉ so và báo.
 	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Protect Main (Organization), Protect Release
@@ -40,6 +41,7 @@ from pathlib import Path
 ORG = 'TOANQUYNHLLC'
 ROOT = Path(__file__).resolve().parent.parent
 SYNC_BRANCH = 'chore/sync_org_files'
+LABELS_FILE = ROOT / 'labels.yml'
 MAINTAINERS = ('nguyentrongtoandl', 'trongtoandl81')
 # Team ghi trong CODEOWNERS.
 TEAM = 'maintainers'
@@ -56,7 +58,7 @@ TEAMS = {
 		'Maintainers',
 		'maintain',
 		'closed',
-		'Người quản trị các repository — xem MAINTAINERS.md',
+		'Duy trì repository, quản lý phát hành và kiểm duyệt Pull Request.',
 	),
 	'developers': ('Developers', 'push', 'closed', 'Phát triển, review và duy trì mã nguồn.'),
 	'qa': ('QA', 'triage', 'closed', 'Quản lý issue, kiểm thử, xác nhận lỗi.'),
@@ -889,10 +891,88 @@ def teamPermission(team, repo):
 		return None
 
 
+def loadLabels():
+	"""Nhãn chuẩn trong labels.yml (đọc YAML bằng Ruby như validate.py — Python không có sẵn thư viện YAML)."""
+	output = subprocess.run(
+		[
+			'ruby',
+			'-ryaml',
+			'-rjson',
+			'-e',
+			'puts JSON.dump(YAML.load_file(ARGV[0]))',
+			str(LABELS_FILE),
+		],
+		capture_output=True,
+		text=True,
+		check=True,
+	).stdout
+	return json.loads(output)
+
+
+def syncLabels(repos, apply):
+	"""Tạo hoặc cập nhật nhãn chuẩn khác với labels.yml; không xóa nhãn riêng của repository."""
+	wanted = loadLabels()
+	for repo in repos:
+		print(f'== {ORG}/{repo}')
+		current = {
+			label['name'].lower(): label
+			for label in ghJson(
+				'label',
+				'list',
+				'--repo',
+				f'{ORG}/{repo}',
+				'--limit',
+				'500',
+				'--json',
+				'name,color,description',
+			)
+			or []
+		}
+		changes = []
+		for label in wanted:
+			live = current.get(str(label['name']).lower())
+			if (
+				live is None
+				or live['color'].lower() != str(label['color']).lower()
+				or (live.get('description') or '') != (label.get('description') or '')
+			):
+				changes.append((label, 'cập nhật' if live else 'tạo'))
+		if not changes:
+			print(f'   ✔ đủ {len(wanted)} nhãn chuẩn')
+			continue
+		for label, action in changes:
+			if not apply:
+				print(f'   (xem trước) {action} nhãn "{label["name"]}"')
+				continue
+			gh(
+				'label',
+				'create',
+				str(label['name']),
+				'--repo',
+				f'{ORG}/{repo}',
+				'--color',
+				str(label['color']),
+				'--description',
+				label.get('description') or '',
+				'--force',
+			)
+			print(f'   ✔ {action} nhãn "{label["name"]}"')
+
+
+def teamDetails(team):
+	"""Tên, mô tả, chế độ hiển thị của team trên GitHub."""
+	return ghJson('api', f'orgs/{ORG}/teams/{team}') or {}
+
+
 def syncTeams(repos, apply):
 	for team, (name, permission, privacy, description) in TEAMS.items():
 		exists = ghExists(f'orgs/{ORG}/teams/{team}')
 		print(f'== team {ORG}/{team}: {"đã có" if exists else "chưa có"}')
+		details = teamDetails(team) if exists else {}
+		wanted = {'name': name, 'description': description, 'privacy': privacy}
+		drift = {
+			key: value for key, value in wanted.items() if exists and details.get(key) != value
+		}
 		users = [user for user in MAINTAINERS if not exists or teamRole(team, user) != 'maintainer']
 		# Không hạ quyền: admin đã bao gồm maintain, maintain bao gồm push…
 		missing = [
@@ -901,9 +981,14 @@ def syncTeams(repos, apply):
 			if not exists
 			or PERMISSION_RANK.get(teamPermission(team, repo), -1) < PERMISSION_RANK[permission]
 		]
-		if not users and not missing:
+		if not users and not missing and not drift:
 			print(f'   ✔ đủ người quản trị, team có quyền {permission} {len(repos)} repository')
 			continue
+		for key, value in drift.items():
+			print(f'   {"" if apply else "(xem trước) "}{key}: {details.get(key)} → {value}')
+		if drift and apply:
+			body = json.dumps(drift, ensure_ascii=False)
+			gh('api', '-X', 'PATCH', f'orgs/{ORG}/teams/{team}', '--input', '-', stdin=body)
 		if not apply:
 			if not exists:
 				print(f'   (xem trước) tạo team {name} ({privacy})')
@@ -955,7 +1040,7 @@ def main():
 	)
 	parser.add_argument(
 		'command',
-		choices=('files', 'settings', 'rulesets', 'team', 'org-rulesets', 'org-settings'),
+		choices=('files', 'settings', 'rulesets', 'team', 'labels', 'org-rulesets', 'org-settings'),
 	)
 	parser.add_argument('--apply', action='store_true', help='áp dụng thay đổi trên GitHub')
 	parser.add_argument('--repo', help='chỉ xử lý một repository')
@@ -977,6 +1062,8 @@ def main():
 		syncRulesets(repos, args.apply)
 	elif args.command == 'org-rulesets':
 		syncOrgRulesets(args.apply)
+	elif args.command == 'labels':
+		syncLabels(repos, args.apply)
 	elif args.command == 'org-settings':
 		syncOrgSettings(args.apply)
 	else:
