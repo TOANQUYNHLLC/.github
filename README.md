@@ -1,5 +1,11 @@
 # 🏢 CÔNG TY TNHH TOÀN QUỲNH
 
+[![Kiểm tra repository](https://github.com/TOANQUYNHLLC/.github/actions/workflows/validate.yml/badge.svg)](https://github.com/TOANQUYNHLLC/.github/actions/workflows/validate.yml)
+[![Phát hành](https://img.shields.io/github/v/release/TOANQUYNHLLC/.github?label=ph%C3%A1t%20h%C3%A0nh)](https://github.com/TOANQUYNHLLC/.github/releases/latest)
+[![Commit gần nhất](https://img.shields.io/github/last-commit/TOANQUYNHLLC/.github/main?label=commit%20g%E1%BA%A7n%20nh%E1%BA%A5t)](https://github.com/TOANQUYNHLLC/.github/commits/main)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-fe5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org/en/v1.0.0/)
+[![Code style: Prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg)](https://prettier.io)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Repository `.github` chính thức của **CÔNG TY TNHH TOÀN QUỲNH**: hồ sơ tổ chức, tệp cộng đồng mặc định và cấu hình GitHub dùng chung cho mọi repository. Giới thiệu về công ty xem tại [`profile/README.md`](profile/README.md).
@@ -62,7 +68,7 @@ GitHub chỉ kế thừa `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`,
 | [`rulesets/`](rulesets/)                         | Ruleset **Protect Main**, **Protect Release Tags** (cấp repository) và bản cấp tổ chức, push ruleset **Protect Pushes** — xem [`rulesets/README.md`](rulesets/README.md)                                                                                                                    |
 | [`labels.yml`](labels.yml)                       | Bộ nhãn chuẩn: nhãn mặc định của GitHub, loại thay đổi (khớp tiền tố branch), phạm vi `area: …`, mức độ ưu tiên, trạng thái xử lý, nhãn Dependabot                                                                                                                                          |
 
-**Workflow của repository này** — GitHub Actions của repository đang tắt; việc thay thế xem mục **PHÁT HÀNH** → _Khi GitHub Actions tắt_
+**Workflow của repository này** — GitHub Actions của repository đang tắt: huy hiệu "Kiểm tra repository" ở đầu trang hiện kết quả lần chạy gần nhất, kiểm tra thực tế chạy tại máy (`make check` trước mỗi lần đẩy); việc thay thế xem mục **PHÁT HÀNH** → _Khi GitHub Actions tắt_
 
 | Đường dẫn                                                                                                                                     | Chức năng                                                                                                                           |
 | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
