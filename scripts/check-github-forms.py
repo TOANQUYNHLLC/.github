@@ -48,6 +48,7 @@ def fetchPage(url, attempts=3):
 		except urllib.error.HTTPError as exc:
 			if attempt == attempts or (exc.code != 429 and exc.code < 500):
 				raise
+			exc.close()  # lỗi HTTP giữ phản hồi đang mở — đóng trước khi thử lại
 			time.sleep(RETRY_DELAY * attempt)
 	return ''
 

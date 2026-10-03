@@ -123,6 +123,7 @@ def requestStatus(url, method):
 		with OPENER.open(request, timeout=15) as response:
 			return response.status
 	except urllib.error.HTTPError as exc:
+		exc.close()  # lỗi HTTP giữ phản hồi đang mở — chỉ cần mã
 		return exc.code
 	except (urllib.error.URLError, TimeoutError) as exc:
 		return f'không kết nối được ({getattr(exc, "reason", exc)})'

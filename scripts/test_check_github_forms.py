@@ -35,8 +35,9 @@ class GithubFormsTest(unittest.TestCase):
 		with mock.patch.object(module.urllib.request, 'urlopen', urlopen):
 			self.assertEqual(module.fetchPage('https://github.com'), 'trang')
 			responses[:] = [missing, io.BytesIO(b'')]
-			with self.assertRaises(urllib.error.HTTPError):
+			with self.assertRaises(urllib.error.HTTPError) as raised:
 				module.fetchPage('https://github.com')
+			raised.exception.close()
 			self.assertEqual(len(responses), 1)
 
 
