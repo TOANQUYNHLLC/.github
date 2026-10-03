@@ -22,14 +22,12 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 2
         steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
             - name: Kiểm tra tiêu đề
               env:
                   PR_TITLE: ${{ github.event.pull_request.title }}
-              run: |
-                  pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_-]+\))?!?: .+'
-                  if [[ "$PR_TITLE" =~ $pattern ]]; then
-                      echo "Tiêu đề hợp lệ: $PR_TITLE"
-                  else
-                      echo "::error::Tiêu đề Pull Request phải theo dạng '<loại>(<phạm vi>): <mô tả>' (phạm vi tùy chọn) với loại là feat, fix, docs, style, refactor, perf, test, build, ci, chore hoặc revert — xem CONTRIBUTING.md. Tiêu đề hiện tại: $PR_TITLE"
-                      exit 1
-                  fi
+              run: scripts/check-pr-title.sh "$PR_TITLE"

@@ -331,6 +331,15 @@ def check_workflow(path, text):
 		error(
 			path, '$default-branch chỉ dùng trong workflow-templates/ — ghi tên nhánh thật (main)'
 		)
+	# Workflow của repository này gọi script trong scripts/ để chạy được y hệt tại máy (make check); workflow
+	# mẫu được chép sang repository khác — nơi không có scripts/ — nên được viết thẳng.
+	if path.parent.parts[-2:] == ('.github', 'workflows'):
+		for number, line in enumerate(text.split('\n'), start=1):
+			if re.match(r'^\s*run:\s*[|>]', line):
+				error(
+					path,
+					f'dòng {number}: đoạn shell nhiều dòng — tách thành script trong scripts/ rồi gọi một lệnh',
+				)
 	if not re.search(r'^concurrency:', text, re.MULTILINE):
 		error(path, 'thiếu khai báo "concurrency" ở cấp workflow')
 	for number, line in enumerate(text.split('\n'), start=1):
@@ -540,14 +549,14 @@ def contributing_section(text, heading):
 
 
 def workflow_pattern_words(path):
-	"""Các lựa chọn trong nhóm đầu tiên của biến pattern='^(a|b|…)…' trong workflow."""
+	"""Các lựa chọn trong nhóm đầu tiên của biến pattern='^(a|b|…)…' trong script hoặc workflow mẫu."""
 	text = path.read_text(encoding='utf-8') if path.exists() else ''
 	match = re.search(r"pattern='\^\(([a-z|]+)\)", text)
 	return set(match.group(1).split('|')) if match else set()
 
 
 def check_conventions():
-	"""Loại commit và tiền tố branch trong CONTRIBUTING.md phải khớp các workflow kiểm tra."""
+	"""Loại commit và tiền tố branch trong CONTRIBUTING.md phải khớp script và workflow mẫu kiểm tra."""
 	contributing = (ROOT / 'CONTRIBUTING.md').read_text(encoding='utf-8')
 	types = set(
 		re.findall(
@@ -569,9 +578,12 @@ def check_conventions():
 			errors.append(
 				f'.github/labeler.yml: thiếu luật head-branch cho tiền tố "{prefix}/" của CONTRIBUTING.md'
 			)
-	for name, expected in (('pr-title.yml', types), ('branch-name.yml', prefixes)):
-		for folder in (ROOT / '.github' / 'workflows', ROOT / 'workflow-templates'):
-			path = folder / name
+	# Workflow của repository này gọi script; workflow mẫu chứa mẫu kiểm tra trực tiếp.
+	for name, script, expected in (
+		('pr-title.yml', 'check-pr-title.sh', types),
+		('branch-name.yml', 'check-branch-name.sh', prefixes),
+	):
+		for path in (ROOT / 'scripts' / script, ROOT / 'workflow-templates' / name):
 			found = workflow_pattern_words(path)
 			for word in sorted(expected ^ found):
 				where = 'thiếu' if word in expected else 'thừa'

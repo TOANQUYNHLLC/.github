@@ -5,12 +5,13 @@
 .DEFAULT_GOAL := help
 TOOLS := git python3 ruby npx ruff shellcheck actionlint
 
-.PHONY: help check validate test format format-check lint tools links versions forms release-notes release-prepare labels-preview labels-apply hooks org-preview
+.PHONY: help check validate test format format-check lint conventions audit tools links versions forms release-notes release-prepare labels-preview labels-apply hooks org-preview
 
 help: ## Hiển thị danh sách lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-15s %s\n", $$1, $$2}'
 
-check: validate test format-check lint ## Chạy toàn bộ kiểm tra giống CI
+# Mọi kiểm tra GitHub Actions chạy trên Pull Request (trừ CodeQL — cần CodeQL CLI): chạy tại máy trước khi đẩy.
+check: validate test format-check lint conventions audit ## Chạy toàn bộ kiểm tra giống CI
 
 validate: ## Kiểm tra nội dung bằng scripts/validate.py
 	python3 scripts/validate.py
@@ -36,6 +37,13 @@ lint: tools ## ESLint, ruff check, shellcheck và actionlint
 	ruff check --target-version py311 scripts
 	shellcheck scripts/*.sh .devcontainer/*.sh
 	actionlint .github/workflows/*.yml workflow-templates/*.yml
+
+conventions: ## Tên branch và tiêu đề commit theo quy ước (giống branch-name.yml, pr-title.yml)
+	scripts/check-branch-name.sh
+	scripts/check-pr-title.sh
+
+audit: tools ## Dependency có lỗ hổng mức high trở lên (giống dependency-review.yml)
+	npm audit --audit-level=high
 
 hooks: ## Cài pre-commit hook, mẫu commit và để git blame bỏ qua commit chỉ đổi định dạng
 	@# --git-path hooks: thư mục hook thật, dùng chung cho mọi git worktree (.git trong worktree là tệp).
@@ -65,5 +73,5 @@ labels-preview: ## Xem trước việc đồng bộ nhãn lên các repository
 labels-apply: ## Đồng bộ nhãn lên các repository (cần GitHub CLI và quyền quản trị)
 	scripts/sync-labels.sh --apply
 
-org-preview: ## Xem trước việc áp dụng tệp, cài đặt, ruleset, team lên mọi repository (cần gh)
-	for command in files settings rulesets team org-rulesets; do python3 scripts/org-setup.py $$command; done
+org-preview: ## Xem trước việc áp dụng tệp, cài đặt, ruleset, team lên mọi repository và cài đặt tổ chức (cần gh)
+	for command in files settings rulesets team org-rulesets org-settings; do python3 scripts/org-setup.py $$command; done

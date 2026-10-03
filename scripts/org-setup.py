@@ -8,14 +8,20 @@ Lệnh (nên chạy theo thứ tự):
 	files: mở Pull Request thêm các tệp dùng chung còn thiếu — .editorconfig, .gitattributes,
 		workflow kiểm tra tiêu đề Pull Request, tên branch và gắn nhãn (labeler), CODEOWNERS, dependabot.yml, release.yml
 		và tệp định dạng theo ngôn ngữ repository dùng. Không ghi đè tệp đã có.
-	settings: cho phép Merge và Squash, tắt Rebase (ADR 0011), tự xóa branch sau khi hợp nhất; bật secret scanning,
-		push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư, Release bất biến
-		(immutable releases); --discussions bật thêm GitHub Discussions.
+	settings: cài đặt repository (REPOSITORY_SETTINGS: Merge và Squash, tắt Rebase — ADR 0011, auto-merge,
+		Update branch, sign-off khi commit trên web, tắt Wiki và Projects; phần riêng trong
+		REPOSITORY_OVERRIDES, topics của .github lấy từ CITATION.cff); bật Dependabot alerts, secret
+		scanning, push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư, Release bất
+		biến (immutable releases); quyền GitHub Actions (giữ nguyên trạng thái bật/tắt); so GitHub
+		Pages; --discussions bật thêm GitHub Discussions.
 	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json) và Protect Release
 		Tags (rulesets/protect-release-tags.json, ADR 0008); Protect Main của repository khác chỉ giữ
 		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
 		chưa có workflow kiểm tra bắt buộc — hợp nhất Pull Request của lệnh files trước.
-	team: tạo team maintainers, thêm người quản trị và cấp quyền maintain mọi repository; đã đủ thì báo đã đúng.
+	team: tạo các team trong TEAMS, thêm người quản trị và cấp quyền của từng team trên mọi repository (không
+		hạ quyền đã cao hơn); đã đủ thì báo đã đúng.
+	org-settings: cài đặt tổ chức (ORG_SETTINGS) và quyền GitHub Actions cấp tổ chức; mục chỉ đổi được
+		trên web (ORG_WEB_ONLY_SETTINGS) thì chỉ so và báo.
 	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Protect Main (Organization), Protect Release
 		Tags (Organization) và Protect Pushes (Organization, ADR 0010) (rulesets/org-*.json) cho mọi
 		repository; cần token có quyền admin:org
@@ -34,8 +40,39 @@ from pathlib import Path
 ORG = 'TOANQUYNHLLC'
 ROOT = Path(__file__).resolve().parent.parent
 SYNC_BRANCH = 'chore/sync_org_files'
-TEAM = 'maintainers'
 MAINTAINERS = ('nguyentrongtoandl', 'trongtoandl81')
+# Team ghi trong CODEOWNERS.
+TEAM = 'maintainers'
+# Team của tổ chức (khớp web, kiểm tra 2026-10-03): slug → (tên, quyền trên mọi repository, hiển thị, mô tả
+# khi tạo). Mọi team gồm hai người quản trị với vai trò maintainer.
+TEAMS = {
+	'admins': (
+		'Admins',
+		'admin',
+		'secret',
+		'Quản trị Organization, repository, bảo mật và phân quyền.',
+	),
+	TEAM: (
+		'Maintainers',
+		'maintain',
+		'closed',
+		'Người quản trị các repository — xem MAINTAINERS.md',
+	),
+	'developers': ('Developers', 'push', 'closed', 'Phát triển, review và duy trì mã nguồn.'),
+	'qa': ('QA', 'triage', 'closed', 'Quản lý issue, kiểm thử, xác nhận lỗi.'),
+	'design': ('Design', 'triage', 'closed', 'Thiết kế UI/UX, góp ý sản phẩm.'),
+	'marketing': ('Marketing', 'pull', 'closed', 'Website, bài viết, hình ảnh truyền thông.'),
+}
+# Thứ tự quyền để không hạ quyền đã cao hơn; khi đọc GitHub trả role_name (read, write), khi ghi nhận pull, push.
+PERMISSION_RANK = {
+	'pull': 0,
+	'read': 0,
+	'triage': 1,
+	'push': 2,
+	'write': 2,
+	'maintain': 3,
+	'admin': 4,
+}
 RULESET_FILE = ROOT / 'rulesets' / 'protect-main.json'
 # Ruleset tag: chặn tạo, dời, xóa tag phát hành v* ngoài danh sách bỏ qua (ADR 0008).
 TAG_RULESET_FILE = ROOT / 'rulesets' / 'protect-release-tags.json'
@@ -72,8 +109,9 @@ LANGUAGE_FILES = (
 	(('Dockerfile', 'compose.yaml'), '.dockerignore', 'repository-templates/.dockerignore'),
 )
 SECURITY_FEATURES = ('secret_scanning', 'secret_scanning_push_protection')
-# Endpoint bật bằng PUT, đọc trạng thái qua trường enabled.
+# Endpoint bật bằng PUT, đọc trạng thái qua trường enabled; Dependabot alerts bật trước security updates.
 SECURITY_ENDPOINTS = {
+	'Dependabot alerts': 'vulnerability-alerts',
 	'Dependabot security updates': 'automated-security-fixes',
 	'báo cáo lỗ hổng riêng tư': 'private-vulnerability-reporting',
 	# Tag và tệp đính kèm của Release đã phát hành không đổi được; tổ chức đang bắt buộc cho mọi repository.
@@ -81,14 +119,87 @@ SECURITY_ENDPOINTS = {
 }
 # Chỉ bật được cho repository công khai (báo cáo lỗ hổng riêng tư).
 PUBLIC_ONLY_ENDPOINTS = ('private-vulnerability-reporting',)
+# Đọc trạng thái bằng mã HTTP (204 bật, 404 tắt), không có trường enabled.
+STATUS_ONLY_ENDPOINTS = ('vulnerability-alerts',)
 MERGE_SETTINGS = {
 	'allow_squash_merge': True,
 	'allow_merge_commit': True,
 	# Rebase and merge tạo lại commit không có chữ ký (ADR 0011).
 	'allow_rebase_merge': False,
+	'allow_auto_merge': True,
+	'allow_update_branch': True,
 	'delete_branch_on_merge': True,
 	'squash_merge_commit_title': 'PR_TITLE',
 	'squash_merge_commit_message': 'PR_BODY',
+	'merge_commit_title': 'MERGE_MESSAGE',
+	'merge_commit_message': 'PR_TITLE',
+}
+# Cài đặt mọi repository (khớp .github trên web, kiểm tra 2026-10-03; giữ allow_rebase_merge của ADR 0011).
+REPOSITORY_SETTINGS = {
+	'has_issues': True,
+	'has_projects': False,
+	'has_wiki': False,
+	'web_commit_signoff_required': True,
+	**MERGE_SETTINGS,
+}
+# Cài đặt riêng từng repository, ghi đè REPOSITORY_SETTINGS.
+REPOSITORY_OVERRIDES = {
+	'.github': {
+		'description': 'Hồ sơ tổ chức, tệp cộng đồng mặc định, biểu mẫu và cấu hình GitHub dùng chung cho mọi '
+		'repository của CÔNG TY TNHH TOÀN QUỲNH',
+		'homepage': 'https://toanquynh.com',
+		'has_discussions': True,
+	},
+}
+# GitHub Pages chỉ so, sửa trên web: .github dùng tên miền toanquynh.com dù website thật ở hosting khác (cố ý).
+PAGES = {
+	'.github': {
+		'cname': 'toanquynh.com',
+		'build_type': 'workflow',
+		'source': {'branch': 'main', 'path': '/'},
+	},
+}
+# Quyền GitHub Actions; không quản lý trạng thái bật/tắt (enabled, enabled_repositories) — người quản trị
+# tự bật, tắt trên web, script gửi lại giá trị đang có vì API bắt buộc trường này.
+ACTIONS_PERMISSIONS = {'allowed_actions': 'all', 'sha_pinning_required': True}
+ORG_ACTIONS_PERMISSIONS = {'allowed_actions': 'all', 'sha_pinning_required': False}
+WORKFLOW_PERMISSIONS = {
+	'default_workflow_permissions': 'read',
+	# Workflow monthly-release.yml mở Pull Request phát hành.
+	'can_approve_pull_request_reviews': True,
+}
+# Cài đặt tổ chức đổi được qua API (khớp web, kiểm tra 2026-10-03).
+ORG_SETTINGS = {
+	'name': 'TOAN QUYNH CO., LTD',
+	'description': 'The Official Repository of TOAN QUYNH Co., Ltd',
+	'blog': 'https://toanquynh.com',
+	'email': 'toanquynhvn@gmail.com',
+	'location': 'Vietnam',
+	'default_repository_permission': 'read',
+	'members_can_create_repositories': True,
+	'members_can_create_public_repositories': True,
+	'members_can_create_private_repositories': True,
+	'members_can_create_pages': True,
+	'members_can_create_public_pages': True,
+	'members_can_create_private_pages': True,
+	'members_can_fork_private_repositories': True,
+	'has_organization_projects': True,
+	'has_repository_projects': True,
+	'web_commit_signoff_required': True,
+	'deploy_keys_enabled_for_repositories': True,
+}
+# Cài đặt tổ chức API không đổi được — chỉ so, sửa tại Organization settings trên web.
+ORG_WEB_ONLY_SETTINGS = {
+	'two_factor_requirement_enabled': True,
+	'default_repository_branch': 'main',
+	'members_can_change_repo_visibility': True,
+	'members_can_delete_repositories': True,
+	'members_can_delete_issues': True,
+	'members_can_invite_outside_collaborators': True,
+	'members_can_create_teams': True,
+	'members_can_view_dependency_insights': True,
+	'readers_can_create_discussions': True,
+	'display_commenter_full_name_setting_enabled': False,
 }
 
 
@@ -451,28 +562,126 @@ def cmd_files(repos, apply):
 		print(f'   ✔ Pull Request: {url}')
 
 
+def citation_keywords():
+	"""Từ khóa trong CITATION.cff — topics của repository .github."""
+	text = (ROOT / 'CITATION.cff').read_text(encoding='utf-8')
+	block = re.search(r'^keywords:\n((?:[ \t]+- .+\n)+)', text, re.MULTILINE)
+	return re.findall(r'- (.+)', block.group(1)) if block else []
+
+
+def repository_settings(repo, discussions=False):
+	"""Cài đặt mong muốn của repository: chung cho mọi repository, cộng phần riêng của nó."""
+	wanted = dict(REPOSITORY_SETTINGS, **REPOSITORY_OVERRIDES.get(repo, {}))
+	if discussions:
+		wanted['has_discussions'] = True
+	return wanted
+
+
+def update_settings(endpoint, current, wanted, apply, what):
+	"""So cài đặt đang có với cài đặt mong muốn; --apply thì PATCH phần khác."""
+	changes = {key: value for key, value in wanted.items() if current.get(key) != value}
+	if not changes:
+		print(f'   ✔ {what} đã đúng')
+		return
+	for key, value in changes.items():
+		print(f'   {"" if apply else "(xem trước) "}{key}: {current.get(key)} → {value}')
+	if apply:
+		gh('api', '-X', 'PATCH', endpoint, '--input', '-', stdin=json.dumps(changes))
+		print('   ✔ đã cập nhật')
+
+
 def cmd_settings(repos, apply, discussions):
-	wanted = dict(MERGE_SETTINGS, **({'has_discussions': True} if discussions else {}))
 	for repo in repos:
 		print(f'== {ORG}/{repo}')
 		current = gh_json('api', f'repos/{ORG}/{repo}')
-		changes = {key: value for key, value in wanted.items() if current.get(key) != value}
-		if not changes:
-			print('   ✔ cài đặt hợp nhất đã đúng')
-			cmd_security(repo, current, apply)
-			continue
-		for key, value in changes.items():
-			print(f'   {"" if apply else "(xem trước) "}{key}: {current.get(key)} → {value}')
-		if apply:
-			args = []
-			for key, value in changes.items():
-				if isinstance(value, bool):
-					args += ['-F', f'{key}={"true" if value else "false"}']
-				else:
-					args += ['-f', f'{key}={value}']
-			gh('api', '-X', 'PATCH', f'repos/{ORG}/{repo}', *args)
-			print('   ✔ đã cập nhật')
+		update_settings(
+			f'repos/{ORG}/{repo}',
+			current,
+			repository_settings(repo, discussions),
+			apply,
+			'cài đặt repository',
+		)
+		cmd_topics(repo, current, apply)
 		cmd_security(repo, current, apply)
+		sync_actions(
+			f'repos/{ORG}/{repo}/actions/permissions', ACTIONS_PERMISSIONS, 'enabled', apply
+		)
+		cmd_pages(repo)
+
+
+def cmd_topics(repo, current, apply):
+	"""Topics của .github khớp keywords trong CITATION.cff; repository khác không quản lý."""
+	if repo != '.github':
+		return
+	wanted = citation_keywords()
+	if sorted(current.get('topics') or []) == sorted(wanted):
+		print('   ✔ topics khớp CITATION.cff')
+		return
+	print(f'   {"" if apply else "(xem trước) "}topics: {current.get("topics")} → {wanted}')
+	if apply:
+		body = json.dumps({'names': wanted})
+		gh('api', '-X', 'PUT', f'repos/{ORG}/{repo}/topics', '--input', '-', stdin=body)
+
+
+def sync_actions(endpoint, wanted, enabled_key, apply):
+	"""Quyền GitHub Actions tại endpoint (repository hoặc tổ chức) và quyền mặc định của GITHUB_TOKEN;
+	gửi lại enabled_key đang có — API bắt buộc trường này nhưng script không bật, tắt Actions."""
+	changed = False
+	for path, target, keep in (
+		(endpoint, wanted, enabled_key),
+		(f'{endpoint}/workflow', WORKFLOW_PERMISSIONS, None),
+	):
+		try:
+			current = gh_json('api', path) or {}
+		except RuntimeError as exc:
+			print(f'   ⚠ không đọc được {path}: {exc}')
+			continue
+		changes = {key: value for key, value in target.items() if current.get(key) != value}
+		for key, value in changes.items():
+			changed = True
+			print(
+				f'   {"" if apply else "(xem trước) "}Actions {key}: {current.get(key)} → {value}'
+			)
+		if not changes or not apply:
+			continue
+		body = dict(changes, **({keep: current.get(keep)} if keep else {}))
+		try:
+			gh('api', '-X', 'PUT', path, '--input', '-', stdin=json.dumps(body))
+		except RuntimeError as exc:
+			print(f'   ⚠ không cập nhật được {path}: {exc}')
+	if not changed:
+		print('   ✔ quyền GitHub Actions đã đúng')
+
+
+def cmd_pages(repo):
+	"""So GitHub Pages với PAGES (chỉ so — sửa trên web)."""
+	wanted = PAGES.get(repo)
+	if not wanted:
+		return
+	try:
+		current = gh_json('api', f'repos/{ORG}/{repo}/pages') or {}
+	except RuntimeError:
+		current = {}
+	different = [key for key, value in wanted.items() if current.get(key) != value]
+	if different:
+		print(f'   ✘ GitHub Pages khác ({", ".join(different)}) — sửa tại Settings → Pages')
+	else:
+		print('   ✔ GitHub Pages đã đúng')
+
+
+def cmd_org_settings(apply):
+	"""Cài đặt tổ chức và quyền GitHub Actions cấp tổ chức."""
+	print(f'== cài đặt tổ chức {ORG}')
+	current = gh_json('api', f'orgs/{ORG}')
+	update_settings(f'orgs/{ORG}', current, ORG_SETTINGS, apply, 'cài đặt tổ chức')
+	for key, value in ORG_WEB_ONLY_SETTINGS.items():
+		if current.get(key) != value:
+			print(
+				f'   ✘ {key}: {current.get(key)} ≠ {value} — sửa tại Organization settings trên web'
+			)
+	sync_actions(
+		f'orgs/{ORG}/actions/permissions', ORG_ACTIONS_PERMISSIONS, 'enabled_repositories', apply
+	)
 
 
 def security_endpoints(private):
@@ -495,6 +704,10 @@ def cmd_security(repo, current, apply):
 		print(f'   – bỏ qua {label}: chỉ dành cho repository công khai')
 	endpoints, unread = {}, False
 	for label, endpoint in security_endpoints(private).items():
+		if endpoint in STATUS_ONLY_ENDPOINTS:
+			if not gh_exists(f'repos/{ORG}/{repo}/{endpoint}'):
+				endpoints[label] = endpoint
+			continue
 		try:
 			enabled = (gh_json('api', f'repos/{ORG}/{repo}/{endpoint}') or {}).get('enabled')
 		except RuntimeError as exc:
@@ -649,23 +862,23 @@ def cmd_org_rulesets(apply):
 		print(f'   ✔ đã {action} ruleset "{name}"')
 
 
-def team_role(user):
+def team_role(team, user):
 	"""Vai trò của người dùng trong team (maintainer, member), None nếu chưa là thành viên."""
 	try:
-		return (gh_json('api', f'orgs/{ORG}/teams/{TEAM}/memberships/{user}') or {}).get('role')
+		return (gh_json('api', f'orgs/{ORG}/teams/{team}/memberships/{user}') or {}).get('role')
 	except RuntimeError:
 		return None
 
 
-def team_permission(repo):
-	"""Quyền của team trên repository (pull, triage, push, maintain, admin), None nếu chưa được cấp."""
+def team_permission(team, repo):
+	"""Quyền của team trên repository (read, triage, write, maintain, admin), None nếu chưa được cấp."""
 	try:
 		return (
 			gh_json(
 				'api',
 				'-H',
 				'Accept: application/vnd.github.v3.repository+json',
-				f'orgs/{ORG}/teams/{TEAM}/repos/{ORG}/{repo}',
+				f'orgs/{ORG}/teams/{team}/repos/{ORG}/{repo}',
 			)
 			or {}
 		).get('role_name')
@@ -674,58 +887,65 @@ def team_permission(repo):
 
 
 def cmd_team(repos, apply):
-	exists = gh_exists(f'orgs/{ORG}/teams/{TEAM}')
-	print(f'== team {ORG}/{TEAM}: {"đã có" if exists else "chưa có"}')
-	users = [user for user in MAINTAINERS if not exists or team_role(user) != 'maintainer']
-	# Quyền admin đã bao gồm maintain — không hạ quyền.
-	missing = [
-		repo for repo in repos if not exists or team_permission(repo) not in ('maintain', 'admin')
-	]
-	if not users and not missing:
-		print(f'   ✔ đủ người quản trị, team có quyền maintain {len(repos)} repository')
-		return
-	if not apply:
+	for team, (name, permission, privacy, description) in TEAMS.items():
+		exists = gh_exists(f'orgs/{ORG}/teams/{team}')
+		print(f'== team {ORG}/{team}: {"đã có" if exists else "chưa có"}')
+		users = [
+			user for user in MAINTAINERS if not exists or team_role(team, user) != 'maintainer'
+		]
+		# Không hạ quyền: admin đã bao gồm maintain, maintain bao gồm push…
+		missing = [
+			repo
+			for repo in repos
+			if not exists
+			or PERMISSION_RANK.get(team_permission(team, repo), -1) < PERMISSION_RANK[permission]
+		]
+		if not users and not missing:
+			print(f'   ✔ đủ người quản trị, team có quyền {permission} {len(repos)} repository')
+			continue
+		if not apply:
+			if not exists:
+				print(f'   (xem trước) tạo team {name} ({privacy})')
+			for user in users:
+				print(f'   (xem trước) thêm {user} (maintainer)')
+			for repo in missing:
+				print(f'   (xem trước) cấp {permission} {ORG}/{repo}')
+			continue
 		if not exists:
-			print(f'   (xem trước) tạo team {TEAM}')
+			gh(
+				'api',
+				f'orgs/{ORG}/teams',
+				'-f',
+				f'name={name}',
+				'-f',
+				f'privacy={privacy}',
+				'-f',
+				f'description={description}',
+			)
 		for user in users:
-			print(f'   (xem trước) thêm {user} (maintainer)')
+			gh(
+				'api',
+				'-X',
+				'PUT',
+				f'orgs/{ORG}/teams/{team}/memberships/{user}',
+				'-f',
+				'role=maintainer',
+			)
+			print(f'   ✔ thêm {user} (maintainer)')
 		for repo in missing:
-			print(f'   (xem trước) cấp maintain {ORG}/{repo}')
-		return
-	if not exists:
-		gh(
-			'api',
-			f'orgs/{ORG}/teams',
-			'-f',
-			f'name={TEAM}',
-			'-f',
-			'privacy=closed',
-			'-f',
-			'description=Người quản trị các repository — xem MAINTAINERS.md',
+			gh(
+				'api',
+				'-X',
+				'PUT',
+				f'orgs/{ORG}/teams/{team}/repos/{ORG}/{repo}',
+				'-f',
+				f'permission={permission}',
+			)
+			print(f'   ✔ {permission} {ORG}/{repo}')
+	if apply:
+		print(
+			f'   CODEOWNERS dùng @{ORG}/{TEAM}; đổi thành viên thì cập nhật MAINTAINERS.md và MAINTAINERS trong script này.'
 		)
-	for user in users:
-		gh(
-			'api',
-			'-X',
-			'PUT',
-			f'orgs/{ORG}/teams/{TEAM}/memberships/{user}',
-			'-f',
-			'role=maintainer',
-		)
-		print(f'   ✔ thêm {user} (maintainer)')
-	for repo in missing:
-		gh(
-			'api',
-			'-X',
-			'PUT',
-			f'orgs/{ORG}/teams/{TEAM}/repos/{ORG}/{repo}',
-			'-f',
-			'permission=maintain',
-		)
-		print(f'   ✔ maintain {ORG}/{repo}')
-	print(
-		f'   CODEOWNERS dùng @{ORG}/{TEAM}; đổi thành viên thì cập nhật MAINTAINERS.md và MAINTAINERS trong script này.'
-	)
 
 
 def main():
@@ -733,7 +953,8 @@ def main():
 		description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
 	)
 	parser.add_argument(
-		'command', choices=('files', 'settings', 'rulesets', 'team', 'org-rulesets')
+		'command',
+		choices=('files', 'settings', 'rulesets', 'team', 'org-rulesets', 'org-settings'),
 	)
 	parser.add_argument('--apply', action='store_true', help='áp dụng thay đổi trên GitHub')
 	parser.add_argument('--repo', help='chỉ xử lý một repository')
@@ -745,8 +966,8 @@ def main():
 		gh('auth', 'status')
 	except (RuntimeError, FileNotFoundError):
 		sys.exit('Cần GitHub CLI đã đăng nhập: https://cli.github.com rồi chạy gh auth login')
-	# org-rulesets áp dụng cho cả tổ chức, không cần danh sách repository.
-	repos = [] if args.command == 'org-rulesets' else list_repos(args.repo)
+	# Lệnh org-* áp dụng cho cả tổ chức, không cần danh sách repository.
+	repos = [] if args.command.startswith('org-') else list_repos(args.repo)
 	if args.command == 'files':
 		cmd_files(repos, args.apply)
 	elif args.command == 'settings':
@@ -755,6 +976,8 @@ def main():
 		cmd_rulesets(repos, args.apply)
 	elif args.command == 'org-rulesets':
 		cmd_org_rulesets(args.apply)
+	elif args.command == 'org-settings':
+		cmd_org_settings(args.apply)
 	else:
 		cmd_team(repos, args.apply)
 	if not args.apply:

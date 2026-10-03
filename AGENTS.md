@@ -12,11 +12,11 @@ Repository `.github` đặc biệt của tổ chức: tệp cộng đồng (`CON
 
 ## 🛠️ LỆNH
 
-| Lệnh          | Khi nào chạy                                                         |
-| ------------- | -------------------------------------------------------------------- |
-| `make check`  | **Bắt buộc** trước khi báo hoàn thành — chạy toàn bộ kiểm tra như CI |
-| `make format` | Định dạng lại bằng Prettier và ruff                                  |
-| `make test`   | Chỉ chạy test của `scripts/`                                         |
+| Lệnh          | Khi nào chạy                                                                                         |
+| ------------- | ---------------------------------------------------------------------------------------------------- |
+| `make check`  | **Bắt buộc** trước khi đẩy và báo hoàn thành — chạy toàn bộ kiểm tra như GitHub Actions (trừ CodeQL) |
+| `make format` | Định dạng lại bằng Prettier và ruff                                                                  |
+| `make test`   | Chỉ chạy test của `scripts/`                                                                         |
 
 ---
 
@@ -27,7 +27,7 @@ Repository `.github` đặc biệt của tổ chức: tệp cộng đồng (`CON
 - **Branch:** `<tiền tố>/<mô_tả>` bằng tiếng Anh, nối từ bằng `_` (ví dụ `docs/update_readme`). Không commit thẳng lên `main`.
 - **Commit và tiêu đề Pull Request:** `<loại>(<phạm vi>): <mô tả>` với loại trong bảng của `CONTRIBUTING.md`.
 - **Ruleset:** mọi ruleset nhánh và tag trong `rulesets/` có quy tắc `required_signatures` (ADR 0009) — push ruleset không nhận quy tắc này (ADR 0010); bản cấp tổ chức sinh lại từ bản cấp repository bằng `org_rulesets()` trong `scripts/org-setup.py` (riêng `org-protect-pushes.json` là nguồn, không có bản cấp repository).
-- **Workflow:** mọi action ghim theo commit SHA đầy đủ kèm chú thích phiên bản; khai báo `permissions` tối thiểu, quyền ghi chỉ ở job và có chú thích lý do; khai báo `concurrency`; job nào cũng có `timeout-minutes`. Workflow mẫu: danh mục đầu tiên là danh mục chung của `actions/starter-workflows`. Không đoán SHA — lấy bằng `git ls-remote`.
+- **Workflow:** đoạn shell tách thành script trong `scripts/`, workflow chỉ gọi một lệnh — không viết `run: |` trong `.github/workflows/` (`validate.py` kiểm tra; `workflow-templates/` được miễn vì chép sang repository khác). Kiểm tra mà Actions chạy trên Pull Request phải có trong `make check` để chạy tại máy trước khi đẩy. Mọi action ghim theo commit SHA đầy đủ kèm chú thích phiên bản; khai báo `permissions` tối thiểu, quyền ghi chỉ ở job và có chú thích lý do; khai báo `concurrency`; job nào cũng có `timeout-minutes`. Workflow mẫu: danh mục đầu tiên là danh mục chung của `actions/starter-workflows`. Không đoán SHA — lấy bằng `git ls-remote`.
 - **Danh sách phải khớp nhau:** loại commit và tiền tố branch giữa `CONTRIBUTING.md` và các workflow `pr-title.yml`, `branch-name.yml`; đuôi file giữa `scripts/validate.py`, `.editorconfig`, `.gitattributes`; nhãn trong biểu mẫu, `dependabot.yml`, `release.yml`, `stale.yml`, `labeler.yml` phải có trong `labels.yml`; tiền tố branch mới thì thêm luật vào `.github/labeler.yml`. Sửa một nơi thì sửa cả các nơi còn lại.
 - **Phiên bản công cụ:** chỉ khai báo trong `mise.toml` (ruff, ShellCheck, actionlint), `.nvmrc` (Node.js) và `package.json` (thư viện Node.js); không ghi phiên bản trong workflow hay script.
 - **Biểu mẫu:** biểu mẫu Issue, Discussion và `FUNDING.yml` phải nằm trong `.github/` (GitHub không nhận ở thư mục gốc); liên kết trong biểu mẫu và `PULL_REQUEST_TEMPLATE.md` là URL tuyệt đối vì nội dung hiển thị ở repository khác. Sửa biểu mẫu thì đẩy branch rồi chạy `make forms REF=<branch>` trước khi hợp nhất — GitHub có thể từ chối khóa mà tài liệu vẫn nhắc (ví dụ `type`).
