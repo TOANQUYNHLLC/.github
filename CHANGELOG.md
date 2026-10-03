@@ -17,7 +17,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - `make links`: liên kết bên ngoài còn hoạt động (thử IPv4 trước, thử lại khi máy chủ lỗi tạm thời) và bản `security.txt` trên website khớp repository. `make forms`: GitHub chấp nhận biểu mẫu trên một branch. `make versions`: công cụ trong `mise.toml` có bản mới.
 - `make org-preview` (`org-setup.py preview`): xem trước cùng lúc việc áp dụng tệp dùng chung, cài đặt, ruleset, team, nhãn lên mọi repository và cài đặt tổ chức; các lệnh trong `scripts/orgsetup/` đọc GitHub song song, ghi tuần tự.
 - `make release-pr`: chuẩn bị và mở Pull Request phát hành tại máy khi GitHub Actions tắt.
-- Workflow mẫu `docs-check.yml`, `go-ci.yml` gọi `check-markdown-links.py`, `check-gofmt.py` của tổ chức (đọc đúng tên tệp tiếng Việt; bỏ qua `vendor/`).
+- Workflow mẫu `docs-check.yml`, `go-ci.yml` gọi `check-markdown-links.py`, `check-gofmt.py` của tổ chức (đọc đúng tên tệp tiếng Việt; anchor tiêu đề tính đúng như GitHub, kể cả tiêu đề có emoji hoặc liên kết; bỏ qua `vendor/`).
 
 ### 🗑️ BỎ
 
