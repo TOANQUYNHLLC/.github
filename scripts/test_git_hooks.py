@@ -100,6 +100,22 @@ class GitHooksTest(unittest.TestCase):
 			self.git('add', 'tool.py')
 			self.assertEqual(self.module.preCommit(self.repo, []), 0)
 
+	@unittest.skipUnless(
+		(ROOT / 'node_modules' / '.bin' / 'prettier').exists(), 'cần Prettier (make tools)'
+	)
+	def testPreCommitWithoutRuffBlocksClearly(self):
+		path = self.repo / 'tool.py'
+		path.write_text("print('ok')\n", encoding='utf-8')
+		self.git('add', 'tool.py')
+		which = shutil.which
+		with (
+			mock.patch.object(
+				self.module.shutil, 'which', lambda name: None if name == 'ruff' else which(name)
+			),
+			silenced(),
+		):
+			self.assertEqual(self.module.preCommit(self.repo, []), 1)
+
 	def testAfterPullReportsWithoutBlocking(self):
 		# Sau khi kéo code: org-preview chỉ chạy khi gh đã đăng nhập; links, versions luôn chạy; chạy song song
 		# nhưng in theo thứ tự; lệnh lỗi chỉ báo, không chặn.

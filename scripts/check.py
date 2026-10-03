@@ -52,9 +52,9 @@ def checkGroups():
 		],
 		'format': [
 			['npx', 'prettier', '--check', '.'],
-			['ruff', 'format', '--check', 'scripts'],
+			['ruff', 'format', '--check', '.'],
 			# Python ≥ 3.11 (tomllib, datetime.UTC); ruff.toml giữ đúng cấu hình chuẩn nên khai báo ở đây.
-			['ruff', 'check', '--target-version', 'py311', 'scripts'],
+			['ruff', 'check', '--target-version', 'py311', '.'],
 		],
 		# shellcheck không nhận danh sách tệp rỗng — không có script shell thì bỏ lệnh.
 		'lint': [

@@ -25,6 +25,7 @@ HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; TOANQUYNH-link-check/1.0)'}
 SKIP = ('img.shields.io', '/actions/workflows/')
 # Tệp ngoài Markdown: URL đứng trần (khóa YAML, trường của security.txt), không nằm trong (…).
 PATTERNS = ('*.md', '*.yml', '*.yaml', '*.cff', '*.txt')
+CANONICAL = re.compile(r'^Canonical:\s*(\S+)$', re.MULTILINE)
 # Giây chờ trước khi thử lại liên kết trả lỗi máy chủ (5xx).
 RETRY_DELAY = 2
 # Giây chờ kết nối tới mỗi địa chỉ của máy chủ; chờ phản hồi vẫn 15 giây.
@@ -88,13 +89,14 @@ OPENER = quickOpener()
 
 def textFiles():
 	output = subprocess.run(
-		['git', 'ls-files', '--cached', '--others', '--exclude-standard', *PATTERNS],
+		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z', *PATTERNS],
 		cwd=ROOT,
 		capture_output=True,
 		text=True,
 		check=True,
 	).stdout
-	return [ROOT / name for name in output.split()]
+	# -z: tên tệp có khoảng trắng; bỏ tệp đã xóa trên đĩa nhưng còn trong index.
+	return [ROOT / name for name in output.split('\0') if name and (ROOT / name).is_file()]
 
 
 def collectLinks():
@@ -143,21 +145,27 @@ def linkStatus(url):
 	return code
 
 
+def canonicalUrl(path):
+	"""URL Canonical khai báo trong tệp (trường của security.txt), None nếu không có."""
+	match = CANONICAL.search(path.read_text(encoding='utf-8'))
+	return match.group(1) if match else None
+
+
 def publishedCopyDiffers(path):
 	"""Thông báo khi bản đăng tại URL Canonical của tệp (ví dụ security.txt trên website) khác bản trong
-	repository; None khi giống nhau hoặc tệp không khai báo Canonical."""
-	text = path.read_text(encoding='utf-8')
-	match = re.search(r'^Canonical:\s*(\S+)$', text, re.MULTILINE)
-	if not match:
-		return None
-	request = urllib.request.Request(match.group(1), headers=HEADERS)
+	repository; None khi giống nhau."""
+	url = canonicalUrl(path)
+	request = urllib.request.Request(url, headers=HEADERS)
 	try:
 		with OPENER.open(request, timeout=15) as response:
 			published = response.read().decode('utf-8')
+	except urllib.error.HTTPError as exc:
+		exc.close()  # lỗi HTTP giữ phản hồi đang mở — chỉ cần mã
+		return f'không đọc được {url} (HTTP {exc.code})'
 	except (urllib.error.URLError, TimeoutError, UnicodeDecodeError) as exc:
-		return f'không đọc được {match.group(1)} ({getattr(exc, "reason", exc)})'
-	if published.replace('\r\n', '\n') != text:
-		return f'{match.group(1)} khác {path.relative_to(ROOT)} — đăng lại tệp lên website'
+		return f'không đọc được {url} ({getattr(exc, "reason", exc)})'
+	if published.replace('\r\n', '\n') != path.read_text(encoding='utf-8'):
+		return f'{url} khác {path.relative_to(ROOT)} — đăng lại tệp lên website'
 	return None
 
 
@@ -176,7 +184,8 @@ def main():
 		else:
 			broken += 1
 			print(f'❌ {code} {url} ({where})')
-	for path in sorted(ROOT.glob('.well-known/*.txt')):
+	# Chỉ tệp có Canonical mới có bản đăng trên web để so.
+	for path in sorted(path for path in ROOT.glob('.well-known/*.txt') if canonicalUrl(path)):
 		problem = publishedCopyDiffers(path)
 		if problem:
 			broken += 1

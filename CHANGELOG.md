@@ -19,6 +19,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 ### ♻️ THAY ĐỔI
 
 - Mọi kiểm tra là script trong `scripts/`, ưu tiên Python, không viết trong YAML; `scripts/check.py` khai báo các nhóm kiểm tra dùng chung cho `make check` và GitHub Actions.
+- ruff (`make check`, `make format`, hook `pre-commit`) kiểm tra cùng một phạm vi: mọi tệp Python của repository.
 - `scripts/org-setup.py` chia thành các module trong `scripts/orgsetup/`; mỗi script có tệp test riêng.
 - Kiểm tra liên kết, biểu mẫu chạy song song và thử lại khi máy chủ lỗi tạm thời; `check-markdown-links.py` hiểu liên kết mã hóa phần trăm; `check-gofmt.py` bỏ qua `vendor/`.
 - `validate.py` kiểm tra thêm: tên hàm, tham số, biến camelCase (đọc cây cú pháp); người quản trị trong `MAINTAINERS.md` khớp `org-setup.py team`; bộ nhãn chuẩn có đủ nhãn mặc định của GitHub; liên kết trong `CHANGELOG.md` là URL tuyệt đối; `security.txt` sắp hết hạn (trước 30 ngày). `make links` báo khi bản `security.txt` trên website khác bản trong repository.

@@ -95,7 +95,14 @@ def writeOutputs(**values):
 
 def onCleanMain():
 	"""open-pr lấy HEAD làm gốc branch phát hành — tại máy phải đứng ở main sạch, trùng origin/main."""
-	runCommand('git', 'fetch', '--quiet', '--tags', 'origin', 'main')
+	try:
+		runCommand('git', 'fetch', '--quiet', '--tags', 'origin', 'main')
+	except subprocess.CalledProcessError as exc:
+		reportMessage(
+			'error',
+			f'Không tải được origin/main ({exc.stderr.strip()}) — kiểm tra mạng rồi chạy lại.',
+		)
+		return False
 	if (
 		runCommand('git', 'branch', '--show-current') == 'main'
 		and not runCommand('git', 'status', '--porcelain')

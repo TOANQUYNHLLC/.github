@@ -31,11 +31,13 @@ EMBEDDED = re.compile(
 def formPaths():
 	folder = ROOT / '.github'
 	paths = [
-		*(folder / 'ISSUE_TEMPLATE').glob('*.yml'),
-		*(folder / 'DISCUSSION_TEMPLATE').glob('*.yml'),
+		path
+		for kind in ('ISSUE_TEMPLATE', 'DISCUSSION_TEMPLATE')
+		for pattern in ('*.yml', '*.yaml')
+		for path in (folder / kind).glob(pattern)
 	]
 	# config.yml cấu hình trang chọn biểu mẫu, không phải biểu mẫu.
-	return sorted(path for path in paths if path.name != 'config.yml')
+	return sorted(path for path in paths if path.stem != 'config')
 
 
 def fetchPage(url, attempts=3):
@@ -50,7 +52,6 @@ def fetchPage(url, attempts=3):
 				raise
 			exc.close()  # lỗi HTTP giữ phản hồi đang mở — đóng trước khi thử lại
 			time.sleep(RETRY_DELAY * attempt)
-	return ''
 
 
 def templateData(ref, relative):
