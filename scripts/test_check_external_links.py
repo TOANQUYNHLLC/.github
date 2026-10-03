@@ -36,13 +36,19 @@ def answerWith(codes):
 
 
 def handlerClass(head, get=None):
-	# do_HEAD, do_GET, log_message là tên http.server quy định — gán qua type() để tên hàm vẫn camelCase
-	# (ADR 0010).
-	return type(
-		'QuietHandler',
-		(http.server.BaseHTTPRequestHandler,),
-		{'do_HEAD': head, 'do_GET': get or head, 'log_message': lambda handler, *args: None},
-	)
+	"""Lớp xử lý HTTP trả lời HEAD bằng head, GET bằng get (mặc định như HEAD), không in nhật ký."""
+
+	class Handler(http.server.BaseHTTPRequestHandler):
+		def do_HEAD(self):
+			head(self)
+
+		def do_GET(self):
+			(get or head)(self)
+
+		def log_message(self, format, *args):
+			pass
+
+	return Handler
 
 
 QuietHandler = handlerClass(answerOk)

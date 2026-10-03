@@ -36,7 +36,6 @@ import contextlib
 import io
 import sys
 import threading
-import types
 from concurrent.futures import ThreadPoolExecutor
 
 from orgsetup import files, github, labels, rulesets, settings, teams
@@ -63,23 +62,28 @@ def runCommand(command, repos, apply, discussions=False):
 		settings.syncOrgSettings(apply)
 
 
-def threadOutput(fallback):
+class ThreadOutput:
 	"""stdout, stderr riêng cho từng luồng: preview chạy mọi lệnh song song trong một tiến trình mà đầu ra của
 	mỗi lệnh vẫn liền khối. Luồng chưa gán bộ đệm (local.buffer) thì ghi thẳng ra đích gốc."""
-	local = threading.local()
 
-	def target():
-		return getattr(local, 'buffer', fallback)
+	def __init__(self, fallback):
+		self.fallback = fallback
+		self.local = threading.local()
 
-	return types.SimpleNamespace(
-		local=local, write=lambda text: target().write(text), flush=lambda: target().flush()
-	)
+	def target(self):
+		return getattr(self.local, 'buffer', self.fallback)
+
+	def write(self, text):
+		return self.target().write(text)
+
+	def flush(self):
+		self.target().flush()
 
 
 def previewAll(repos):
 	"""Xem trước mọi lệnh song song — mỗi lệnh chờ GitHub vài lần, tuần tự thì vài chục giây; in kết quả liền
 	khối theo thứ tự COMMANDS. Đăng nhập và danh sách repository đã kiểm tra một lần cho mọi lệnh."""
-	out, err = threadOutput(sys.stdout), threadOutput(sys.stderr)
+	out, err = ThreadOutput(sys.stdout), ThreadOutput(sys.stderr)
 
 	def preview(command):
 		buffer = io.StringIO()
