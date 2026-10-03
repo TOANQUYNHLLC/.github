@@ -18,7 +18,8 @@ jobs:
     content:
         name: Liên kết, biểu mẫu, nhãn, cấu hình định dạng và mẫu email
         runs-on: ubuntu-latest
-        timeout-minutes: 5
+        # Mỗi test chạy validate.py trên một bản sao repository — cả bộ mất khoảng 5 phút.
+        timeout-minutes: 15
         steps:
             - name: Checkout
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
