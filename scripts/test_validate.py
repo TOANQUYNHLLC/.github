@@ -129,7 +129,7 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails('Expires đã hết hạn')
 
 	def testShellMustIndentWithTabs(self):
-		self.edit('scripts/sync-labels.sh', '\tAPPLY=true', '    APPLY=true')
+		self.edit('scripts/pre-commit.sh', '\texit 0', '    exit 0')
 		self.assertFails('thụt lề phải dùng tab')
 
 	def testPrettierMustUseTabWidth4(self):
@@ -223,6 +223,22 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails(
 			'scripts/conventions.py: COMMIT_TYPES thiếu "revert" so với CONTRIBUTING.md'
 		)
+
+	def testGitmessageTypesMatchContributing(self):
+		self.edit('.gitmessage', 'chore, revert', 'chore')
+		self.assertFails('.gitmessage: dòng "# Loại:" thiếu "revert"')
+
+	def testTemplateLabelerCoversAllBranchPrefixes(self):
+		self.edit(
+			'repository-templates/labeler.yml', "release:\n    - head-branch: ['^release/']\n", ''
+		)
+		self.assertFails(
+			'repository-templates/labeler.yml: thiếu luật head-branch cho tiền tố "release/"'
+		)
+
+	def testMiseToolsMatchVersionCheck(self):
+		self.edit('mise.toml', 'actionlint = ', 'taplo = "0.10.0"\nactionlint = ')
+		self.assertFails('scripts/check-tool-versions.py: REPOSITORIES thiếu taplo')
 
 	def testFunctionNamesMustBeCamelCase(self):
 		self.edit('scripts/release.py', 'def releaseNotes(', 'def release_notes(')
@@ -893,6 +909,11 @@ class OrgSetupTest(unittest.TestCase):
 	def testTeamsAlreadyCorrectAreNotWritten(self):
 		calls = []
 		self.module.ghExists = lambda endpoint: True
+		details = {
+			team: {'name': name, 'description': description, 'privacy': privacy}
+			for team, (name, _, privacy, description) in self.module.TEAMS.items()
+		}
+		self.module.teamDetails = lambda team: details[team]
 		self.module.teamRole = lambda team, user: 'maintainer'
 		# Quyền cao hơn (admin) đã đủ cho mọi team — không hạ quyền.
 		self.module.teamPermission = lambda team, repo: 'admin'
@@ -918,6 +939,34 @@ class OrgSetupTest(unittest.TestCase):
 				'orgs/TOANQUYNHLLC/teams/maintainers/repos/TOANQUYNHLLC/app',
 			],
 		)
+
+	def testTeamDescriptionDriftIsPatched(self):
+		calls = []
+		self.module.ghExists = lambda endpoint: True
+		self.module.teamRole = lambda team, user: 'maintainer'
+		self.module.teamPermission = lambda team, repo: 'admin'
+		self.module.teamDetails = lambda team: {
+			'name': self.module.TEAMS[team][0],
+			'description': 'mô tả cũ' if team == 'qa' else self.module.TEAMS[team][3],
+			'privacy': self.module.TEAMS[team][2],
+		}
+		self.module.gh = lambda *args, **kwargs: calls.append((args, kwargs.get('stdin')))
+		with contextlib.redirect_stdout(io.StringIO()):
+			self.module.syncTeams(['.github'], apply=True)
+		self.assertEqual([args[3] for args, _ in calls], ['orgs/TOANQUYNHLLC/teams/qa'])
+		self.assertEqual(json.loads(calls[0][1]), {'description': self.module.TEAMS['qa'][3]})
+
+	def testLabelsOnlyWriteDifferences(self):
+		calls = []
+		wanted = self.module.loadLabels()
+		live = [dict(label) for label in wanted[1:]]
+		live[0]['color'] = '000000'
+		self.module.ghJson = lambda *args: live
+		self.module.gh = lambda *args, **kwargs: calls.append(args)
+		with contextlib.redirect_stdout(io.StringIO()):
+			self.module.syncLabels(['app'], apply=True)
+		# Một nhãn thiếu (tạo) và một nhãn sai màu (cập nhật); nhãn đúng không ghi lại.
+		self.assertEqual([args[2] for args in calls], [wanted[0]['name'], wanted[1]['name']])
 
 	def testProtectMainPerRepository(self):
 		def checks(ruleset):

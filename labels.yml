@@ -1,5 +1,5 @@
 # Bộ nhãn chuẩn cho mọi repository của CÔNG TY TNHH TOÀN QUỲNH.
-# Áp dụng bằng: scripts/sync-labels.sh (xem hướng dẫn trong script).
+# Áp dụng bằng: python3 scripts/org-setup.py labels [--apply] [--repo TÊN] (make labels-preview, make labels-apply).
 # color: mã hex 6 ký tự trong dấu nháy (tránh YAML đọc thành số), không có dấu #. description: tối đa 100 ký tự.
 # Chọn theo tần suất ở 40 repository phổ biến và 30 repository ứng dụng, gồm y tế (2026-09-27): có đủ các nhãn
 # phổ biến nhất. Không dùng nhãn thay được bằng tính năng GitHub (work in progress → Draft Pull Request;

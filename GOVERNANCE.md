@@ -17,7 +17,7 @@ Tài liệu này mô tả ai ra quyết định và cách thay đổi được c
 ## 🗳️ CÁCH RA QUYẾT ĐỊNH
 
 - Thay đổi thông thường: quyết định qua Pull Request — cần phê duyệt của chủ sở hữu mã và mọi kiểm tra tự động thành công.
-- Thay đổi lớn (kiến trúc, quy ước chung, công cụ, quy trình): tạo Issue để trao đổi trước; người quản trị ra quyết định cuối cùng và ghi lại lý do trong Issue.
+- Thay đổi lớn (kiến trúc, quy ước chung, công cụ, quy trình): tạo Issue để trao đổi trước; người quản trị ra quyết định cuối cùng và ghi lại lý do trong Issue (repository `.github` ghi thêm bản ghi quyết định trong `docs/adr/`).
 - Thay đổi quy ước dùng chung cho cả tổ chức (repository `.github`): chỉ người quản trị được hợp nhất và phải ghi vào `CHANGELOG.md`.
 
 ---

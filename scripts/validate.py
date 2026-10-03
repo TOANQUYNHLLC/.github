@@ -58,6 +58,7 @@ def loadScript(name):
 
 conventions = loadScript('conventions')
 markdownLinks = loadScript('check-markdown-links')
+toolVersions = loadScript('check-tool-versions')
 
 
 def error(path, message):
@@ -377,11 +378,17 @@ def checkWorkflowTemplate(path):
 
 
 def checkToolVersions():
-	"""Phiên bản ruff, ShellCheck, actionlint chỉ ở mise.toml; Node.js chỉ ở .nvmrc (ADR 0007)."""
+	"""Phiên bản công cụ chỉ ở mise.toml; Node.js chỉ ở .nvmrc (ADR 0007). Công cụ trong mise.toml (trừ Python, Node.js)
+	khớp danh sách check-tool-versions.py theo dõi bản mới."""
 	mise = (ROOT / 'mise.toml').read_text(encoding='utf-8') if (ROOT / 'mise.toml').exists() else ''
-	for tool in ('ruff', 'shellcheck', 'actionlint'):
-		if not re.search(rf'^{tool} = "[^"]+"$', mise, re.MULTILINE):
-			errors.append(f'mise.toml: thiếu phiên bản {tool}')
+	tools = set(re.findall(r'^([a-z-]+) = "[^"]+"$', mise.split('[settings]')[0], re.MULTILINE))
+	for tool in sorted((tools - {'python', 'node'}) ^ set(toolVersions.REPOSITORIES)):
+		where = (
+			'mise.toml: thiếu phiên bản'
+			if tool in toolVersions.REPOSITORIES
+			else ('scripts/check-tool-versions.py: REPOSITORIES thiếu')
+		)
+		errors.append(f'{where} {tool}')
 	if re.search(r'^node = ', mise, re.MULTILINE):
 		errors.append('mise.toml: Node.js khai báo trong .nvmrc, không lặp trong mise.toml')
 	pinned = re.compile(r'ruff==|pipx install ruff|actionlint@v|download-actionlint|shellcheck-v\d')
@@ -588,14 +595,29 @@ def checkConventions():
 			re.MULTILINE,
 		)
 	)
-	# Mỗi tiền tố branch có luật head-branch trong .github/labeler.yml (tự gắn nhãn loại cho Pull Request).
-	labeler = ROOT / '.github' / 'labeler.yml'
-	if labeler.exists():
+	# Mỗi tiền tố branch có luật head-branch trong labeler.yml của repository này và bản mẫu (tự gắn nhãn loại
+	# cho Pull Request).
+	for labeler in (
+		ROOT / '.github' / 'labeler.yml',
+		ROOT / 'repository-templates' / 'labeler.yml',
+	):
+		if not labeler.exists():
+			continue
 		covered = set(re.findall(r"'\^([a-z]+)/'", labeler.read_text(encoding='utf-8')))
 		for prefix in sorted(prefixes - covered):
 			errors.append(
-				f'.github/labeler.yml: thiếu luật head-branch cho tiền tố "{prefix}/" của CONTRIBUTING.md'
+				f'{labeler.relative_to(ROOT)}: thiếu luật head-branch cho tiền tố "{prefix}/" của CONTRIBUTING.md'
 			)
+	# Mẫu commit (.gitmessage, bật bằng make hooks) liệt kê đúng các loại commit.
+	message = ROOT / '.gitmessage'
+	listed = (
+		re.search(r'^# Loại: (.+)$', message.read_text(encoding='utf-8'), re.MULTILINE)
+		if message.exists()
+		else None
+	)
+	for word in sorted(types ^ set(re.split(r',\s*', listed.group(1).strip()) if listed else ())):
+		where = 'thiếu' if word in types else 'thừa'
+		errors.append(f'.gitmessage: dòng "# Loại:" {where} "{word}" so với CONTRIBUTING.md')
 	for name, expected, found in (
 		('COMMIT_TYPES', types, set(conventions.COMMIT_TYPES)),
 		('BRANCH_PREFIXES', prefixes, set(conventions.BRANCH_PREFIXES)),
