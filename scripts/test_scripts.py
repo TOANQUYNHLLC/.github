@@ -237,15 +237,21 @@ class ValidateTest(unittest.TestCase):
 		self.edit('mise.toml', 'actionlint = ', 'taplo = "0.10.0"\nactionlint = ')
 		self.assertFails('scripts/check-tool-versions.py: REPOSITORIES thiếu taplo')
 
-	def testScriptsMustBePython(self):
+	def testNonPythonScriptNeedsReason(self):
 		(self.repo / 'scripts' / 'check-x.sh').write_text(
 			'#!/usr/bin/env bash\necho x\n', encoding='utf-8'
 		)
-		self.assertFails('scripts/check-x.sh: script trong scripts/ phải viết bằng Python')
+		self.assertFails('scripts/check-x.sh: script không viết bằng Python — thêm dòng')
+		(self.repo / 'tools.rb').write_text('puts 1\n', encoding='utf-8')
+		self.assertFails('tools.rb: script không viết bằng Python')
 
-	def testShellOnlyInDevcontainer(self):
-		(self.repo / 'tools.sh').write_text('#!/usr/bin/env bash\necho x\n', encoding='utf-8')
-		self.assertFails('tools.sh: shell script chỉ dùng trong .devcontainer/')
+	def testNonPythonScriptWithReasonIsValid(self):
+		(self.repo / 'scripts' / 'check-x.sh').write_text(
+			'#!/usr/bin/env bash\n# Không viết bằng Python vì: chỉ nối các lệnh cài đặt.\necho x\n',
+			encoding='utf-8',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
 
 	def testFunctionNamesMustBeCamelCase(self):
 		self.edit('scripts/release.py', 'def releaseNotes(', 'def release_notes(')

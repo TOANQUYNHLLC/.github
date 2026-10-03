@@ -42,6 +42,10 @@ WORKFLOW_GENERAL_CATEGORIES = {
 COMPANY_EMAIL = 'toanquynhvn@gmail.com'
 errors = []
 FORM_LABELS = []
+# Đuôi tệp script ngoài Python ở bất kỳ đâu — phải ghi lý do không dùng Python (ADR 0015); trong scripts/ thì mọi
+# tệp không phải Python (kể cả .js) đều phải ghi.
+SCRIPT_SUFFIXES = ('.sh', '.bash', '.zsh', '.rb', '.pl', '.ps1')
+NOT_PYTHON_REASON = 'Không viết bằng Python vì:'
 # Tên hàm Python: camelCase tiếng Anh (ADR 0012); setUp, tearDown của unittest cũng khớp.
 FUNCTION_NAME = re.compile(r'[a-z][a-zA-Z0-9]*')
 
@@ -933,6 +937,17 @@ def checkChangelog(path, text):
 		error(path, 'có phiên bản bị lặp')
 
 
+def checkScriptLanguage(path):
+	"""Script không viết bằng Python phải nêu lý do ngôn ngữ khác xử lý tốt hơn trong 10 dòng đầu."""
+	head = '\n'.join(path.read_text(encoding='utf-8', errors='replace').split('\n')[:10])
+	if not re.search(rf'{re.escape(NOT_PYTHON_REASON)}\s*\S', head):
+		error(
+			path,
+			f'script không viết bằng Python — thêm dòng "{NOT_PYTHON_REASON} <lý do>" ở đầu tệp, '
+			'nêu vì sao ngôn ngữ này xử lý tốt hơn; nếu không, viết bằng Python (ADR 0015)',
+		)
+
+
 def checkShell(path):
 	data = path.read_bytes()
 	if b'\r' in data:
@@ -958,11 +973,9 @@ for file in trackedFiles():
 		and file.parent.parent != ROOT / '.github'
 	) or (file.name == 'FUNDING.yml' and file.parent != ROOT / '.github'):
 		error(file, 'phải nằm trong thư mục .github/ để GitHub nhận diện')
-	# Script viết bằng Python (ADR 0014); shell chỉ cho script cài đặt Dev Container, chạy trước khi có công cụ.
-	if file.parent == ROOT / 'scripts' and file.suffix != '.py':
-		error(file, 'script trong scripts/ phải viết bằng Python (ADR 0014)')
-	if file.suffix == '.sh' and file.parent != ROOT / '.devcontainer':
-		error(file, 'shell script chỉ dùng trong .devcontainer/ — viết bằng Python (ADR 0014)')
+	# Script ưu tiên Python; ngôn ngữ khác chỉ khi xử lý việc đó tốt hơn, ghi lý do ở đầu tệp (ADR 0015).
+	if (file.parent == ROOT / 'scripts' and file.suffix != '.py') or file.suffix in SCRIPT_SUFFIXES:
+		checkScriptLanguage(file)
 	if file.suffix == '.sh':
 		checkShell(file)
 	if file.suffix == '.py':
