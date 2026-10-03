@@ -25,7 +25,7 @@ Repository `.github` đặc biệt của tổ chức: tệp cộng đồng (`CON
 ## 📐 QUY ƯỚC BẮT BUỘC
 
 - **Định dạng:** theo `.editorconfig` — UTF-8, LF, thụt lề bằng **tab** độ rộng 4 (kể cả Python, JSON, shell, `Makefile`); YAML và Markdown dùng 4 dấu cách. Không tự đổi sang dấu cách hay độ rộng 2.
-- **Ngôn ngữ:** nội dung tài liệu và thông báo viết bằng tiếng Việt, chữ dạng dựng sẵn (NFC); tiêu đề Markdown viết HOA (cả hai được `scripts/validate.py` kiểm tra).
+- **Ngôn ngữ:** nội dung tài liệu và thông báo viết bằng tiếng Việt, chữ dạng dựng sẵn (NFC); tiêu đề Markdown viết HOA. Riêng chữ trên huy hiệu (badge) viết **tiếng Anh, hoa đầu mỗi từ** (`Last Commit`, `Code Style: Prettier`) — cả chữ thay thế lẫn nhãn; huy hiệu shields.io đặt `label=`, huy hiệu workflow dùng shields.io vì huy hiệu gốc của GitHub lấy chữ theo tên workflow. `scripts/validate.py` kiểm tra cả ba.
 - **Branch:** `<tiền tố>/<mô_tả>` bằng tiếng Anh, nối từ bằng `_` (ví dụ `docs/update_readme`). Không commit thẳng lên `main`.
 - **Commit và tiêu đề Pull Request:** `<loại>(<phạm vi>): <mô tả>` với loại trong bảng của `CONTRIBUTING.md`.
 - **Ruleset:** mọi ruleset nhánh và tag trong `rulesets/` có quy tắc `required_signatures` (ADR 0006) — push ruleset không nhận quy tắc này (ADR 0007); bản cấp tổ chức sinh lại từ bản cấp repository bằng `orgRulesets()` trong `scripts/orgsetup/rulesets.py` (riêng `org-protect-pushes.json` là nguồn, không có bản cấp repository).
