@@ -14,7 +14,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ♻️ THAY ĐỔI
 
-- Script chỉ viết bằng Python, kể cả git hook (ADR 0014): `scripts/pre-commit.sh` thành `scripts/git-hooks.py`, thêm hook `pre-push` (chạy `make check`, lỗi thì không đẩy) và `post-merge` (chạy `make org-preview` sau `git pull`); `validate.py` báo lỗi khi `scripts/` có tệp không phải Python hoặc có tệp `.sh` ngoài `.devcontainer/`.
+- Script ưu tiên Python, kể cả git hook; ngôn ngữ khác chỉ khi xử lý tốt hơn và ghi dòng `Không viết bằng Python vì: <lý do>` ở đầu tệp (ADR 0014, 0015): `scripts/pre-commit.sh` thành `scripts/git-hooks.py`, thêm hook `pre-push` (chạy `make check`, lỗi thì không đẩy) và `post-merge` (chạy `make org-preview` sau `git pull`); `validate.py` báo lỗi khi script không phải Python (mọi tệp trong `scripts/`, tệp `.sh`, `.rb`… ở bất kỳ đâu) thiếu dòng lý do.
 - Dev Container không cài Python hai lần: Python lấy từ image, `mise` bỏ qua Python (`MISE_DISABLE_TOOLS=python`).
 
 ---

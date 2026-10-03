@@ -1,6 +1,6 @@
 # 0014. SCRIPT CHỈ VIẾT BẰNG PYTHON, KỂ CẢ GIT HOOK; HOOK CHẠY KIỂM TRA TRƯỚC KHI ĐẨY VÀ SAU KHI KÉO
 
-- **Trạng thái:** Chấp nhận
+- **Trạng thái:** Bị thay thế một phần bởi [0015](0015-prefer-python-with-reason.md) (ưu tiên Python có ghi lý do thay cho cấm ngôn ngữ khác)
 - **Ngày:** 2026-10-03
 - **Điều chỉnh:** [0012](0012-python-checks-camel-case.md) — bỏ ngoại lệ "hook git bằng shell"
 

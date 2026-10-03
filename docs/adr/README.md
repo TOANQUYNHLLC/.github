@@ -17,7 +17,8 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0011](0011-disallow-rebase-merge.md)           | Bỏ Rebase để commit trên nhánh chính luôn có chữ ký                                          | Chấp nhận                        | 2026-10-03 |
 | [0012](0012-python-checks-camel-case.md)        | Kiểm tra viết bằng Python trong `scripts/`; tên hàm camelCase tiếng Anh                      | Thay thế một phần bởi 0013, 0014 | 2026-10-03 |
 | [0013](0013-no-checks-in-yaml.md)               | Mọi kiểm tra là tệp riêng, không viết trực tiếp trong YAML                                   | Chấp nhận                        | 2026-10-03 |
-| [0014](0014-python-only-scripts-git-hooks.md)   | Script chỉ viết bằng Python, kể cả git hook; hook chạy kiểm tra trước khi đẩy và sau khi kéo | Chấp nhận                        | 2026-10-03 |
+| [0014](0014-python-only-scripts-git-hooks.md)   | Script chỉ viết bằng Python, kể cả git hook; hook chạy kiểm tra trước khi đẩy và sau khi kéo | Thay thế một phần bởi 0015       | 2026-10-03 |
+| [0015](0015-prefer-python-with-reason.md)       | Ưu tiên Python; ngôn ngữ khác khi xử lý tốt hơn, ghi lý do                                   | Chấp nhận                        | 2026-10-03 |
 
 ## ✍️ CÁCH THÊM ADR
 
