@@ -6,7 +6,11 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ---
 
-## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2026.09.Stable...HEAD)
+## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2026.10.Stable...HEAD)
+
+---
+
+## [v2026.10.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2026.10.Stable) — 2026-10-03
 
 ### ✨ THÊM
 
