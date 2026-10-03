@@ -702,6 +702,61 @@ class ConventionsTest(unittest.TestCase):
 			self.assertFalse(self.check(self.module.checkTitle, title), title)
 
 
+class GitHooksTest(unittest.TestCase):
+	def setUp(self):
+		self.module = loadScript('git-hooks')
+		self.tmp = tempfile.TemporaryDirectory()
+		self.repo = Path(self.tmp.name)
+		self.git('init', '-q')
+		for name in self.module.FORMAT_CONFIGS:
+			shutil.copy2(ROOT / name, self.repo / name)
+		self.git('add', '-A')
+		self.git('-c', 'commit.gpgsign=false', 'commit', '-qm', 'init')
+
+	def tearDown(self):
+		self.tmp.cleanup()
+
+	def git(self, *args):
+		return subprocess.run(
+			['git', *args], cwd=self.repo, capture_output=True, text=True, check=True
+		).stdout.strip()
+
+	def testPushedBranchesSkipsTagsAndDeletions(self):
+		zero = self.module.ZERO_SHA
+		lines = [
+			f'refs/heads/main {"a" * 40} refs/heads/main {"b" * 40}',
+			f'refs/tags/v1 {"c" * 40} refs/tags/v1 {zero}',
+			f'(delete) {zero} refs/heads/old {"d" * 40}',
+		]
+		self.assertEqual(self.module.pushedBranches(lines), [('refs/heads/main', 'a' * 40)])
+		self.assertEqual(self.module.pushedBranches(lines[1:]), [])
+
+	def testInstallLinksEveryHookAndWarnsHooksPath(self):
+		self.git('config', 'core.hooksPath', '.husky')
+		output = io.StringIO()
+		with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(output):
+			self.module.installHooks(self.repo)
+		self.assertIn('core.hooksPath = .husky', output.getvalue())
+		for name in self.module.HOOKS:
+			link = self.repo / '.git' / 'hooks' / name
+			self.assertEqual(link.resolve(), self.module.SCRIPT, name)
+
+	@unittest.skipUnless(
+		(ROOT / 'node_modules' / '.bin' / 'prettier').exists(), 'cần Prettier (make tools)'
+	)
+	def testPreCommitChecksStagedContent(self):
+		# Stage nội dung sai định dạng, sửa tệp trên đĩa cho đúng: hook vẫn phải chặn — và ngược lại.
+		path = self.repo / 'a.md'
+		path.write_text('#  Tiêu đề\n\n*  mục\n', encoding='utf-8')
+		self.git('add', 'a.md')
+		path.write_text('# Tiêu đề\n\n- mục\n', encoding='utf-8')
+		with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+			self.assertEqual(self.module.preCommit(self.repo, []), 1)
+			self.git('add', 'a.md')
+			path.write_text('#  sai\n', encoding='utf-8')
+			self.assertEqual(self.module.preCommit(self.repo, []), 0)
+
+
 class CheckTest(unittest.TestCase):
 	def testValidateWorkflowRunsCheckGroups(self):
 		# Mỗi job của validate.yml gọi đúng một nhóm của check.py — tại máy và trên GitHub chạy cùng lệnh.

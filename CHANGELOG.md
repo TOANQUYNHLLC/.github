@@ -14,6 +14,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ♻️ THAY ĐỔI
 
+- Git hook kiểm tra đúng nội dung (ADR 0016): `pre-commit` kiểm tra phần đã stage; `pre-push` chặn khi còn thay đổi chưa commit hoặc đẩy branch khác HEAD, bỏ qua khi chỉ đẩy tag hoặc xóa branch; thêm `post-rewrite` để chạy `make org-preview` sau `git pull --rebase`; `make hooks` gọi `git-hooks.py install` — cài vào thư mục hook chuẩn của git, cảnh báo `core.hooksPath`, hook mới tự cài sau khi kéo.
 - Script ưu tiên Python, kể cả git hook; ngôn ngữ khác chỉ khi xử lý tốt hơn và ghi dòng `Không viết bằng Python vì: <lý do>` ở đầu tệp (ADR 0014, 0015): `scripts/pre-commit.sh` thành `scripts/git-hooks.py`, thêm hook `pre-push` (chạy `make check`, lỗi thì không đẩy) và `post-merge` (chạy `make org-preview` sau `git pull`); `validate.py` báo lỗi khi script không phải Python (mọi tệp trong `scripts/`, tệp `.sh`, `.rb`… ở bất kỳ đâu) thiếu dòng lý do.
 - Dev Container không cài Python hai lần: Python lấy từ image, `mise` bỏ qua Python (`MISE_DISABLE_TOOLS=python`).
 
