@@ -77,18 +77,28 @@ def teamDetails(team):
 def teamState(team, repos):
 	"""Trạng thái team trên GitHub: (đã có, mục khác web, người chưa là maintainer, repository thiếu quyền)."""
 	name, permission, privacy, description = TEAMS[team]
-	exists = github.ghExists(f'orgs/{github.ORG}/teams/{team}')
-	details = teamDetails(team) if exists else {}
+	# Đọc chi tiết team cũng cho biết team đã có chưa (không có thì gh báo lỗi 404).
+	try:
+		details, exists = teamDetails(team), True
+	except RuntimeError:
+		details, exists = {}, False
 	wanted = {'name': name, 'description': description, 'privacy': privacy}
 	drift = {key: value for key, value in wanted.items() if exists and details.get(key) != value}
-	users = [user for user in MAINTAINERS if not exists or teamRole(team, user) != 'maintainer']
-	# Không hạ quyền: admin đã bao gồm maintain, maintain bao gồm push…
-	missing = [
-		repo
-		for repo in repos
-		if not exists
-		or PERMISSION_RANK.get(teamPermission(team, repo), -1) < PERMISSION_RANK[permission]
-	]
+	if not exists:
+		return exists, details, drift, list(MAINTAINERS), list(repos)
+	# Vai trò từng người, quyền trên từng repository đọc cùng lúc — mỗi lần chờ GitHub gần một giây.
+	with ThreadPoolExecutor(max_workers=len(MAINTAINERS) + len(repos)) as pool:
+		roles = pool.map(lambda user: teamRole(team, user), MAINTAINERS)
+		permissions = pool.map(lambda repo: teamPermission(team, repo), repos)
+		users = [
+			user for user, role in zip(MAINTAINERS, roles, strict=True) if role != 'maintainer'
+		]
+		# Không hạ quyền: admin đã bao gồm maintain, maintain bao gồm push…
+		missing = [
+			repo
+			for repo, current in zip(repos, permissions, strict=True)
+			if PERMISSION_RANK.get(current, -1) < PERMISSION_RANK[permission]
+		]
 	return exists, details, drift, users, missing
 
 

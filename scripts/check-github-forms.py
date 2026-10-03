@@ -88,7 +88,7 @@ def main():
 			return exc
 
 	# Đọc các trang song song — mỗi trang mất khoảng một giây.
-	with ThreadPoolExecutor(max_workers=4) as pool:
+	with ThreadPoolExecutor(max_workers=max(1, len(relatives))) as pool:
 		templates = list(pool.map(fetch, relatives))
 	# Mọi trang đều 404: ref chưa có trên GitHub, không phải biểu mẫu lỗi.
 	if templates and all(

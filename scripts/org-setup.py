@@ -32,36 +32,89 @@ Lệnh (nên chạy theo thứ tự):
 """
 
 import argparse
-import subprocess
+import contextlib
+import io
 import sys
+import threading
+import types
 from concurrent.futures import ThreadPoolExecutor
 
 from orgsetup import files, github, labels, rulesets, settings, teams
 
 COMMANDS = ('files', 'settings', 'rulesets', 'team', 'labels', 'org-rulesets', 'org-settings')
+PREVIEW_NOTE = 'Chế độ xem trước — chạy lại với --apply để áp dụng.'
 
 
-def previewAll():
-	"""Xem trước mọi lệnh song song — mỗi lệnh chờ GitHub vài giây, tuần tự thì gần 40 giây; mỗi lệnh chạy
-	một tiến trình riêng để kết quả in liền khối, đúng thứ tự COMMANDS."""
+def runCommand(command, repos, apply, discussions=False):
+	"""Chạy một lệnh; lệnh org-* áp dụng cho cả tổ chức, không dùng danh sách repository."""
+	if command == 'files':
+		files.syncFiles(repos, apply)
+	elif command == 'settings':
+		settings.syncSettings(repos, apply, discussions)
+	elif command == 'rulesets':
+		rulesets.syncRulesets(repos, apply)
+	elif command == 'team':
+		teams.syncTeams(repos, apply)
+	elif command == 'labels':
+		labels.syncLabels(repos, apply)
+	elif command == 'org-rulesets':
+		rulesets.syncOrgRulesets(apply)
+	else:
+		settings.syncOrgSettings(apply)
+
+
+def threadOutput(fallback):
+	"""stdout, stderr riêng cho từng luồng: preview chạy mọi lệnh song song trong một tiến trình mà đầu ra của
+	mỗi lệnh vẫn liền khối. Luồng chưa gán bộ đệm (local.buffer) thì ghi thẳng ra đích gốc."""
+	local = threading.local()
+
+	def target():
+		return getattr(local, 'buffer', fallback)
+
+	return types.SimpleNamespace(
+		local=local, write=lambda text: target().write(text), flush=lambda: target().flush()
+	)
+
+
+def previewAll(repos):
+	"""Xem trước mọi lệnh song song — mỗi lệnh chờ GitHub vài lần, tuần tự thì vài chục giây; in kết quả liền
+	khối theo thứ tự COMMANDS. Đăng nhập và danh sách repository đã kiểm tra một lần cho mọi lệnh."""
+	out, err = threadOutput(sys.stdout), threadOutput(sys.stderr)
 
 	def preview(command):
-		return subprocess.run(
-			[sys.executable, __file__, command], capture_output=True, text=True, check=False
-		)
+		buffer = io.StringIO()
+		out.local.buffer = err.local.buffer = buffer
+		try:
+			runCommand(command, [] if command.startswith('org-') else repos, apply=False)
+			return True, buffer.getvalue()
+		except (RuntimeError, OSError, KeyError, ValueError) as exc:
+			print(f'❌ {exc}')
+			return False, buffer.getvalue()
+		finally:
+			del out.local.buffer, err.local.buffer
 
-	with ThreadPoolExecutor(max_workers=len(COMMANDS)) as pool:
+	with (
+		contextlib.redirect_stdout(out),
+		contextlib.redirect_stderr(err),
+		ThreadPoolExecutor(max_workers=len(COMMANDS)) as pool,
+	):
 		results = list(pool.map(preview, COMMANDS))
-	failed = [
-		command for command, result in zip(COMMANDS, results, strict=True) if result.returncode
-	]
-	for command, result in zip(COMMANDS, results, strict=True):
-		print(f'##### {command}', flush=True)
-		print(result.stdout, end='', flush=True)
-		print(result.stderr, end='', file=sys.stderr, flush=True)
+	failed = [command for command, (passed, _) in zip(COMMANDS, results, strict=True) if not passed]
+	for command, (_, output) in zip(COMMANDS, results, strict=True):
+		print(f'##### {command}')
+		print(output, end='')
+	print(PREVIEW_NOTE)
 	if failed:
 		print(f'❌ Lệnh lỗi: {", ".join(failed)}', file=sys.stderr)
 	return 1 if failed else 0
+
+
+def signedIn():
+	try:
+		github.gh('auth', 'status')
+		return True
+	except (RuntimeError, FileNotFoundError):
+		return False
 
 
 def main():
@@ -80,31 +133,29 @@ def main():
 	args = parser.parse_args()
 	if args.command == 'preview' and (args.apply or args.repo or args.discussions):
 		parser.error('preview chỉ xem trước mọi lệnh, không nhận --apply, --repo, --discussions')
-	# Kiểm tra một lần trước khi preview chạy song song mọi lệnh (không báo lặp lại cho từng lệnh).
-	try:
-		github.gh('auth', 'status')
-	except (RuntimeError, FileNotFoundError):
-		sys.exit('Cần GitHub CLI đã đăng nhập: https://cli.github.com rồi chạy gh auth login')
+
+	def repositories():
+		# Lỗi (chưa đăng nhập…) để signedIn() báo; lệnh org-* không cần danh sách repository.
+		if args.command.startswith('org-'):
+			return []
+		try:
+			return github.listRepos(args.repo)
+		except (RuntimeError, FileNotFoundError):
+			return None
+
+	# Kiểm tra đăng nhập và lấy danh sách repository cùng lúc — mỗi việc chờ GitHub gần một giây.
+	with ThreadPoolExecutor(max_workers=2) as pool:
+		login, listing = pool.submit(signedIn), pool.submit(repositories)
+		if not login.result():
+			sys.exit('Cần GitHub CLI đã đăng nhập: https://cli.github.com rồi chạy gh auth login')
+		repos = listing.result()
+	if repos is None:
+		repos = github.listRepos(args.repo)  # báo đúng lỗi của gh
 	if args.command == 'preview':
-		return previewAll()
-	# Lệnh org-* áp dụng cho cả tổ chức, không cần danh sách repository.
-	repos = [] if args.command.startswith('org-') else github.listRepos(args.repo)
-	if args.command == 'files':
-		files.syncFiles(repos, args.apply)
-	elif args.command == 'settings':
-		settings.syncSettings(repos, args.apply, args.discussions)
-	elif args.command == 'rulesets':
-		rulesets.syncRulesets(repos, args.apply)
-	elif args.command == 'org-rulesets':
-		rulesets.syncOrgRulesets(args.apply)
-	elif args.command == 'labels':
-		labels.syncLabels(repos, args.apply)
-	elif args.command == 'org-settings':
-		settings.syncOrgSettings(args.apply)
-	else:
-		teams.syncTeams(repos, args.apply)
+		return previewAll(repos)
+	runCommand(args.command, repos, args.apply, args.discussions)
 	if not args.apply:
-		print('Chế độ xem trước — chạy lại với --apply để áp dụng.')
+		print(PREVIEW_NOTE)
 	return 0
 
 
