@@ -25,7 +25,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - `make test`, `make check` chạy test song song trên nhiều tiến trình (`scripts/run-tests.py`): các nhóm của `make check` cũng chạy song song (đầu ra vẫn theo thứ tự). `make check` từ khoảng 48 giây còn khoảng 10 giây trên máy 10 lõi.
 - Mọi kiểm tra đọc đúng tệp có tên tiếng Việt, có khoảng trắng (`git ls-files -z`) và bỏ qua tệp đã xóa trên đĩa.
 - Kiểm tra liên kết, biểu mẫu chạy song song và thử lại khi máy chủ lỗi tạm thời; `make forms` báo rõ khi branch chưa đẩy lên GitHub; `make org-preview` kiểm tra đăng nhập GitHub CLI một lần; `check-markdown-links.py` hiểu liên kết mã hóa phần trăm; `check-gofmt.py` bỏ qua `vendor/`.
-- `validate.py` kiểm tra thêm: tên hàm, tham số, biến tự đặt camelCase (đọc cây cú pháp; tên do Python, thư viện quy định như `__init__`, `do_GET`, `http_open` giữ nguyên — ADR 0014); người quản trị trong `MAINTAINERS.md` khớp `org-setup.py team`; bộ nhãn chuẩn có đủ nhãn mặc định của GitHub; liên kết trong `CHANGELOG.md` là URL tuyệt đối; `security.txt` sắp hết hạn (trước 30 ngày). `make links` báo khi bản `security.txt` trên website khác bản trong repository.
+- `validate.py` kiểm tra thêm: tên hàm, tham số, biến tự đặt camelCase (đọc cây cú pháp; chỉ xét tên tự đặt, cú pháp của ngôn ngữ như `__init__`, `do_GET`, `http_open` giữ nguyên — ADR 0010); người quản trị trong `MAINTAINERS.md` khớp `org-setup.py team`; bộ nhãn chuẩn có đủ nhãn mặc định của GitHub; liên kết trong `CHANGELOG.md` là URL tuyệt đối; `security.txt` sắp hết hạn (trước 30 ngày). `make links` báo khi bản `security.txt` trên website khác bản trong repository.
 
 ### 🗑️ BỎ
 
