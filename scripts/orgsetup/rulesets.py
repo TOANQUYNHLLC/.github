@@ -30,8 +30,8 @@ ORG_PUSH_RULESET_NAME = 'Protect Pushes (Organization)'
 # bị bỏ qua) — cùng hai người quản trị; ruleset trên web tắt giới hạn hủy phê duyệt.
 ORG_BYPASS_ACTORS = [{'actor_id': 1, 'actor_type': 'OrganizationAdmin', 'bypass_mode': 'always'}]
 
-# Ruleset cấp tổ chức trên web (2026-10-03) có thêm code scanning: kết quả CodeQL của Pull Request không được
-# có cảnh báo mức errors hoặc cảnh báo bảo mật từ high trở lên. Bản cấp repository chưa có quy tắc này.
+# Ruleset cấp tổ chức có thêm code scanning: kết quả CodeQL của Pull Request không được
+# có cảnh báo mức errors hoặc cảnh báo bảo mật từ high trở lên. Bản cấp repository không có quy tắc này.
 ORG_CODE_SCANNING_RULE = {
 	'type': 'code_scanning',
 	'parameters': {

@@ -36,7 +36,7 @@ MERGE_SETTINGS = {
 	'merge_commit_message': 'PR_TITLE',
 }
 
-# Cài đặt mọi repository (khớp .github trên web, kiểm tra 2026-10-03; giữ allow_rebase_merge của ADR 0006).
+# Cài đặt mọi repository (allow_rebase_merge theo ADR 0006).
 REPOSITORY_SETTINGS = {
 	'has_issues': True,
 	'has_projects': False,
@@ -67,7 +67,7 @@ WORKFLOW_PERMISSIONS = {
 	'can_approve_pull_request_reviews': True,
 }
 
-# Cài đặt tổ chức đổi được qua API (khớp web, kiểm tra 2026-10-03).
+# Cài đặt tổ chức đổi được qua API.
 ORG_SETTINGS = {
 	'name': 'TOAN QUYNH CO., LTD',
 	'description': 'The Official Repository of TOAN QUYNH Co., Ltd',

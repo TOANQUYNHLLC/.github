@@ -5,6 +5,7 @@ cả hai có sẵn trên runner GitHub; trên máy dùng Python do mise cài, kh
 """
 
 import ast
+import builtins
 import hashlib
 import importlib.util
 import json
@@ -48,6 +49,22 @@ WORKFLOW_GENERAL_CATEGORIES = {
 }
 # Email liên hệ chung của công ty — mọi tài liệu phải dùng đúng địa chỉ này.
 COMPANY_EMAIL = 'toanquynhvn@gmail.com'
+# Nhãn mặc định GitHub tạo cho repository mới — bộ nhãn chuẩn phải có đủ để không mất nhãn quen thuộc.
+GITHUB_DEFAULT_LABELS = (
+	'bug',
+	'documentation',
+	'duplicate',
+	'enhancement',
+	'good first issue',
+	'help wanted',
+	'invalid',
+	'question',
+	'wontfix',
+)
+# Đường dẫn trong tài liệu bắt đầu bằng các thư mục này phải có thật trong repository.
+DOC_PATH = re.compile(
+	r'`((?:scripts|docs|rulesets|workflow-templates|repository-templates|\.github/workflows)/[^`\s*<>…]*)`'
+)
 # security.txt: báo trước khi Expires hết hạn để kịp gia hạn và đăng lại lên website.
 EXPIRY_NOTICE_DAYS = 30
 errors = []
@@ -858,6 +875,57 @@ def checkRulesets():
 				)
 
 
+def checkDocsMatchCode():
+	"""Tài liệu khớp code: lệnh make, đường dẫn, hàm được nhắc tới phải có thật; README.md liệt kê đủ lệnh make,
+	script và workflow của repository."""
+	makefile = ROOT / 'Makefile'
+	targets = (
+		set(re.findall(r'^([a-z-]+):.*## ', makefile.read_text(encoding='utf-8'), re.MULTILINE))
+		if makefile.exists()
+		else set()
+	)
+	scripts = sorted(
+		path
+		for path in (ROOT / 'scripts').rglob('*.py')
+		if not path.name.startswith('test_') and '__pycache__' not in path.parts
+	)
+	functions = {
+		name
+		for path in scripts
+		for name in re.findall(r'^\s*def (\w+)\(', path.read_text(encoding='utf-8'), re.MULTILINE)
+	}
+	for path in (file for file in trackedFiles() if file.suffix == '.md'):
+		text = path.read_text(encoding='utf-8')
+		for target in sorted(set(re.findall(r'`make ([a-z][a-z-]*)', text))):
+			if targets and target not in targets:
+				error(path, f'nhắc "make {target}" nhưng Makefile không có lệnh này')
+		for reference in sorted(set(DOC_PATH.findall(text))):
+			# Tên branch ví dụ (docs/update_readme) trông như đường dẫn.
+			if '_' in reference and conventions.BRANCH_PATTERN.match(reference):
+				continue
+			if not (ROOT / reference.rstrip('/')).exists():
+				error(path, f'nhắc "{reference}" nhưng tệp, thư mục này không có')
+		for name in sorted(set(re.findall(r'`([a-z][A-Za-z0-9]*)\(\)`', text))):
+			if name not in functions and not hasattr(builtins, name):
+				error(path, f'nhắc hàm "{name}()" nhưng không script nào trong scripts/ định nghĩa')
+	readmePath = ROOT / 'README.md'
+	if not readmePath.exists():
+		return
+	readme = readmePath.read_text(encoding='utf-8')
+	# make help là lệnh mặc định — README ghi dạng `make`.
+	for target in sorted(targets - {'help'}):
+		if f'`make {target}' not in readme:
+			error(readmePath, f'bảng lệnh thiếu "make {target}" (có trong Makefile)')
+	for path in scripts:
+		relative = path.relative_to(ROOT).as_posix()
+		folder = path.parent.relative_to(ROOT).as_posix() + '/'
+		if f'`{relative}`' not in readme and (folder == 'scripts/' or f'`{folder}`' not in readme):
+			error(readmePath, f'mục cấu trúc thiếu {relative}')
+	for workflow in sorted((ROOT / '.github' / 'workflows').glob('*.yml')):
+		if f'`.github/workflows/{workflow.name}`' not in readme:
+			error(readmePath, f'mục cấu trúc thiếu .github/workflows/{workflow.name}')
+
+
 def checkAdrIndex():
 	"""Bảng trong docs/adr/README.md phải liệt kê mọi ADR, cùng ngày và cùng trạng thái với từng tệp."""
 	folder = ROOT / 'docs' / 'adr'
@@ -1162,6 +1230,9 @@ def checkLabelUsage():
 	if not labelFile.exists():
 		return
 	known = checkLabels(labelFile)
+	for label in GITHUB_DEFAULT_LABELS:
+		if label not in known:
+			error(labelFile, f'thiếu nhãn mặc định của GitHub "{label}"')
 	for formPath, label in FORM_LABELS + configLabels():
 		if label.lower() not in known:
 			error(formPath, f'nhãn "{label}" chưa có trong labels.yml')
@@ -1184,6 +1255,7 @@ def runChecks():
 		checkConventions,
 		checkRulesets,
 		checkMaintainers,
+		checkDocsMatchCode,
 		checkAdrIndex,
 		checkRequiredFiles,
 		checkLabelUsage,

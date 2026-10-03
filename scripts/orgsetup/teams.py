@@ -10,7 +10,7 @@ MAINTAINERS = ('nguyentrongtoandl', 'trongtoandl81')
 # Team ghi trong CODEOWNERS.
 TEAM = 'maintainers'
 
-# Team của tổ chức (khớp web, kiểm tra 2026-10-03): slug → (tên, quyền trên mọi repository, hiển thị, mô tả
+# Team của tổ chức: slug → (tên, quyền trên mọi repository, hiển thị, mô tả
 # khi tạo). Mọi team gồm hai người quản trị với vai trò maintainer.
 TEAMS = {
 	'admins': (

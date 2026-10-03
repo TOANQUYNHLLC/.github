@@ -5,5 +5,6 @@ Làm theo [`AGENTS.md`](../AGENTS.md) — lệnh kiểm tra, quy ước bắt bu
 ## 👀 KHI ĐÁNH GIÁ PULL REQUEST
 
 - Nhận xét bằng tiếng Việt.
-- Ưu tiên lỗi mà `make check` không bắt được: logic sai, mô tả trong tài liệu khác với mã, thay đổi ảnh hưởng mọi repository của tổ chức.
+- Ưu tiên lỗi mà `make check` không bắt được: logic sai, thay đổi ảnh hưởng mọi repository của tổ chức.
+- Đối chiếu tài liệu với code của Pull Request (README, `AGENTS.md`, ADR, docstring, chú thích): chỉ ra mọi chỗ mô tả không còn đúng.
 - Cảnh báo khi Pull Request chứa mật khẩu, token, dữ liệu cá nhân hoặc thông tin y tế.

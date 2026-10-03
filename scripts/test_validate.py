@@ -515,6 +515,36 @@ class ValidateTest(unittest.TestCase):
 		self.editRegex('MAINTAINERS.md', r'^\| .+\[@trongtoandl81\].+\n', '')
 		self.assertFails('người quản trị "trongtoandl81" chỉ có ở một trong MAINTAINERS.md')
 
+	def testDocsMustMatchCode(self):
+		# Lệnh make, đường dẫn, hàm nhắc trong tài liệu phải có thật.
+		self.edit(
+			'ROADMAP.md',
+			'# 🗺️ LỘ TRÌNH\n',
+			'# 🗺️ LỘ TRÌNH\n\nChạy `make deploy`, xem `scripts/deploy.py`, hàm `deployAll()`.\n',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 1, output)
+		self.assertIn('nhắc "make deploy" nhưng Makefile không có lệnh này', output)
+		self.assertIn('nhắc "scripts/deploy.py" nhưng tệp, thư mục này không có', output)
+		self.assertIn('nhắc hàm "deployAll()" nhưng không script nào', output)
+
+	def testReadmeListsEveryTargetScriptWorkflow(self):
+		self.edit('Makefile', 'help: ##', 'deploy: ## Triển khai\n\techo deploy\n\nhelp: ##')
+		(self.repo / 'scripts' / 'deploy.py').write_text('"""Triển khai."""\n', encoding='utf-8')
+		(self.repo / '.github' / 'workflows' / 'deploy.yml').write_text(
+			(self.repo / '.github' / 'workflows' / 'stale.yml').read_text(encoding='utf-8'),
+			encoding='utf-8',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 1, output)
+		self.assertIn('bảng lệnh thiếu "make deploy"', output)
+		self.assertIn('mục cấu trúc thiếu scripts/deploy.py', output)
+		self.assertIn('mục cấu trúc thiếu .github/workflows/deploy.yml', output)
+
+	def testLabelsKeepGithubDefaults(self):
+		self.editRegex('labels.yml', r'^- name: wontfix\n(  .+\n)+', '')
+		self.assertFails('thiếu nhãn mặc định của GitHub "wontfix"')
+
 	def testAdrIndexListsEveryAdr(self):
 		# Số 9999 không trùng ADR thật nào — test không phải sửa mỗi khi thêm ADR.
 		(self.repo / 'docs' / 'adr' / '9999-thu.md').write_text(
