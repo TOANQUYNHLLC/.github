@@ -1,6 +1,6 @@
 # 0012. KIỂM TRA VIẾT BẰNG PYTHON TRONG SCRIPTS/; TÊN HÀM CAMELCASE TIẾNG ANH
 
-- **Trạng thái:** Bị thay thế một phần bởi [0013](0013-no-checks-in-yaml.md) (bỏ ngoại lệ lệnh viết thẳng trong workflow mẫu)
+- **Trạng thái:** Bị thay thế một phần bởi [0013](0013-no-checks-in-yaml.md) (bỏ ngoại lệ lệnh viết thẳng trong workflow mẫu) và [0014](0014-python-only-scripts-git-hooks.md) (bỏ ngoại lệ hook git bằng shell)
 - **Ngày:** 2026-10-03
 
 ## 📌 BỐI CẢNH

@@ -129,7 +129,10 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails('Expires đã hết hạn')
 
 	def testShellMustIndentWithTabs(self):
-		self.edit('scripts/pre-commit.sh', '\texit 0', '    exit 0')
+		path = self.repo / '.devcontainer' / 'post-create.sh'
+		path.write_text(
+			path.read_text(encoding='utf-8') + 'if true; then\n    echo x\nfi\n', encoding='utf-8'
+		)
 		self.assertFails('thụt lề phải dùng tab')
 
 	def testPrettierMustUseTabWidth4(self):
@@ -239,6 +242,16 @@ class ValidateTest(unittest.TestCase):
 	def testMiseToolsMatchVersionCheck(self):
 		self.edit('mise.toml', 'actionlint = ', 'taplo = "0.10.0"\nactionlint = ')
 		self.assertFails('scripts/check-tool-versions.py: REPOSITORIES thiếu taplo')
+
+	def testScriptsMustBePython(self):
+		(self.repo / 'scripts' / 'check-x.sh').write_text(
+			'#!/usr/bin/env bash\necho x\n', encoding='utf-8'
+		)
+		self.assertFails('scripts/check-x.sh: script trong scripts/ phải viết bằng Python')
+
+	def testShellOnlyInDevcontainer(self):
+		(self.repo / 'tools.sh').write_text('#!/usr/bin/env bash\necho x\n', encoding='utf-8')
+		self.assertFails('tools.sh: shell script chỉ dùng trong .devcontainer/')
 
 	def testFunctionNamesMustBeCamelCase(self):
 		self.edit('scripts/release.py', 'def releaseNotes(', 'def release_notes(')
@@ -383,7 +396,7 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails('SUPPORT.md: có BOM UTF-8')
 
 	def testShellMustHaveShebang(self):
-		self.edit('scripts/pre-commit.sh', '#!/usr/bin/env bash\n', '')
+		self.edit('.devcontainer/post-create.sh', '#!/usr/bin/env bash\n', '')
 		self.assertFails('shell script thiếu shebang')
 
 	def testSecurityTxtExpiresWithinOneYear(self):
