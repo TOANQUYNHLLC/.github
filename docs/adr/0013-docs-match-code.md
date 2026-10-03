@@ -11,6 +11,7 @@ Repository này vừa là code (script kiểm tra, workflow) vừa là tài li�
 
 - Mỗi lần sửa code, người sửa (kể cả AI agent) kiểm tra mọi tài liệu liên quan — `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `docs/adr/`, `rulesets/README.md`, docstring, chú thích — còn đúng với code hiện tại; sai thì sửa trong cùng Pull Request.
 - Không ghi con số dễ lệch (số nhãn, số team, số quyết định…) vào câu chữ khi không cần.
+- Tài liệu chỉ mô tả hiện trạng: thứ code không còn (tệp, lệnh, tính năng, cài đặt đã bỏ) xoá khỏi tài liệu, kể cả mục **CHƯA PHÁT HÀNH** của `CHANGELOG.md`; lịch sử thay đổi nằm trong git và GitHub Release.
 - `validate.py` (`checkDocsMatchCode()`) kiểm tra phần đối chiếu được bằng máy:
     - Lệnh `make …`, đường dẫn trong `scripts/`, `docs/`, `rulesets/`, `workflow-templates/`, `repository-templates/`, `.github/workflows/` và hàm `tênHàm()` được nhắc trong tài liệu Markdown phải có thật.
     - `README.md` liệt kê đủ lệnh trong `Makefile`, script trong `scripts/` và workflow trong `.github/workflows/`.

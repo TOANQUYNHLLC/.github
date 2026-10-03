@@ -19,10 +19,6 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - `make release-pr`: chuẩn bị và mở Pull Request phát hành tại máy khi GitHub Actions tắt.
 - Workflow mẫu `docs-check.yml`, `go-ci.yml` gọi `check-markdown-links.py`, `check-gofmt.py` của tổ chức (đọc đúng tên tệp tiếng Việt; anchor tiêu đề tính đúng như GitHub, kể cả tiêu đề có emoji hoặc liên kết; bỏ qua `vendor/`).
 
-### 🗑️ BỎ
-
-- GitHub Pages của repository `.github`.
-
 ---
 
 ## [v2026.10.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2026.10.Stable) — 2026-10-03
