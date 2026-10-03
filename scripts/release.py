@@ -97,7 +97,20 @@ def prepareRelease(version, date):
 	if runCommand('git', 'tag', '--list', version):
 		print(f'Đã có tag {version} — bỏ qua.')
 		return 0
-	previous = runCommand('git', 'describe', '--tags', '--abbrev=0', '--match', 'v*')
+	described = subprocess.run(
+		['git', 'describe', '--tags', '--abbrev=0', '--match', 'v*'],
+		cwd=ROOT,
+		capture_output=True,
+		text=True,
+		check=False,
+	)
+	if described.returncode != 0:
+		reportMessage(
+			'error',
+			'Chưa có tag v* nào — gắn tag phát hành đầu tiên bằng tay (README → PHÁT HÀNH) rồi chạy lại.',
+		)
+		return 1
+	previous = described.stdout.strip()
 	commits = int(runCommand('git', 'rev-list', '--count', f'{previous}..HEAD'))
 	if not commits:
 		print(f'Không có thay đổi kể từ {previous} — bỏ qua.')

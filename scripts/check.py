@@ -72,15 +72,20 @@ def runGroups(groups):
 		for command in checkGroups()[name]:
 			print(f'$ {" ".join(command)}', flush=True)
 			if subprocess.run(command, cwd=ROOT, check=False).returncode != 0:
-				failed.append(
-					f'{name}: {command[0]} {command[1] if len(command) > 1 else ""}'.strip()
-				)
+				failed.append(f'{name}: {" ".join(command)[:80]}')
 	for item in failed:
 		print(f'❌ {item}')
 	return not failed
 
 
 def main():
+	# validate.py, test cần Python ≥ 3.11 (tomllib, datetime.UTC); python3 của macOS là 3.9. Git hook chạy từ
+	# ứng dụng giao diện (VS Code…) có thể không có PATH của mise nên dễ gặp bản cũ.
+	if sys.version_info < (3, 11):  # noqa: UP036 — cố ý: chặn khi bị chạy bằng Python cũ
+		print(
+			f'Cần Python ≥ 3.11 (đang dùng {sys.version.split()[0]}) — chạy mise install, mở terminal có mise.'
+		)
+		return 1
 	names = sys.argv[1:] or list(checkGroups())
 	unknown = [name for name in names if name not in (*checkGroups(), 'tools')]
 	if unknown:

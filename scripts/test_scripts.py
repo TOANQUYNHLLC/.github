@@ -671,6 +671,22 @@ class ReleaseTest(unittest.TestCase):
 			changelog.index('## [v2099.02.Stable]'), changelog.index('## [v2099.01.Stable]')
 		)
 
+	def testPrepareWithoutTagReportsClearly(self):
+		# Repository chưa có tag v*: báo rõ cần gắn tag đầu tiên, không văng lỗi git.
+		with tempfile.TemporaryDirectory() as folder:
+			subprocess.run(['git', 'init', '-q'], cwd=folder, check=True)
+			subprocess.run(
+				['git', '-c', 'commit.gpgsign=false', 'commit', '-q', '--allow-empty', '-m', 'x'],
+				cwd=folder,
+				check=True,
+			)
+			self.module.ROOT = Path(folder)
+			output = io.StringIO()
+			with contextlib.redirect_stdout(output):
+				code = self.module.prepareRelease('v2099.01.Stable', '2099-01-01')
+		self.assertEqual(code, 1)
+		self.assertIn('Chưa có tag v* nào', output.getvalue())
+
 	def testEmptyUnreleasedSection(self):
 		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'v2099.02.Stable', '2099-02-01')
 		self.assertEqual(self.module.unreleasedNotes(changelog), '')
@@ -694,6 +710,8 @@ class ConventionsTest(unittest.TestCase):
 		# Branch của Dependabot và nhánh chính được bỏ qua.
 		self.assertTrue(self.check(self.module.checkBranch, 'dependabot/npm_and_yarn/x-1.0'))
 		self.assertTrue(self.check(self.module.checkBranch, 'main'))
+		# HEAD không ở branch nào (đang rebase): không có tên để kiểm tra, không báo lỗi.
+		self.assertTrue(self.check(self.module.checkBranch, ''))
 
 	def testTitles(self):
 		for title in ('feat: thêm', 'fix(booking)!: sửa', 'revert: feat: thêm'):

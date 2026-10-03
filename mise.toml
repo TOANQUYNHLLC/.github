@@ -2,7 +2,7 @@
 # Cài mise (https://mise.jdx.dev) rồi chạy: mise install
 # Node.js lấy từ .nvmrc (dùng chung với actions/setup-node); thư viện Node.js ghi trong package.json.
 [tools]
-python = "3"
+python = "3.14"
 ruff = "0.16.10"
 shellcheck = "0.11.0"
 actionlint = "1.7.12"

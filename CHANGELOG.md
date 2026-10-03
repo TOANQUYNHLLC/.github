@@ -8,6 +8,12 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2026.10.Stable...HEAD)
 
+### 🐛 SỬA LỖI
+
+- `conventions.py branch` không báo lỗi khi HEAD không ở branch nào (đang rebase); `conventions.py title` bỏ qua merge commit (nút **Update branch** của GitHub tạo "Merge branch 'main' into …") — trước đây `make check`, hook `pre-push` chặn oan.
+- `release.py prepare` báo rõ khi repository chưa có tag `v*` thay vì văng lỗi git.
+- `check.py`, `validate.py` báo rõ khi chạy bằng Python cũ hơn 3.11 (python3 của macOS là 3.9; git hook chạy từ ứng dụng giao diện có thể không có PATH của mise); `mise.toml` ghim Python 3.14 như các công cụ khác.
+
 ### 🗑️ BỎ
 
 - GitHub Pages của repository `.github` (tên miền `toanquynh.com` trỏ về hosting riêng nên Pages không phục vụ được, không có workflow triển khai): đã xóa trên web cùng môi trường `github-pages`; `org-setup.py settings` không còn so Pages.
