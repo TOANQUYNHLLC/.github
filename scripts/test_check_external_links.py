@@ -50,10 +50,31 @@ QuietHandler = handlerClass(answerOk)
 
 class ExternalLinksTest(unittest.TestCase):
 	def testUnreachableAddressIsSkippedAndRemembered(self):
-		# Địa chỉ đầu không kết nối được (như IPv6 hỏng của conventionalcommits.org): linkStatus chuyển sang
-		# địa chỉ sau và nhớ địa chỉ hỏng — chứng minh opener thật sự kết nối qua connectQuickly.
+		# Địa chỉ đầu không kết nối được: linkStatus chuyển sang địa chỉ sau và nhớ địa chỉ hỏng — chứng minh
+		# opener thật sự kết nối qua connectQuickly. Cổng đóng trên 127.0.0.1 thay cho địa chỉ hỏng.
 		module = loadScript('check-external-links')
 		# TCPServer thay HTTPServer: HTTPServer tra tên máy (getfqdn), trên macOS mất vài giây.
+		server = socketserver.TCPServer(('127.0.0.1', 0), QuietHandler)
+		threading.Thread(target=server.serve_forever, daemon=True).start()
+		port = server.server_address[1]
+		with socket.socket() as probe:
+			probe.bind(('127.0.0.1', 0))
+			closed = probe.getsockname()[1]
+		candidates = [
+			(socket.AF_INET, socket.SOCK_STREAM, 0, '', ('127.0.0.1', closed)),
+			(socket.AF_INET, socket.SOCK_STREAM, 0, '', ('localhost', port)),
+		]
+		try:
+			with mock.patch.object(module.socket, 'getaddrinfo', return_value=candidates):
+				self.assertEqual(module.linkStatus(f'http://example.test:{port}/'), 200)
+		finally:
+			server.shutdown()
+			server.server_close()
+		self.assertEqual(module.UNREACHABLE, {'127.0.0.1'})
+
+	def testIpv4IsTriedFirst(self):
+		# Máy chủ có IPv6 hỏng (như conventionalcommits.org): thử IPv4 trước nên không phải chờ IPv6.
+		module = loadScript('check-external-links')
 		server = socketserver.TCPServer(('127.0.0.1', 0), QuietHandler)
 		threading.Thread(target=server.serve_forever, daemon=True).start()
 		port = server.server_address[1]
@@ -67,7 +88,7 @@ class ExternalLinksTest(unittest.TestCase):
 		finally:
 			server.shutdown()
 			server.server_close()
-		self.assertEqual(module.UNREACHABLE, {'::1'})
+		self.assertEqual(module.UNREACHABLE, set())
 
 	def testFallsBackToGetAndRetriesServerErrors(self):
 		# HEAD bị từ chối (404) nhưng GET đọc được: liên kết còn sống. GET lỗi 503 lần đầu: thử lại rồi đạt.

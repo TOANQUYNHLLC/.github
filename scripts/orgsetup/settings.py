@@ -2,6 +2,7 @@
 
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from orgsetup import github
 
@@ -169,14 +170,23 @@ def syncActions(endpoint, wanted, enabledKey, apply):
 	"""Quyền GitHub Actions tại endpoint (repository hoặc tổ chức) và quyền mặc định của GITHUB_TOKEN;
 	gửi lại enabledKey đang có — API bắt buộc trường này nhưng script không bật, tắt Actions."""
 	changed = skipped = unread = False
-	for path, target, keep in (
+	targets = (
 		(endpoint, wanted, enabledKey),
 		(f'{endpoint}/workflow', WORKFLOW_PERMISSIONS, None),
-	):
+	)
+
+	def read(path):
 		try:
-			current = github.ghJson('api', path) or {}
+			return github.ghJson('api', path) or {}
 		except RuntimeError as exc:
-			print(f'   ⚠ không đọc được {path}: {exc}')
+			return exc
+
+	# Đọc hai nhóm quyền cùng lúc; so và ghi vẫn lần lượt.
+	with ThreadPoolExecutor(max_workers=len(targets)) as pool:
+		readings = list(pool.map(read, [path for path, _, _ in targets]))
+	for (path, target, keep), current in zip(targets, readings, strict=True):
+		if isinstance(current, Exception):
+			print(f'   ⚠ không đọc được {path}: {current}')
 			unread = True
 			continue
 		# Actions đang tắt: GitHub không trả allowed_actions, sha_pinning_required — so khi bật lại.
@@ -238,21 +248,28 @@ def syncSecurity(repo, current, apply):
 	private = bool(current.get('private'))
 	for label in sorted(set(SECURITY_ENDPOINTS) - set(securityEndpoints(private))):
 		print(f'   – bỏ qua {label}: chỉ dành cho repository công khai')
-	endpoints, unread = {}, False
-	for label, endpoint in securityEndpoints(private).items():
+
+	def securityStatus(endpoint):
+		"""True/False theo trạng thái bật; lỗi đọc thì trả lỗi để báo theo thứ tự."""
 		if endpoint in STATUS_ONLY_ENDPOINTS:
-			if not github.ghExists(f'repos/{github.ORG}/{repo}/{endpoint}'):
-				endpoints[label] = endpoint
-			continue
+			return github.ghExists(f'repos/{github.ORG}/{repo}/{endpoint}')
 		try:
-			enabled = (github.ghJson('api', f'repos/{github.ORG}/{repo}/{endpoint}') or {}).get(
-				'enabled'
+			return bool(
+				(github.ghJson('api', f'repos/{github.ORG}/{repo}/{endpoint}') or {}).get('enabled')
 			)
 		except RuntimeError as exc:
-			print(f'   ⚠ không đọc được trạng thái {label}: {exc}')
+			return exc
+
+	# Đọc mọi trạng thái cùng lúc — mỗi lần chờ GitHub gần một giây.
+	wanted = securityEndpoints(private)
+	with ThreadPoolExecutor(max_workers=max(1, len(wanted))) as pool:
+		statuses = list(pool.map(securityStatus, wanted.values()))
+	endpoints, unread = {}, False
+	for (label, endpoint), status in zip(wanted.items(), statuses, strict=True):
+		if isinstance(status, Exception):
+			print(f'   ⚠ không đọc được trạng thái {label}: {status}')
 			unread = True
-			continue
-		if not enabled:
+		elif not status:
 			endpoints[label] = endpoint
 	if not off and not endpoints and not unread:
 		print('   ✔ tính năng bảo mật đã bật')

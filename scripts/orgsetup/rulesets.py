@@ -2,6 +2,7 @@
 
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from orgsetup import files, github
 
@@ -278,14 +279,21 @@ def syncRulesets(repos, apply):
 			or []
 		}
 		wanted = rulesetsFor(repo)
-		for source, ruleset in wanted:
+		# Đọc mọi ruleset đang có cùng lúc; so và ghi vẫn lần lượt.
+		paths = [
+			f'repos/{github.ORG}/{repo}/rulesets/{existing[ruleset["name"]]}'
+			if ruleset['name'] in existing
+			else None
+			for _, ruleset in wanted
+		]
+		with ThreadPoolExecutor(max_workers=len(paths)) as pool:
+			lives = list(pool.map(lambda path: github.ghJson('api', path) if path else None, paths))
+		for (source, ruleset), live in zip(wanted, lives, strict=True):
 			name = ruleset['name']
 			action = 'cập nhật' if name in existing else 'tạo'
-			if name in existing:
-				live = github.ghJson('api', f'repos/{github.ORG}/{repo}/rulesets/{existing[name]}')
-				if rulesetSummary(live) == rulesetSummary(ruleset):
-					print(f'   ✔ ruleset "{name}" đã đúng')
-					continue
+			if name in existing and rulesetSummary(live) == rulesetSummary(ruleset):
+				print(f'   ✔ ruleset "{name}" đã đúng')
+				continue
 			if not apply:
 				print(
 					f'   (xem trước) {action} ruleset "{name}" từ {source.relative_to(github.ROOT)}'

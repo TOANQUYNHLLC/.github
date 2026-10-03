@@ -16,6 +16,7 @@ import sys
 import tomllib
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -54,20 +55,28 @@ def versionKey(version):
 
 def main():
 	tools = tomllib.loads((ROOT / 'mise.toml').read_text(encoding='utf-8')).get('tools', {})
-	outdated = 0
-	for tool, repository in REPOSITORIES.items():
-		current = str(tools.get(tool, ''))
+
+	def latest(repository):
 		try:
-			latest = latestRelease(repository)
+			return latestRelease(repository)
 		except (urllib.error.URLError, TimeoutError, KeyError, json.JSONDecodeError) as exc:
 			if isinstance(exc, urllib.error.HTTPError):
 				exc.close()  # lỗi HTTP giữ phản hồi đang mở
+			return exc
+
+	cliToken()  # đọc token một lần trước khi các luồng cùng cần
+	# Hỏi GitHub song song — mỗi lần chờ mạng gần một giây.
+	with ThreadPoolExecutor(max_workers=len(REPOSITORIES)) as pool:
+		releases = list(pool.map(latest, REPOSITORIES.values()))
+	outdated = 0
+	for tool, release in zip(REPOSITORIES, releases, strict=True):
+		current = str(tools.get(tool, ''))
+		if isinstance(release, Exception):
 			outdated += 1
-			print(f'❌ {tool}: không đọc được bản phát hành mới nhất ({exc})')
-			continue
-		if versionKey(current) < versionKey(latest):
+			print(f'❌ {tool}: không đọc được bản phát hành mới nhất ({release})')
+		elif versionKey(current) < versionKey(release):
 			outdated += 1
-			print(f'⬆️  {tool} {current} → {latest}: sửa mise.toml rồi chạy mise install')
+			print(f'⬆️  {tool} {current} → {release}: sửa mise.toml rồi chạy mise install')
 		else:
 			print(f'✅ {tool} {current}')
 	print(f'{"✅ Công cụ đều mới nhất" if not outdated else f"❌ {outdated} công cụ cần xem lại"}.')

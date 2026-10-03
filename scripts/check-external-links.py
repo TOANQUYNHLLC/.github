@@ -35,12 +35,15 @@ UNREACHABLE = set()
 
 
 def connectQuickly(address, timeout, sourceAddress=None):
-	"""Như socket.create_connection nhưng mỗi địa chỉ chỉ chờ CONNECT_TIMEOUT giây và nhớ địa chỉ hỏng: máy chủ
-	có IPv6 hỏng (ví dụ conventionalcommits.org) thì urllib thử lần lượt, mỗi địa chỉ chờ trọn timeout mới sang
-	IPv4 — curl, trình duyệt thử song song nên không chậm."""
+	"""Như socket.create_connection nhưng thử IPv4 trước, mỗi địa chỉ chỉ chờ CONNECT_TIMEOUT giây và nhớ địa chỉ
+	hỏng: urllib thử địa chỉ lần lượt (IPv6 trước), nên máy chủ có IPv6 hỏng (ví dụ conventionalcommits.org) làm
+	mỗi liên kết chờ thêm vài giây — curl, trình duyệt thử song song nên không chậm."""
 	host, port = address
 	candidates = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
-	candidates.sort(key=lambda candidate: candidate[4][0] in UNREACHABLE)
+	# IPv4 trước (máy chủ có IPv6 hỏng không làm mỗi liên kết chờ thêm vài giây); địa chỉ đã hỏng thử sau cùng.
+	candidates.sort(
+		key=lambda candidate: (candidate[4][0] in UNREACHABLE, candidate[0] != socket.AF_INET)
+	)
 	error = OSError(f'không có địa chỉ cho {host}')
 	for family, kind, protocol, _, socketAddress in candidates:
 		connection = socket.socket(family, kind, protocol)

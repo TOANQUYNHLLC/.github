@@ -9,6 +9,7 @@ import io
 import json
 import re
 import subprocess
+import time
 import unittest
 from unittest import mock
 
@@ -380,26 +381,29 @@ class OrgSetupTest(unittest.TestCase):
 		)
 
 	def testPreviewRunsEveryCommandInOrder(self):
-		# make org-preview: mọi lệnh chạy song song nhưng in đúng thứ tự COMMANDS; một lệnh lỗi thì mã thoát 1.
+		# make org-preview: mọi lệnh chạy song song trong một tiến trình nhưng in đúng thứ tự COMMANDS, đầu ra
+		# của từng lệnh không lẫn nhau; một lệnh lỗi thì mã thoát 1.
 		module = loadScript('org-setup')
 
-		def run(command, **kwargs):
-			name = command[-1]
-			return subprocess.CompletedProcess(
-				command, int(name == 'team'), f'kết quả {name}\n', ''
-			)
+		def run(command, repos, apply, discussions=False):
+			# Lệnh đầu chậm nhất: nếu đầu ra không tách theo luồng, dòng của nó sẽ in sau cùng.
+			time.sleep(0.2 if command == module.COMMANDS[0] else 0)
+			print(f'kết quả {command}')
+			if command == 'team':
+				raise RuntimeError('gh lỗi')
 
 		output = io.StringIO()
 		with (
-			mock.patch.object(module.subprocess, 'run', run),
+			mock.patch.object(module, 'runCommand', run),
 			contextlib.redirect_stdout(output),
 			contextlib.redirect_stderr(io.StringIO()),
 		):
-			code = module.previewAll()
+			code = module.previewAll(['app'])
 		self.assertEqual(code, 1)
 		self.assertEqual(
 			re.findall(r'^kết quả (\S+)$', output.getvalue(), re.MULTILINE), list(module.COMMANDS)
 		)
+		self.assertIn('❌ gh lỗi', output.getvalue())
 		self.assertEqual(
 			subprocess.run(
 				['make', '-n', 'org-preview'], cwd=ROOT, capture_output=True, text=True, check=True
@@ -408,11 +412,11 @@ class OrgSetupTest(unittest.TestCase):
 		)
 
 	def testPreviewChecksLoginOnce(self):
-		# Chưa đăng nhập GitHub CLI: dừng trước khi chạy song song các lệnh, báo một lần.
+		# Chưa đăng nhập GitHub CLI: dừng trước khi chạy lệnh nào, báo một lần.
 		module = loadScript('org-setup')
 		with (
 			mock.patch.object(module.github, 'gh', side_effect=RuntimeError('chưa đăng nhập')),
-			mock.patch.object(module.subprocess, 'run') as run,
+			mock.patch.object(module, 'runCommand') as run,
 			mock.patch.object(module.sys, 'argv', ['org-setup.py', 'preview']),
 			self.assertRaises(SystemExit) as stopped,
 		):
