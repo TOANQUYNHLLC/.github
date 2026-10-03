@@ -400,7 +400,7 @@ def checkToolVersions():
 		*(
 			path
 			for path in (ROOT / 'scripts').glob('*.py')
-			if path.name not in ('validate.py', 'test_validate.py')
+			if path.name not in ('validate.py', 'test_scripts.py')
 		),
 		ROOT / 'Makefile',
 	]

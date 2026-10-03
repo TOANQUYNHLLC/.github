@@ -35,7 +35,7 @@ Khác với bản cấp repository:
 - Không dùng actor loại `User` (import báo "contains an invalid actor"): danh sách bỏ qua là **chủ tổ chức** (`OrganizationAdmin`) — cùng hai người quản trị như bản cấp repository; không giới hạn người hủy phê duyệt.
 - Protect Release Tags (Organization) có thêm quy tắc kiểm tra bắt buộc với danh sách rỗng như trên web — quy tắc này không chặn gì, có thể xóa trên web rồi bỏ trong `orgTagRuleset()`.
 - Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `orgRulesets()` trong `scripts/org-setup.py` và khớp ruleset đang cài trên web; test bảo đảm tệp khớp `orgRulesets()` — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức.
-- Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json` và `org-protect-pushes.json`. REST API ruleset cấp tổ chức trả HTTP 403 ở gói Free (dù token có quyền `admin:org`), nên `python3 scripts/org-setup.py org-rulesets` chỉ so tệp với ruleset trên web (đọc qua GraphQL); `--apply` chỉ tạo, cập nhật được khi tổ chức dùng gói Team.
+- Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json` và `org-protect-pushes.json`. Ở gói Free, ghi ruleset cấp tổ chức qua REST (HTTP 403, dù token có quyền `admin:org`) lẫn GraphQL (`updateRepositoryRuleset`, `createRepositoryRuleset`) đều bị chặn, nên `python3 scripts/org-setup.py org-rulesets` chỉ so tệp với ruleset trên web (đọc qua GraphQL); `--apply` chỉ tạo, cập nhật được khi tổ chức dùng gói Team.
 
 ## 📤 PROTECT PUSHES (CẤP TỔ CHỨC)
 

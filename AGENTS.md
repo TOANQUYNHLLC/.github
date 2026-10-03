@@ -44,5 +44,5 @@ Repository `.github` đặc biệt của tổ chức: tệp cộng đồng (`CON
 - Không đưa mật khẩu, token, khóa API, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế vào repository.
 - Không bỏ qua kiểm tra (`--no-verify`), không bỏ ký commit (`--no-gpg-sign`), không force push lên `main`.
 - Không sửa `LICENSE` và không bịa thông tin công ty, người liên hệ, liên kết — chỉ dùng thông tin đã có trong repository.
-- Không xóa hoặc nới lỏng test trong `scripts/test_validate.py` để kiểm tra thành công.
+- Không xóa hoặc nới lỏng test trong `scripts/test_scripts.py` để kiểm tra thành công.
 - Không thêm tệp không có chức năng cụ thể (cấu hình toàn chú thích, bản sao của tệp khác, script không ai gọi).
