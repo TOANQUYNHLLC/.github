@@ -234,8 +234,16 @@ class ValidateTest(unittest.TestCase):
 		self.assert_fails('.editorconfig: thiếu .cmd trong mục "end_of_line = crlf"')
 
 	def test_loai_commit_phai_khop_contributing(self):
-		self.edit('.github/workflows/pr-title.yml', '|revert)', ')')
-		self.assert_fails('.github/workflows/pr-title.yml: thiếu "revert" so với CONTRIBUTING.md')
+		self.edit('scripts/check-pr-title.sh', '|revert)', ')')
+		self.assert_fails('scripts/check-pr-title.sh: thiếu "revert" so với CONTRIBUTING.md')
+
+	def test_workflow_khong_viet_shell_nhieu_dong(self):
+		self.edit(
+			'.github/workflows/validate.yml',
+			'run: python3 scripts/validate.py',
+			'run: |\n                  python3 scripts/validate.py',
+		)
+		self.assert_fails('validate.yml: dòng 30: đoạn shell nhiều dòng')
 
 	def test_tien_to_branch_phai_khop_contributing(self):
 		self.edit('workflow-templates/branch-name.yml', '|release)', ')')
@@ -683,6 +691,37 @@ class OrgSetupTest(unittest.TestCase):
 		)
 		self.assertIn('automated-security-fixes', self.module.security_endpoints(True).values())
 		self.assertIn('immutable-releases', self.module.security_endpoints(True).values())
+		# Dependabot security updates cần Dependabot alerts bật trước.
+		endpoints = list(self.module.security_endpoints(False).values())
+		self.assertLess(
+			endpoints.index('vulnerability-alerts'), endpoints.index('automated-security-fixes')
+		)
+
+	def test_cai_dat_repository_rieng_va_chung(self):
+		own = self.module.repository_settings('.github')
+		other = self.module.repository_settings('app')
+		self.assertFalse(own['allow_rebase_merge'])
+		self.assertTrue(own['has_discussions'])
+		self.assertNotIn('has_discussions', other)
+		self.assertNotIn('homepage', other)
+		self.assertTrue(self.module.repository_settings('app', discussions=True)['has_discussions'])
+		self.assertIn('rulesets', self.module.citation_keywords())
+
+	def test_quyen_actions_giu_trang_thai_bat_tat(self):
+		calls = []
+		live = {
+			'repos/x/actions/permissions': {'enabled': False, 'allowed_actions': 'all'},
+			'repos/x/actions/permissions/workflow': dict(self.module.WORKFLOW_PERMISSIONS),
+		}
+		self.module.gh_json = lambda *args: live[args[1]]
+		self.module.gh = lambda *args, **kwargs: calls.append((args, kwargs.get('stdin')))
+		with contextlib.redirect_stdout(io.StringIO()):
+			self.module.sync_actions(
+				'repos/x/actions/permissions', self.module.ACTIONS_PERMISSIONS, 'enabled', True
+			)
+		# Chỉ ghi phần khác (sha_pinning_required) và gửi lại enabled đang có — không bật Actions.
+		self.assertEqual(len(calls), 1)
+		self.assertEqual(json.loads(calls[0][1]), {'sha_pinning_required': True, 'enabled': False})
 
 	def test_tep_ruleset_to_chuc_khop_protect_main(self):
 		# Tệp để import trên web phải đúng bằng org_ruleset() sinh từ Protect Main.
@@ -793,17 +832,22 @@ class OrgSetupTest(unittest.TestCase):
 	def test_team_da_dung_thi_khong_ghi(self):
 		calls = []
 		self.module.gh_exists = lambda endpoint: True
-		self.module.team_role = lambda user: 'maintainer'
-		self.module.team_permission = lambda repo: 'admin' if repo == '.github' else 'maintain'
+		self.module.team_role = lambda team, user: 'maintainer'
+		# Quyền cao hơn (admin) đã đủ cho mọi team — không hạ quyền.
+		self.module.team_permission = lambda team, repo: 'admin'
 		self.module.gh = lambda *args, **kwargs: calls.append(args)
 		output = io.StringIO()
 		with contextlib.redirect_stdout(output):
 			self.module.cmd_team(['.github', 'app'], apply=True)
-		self.assertIn('✔ đủ người quản trị', output.getvalue())
+		self.assertEqual(output.getvalue().count('✔ đủ người quản trị'), len(self.module.TEAMS))
 		self.assertEqual(calls, [])
-		# Chỉ ghi phần còn thiếu: một người chưa là maintainer, một repository chưa có quyền.
-		self.module.team_role = lambda user: 'member' if user == 'trongtoandl81' else 'maintainer'
-		self.module.team_permission = lambda repo: 'push' if repo == 'app' else 'maintain'
+		# Chỉ ghi phần còn thiếu: một người chưa là maintainer, một repository chưa đủ quyền.
+		self.module.team_role = lambda team, user: (
+			'member' if (team, user) == ('maintainers', 'trongtoandl81') else 'maintainer'
+		)
+		self.module.team_permission = lambda team, repo: (
+			'write' if (team, repo) == ('maintainers', 'app') else 'admin'
+		)
 		with contextlib.redirect_stdout(io.StringIO()):
 			self.module.cmd_team(['.github', 'app'], apply=True)
 		self.assertEqual(

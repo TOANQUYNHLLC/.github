@@ -26,13 +26,8 @@ jobs:
               with:
                   persist-credentials: false
 
-            - name: Lấy nội dung phát hành
-              env:
-                  TAG: ${{ github.ref_name }}
-              run: python3 scripts/release-notes.py "$TAG" > release-notes.md
-
-            - name: Tạo Release
+            - name: Tạo Release từ CHANGELOG.md
               env:
                   GH_TOKEN: ${{ github.token }}
                   TAG: ${{ github.ref_name }}
-              run: gh release create "$TAG" --title "$TAG" --notes-file release-notes.md --verify-tag
+              run: scripts/create-release.sh "$TAG"
