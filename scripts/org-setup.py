@@ -12,8 +12,8 @@ Lệnh (nên chạy theo thứ tự):
 		Update branch, sign-off khi commit trên web, tắt Wiki và Projects; phần riêng trong
 		REPOSITORY_OVERRIDES, topics của .github lấy từ CITATION.cff); bật Dependabot alerts, secret
 		scanning, push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư, Release bất
-		biến (immutable releases); quyền GitHub Actions (giữ nguyên trạng thái bật/tắt); so GitHub
-		Pages; --discussions bật thêm GitHub Discussions.
+		biến (immutable releases); quyền GitHub Actions (giữ nguyên trạng thái bật/tắt);
+		--discussions bật thêm GitHub Discussions.
 	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json) và Protect Release
 		Tags (rulesets/protect-release-tags.json, ADR 0008); Protect Main của repository khác chỉ giữ
 		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
@@ -165,14 +165,6 @@ REPOSITORY_OVERRIDES = {
 		'repository của CÔNG TY TNHH TOÀN QUỲNH',
 		'homepage': 'https://toanquynh.com',
 		'has_discussions': True,
-	},
-}
-# GitHub Pages chỉ so, sửa trên web: .github dùng tên miền toanquynh.com dù website thật ở hosting khác (cố ý).
-PAGES = {
-	'.github': {
-		'cname': 'toanquynh.com',
-		'build_type': 'workflow',
-		'source': {'branch': 'main', 'path': '/'},
 	},
 }
 # Quyền GitHub Actions; không quản lý trạng thái bật/tắt (enabled, enabled_repositories) — người quản trị
@@ -626,7 +618,6 @@ def syncSettings(repos, apply, discussions):
 		syncActions(
 			f'repos/{ORG}/{repo}/actions/permissions', ACTIONS_PERMISSIONS, 'enabled', apply
 		)
-		comparePages(repo)
 
 
 def syncTopics(repo, current, apply):
@@ -675,22 +666,6 @@ def syncActions(endpoint, wanted, enabled_key, apply):
 			print(f'   ⚠ không cập nhật được {path}: {exc}')
 	if not changed:
 		print('   ✔ quyền GitHub Actions đã đúng')
-
-
-def comparePages(repo):
-	"""So GitHub Pages với PAGES (chỉ so — sửa trên web)."""
-	wanted = PAGES.get(repo)
-	if not wanted:
-		return
-	try:
-		current = ghJson('api', f'repos/{ORG}/{repo}/pages') or {}
-	except RuntimeError:
-		current = {}
-	different = [key for key, value in wanted.items() if current.get(key) != value]
-	if different:
-		print(f'   ✘ GitHub Pages khác ({", ".join(different)}) — sửa tại Settings → Pages')
-	else:
-		print('   ✔ GitHub Pages đã đúng')
 
 
 def syncOrgSettings(apply):
