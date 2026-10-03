@@ -123,7 +123,7 @@ def prePush(root, args):
 def afterPull(root):
 	"""Sau khi kéo code: cài lại hook (nhận hook mới thêm), so cài đặt trên GitHub với code, kiểm tra liên kết
 	bên ngoài và phiên bản công cụ; chỉ báo, không chặn. Liên kết, phiên bản kiểm tra tại máy vì môi trường đám
-	mây của routine hằng tuần chặn mạng ra ngoài."""
+	mây của routine Claude Code chặn mạng ra ngoài."""
 	installHooks(root)
 	signedIn = shutil.which('gh') and (
 		subprocess.run(['gh', 'auth', 'status'], capture_output=True, check=False).returncode == 0
