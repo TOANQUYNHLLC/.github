@@ -12,7 +12,8 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0006](0006-allow-all-merge-methods.md)         | Cho phép cả ba cách hợp nhất; bỏ lịch sử tuyến tính                | Chấp nhận                        | 2026-09-26 |
 | [0007](0007-mise-single-version-source.md)      | `mise.toml` là nguồn phiên bản công cụ duy nhất                    | Chấp nhận                        | 2026-09-26 |
 | [0008](0008-protect-release-tags.md)            | Ruleset Protect Release Tags cho tag phát hành `v*`                | Thay thế một phần bởi 0009       | 2026-09-27 |
-| [0009](0009-rulesets-require-signed-commits.md) | Mọi ruleset bắt buộc commit có chữ ký                              | Chấp nhận                        | 2026-09-27 |
+| [0009](0009-rulesets-require-signed-commits.md) | Mọi ruleset bắt buộc commit có chữ ký                              | Thay thế một phần bởi 0010       | 2026-09-27 |
+| [0010](0010-org-push-ruleset.md)                | Push ruleset Protect Pushes cấp tổ chức                            | Chấp nhận                        | 2026-09-30 |
 
 ## ✍️ CÁCH THÊM ADR
 

@@ -594,16 +594,16 @@ def check_rulesets():
 	for workflow in sorted((ROOT / '.github' / 'workflows').glob('*.yml')):
 		for job in ((load_yaml(workflow) or {}).get('jobs') or {}).values():
 			jobs.add(job.get('name'))
-	# Mọi ruleset (nhánh, tag, cấp repository, cấp tổ chức) bắt buộc commit có chữ ký (ADR 0009).
+	# Mọi ruleset nhánh, tag (cấp repository, cấp tổ chức) bắt buộc commit có chữ ký (ADR 0009); push
+	# ruleset không nhận quy tắc này (ADR 0010).
 	for ruleset_path in sorted((ROOT / 'rulesets').glob('*.json')):
 		try:
-			types = {
-				r.get('type')
-				for r in json.loads(ruleset_path.read_text(encoding='utf-8')).get('rules', [])
-			}
+			data = json.loads(ruleset_path.read_text(encoding='utf-8'))
 		except json.JSONDecodeError:
 			continue
-		if 'required_signatures' not in types:
+		if data.get('target') == 'push':
+			continue
+		if 'required_signatures' not in {r.get('type') for r in data.get('rules', [])}:
 			error(
 				ruleset_path, 'ruleset phải có quy tắc required_signatures (Require signed commits)'
 			)
@@ -664,6 +664,24 @@ def check_rulesets():
 			error(
 				org_tag_path,
 				'ruleset phải tên "Protect Release Tags (Organization)", nhắm ~ALL repository và refs/tags/v*',
+			)
+	push_path = ROOT / 'rulesets' / 'org-protect-pushes.json'
+	if not push_path.exists():
+		errors.append('thiếu tệp bắt buộc rulesets/org-protect-pushes.json')
+	else:
+		try:
+			pushes = json.loads(push_path.read_text(encoding='utf-8'))
+		except json.JSONDecodeError:
+			pushes = {}
+		conditions = pushes.get('conditions') or {}
+		if (
+			pushes.get('name') != 'Protect Pushes (Organization)'
+			or pushes.get('target') != 'push'
+			or '~ALL' not in (conditions.get('repository_name') or {}).get('include', [])
+		):
+			error(
+				push_path,
+				'ruleset phải tên "Protect Pushes (Organization)", target "push" và nhắm ~ALL repository (ADR 0010)',
 			)
 	for rule in ruleset.get('rules', []):
 		for check in (rule.get('parameters') or {}).get('required_status_checks', []):

@@ -1,0 +1,63 @@
+{
+	"name": "Protect Pushes (Organization)",
+	"target": "push",
+	"enforcement": "active",
+	"conditions": {
+		"repository_name": {
+			"exclude": [],
+			"include": ["~ALL"],
+			"protected": false
+		}
+	},
+	"bypass_actors": [
+		{
+			"actor_id": 1,
+			"actor_type": "OrganizationAdmin",
+			"bypass_mode": "always"
+		}
+	],
+	"rules": [
+		{
+			"type": "file_path_restriction",
+			"parameters": {
+				"restricted_file_paths": [
+					"**/.env",
+					"**/id_rsa",
+					"**/id_dsa",
+					"**/id_ecdsa",
+					"**/id_ed25519"
+				]
+			}
+		},
+		{
+			"type": "file_extension_restriction",
+			"parameters": {
+				"restricted_file_extensions": [
+					"*.pem",
+					"*.key",
+					"*.p12",
+					"*.pfx",
+					"*.jks",
+					"*.keystore",
+					"*.ppk",
+					"*.kdbx",
+					"*.sqlite",
+					"*.sqlite3",
+					"*.db"
+				]
+			}
+		},
+		{
+			"type": "max_file_size",
+			"parameters": {
+				"max_file_size": 10
+			}
+		},
+		{
+			"type": "max_file_path_length",
+			"parameters": {
+				"max_file_path_length": 200
+			}
+		}
+	]
+}
