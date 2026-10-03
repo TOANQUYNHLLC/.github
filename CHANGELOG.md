@@ -22,7 +22,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - ruff (`make check`, `make format`, hook `pre-commit`) kiểm tra cùng một phạm vi: mọi tệp Python của repository.
 - `scripts/org-setup.py` chia thành các module trong `scripts/orgsetup/`; mỗi script có tệp test riêng.
 - Mọi kiểm tra đọc đúng tệp có tên tiếng Việt, có khoảng trắng (`git ls-files -z`) và bỏ qua tệp đã xóa trên đĩa.
-- Kiểm tra liên kết, biểu mẫu chạy song song và thử lại khi máy chủ lỗi tạm thời; `check-markdown-links.py` hiểu liên kết mã hóa phần trăm; `check-gofmt.py` bỏ qua `vendor/`.
+- Kiểm tra liên kết, biểu mẫu chạy song song và thử lại khi máy chủ lỗi tạm thời; `make forms` báo rõ khi branch chưa đẩy lên GitHub; `make org-preview` kiểm tra đăng nhập GitHub CLI một lần; `check-markdown-links.py` hiểu liên kết mã hóa phần trăm; `check-gofmt.py` bỏ qua `vendor/`.
 - `validate.py` kiểm tra thêm: tên hàm, tham số, biến camelCase (đọc cây cú pháp); người quản trị trong `MAINTAINERS.md` khớp `org-setup.py team`; bộ nhãn chuẩn có đủ nhãn mặc định của GitHub; liên kết trong `CHANGELOG.md` là URL tuyệt đối; `security.txt` sắp hết hạn (trước 30 ngày). `make links` báo khi bản `security.txt` trên website khác bản trong repository.
 
 ### 🗑️ BỎ

@@ -78,16 +78,15 @@ def main():
 		'--discussions', action='store_true', help='settings: bật GitHub Discussions'
 	)
 	args = parser.parse_args()
-	if args.command == 'preview':
-		if args.apply or args.repo or args.discussions:
-			parser.error(
-				'preview chỉ xem trước mọi lệnh, không nhận --apply, --repo, --discussions'
-			)
-		return previewAll()
+	if args.command == 'preview' and (args.apply or args.repo or args.discussions):
+		parser.error('preview chỉ xem trước mọi lệnh, không nhận --apply, --repo, --discussions')
+	# Kiểm tra một lần trước khi preview chạy song song mọi lệnh (không báo lặp lại cho từng lệnh).
 	try:
 		github.gh('auth', 'status')
 	except (RuntimeError, FileNotFoundError):
 		sys.exit('Cần GitHub CLI đã đăng nhập: https://cli.github.com rồi chạy gh auth login')
+	if args.command == 'preview':
+		return previewAll()
 	# Lệnh org-* áp dụng cho cả tổ chức, không cần danh sách repository.
 	repos = [] if args.command.startswith('org-') else github.listRepos(args.repo)
 	if args.command == 'files':
