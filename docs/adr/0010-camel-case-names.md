@@ -1,6 +1,6 @@
 # 0010. TÊN HÀM, THAM SỐ, BIẾN CAMELCASE TIẾNG ANH
 
-- **Trạng thái:** Chấp nhận
+- **Trạng thái:** Bị thay thế một phần bởi [0014](0014-naming-rule-user-defined-only.md) (phạm vi: chỉ tên tự đặt; tên do thư viện quy định giữ nguyên, không viết vòng)
 - **Ngày:** 2026-10-03
 
 ## 📌 BỐI CẢNH

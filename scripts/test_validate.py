@@ -299,6 +299,73 @@ class ValidateTest(unittest.TestCase):
 		self.edit('scripts/release.py', 'changelogPath = ROOT', 'changelog_path = ROOT')
 		self.assertFails('tên biến "changelog_path" phải viết camelCase tiếng Anh')
 
+	def testLibraryDefinedNamesAreAllowed(self):
+		# Tên do Python, thư viện quy định không phải tên tự đặt: __init__, __all__, phương thức ghi đè lớp cha
+		# của thư viện (log_message) hoặc theo mẫu tên thư viện gọi (do_POST của http.server, ftp_open của
+		# urllib) — kể cả tham số theo chữ ký của lớp cha.
+		path = self.repo / 'scripts' / 'check-gofmt.py'
+		path.write_text(
+			path.read_text(encoding='utf-8')
+			+ """
+import http.server
+import urllib.request
+from http.server import BaseHTTPRequestHandler as Base
+
+__all__ = ['Handler']
+
+
+class Handler(http.server.BaseHTTPRequestHandler):
+	def do_POST(self):
+		pass
+
+	def log_message(self, format, *args):
+		pass
+
+
+class Short(Base):
+	def do_PATCH(self):
+		pass
+
+
+class Opener(urllib.request.HTTPHandler):
+	def ftp_open(self, req):
+		pass
+
+
+class Holder:
+	def __init__(self, value):
+		self.value = value
+""",
+			encoding='utf-8',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
+
+	def testUserDefinedNamesInLibrarySubclassesAreChecked(self):
+		# Tên tự đặt vẫn phải camelCase, kể cả trong lớp con của thư viện và tham số của __init__.
+		path = self.repo / 'scripts' / 'check-gofmt.py'
+		path.write_text(
+			path.read_text(encoding='utf-8')
+			+ """
+import http.server
+
+
+class Handler(http.server.BaseHTTPRequestHandler):
+	def send_page(self):
+		pass
+
+
+class Holder:
+	def __init__(self, start_value):
+		self.value = start_value
+""",
+			encoding='utf-8',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 1, output)
+		self.assertIn('tên hàm "send_page" phải viết camelCase', output)
+		self.assertIn('tham số "start_value" phải viết camelCase', output)
+
 	def testInvalidPythonIsReported(self):
 		self.edit('scripts/check-gofmt.py', 'def goFiles():', 'def goFiles(:')
 		self.assertFails('scripts/check-gofmt.py: Python không hợp lệ')

@@ -62,32 +62,35 @@ def connectQuickly(address, timeout, sourceAddress=None):
 	raise error
 
 
-def quickConnection(connectionClass):
-	"""Tạo kết nối http.client dùng connectQuickly — gán cho từng kết nối vì __init__ (Python 3.14) đặt lại
-	_create_connection, ghi đè ở lớp không có tác dụng."""
+class QuickHTTPConnection(http.client.HTTPConnection):
+	"""Kết nối HTTP dùng connectQuickly — gán trong __init__ vì __init__ của http.client đặt lại
+	_create_connection, ghi đè ở mức lớp không có tác dụng."""
 
-	def create(*args, **kwargs):
-		connection = connectionClass(*args, **kwargs)
-		connection._create_connection = connectQuickly
-		return connection
-
-	return create
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self._create_connection = connectQuickly
 
 
-def quickOpener():
-	"""Opener của urllib mở kết nối bằng connectQuickly. Gán http_open, https_open (tên urllib quy định) cho
-	từng handler thay vì kế thừa lớp — tên hàm trong script viết camelCase (ADR 0010)."""
-	plain, secure = urllib.request.HTTPHandler(), urllib.request.HTTPSHandler()
-	plain.http_open = lambda request: plain.do_open(
-		quickConnection(http.client.HTTPConnection), request
-	)
-	secure.https_open = lambda request: secure.do_open(
-		quickConnection(http.client.HTTPSConnection), request, context=secure._context
-	)
-	return urllib.request.build_opener(plain, secure)
+class QuickHTTPSConnection(http.client.HTTPSConnection):
+	"""Như QuickHTTPConnection cho HTTPS."""
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self._create_connection = connectQuickly
 
 
-OPENER = quickOpener()
+class QuickHTTPHandler(urllib.request.HTTPHandler):
+	def http_open(self, req):
+		return self.do_open(QuickHTTPConnection, req)
+
+
+class QuickHTTPSHandler(urllib.request.HTTPSHandler):
+	def https_open(self, req):
+		return self.do_open(QuickHTTPSConnection, req, context=self._context)
+
+
+# Opener của urllib mở mọi kết nối bằng connectQuickly.
+OPENER = urllib.request.build_opener(QuickHTTPHandler, QuickHTTPSHandler)
 
 
 def textFiles():
