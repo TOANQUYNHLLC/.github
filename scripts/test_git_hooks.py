@@ -1,6 +1,6 @@
 """Test tự động cho scripts/git-hooks.py: cài hook, danh sách ref của pre-push, pre-commit kiểm tra phần đã stage.
 
-Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make test)
+Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
 """
 
 import contextlib

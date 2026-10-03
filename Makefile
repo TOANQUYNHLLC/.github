@@ -16,8 +16,8 @@ check: ## Mọi kiểm tra GitHub Actions chạy trên Pull Request (trừ CodeQ
 validate: ## Kiểm tra nội dung bằng scripts/validate.py
 	python3 scripts/validate.py
 
-test: ## Chạy test tự động của các script
-	python3 -m unittest discover -s scripts -p 'test_*.py'
+test: ## Chạy test tự động của các script (song song trên nhiều tiến trình)
+	python3 scripts/run-tests.py
 
 tools: ## Kiểm tra đã cài đủ công cụ, cài thư viện Node.js nếu thiếu
 	python3 scripts/check.py tools

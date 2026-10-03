@@ -1,6 +1,6 @@
 """Test tự động cho scripts/check-github-forms.py.
 
-Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make test)
+Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
 """
 
 import contextlib

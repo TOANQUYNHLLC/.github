@@ -1,13 +1,15 @@
 """Test tự động cho scripts/check.py: nhóm kiểm tra khớp workflow validate.yml.
 
-Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make test)
+Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
 """
 
 import contextlib
 import io
 import re
 import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -33,11 +35,9 @@ class CheckTest(unittest.TestCase):
 		# Mất mạng: audit chỉ cảnh báo; lỗ hổng thật (mã thoát khác 0, không phải lỗi mạng) vẫn chặn.
 		module = loadScript('check')
 		results = {
+			# Lỗi gộp vào đầu ra (stderr=STDOUT) như khi check.py chạy lệnh thật.
 			'network': subprocess.CompletedProcess(
-				[],
-				1,
-				'',
-				'npm warn audit request to https://x failed, reason: connect ECONNREFUSED',
+				[], 1, 'npm warn audit request to https://x failed, reason: connect ECONNREFUSED\n'
 			),
 			'vulnerable': subprocess.CompletedProcess([], 1, '1 high severity vulnerability\n', ''),
 		}
@@ -48,7 +48,7 @@ class CheckTest(unittest.TestCase):
 				contextlib.redirect_stdout(io.StringIO()),
 				contextlib.redirect_stderr(io.StringIO()),
 			):
-				self.assertEqual(module.runCommand('audit', ['npm', 'audit']), expected, case)
+				self.assertEqual(module.runCommand('audit', ['npm', 'audit'])[0], expected, case)
 
 	def testShellScriptsKeepSpecialNames(self):
 		# Script shell ở bất kỳ thư mục nào, tên có dấu vẫn được shellcheck kiểm tra.
@@ -60,6 +60,25 @@ class CheckTest(unittest.TestCase):
 			subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
 			module.ROOT = root
 			self.assertEqual(module.shellScripts(), ['công cụ/cài đặt.sh'])
+
+	def testGroupsRunInParallelButPrintInOrder(self):
+		# Nhóm chậm (đầu) và nhóm nhanh chạy cùng lúc; đầu ra vẫn theo thứ tự nhóm, lệnh lỗi được liệt kê.
+		module = loadScript('check')
+		groups = {
+			'slow': [[sys.executable, '-c', 'import time; time.sleep(0.5); print("chậm")']],
+			'fast': [[sys.executable, '-c', 'print("nhanh"); raise SystemExit(1)']],
+		}
+		output = io.StringIO()
+		with (
+			mock.patch.object(module, 'checkGroups', return_value=groups),
+			contextlib.redirect_stdout(output),
+		):
+			started = time.monotonic()
+			self.assertFalse(module.runGroups(['slow', 'fast']))
+			self.assertLess(time.monotonic() - started, 1.0)
+		text = output.getvalue()
+		self.assertLess(text.index('chậm'), text.index('nhanh'))
+		self.assertIn('❌ fast:', text)
 
 
 if __name__ == '__main__':

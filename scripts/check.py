@@ -1,7 +1,7 @@
 """Chạy các nhóm kiểm tra của repository — cùng một lệnh tại máy (make check) và trên GitHub Actions.
 
 Chạy:
-	python3 scripts/check.py              # mọi nhóm, theo thứ tự bên dưới
+	python3 scripts/check.py              # mọi nhóm, chạy song song, in kết quả theo thứ tự bên dưới
 	python3 scripts/check.py format lint  # một vài nhóm
 	python3 scripts/check.py tools        # chỉ kiểm tra đã cài đủ công cụ (cài thư viện Node.js nếu thiếu)
 Mỗi nhóm khớp một job của workflow validate.yml (content, format, lint) hoặc một workflow Pull Request
@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,7 +50,7 @@ def checkGroups():
 	return {
 		'content': [
 			['python3', 'scripts/validate.py'],
-			['python3', '-m', 'unittest', 'discover', '-s', 'scripts', '-p', 'test_*.py'],
+			['python3', 'scripts/run-tests.py'],
 		],
 		'format': [
 			['npx', 'prettier', '--check', '.'],
@@ -84,25 +85,38 @@ def ensureTools(groups):
 
 
 def runCommand(name, command):
-	"""Chạy một lệnh kiểm tra; True khi đạt. audit mất mạng thì cảnh báo và tính là đạt."""
-	if name != 'audit':
-		return subprocess.run(command, cwd=ROOT, check=False).returncode == 0
-	result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
-	print(result.stdout, end='')
-	print(result.stderr, end='', file=sys.stderr)
-	if result.returncode != 0 and NETWORK_ERROR.search(result.stdout + result.stderr):
-		print('⚠️  Bỏ qua audit: không kết nối được máy chủ npm — chạy lại make audit khi có mạng.')
-		return True
-	return result.returncode == 0
+	"""Chạy một lệnh kiểm tra, trả (đạt hay không, đầu ra). audit mất mạng thì cảnh báo và tính là đạt."""
+	result = subprocess.run(
+		command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False
+	)
+	output = result.stdout
+	if name == 'audit' and result.returncode != 0 and NETWORK_ERROR.search(output):
+		return True, output + (
+			'⚠️  Bỏ qua audit: không kết nối được máy chủ npm — chạy lại make audit khi có mạng.\n'
+		)
+	return result.returncode == 0, output
+
+
+def runGroup(name):
+	"""Chạy lần lượt các lệnh của một nhóm; trả (đầu ra, lệnh lỗi)."""
+	outputs, failed = [], []
+	for command in checkGroups()[name]:
+		passed, output = runCommand(name, command)
+		outputs.append(f'$ {" ".join(command)}\n{output}')
+		if not passed:
+			failed.append(f'{name}: {" ".join(command)[:80]}')
+	return ''.join(outputs), failed
 
 
 def runGroups(groups):
+	"""Các nhóm độc lập nên chạy song song (test đã chia nhiều tiến trình, Prettier, audit chờ mạng…); đầu ra in
+	liền khối theo thứ tự nhóm."""
+	with ThreadPoolExecutor(max_workers=len(groups)) as pool:
+		results = list(pool.map(runGroup, groups))
 	failed = []
-	for name in groups:
-		for command in checkGroups()[name]:
-			print(f'$ {" ".join(command)}', flush=True)
-			if not runCommand(name, command):
-				failed.append(f'{name}: {" ".join(command)[:80]}')
+	for output, groupFailed in results:
+		print(output, end='', flush=True)
+		failed += groupFailed
 	for item in failed:
 		print(f'❌ {item}')
 	return not failed

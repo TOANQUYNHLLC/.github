@@ -2,7 +2,7 @@
 khẳng định validate.py phát hiện đúng lỗi — để việc sửa script không vô tình làm mất một luật. Sau mỗi test bản
 chép được trả về như lúc đầu.
 
-Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make test)
+Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
 """
 
 import contextlib
