@@ -30,14 +30,17 @@ jobs:
               with:
                   go-version-file: go.mod
 
+            # Script kiểm tra dùng chung của tổ chức (nhánh chính của TOANQUYNHLLC/.github — được ruleset
+            # bảo vệ: Pull Request, phê duyệt, commit có chữ ký); sửa quy ước ở một nơi cho mọi repository.
+            - name: Lấy script của tổ chức
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  repository: TOANQUYNHLLC/.github
+                  path: .org
+                  persist-credentials: false
+
             - name: Kiểm tra định dạng (gofmt)
-              run: |
-                  unformatted=$(gofmt -l .)
-                  if [[ -n "$unformatted" ]]; then
-                      echo "::error::Các file chưa chạy gofmt:"
-                      echo "$unformatted"
-                      exit 1
-                  fi
+              run: python3 .org/scripts/check-gofmt.py
 
             - name: Vet
               run: go vet ./...

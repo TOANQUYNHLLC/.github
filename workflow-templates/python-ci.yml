@@ -30,22 +30,24 @@ jobs:
               with:
                   python-version-file: .python-version
 
-            - name: Cài thư viện
-              run: |
-                  python -m pip install --upgrade pip
-                  if [[ -f requirements.txt ]]; then pip install -r requirements.txt; fi
-                  if [[ -f requirements-dev.txt ]]; then pip install -r requirements-dev.txt; fi
-                  pip install ruff pytest
+            - name: Cài pip, ruff, pytest
+              run: python -m pip install --upgrade pip ruff pytest
 
-            - name: Kiểm tra định dạng và lint (ruff)
-              run: |
-                  ruff format --check .
-                  ruff check .
+            - name: Cài thư viện (requirements.txt)
+              if: hashFiles('requirements.txt') != ''
+              run: pip install -r requirements.txt
 
+            - name: Cài thư viện phát triển (requirements-dev.txt)
+              if: hashFiles('requirements-dev.txt') != ''
+              run: pip install -r requirements-dev.txt
+
+            - name: Kiểm tra định dạng (ruff format)
+              run: ruff format --check .
+
+            - name: Lint (ruff check)
+              run: ruff check .
+
+            # Không có thư mục tests thì bỏ qua kiểm thử.
             - name: Kiểm thử
-              run: |
-                  if [[ -d tests ]]; then
-                      python -m pytest
-                  else
-                      echo "Không có thư mục tests — bỏ qua kiểm thử."
-                  fi
+              if: hashFiles('tests/**') != ''
+              run: python -m pytest

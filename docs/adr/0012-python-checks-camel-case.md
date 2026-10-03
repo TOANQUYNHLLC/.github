@@ -1,6 +1,6 @@
 # 0012. KIỂM TRA VIẾT BẰNG PYTHON TRONG SCRIPTS/; TÊN HÀM CAMELCASE TIẾNG ANH
 
-- **Trạng thái:** Chấp nhận
+- **Trạng thái:** Bị thay thế một phần bởi [0013](0013-no-checks-in-yaml.md) (bỏ ngoại lệ lệnh viết thẳng trong workflow mẫu)
 - **Ngày:** 2026-10-03
 
 ## 📌 BỐI CẢNH
