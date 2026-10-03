@@ -16,14 +16,21 @@ CODE_FENCE = re.compile(r'```.*?```', re.DOTALL)
 LINK = re.compile(r'\]\(([^)\s#]*)(?:#([^)\s]*))?\)')
 
 
+def headingSlug(title):
+	"""Anchor GitHub tạo cho một tiêu đề: bỏ định dạng code, liên kết chỉ giữ chữ hiển thị; chữ thường; bỏ ký tự
+	không phải chữ, số, khoảng trắng, gạch ngang — nhưng giữ U+200D (nối emoji, như 🧑‍💼) và U+FE0F (biến thể
+	emoji, như 🛠️) như GitHub; khoảng trắng thành "-"."""
+	title = re.sub(r'`([^`]*)`', r'\1', title)
+	title = re.sub(r'!?\[([^\]]*)\]\([^)]*\)', r'\1', title)
+	return re.sub(r'[^\w\- \u200d\ufe0f]', '', title.strip().lower()).replace(' ', '-')
+
+
 def headingAnchors(path):
-	"""Anchor GitHub tạo cho các tiêu đề Markdown: chữ thường, bỏ ký tự không phải chữ, số, khoảng trắng,
-	gạch ngang; khoảng trắng thành "-"; tiêu đề trùng thêm hậu tố -1, -2…."""
+	"""Anchor của mọi tiêu đề Markdown trong tệp; tiêu đề trùng thêm hậu tố -1, -2…."""
 	text = CODE_FENCE.sub('', path.read_text(encoding='utf-8'))
 	seen, anchors = {}, set()
 	for match in re.finditer(r'^#{1,6} (.+)$', text, re.MULTILINE):
-		slug = re.sub(r'[^\w\- ]', '', re.sub(r'`([^`]*)`', r'\1', match.group(1)).strip().lower())
-		slug = slug.replace(' ', '-')
+		slug = headingSlug(match.group(1))
 		count = seen.get(slug, 0)
 		seen[slug] = count + 1
 		anchors.add(slug if count == 0 else f'{slug}-{count}')

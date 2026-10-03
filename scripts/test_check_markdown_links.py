@@ -48,6 +48,27 @@ class MarkdownLinksTest(unittest.TestCase):
 			with contextlib.chdir(root):
 				self.assertEqual(module.markdownFiles(), [Path('ghi chú.md')])
 
+	def testHeadingSlugsMatchGithub(self):
+		# Giá trị mong đợi lấy từ anchor GitHub tạo thật (gh api markdown, mode=markdown): GitHub giữ U+FE0F của
+		# emoji như 🛠️ và U+200D của emoji ghép như 🧑‍💼; tiêu đề có liên kết chỉ lấy chữ hiển thị.
+		module = loadScript('check-markdown-links')
+		for title, expected in (
+			('🚀 PHÁT HÀNH', '-phát-hành'),
+			('🛠️ PHÁT TRIỂN CỤC BỘ', '\ufe0f-phát-triển-cục-bộ'),
+			('🧑\u200d💼 NGƯỜI QUẢN TRỊ', '\u200d-người-quản-trị'),
+			('[CHƯA PHÁT HÀNH](https://github.com/x/y/compare/v1...HEAD)', 'chưa-phát-hành'),
+			(
+				'[v2026.10.Stable](https://github.com/x/y/releases/tag/v2026.10.Stable) — 2026-10-03',
+				'v202610stable--2026-10-03',
+			),
+			('0012. PHÁT HÀNH TỪ `CHANGELOG.MD`', '0012-phát-hành-từ-changelogmd'),
+		):
+			self.assertEqual(module.headingSlug(title), expected, title)
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'README.md'
+			path.write_text('## 🛠️ PHÁT TRIỂN CỤC BỘ\n', encoding='utf-8')
+			self.assertEqual(module.findBrokenLinks(path, '[x](#\ufe0f-phát-triển-cục-bộ)'), [])
+
 
 if __name__ == '__main__':
 	unittest.main()
