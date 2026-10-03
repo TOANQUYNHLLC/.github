@@ -22,12 +22,27 @@ def answerOk(handler):
 	handler.end_headers()
 
 
-# do_HEAD, log_message là tên http.server quy định — gán qua type() để tên hàm vẫn camelCase (ADR 0012).
-QuietHandler = type(
-	'QuietHandler',
-	(http.server.BaseHTTPRequestHandler,),
-	{'do_HEAD': answerOk, 'log_message': lambda handler, *args: None},
-)
+def answerWith(codes):
+	"""Trả lần lượt các mã trong codes (mã cuối dùng cho mọi lần sau)."""
+
+	def answer(handler):
+		handler.send_response(codes.pop(0) if len(codes) > 1 else codes[0])
+		handler.end_headers()
+
+	return answer
+
+
+def handlerClass(head, get=None):
+	# do_HEAD, do_GET, log_message là tên http.server quy định — gán qua type() để tên hàm vẫn camelCase
+	# (ADR 0012).
+	return type(
+		'QuietHandler',
+		(http.server.BaseHTTPRequestHandler,),
+		{'do_HEAD': head, 'do_GET': get or head, 'log_message': lambda handler, *args: None},
+	)
+
+
+QuietHandler = handlerClass(answerOk)
 
 
 class ExternalLinksTest(unittest.TestCase):
@@ -50,6 +65,26 @@ class ExternalLinksTest(unittest.TestCase):
 			server.shutdown()
 			server.server_close()
 		self.assertEqual(module.UNREACHABLE, {'::1'})
+
+	def testFallsBackToGetAndRetriesServerErrors(self):
+		# HEAD bị từ chối (404) nhưng GET đọc được: liên kết còn sống. GET lỗi 503 lần đầu: thử lại rồi đạt.
+		module = loadScript('check-external-links')
+		module.RETRY_DELAY = 0
+		for head, get, expected in (
+			([404], [200], 200),
+			([404], [503, 200], 200),
+			([404], [404], 404),
+		):
+			server = socketserver.TCPServer(
+				('127.0.0.1', 0), handlerClass(answerWith(head), answerWith(get))
+			)
+			threading.Thread(target=server.serve_forever, daemon=True).start()
+			try:
+				url = f'http://127.0.0.1:{server.server_address[1]}/'
+				self.assertEqual(module.linkStatus(url), expected, (head, get))
+			finally:
+				server.shutdown()
+				server.server_close()
 
 
 if __name__ == '__main__':

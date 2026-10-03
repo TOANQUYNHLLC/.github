@@ -7,6 +7,7 @@ Workflow mẫu docs-check.yml của repository khác gọi script này; validate
 import re
 import subprocess
 import sys
+import urllib.parse
 from pathlib import Path
 
 # Repository chứa script; workflow mẫu checkout nó vào .org/ bên trong repository đang được kiểm tra.
@@ -36,6 +37,9 @@ def findBrokenLinks(path, text):
 		target, fragment = match.group(1), match.group(2)
 		if re.match(r'[a-z]+:', target) or (not target and fragment is None):
 			continue
+		# Liên kết có thể mã hóa phần trăm (khoảng trắng %20, chữ có dấu trong tên tệp hay mục #…).
+		target = urllib.parse.unquote(target)
+		fragment = urllib.parse.unquote(fragment) if fragment else fragment
 		destination = path.parent / target if target else path
 		if not destination.exists():
 			messages.append(f'liên kết hỏng: {target}')

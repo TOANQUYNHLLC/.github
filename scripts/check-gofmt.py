@@ -9,9 +9,27 @@ import subprocess
 import sys
 
 
+def goFiles():
+	"""Tệp Go git quản lý, trừ vendor/ (mã của bên thứ ba); ngoài git thì để gofmt tự quét thư mục."""
+	result = subprocess.run(
+		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '*.go'],
+		capture_output=True,
+		text=True,
+		check=False,
+	)
+	if result.returncode != 0:
+		return ['.']
+	return [name for name in result.stdout.splitlines() if not name.startswith('vendor/')]
+
+
 def unformattedFiles():
 	"""Tệp Go mà gofmt sẽ đổi định dạng."""
-	output = subprocess.run(['gofmt', '-l', '.'], capture_output=True, text=True, check=True).stdout
+	files = goFiles()
+	if not files:
+		return []
+	output = subprocess.run(
+		['gofmt', '-l', *files], capture_output=True, text=True, check=True
+	).stdout
 	return [name for name in output.split('\n') if name]
 
 

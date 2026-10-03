@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Git hook của repository — make hooks (install) liên kết .git/hooks/<tên hook> tới tệp này.
 
-pre-commit: Prettier, ruff format kiểm tra đúng nội dung đã stage (không phải tệp trên đĩa).
+pre-commit: Prettier, ruff format, ruff check kiểm tra đúng nội dung đã stage (không phải tệp trên đĩa).
 pre-push: make check trên đúng nội dung được đẩy — chặn khi còn thay đổi chưa commit hoặc đẩy branch khác
 	HEAD; bỏ qua khi chỉ đẩy tag hoặc xóa branch; make check lỗi thì không đẩy.
 post-merge: sau git pull (gộp, tua nhanh) — cài lại hook (nhận hook mới), make org-preview, links, versions;
@@ -65,11 +65,16 @@ def preCommit(root, args):
 			failed = True
 		python = [name for name in files if name.endswith('.py')]
 		if python:
-			command = ['ruff', 'format', '--check', *python]
-			failed |= subprocess.run(command, cwd=folder, check=False).returncode != 0
+			for command in (
+				['ruff', 'format', '--check', *python],
+				# Như nhóm format của check.py: Python ≥ 3.11 (tomllib, datetime.UTC).
+				['ruff', 'check', '--target-version', 'py311', *python],
+			):
+				failed |= subprocess.run(command, cwd=folder, check=False).returncode != 0
 	if failed:
 		print(
-			'❌ Nội dung đã stage chưa đúng định dạng — chạy: make format, rồi git add lại.',
+			'❌ Nội dung đã stage chưa đúng định dạng hoặc còn lỗi ruff check — chạy make format, sửa lỗi '
+			'theo thông báo, rồi git add lại.',
 			file=sys.stderr,
 		)
 	return 1 if failed else 0

@@ -27,10 +27,13 @@ jobs:
             - name: Kiểm tra liên kết
               run: python3 scripts/check-external-links.py
 
+            # Ba kiểm tra độc lập: bước trước lỗi vẫn chạy bước sau để báo đủ một lượt.
             - name: Kiểm tra GitHub chấp nhận biểu mẫu
+              if: ${{ !cancelled() }}
               run: python3 scripts/check-github-forms.py
 
             - name: Kiểm tra công cụ trong mise.toml có bản mới
+              if: ${{ !cancelled() }}
               env:
                   GH_TOKEN: ${{ github.token }}
               run: python3 scripts/check-tool-versions.py

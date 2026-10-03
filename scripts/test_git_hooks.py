@@ -85,6 +85,21 @@ class GitHooksTest(unittest.TestCase):
 			path.write_text('#  sai\n', encoding='utf-8')
 			self.assertEqual(self.module.preCommit(self.repo, []), 0)
 
+	@unittest.skipUnless(
+		(ROOT / 'node_modules' / '.bin' / 'prettier').exists() and shutil.which('ruff'),
+		'cần Prettier (make tools) và ruff (mise install)',
+	)
+	def testPreCommitRunsRuffCheck(self):
+		# Tệp Python đúng định dạng nhưng còn lỗi lint (import thừa): hook chặn như nhóm format của make check.
+		path = self.repo / 'tool.py'
+		path.write_text('import os\n', encoding='utf-8')
+		self.git('add', 'tool.py')
+		with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+			self.assertEqual(self.module.preCommit(self.repo, []), 1)
+			path.write_text("print('ok')\n", encoding='utf-8')
+			self.git('add', 'tool.py')
+			self.assertEqual(self.module.preCommit(self.repo, []), 0)
+
 	def testAfterPullReportsWithoutBlocking(self):
 		# Sau khi kéo code: org-preview chỉ chạy khi gh đã đăng nhập; links, versions luôn chạy; chạy song song
 		# nhưng in theo thứ tự; lệnh lỗi chỉ báo, không chặn.

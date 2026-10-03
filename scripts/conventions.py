@@ -107,6 +107,15 @@ def main():
 	)
 	if isinstance(titles, str):
 		titles = titles.splitlines()
+	if not titles:
+		# Không lặng lẽ báo đạt: nói rõ vì sao không có tiêu đề nào để kiểm tra.
+		known = gitOutput('rev-parse', '--verify', '--quiet', 'origin/main')
+		print(
+			'Bỏ qua: chưa có commit nào so với origin/main.'
+			if known
+			else 'Bỏ qua: chưa có origin/main để so — chạy git fetch origin main.'
+		)
+		return 0
 	results = [checkTitle(title) for title in titles]
 	return 0 if all(results) else 1
 
