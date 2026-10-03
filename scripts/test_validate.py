@@ -234,7 +234,24 @@ class ValidateTest(unittest.TestCase):
 			'run: python3 scripts/check.py content',
 			'run: |\n                  python3 scripts/check.py content',
 		)
-		self.assertFails('validate.yml: dòng 30: đoạn shell nhiều dòng')
+		self.assertFails('validate.yml: dòng 30: lệnh nhiều dòng')
+
+	def testWorkflowTemplateHasNoMultilineShell(self):
+		# Workflow mẫu cũng không được viết kiểm tra trực tiếp trong YAML.
+		self.edit(
+			'workflow-templates/go-ci.yml',
+			'run: python3 .org/scripts/check-gofmt.py',
+			'run: |\n                  test -z "$(gofmt -l .)"',
+		)
+		self.assertFails('workflow-templates/go-ci.yml: dòng')
+
+	def testWorkflowHasNoEmbeddedCode(self):
+		self.edit(
+			'workflow-templates/docs-check.yml',
+			'run: python3 .org/scripts/check-markdown-links.py',
+			'run: python3 -c "print(1)"',
+		)
+		self.assertFails('mã nhúng trong YAML')
 
 	def testBranchPrefixesMatchContributing(self):
 		self.edit('scripts/conventions.py', "\t'release',\n", '')

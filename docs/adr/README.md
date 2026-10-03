@@ -15,7 +15,8 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0009](0009-rulesets-require-signed-commits.md) | Mọi ruleset bắt buộc commit có chữ ký                                   | Thay thế một phần bởi 0010       | 2026-09-27 |
 | [0010](0010-org-push-ruleset.md)                | Push ruleset Protect Pushes cấp tổ chức                                 | Chấp nhận                        | 2026-09-30 |
 | [0011](0011-disallow-rebase-merge.md)           | Bỏ Rebase để commit trên nhánh chính luôn có chữ ký                     | Chấp nhận                        | 2026-10-03 |
-| [0012](0012-python-checks-camel-case.md)        | Kiểm tra viết bằng Python trong `scripts/`; tên hàm camelCase tiếng Anh | Chấp nhận                        | 2026-10-03 |
+| [0012](0012-python-checks-camel-case.md)        | Kiểm tra viết bằng Python trong `scripts/`; tên hàm camelCase tiếng Anh | Thay thế một phần bởi 0013       | 2026-10-03 |
+| [0013](0013-no-checks-in-yaml.md)               | Mọi kiểm tra là tệp riêng, không viết trực tiếp trong YAML              | Chấp nhận                        | 2026-10-03 |
 
 ## ✍️ CÁCH THÊM ADR
 

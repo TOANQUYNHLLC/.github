@@ -322,16 +322,22 @@ def checkWorkflow(path, text):
 		error(
 			path, '$default-branch chỉ dùng trong workflow-templates/ — ghi tên nhánh thật (main)'
 		)
-	# Workflow của repository này gọi script trong scripts/ để chạy được y hệt tại máy (make check). Workflow
-	# mẫu gọi script của tổ chức (checkout vào .org/) cho phần kiểm tra chung; lệnh riêng của từng ngôn ngữ
-	# (gofmt, pip, npm) được viết thẳng vì phụ thuộc dự án.
-	if path.parent.parts[-2:] == ('.github', 'workflows'):
-		for number, line in enumerate(text.split('\n'), start=1):
-			if re.match(r'^\s*run:\s*[|>]', line):
-				error(
-					path,
-					f'dòng {number}: đoạn shell nhiều dòng — tách thành script trong scripts/ rồi gọi một lệnh',
-				)
+	# Kiểm tra luôn là tệp riêng trong scripts/, không viết trực tiếp trong YAML (ADR 0013): mỗi bước gọi một
+	# lệnh. Workflow của repository này gọi scripts/ để chạy được y hệt tại máy (make check); workflow mẫu gọi
+	# script của tổ chức (checkout vào .org/).
+	for number, line in enumerate(text.split('\n'), start=1):
+		if re.match(r'^\s*run:\s*[|>]', line):
+			error(
+				path,
+				f'dòng {number}: lệnh nhiều dòng — tách thành script trong scripts/, mỗi bước gọi một lệnh (ADR 0013)',
+			)
+		if re.match(r'^\s*shell:\s*(python|node|pwsh|ruby|perl)', line) or re.search(
+			r'^\s*run:.*\b(python3?|node|ruby|perl|bash|sh)\s+-(c|e)\b', line
+		):
+			error(
+				path,
+				f'dòng {number}: mã nhúng trong YAML — viết thành script trong scripts/ (ADR 0013)',
+			)
 	if not re.search(r'^concurrency:', text, re.MULTILINE):
 		error(path, 'thiếu khai báo "concurrency" ở cấp workflow')
 	for number, line in enumerate(text.split('\n'), start=1):
