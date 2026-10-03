@@ -13,7 +13,7 @@ Ruleset đặt ở **cấp repository**: tổ chức dùng gói GitHub Free nên
 - Cấm force push, cấm xóa; chặn tạo và cập nhật nhánh chính ngoài danh sách bỏ qua.
 - Danh sách bỏ qua: hai tài khoản quản trị, chế độ **always** ([ADR 0005](../docs/adr/0005-merge-protect-main.md)).
 
-Mọi ruleset — nhánh và tag, cấp repository và cấp tổ chức — có quy tắc **Require signed commits** (`required_signatures`, [ADR 0009](../docs/adr/0009-rulesets-require-signed-commits.md)); `scripts/validate.py` báo lỗi khi thiếu.
+Mọi ruleset nhánh và tag — cấp repository và cấp tổ chức — có quy tắc **Require signed commits** (`required_signatures`, [ADR 0009](../docs/adr/0009-rulesets-require-signed-commits.md)); `scripts/validate.py` báo lỗi khi thiếu. Push ruleset không nhận quy tắc này ([ADR 0010](../docs/adr/0010-org-push-ruleset.md)).
 
 ## 🏷️ PROTECT RELEASE TAGS
 
@@ -23,10 +23,11 @@ Mọi ruleset — nhánh và tag, cấp repository và cấp tổ chức — có
 
 ## 🏢 RULESET CẤP TỔ CHỨC
 
-Hai ruleset cho mọi repository (`~ALL`), đã import trên web (**Active**) nhưng chỉ được thực thi khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức):
+Ba ruleset cho mọi repository (`~ALL`); hai ruleset đầu đã import trên web (**Active**) nhưng chỉ được thực thi khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức):
 
 - [`org-protect-main.json`](org-protect-main.json) — **Protect Main (Organization)**: cùng quy tắc với Protect Main trên nhánh mặc định.
 - [`org-protect-release-tags.json`](org-protect-release-tags.json) — **Protect Release Tags (Organization)**: cùng quy tắc với Protect Release Tags trên tag `v*`.
+- [`org-protect-pushes.json`](org-protect-pushes.json) — **Protect Pushes (Organization)**: push ruleset, xem [mục dưới](#-protect-pushes-cấp-tổ-chức).
 
 Khác với bản cấp repository:
 
@@ -34,7 +35,21 @@ Khác với bản cấp repository:
 - Không dùng actor loại `User` (import báo "contains an invalid actor"): danh sách bỏ qua là **chủ tổ chức** (`OrganizationAdmin`) — cùng hai người quản trị như bản cấp repository; không giới hạn người hủy phê duyệt.
 - Protect Release Tags (Organization) có thêm quy tắc kiểm tra bắt buộc với danh sách rỗng như trên web — quy tắc này không chặn gì, có thể xóa trên web rồi bỏ trong `org_tag_ruleset()`.
 - Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `org_rulesets()` trong `scripts/org-setup.py` và khớp ruleset đang cài trên web; test bảo đảm tệp khớp `org_rulesets()` — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức.
-- Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json`. REST API ruleset cấp tổ chức trả HTTP 403 ở gói Free (dù token có quyền `admin:org`), nên `python3 scripts/org-setup.py org-rulesets` chỉ so tệp với ruleset trên web (đọc qua GraphQL); `--apply` chỉ tạo, cập nhật được khi tổ chức dùng gói Team.
+- Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json` và `org-protect-pushes.json`. REST API ruleset cấp tổ chức trả HTTP 403 ở gói Free (dù token có quyền `admin:org`), nên `python3 scripts/org-setup.py org-rulesets` chỉ so tệp với ruleset trên web (đọc qua GraphQL); `--apply` chỉ tạo, cập nhật được khi tổ chức dùng gói Team.
+
+## 📤 PROTECT PUSHES (CẤP TỔ CHỨC)
+
+Push ruleset ([ADR 0010](../docs/adr/0010-org-push-ruleset.md)) chặn ngay khi đẩy — trên mọi branch, kể cả branch chưa hợp nhất — những tệp không được có trong repository:
+
+- Đường dẫn: `**/.env` và khóa SSH riêng (`id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`). `.env.*` không bị chặn vì `.env.example` được phép commit.
+- Đuôi: khóa, chứng chỉ, kho mật khẩu (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `*.ppk`, `*.kdbx`) và tệp cơ sở dữ liệu (`*.sqlite`, `*.sqlite3`, `*.db`).
+- Tệp tối đa **10 MB** (Git LFS không tính); đường dẫn tối đa **200** ký tự.
+
+Khác hai ruleset cấp tổ chức kia:
+
+- GitHub chỉ áp dụng push ruleset cho repository **riêng tư** hoặc **internal** (cả fork network) — repository công khai như `.github` không bị ảnh hưởng; vẫn chỉ thực thi với gói Team.
+- Không có `required_signatures` (push ruleset chỉ nhận bốn quy tắc push) và không có bản cấp repository: tệp là nguồn, `org_push_ruleset()` chỉ chuẩn hóa danh sách bỏ qua và phạm vi.
+- Import và so với web như hai tệp kia (`python3 scripts/org-setup.py org-rulesets`).
 
 ## ✅ KIỂM TRA BẮT BUỘC
 

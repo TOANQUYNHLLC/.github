@@ -56,6 +56,7 @@ GitHub không có API cho các mục này — người quản trị làm trên w
 ## 💡 CÂN NHẮC
 
 - [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`.github/DISCUSSION_TEMPLATE/`](.github/DISCUSSION_TEMPLATE/).
+- [ ] Import push ruleset **Protect Pushes (Organization)** từ [`rulesets/org-protect-pushes.json`](rulesets/org-protect-pushes.json) (**Organization settings → Repository → Rulesets → New ruleset → Import a ruleset**), rồi chạy `python3 scripts/org-setup.py org-rulesets` để so với tệp ([ADR 0010](docs/adr/0010-org-push-ruleset.md)).
 - [ ] Khi nâng lên gói **Team**: ruleset cấp tổ chức được thực thi — cân nhắc ADR mới để bỏ ruleset cấp repository trùng lặp.
 - [ ] Xóa quy tắc kiểm tra bắt buộc rỗng (không chặn gì) của **Protect Release Tags (Organization)** trên web, rồi bỏ khỏi `org_tag_ruleset()` trong [`scripts/org-setup.py`](scripts/org-setup.py) và sinh lại tệp.
 - [ ] Code security configuration **GitHub recommended** (**Organization settings → Advanced Security → Configurations**): đã có nhưng chưa gắn repository nào và chưa là mặc định cho repository mới — đây là cách GitHub khuyên dùng thay cho bật từng tính năng (`org-setup.py settings`). Lưu ý cấu hình này bật code scanning default setup: cần GitHub Actions (đang tắt) và không dùng chung với workflow CodeQL (advanced setup) của repository.

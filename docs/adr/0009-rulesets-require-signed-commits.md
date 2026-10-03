@@ -1,6 +1,6 @@
 # 0009. MỌI RULESET BẮT BUỘC COMMIT CÓ CHỮ KÝ
 
-- **Trạng thái:** Chấp nhận
+- **Trạng thái:** Bị thay thế một phần bởi [0010](0010-org-push-ruleset.md) (push ruleset không có `required_signatures`)
 - **Ngày:** 2026-09-27
 - **Điều chỉnh:** [0008](0008-protect-release-tags.md) — ruleset Protect Release Tags thêm quy tắc `required_signatures`
 

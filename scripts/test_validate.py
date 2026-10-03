@@ -499,6 +499,10 @@ class ValidateTest(unittest.TestCase):
 		)
 		self.assert_fails('protect-main.json: ruleset phải có quy tắc required_signatures')
 
+	def test_push_ruleset_to_chuc_nham_moi_repository(self):
+		self.edit('rulesets/org-protect-pushes.json', '"target": "push"', '"target": "branch"')
+		self.assert_fails('ruleset phải tên "Protect Pushes (Organization)", target "push"')
+
 	def test_ruleset_to_chuc_khong_dung_actor_user(self):
 		self.edit_re(
 			'rulesets/org-protect-main.json',
@@ -691,6 +695,54 @@ class OrgSetupTest(unittest.TestCase):
 		self.assertNotEqual(
 			self.module.ruleset_summary(self.module.graphql_ruleset(node)),
 			self.module.ruleset_summary(wanted),
+		)
+		# Push ruleset: không có refName, tham số của quy tắc push đổi sang dạng REST.
+		pushes = self.module.org_push_ruleset()
+		parameters = {rule['type']: rule['parameters'] for rule in pushes['rules']}
+		paths = parameters['file_path_restriction']['restricted_file_paths']
+		extensions = parameters['file_extension_restriction']['restricted_file_extensions']
+		node = {
+			'name': pushes['name'],
+			'target': 'PUSH',
+			'enforcement': 'ACTIVE',
+			'conditions': {
+				'refName': None,
+				'repositoryName': {'include': ['~ALL'], 'exclude': [], 'protected': False},
+			},
+			'bypassActors': node['bypassActors'],
+			'rules': {
+				'nodes': [
+					{
+						'type': 'FILE_PATH_RESTRICTION',
+						'parameters': {
+							'__typename': 'FilePathRestrictionParameters',
+							'restrictedFilePaths': paths,
+						},
+					},
+					{
+						'type': 'FILE_EXTENSION_RESTRICTION',
+						'parameters': {
+							'__typename': 'FileExtensionRestrictionParameters',
+							'restrictedFileExtensions': extensions,
+						},
+					},
+					{
+						'type': 'MAX_FILE_SIZE',
+						'parameters': {'__typename': 'MaxFileSizeParameters', 'maxFileSize': 10},
+					},
+					{
+						'type': 'MAX_FILE_PATH_LENGTH',
+						'parameters': {
+							'__typename': 'MaxFilePathLengthParameters',
+							'maxFilePathLength': 200,
+						},
+					},
+				]
+			},
+		}
+		self.assertEqual(
+			self.module.ruleset_summary(self.module.graphql_ruleset(node)),
+			self.module.ruleset_summary(self.module.graphql_visible(pushes)),
 		)
 		main = self.module.graphql_visible(self.module.org_ruleset())
 		for rule in main['rules']:

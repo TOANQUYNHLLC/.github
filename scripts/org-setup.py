@@ -16,8 +16,9 @@ Lệnh (nên chạy theo thứ tự):
 		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
 		chưa có workflow kiểm tra bắt buộc — hợp nhất Pull Request của lệnh files trước.
 	team: tạo team maintainers, thêm người quản trị và cấp quyền maintain mọi repository; đã đủ thì báo đã đúng.
-	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Protect Main (Organization) và Protect Release
-		Tags (Organization) (rulesets/org-*.json) cho mọi repository; cần token có quyền admin:org
+	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Protect Main (Organization), Protect Release
+		Tags (Organization) và Protect Pushes (Organization, ADR 0010) (rulesets/org-*.json) cho mọi
+		repository; cần token có quyền admin:org
 		(gh auth refresh -h github.com -s admin:org) và gói GitHub Team trở lên. Gói Free: REST API
 		trả HTTP 403 nên chỉ so tệp với ruleset trên web (đọc qua GraphQL) — tạo, sửa bằng import trên web.
 """
@@ -44,6 +45,10 @@ ORG_RULESET_FILE = ROOT / 'rulesets' / 'org-protect-main.json'
 ORG_RULESET_NAME = 'Protect Main (Organization)'
 ORG_TAG_RULESET_FILE = ROOT / 'rulesets' / 'org-protect-release-tags.json'
 ORG_TAG_RULESET_NAME = 'Protect Release Tags (Organization)'
+# Push ruleset chặn tệp bí mật, cơ sở dữ liệu, tệp lớn (ADR 0010): chỉ có ở cấp tổ chức nên tệp là nguồn —
+# GitHub chỉ áp dụng cho repository riêng tư, internal.
+ORG_PUSH_RULESET_FILE = ROOT / 'rulesets' / 'org-protect-pushes.json'
+ORG_PUSH_RULESET_NAME = 'Protect Pushes (Organization)'
 # Import cấp tổ chức không nhận actor loại User ("contains an invalid actor"): bỏ qua là chủ tổ chức (actor_id
 # bị bỏ qua) — cùng hai người quản trị; ruleset trên web tắt giới hạn hủy phê duyệt.
 ORG_BYPASS_ACTORS = [{'actor_id': 1, 'actor_type': 'OrganizationAdmin', 'bypass_mode': 'always'}]
@@ -213,6 +218,10 @@ query($org: String!) { organization(login: $org) { rulesets(first: 50) { nodes {
 			requiredStatusChecks { context integrationId }
 		}
 		... on CodeQualityParameters { severity }
+		... on FilePathRestrictionParameters { restrictedFilePaths }
+		... on FileExtensionRestrictionParameters { restrictedFileExtensions }
+		... on MaxFileSizeParameters { maxFileSize }
+		... on MaxFilePathLengthParameters { maxFilePathLength }
 	} } }
 } } } }
 """
@@ -330,9 +339,22 @@ def org_tag_ruleset():
 	return org_actors(ruleset)
 
 
+def org_push_ruleset():
+	"""Protect Pushes cho mọi repository ở cấp tổ chức: quy tắc lấy từ tệp, danh sách bỏ qua và phạm vi
+	repository như hai ruleset cấp tổ chức kia."""
+	ruleset = json.loads(ORG_PUSH_RULESET_FILE.read_text(encoding='utf-8'))
+	ruleset['name'] = ORG_PUSH_RULESET_NAME
+	ruleset['conditions'] = {'repository_name': dict(ORG_REPOSITORIES)}
+	return org_actors(ruleset)
+
+
 def org_rulesets():
 	"""Mọi ruleset cấp tổ chức, kèm tệp để import trên web."""
-	return [(ORG_RULESET_FILE, org_ruleset()), (ORG_TAG_RULESET_FILE, org_tag_ruleset())]
+	return [
+		(ORG_RULESET_FILE, org_ruleset()),
+		(ORG_TAG_RULESET_FILE, org_tag_ruleset()),
+		(ORG_PUSH_RULESET_FILE, org_push_ruleset()),
+	]
 
 
 def rulesets_for(repo):
