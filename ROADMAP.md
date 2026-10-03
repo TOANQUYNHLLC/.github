@@ -14,10 +14,10 @@ Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.p
 
 - [ ] `python3 scripts/org-setup.py files --apply --repo <tên>` — Pull Request thêm `.editorconfig`, `.gitattributes`, workflow kiểm tra tiêu đề, tên branch và gắn nhãn (`labeler.yml` kèm cấu hình — sửa đường dẫn nhãn `area: …` cho khớp dự án), `CODEOWNERS`, `dependabot.yml`, `release.yml` và tệp định dạng theo ngôn ngữ; đánh giá rồi hợp nhất. Chép tay `.env.example`, `PRIVACY.md` khi cần ([`repository-templates/`](repository-templates/)).
 - [ ] `python3 scripts/org-setup.py settings --apply --repo <tên>` — cho phép Merge, Squash, tắt Rebase; tự xóa branch; bật Dependabot alerts và security updates, secret scanning, push protection, báo cáo lỗ hổng riêng tư, Release bất biến; quyền GitHub Actions.
-- [ ] `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — ruleset **Protect Release Tags** từ [`protect-release-tags.json`](rulesets/protect-release-tags.json) và **Protect Main** từ [`protect-main.json`](rulesets/protect-main.json), Protect Main chỉ giữ 2 kiểm tra bắt buộc mà repository có.
+- [ ] `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — ruleset **Protect Release Tags** từ [`protect-release-tags.json`](rulesets/protect-release-tags.json) và **Protect Main** từ [`protect-main.json`](rulesets/protect-main.json), Protect Main chỉ giữ kiểm tra bắt buộc mà repository có job tương ứng.
 - [ ] `python3 scripts/org-setup.py labels --apply --repo <tên>` — bộ nhãn chuẩn.
 - [ ] Thêm workflow CodeQL từ [`workflow-templates/codeql.yml`](workflow-templates/codeql.yml) (**Actions → New workflow**, sửa danh sách ngôn ngữ theo dự án): ruleset Protect Main (Organization) bắt buộc kết quả code scanning của CodeQL khi tổ chức dùng gói Team.
-- [ ] `python3 scripts/org-setup.py team --apply --repo <tên>` — cấp quyền cho 6 team (**maintainers** quyền **Maintain** để `CODEOWNERS` có hiệu lực).
+- [ ] `python3 scripts/org-setup.py team --apply --repo <tên>` — cấp quyền cho các team (**maintainers** quyền **Maintain** để `CODEOWNERS` có hiệu lực).
 
 ---
 
@@ -25,7 +25,7 @@ Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.p
 
 GitHub không có API cho các mục này — người quản trị làm trên web (`python3 scripts/org-setup.py org-settings` báo các mục web khác `ORG_WEB_ONLY_SETTINGS`).
 
-- [ ] Nhãn mặc định cho repository tạo mới: **Organization settings → Repository → General → Repository labels** — nhập đủ 47 nhãn theo [`labels.yml`](labels.yml) (tên, màu, mô tả). Nhãn mặc định chỉ áp cho repository tạo sau đó; repository đã có đồng bộ bằng `python3 scripts/org-setup.py labels --apply --repo <tên>`.
+- [ ] Nhãn mặc định cho repository tạo mới: **Organization settings → Repository → General → Repository labels** — nhập đủ các nhãn theo [`labels.yml`](labels.yml) (tên, màu, mô tả). Nhãn mặc định chỉ áp cho repository tạo sau đó; repository đã có đồng bộ bằng `python3 scripts/org-setup.py labels --apply --repo <tên>`.
 
 ---
 

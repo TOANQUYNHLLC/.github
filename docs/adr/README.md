@@ -16,6 +16,7 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0010](0010-camel-case-names.md)              | Tên hàm, tham số, biến camelCase tiếng Anh                                   | Chấp nhận  | 2026-10-03 |
 | [0011](0011-git-hooks.md)                     | Git hook kiểm tra đúng nội dung được commit, được đẩy; đối chiếu sau khi kéo | Chấp nhận  | 2026-10-03 |
 | [0012](0012-monthly-releases.md)              | Phát hành hằng tháng từ `CHANGELOG.md`                                       | Chấp nhận  | 2026-10-03 |
+| [0013](0013-docs-match-code.md)               | Tài liệu luôn khớp với code                                                  | Chấp nhận  | 2026-10-03 |
 
 ## ✍️ CÁCH THÊM ADR
 
