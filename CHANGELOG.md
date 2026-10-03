@@ -8,6 +8,14 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2026.10.Stable...HEAD)
 
+### 🗑️ BỎ
+
+- GitHub Pages của repository `.github` (tên miền `toanquynh.com` trỏ về hosting riêng nên Pages không phục vụ được, không có workflow triển khai): đã xóa trên web cùng môi trường `github-pages`; `org-setup.py settings` không còn so Pages.
+
+### ♻️ THAY ĐỔI
+
+- Dev Container không cài Python hai lần: Python lấy từ image, `mise` bỏ qua Python (`MISE_DISABLE_TOOLS=python`).
+
 ---
 
 ## [v2026.10.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2026.10.Stable) — 2026-10-03

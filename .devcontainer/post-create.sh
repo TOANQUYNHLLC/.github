@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Cài công cụ cho Dev Container / Codespaces từ mise.toml và .nvmrc — cùng phiên bản với CI.
+# Python lấy từ image (devcontainer.json đặt MISE_DISABLE_TOOLS=python), mise không cài lại.
 set -euo pipefail
 
 curl -fsSL https://mise.run | sh

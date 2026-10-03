@@ -4,6 +4,9 @@
 	"features": {
 		"ghcr.io/devcontainers/features/ruby:latest": {}
 	},
+	"containerEnv": {
+		"MISE_DISABLE_TOOLS": "python"
+	},
 	"postCreateCommand": "bash .devcontainer/post-create.sh",
 	"customizations": {
 		"vscode": {
