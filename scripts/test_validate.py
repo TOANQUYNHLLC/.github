@@ -377,11 +377,11 @@ class ValidateTest(unittest.TestCase):
 
 	def test_muc_luc_adr_khop_trang_thai(self):
 		self.edit(
-			'docs/adr/0006-allow-all-merge-methods.md',
+			'docs/adr/0007-mise-single-version-source.md',
 			'- **Trạng thái:** Chấp nhận',
 			'- **Trạng thái:** Bị thay thế bởi [0008](0008-x.md)',
 		)
-		self.assert_fails('ADR 0006: trạng thái')
+		self.assert_fails('ADR 0007: trạng thái')
 
 	def test_muc_luc_adr_nhan_so_khong_lien_ket(self):
 		# Mẫu ADR ghi "Bị thay thế bởi NNNN" không kèm liên kết — phải hợp lệ.
