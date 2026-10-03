@@ -5,6 +5,7 @@ Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make t
 
 import contextlib
 import io
+import re
 import subprocess
 import tempfile
 import unittest
@@ -42,17 +43,20 @@ RELEASE_FIXTURE = """# NHẬT KÝ THAY ĐỔI
 class ReleaseTest(unittest.TestCase):
 	def setUp(self):
 		self.module = loadScript('release')
-		self.changelog = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
 
 	def testExtractsVersionNotes(self):
-		notes = self.module.releaseNotes(self.changelog, 'v2026.09.Stable')
-		self.assertIn('### ✨ THÊM', notes)
-		self.assertIn('PULL_REQUEST_TEMPLATE.md', notes)
+		# Dữ liệu mẫu cố định: nội dung CHANGELOG.md thật thay đổi theo từng lần phát hành.
+		notes = self.module.releaseNotes(RELEASE_FIXTURE, 'v2099.01.Stable')
+		self.assertEqual(notes, '### ✨ THÊM\n\n- Mục cũ.')
 		self.assertNotIn('<p align="center">', notes)
 		self.assertNotIn('CHƯA PHÁT HÀNH', notes)
+		# CHANGELOG.md thật đọc được mục của mọi phiên bản đã phát hành.
+		changelog = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
+		for version in re.findall(r'^## \[(v[^\]]+)\]', changelog, re.MULTILINE):
+			self.assertTrue(self.module.releaseNotes(changelog, version), version)
 
 	def testMissingVersionReturnsNone(self):
-		self.assertIsNone(self.module.releaseNotes(self.changelog, 'v1999.01.Stable'))
+		self.assertIsNone(self.module.releaseNotes(RELEASE_FIXTURE, 'v1999.01.Stable'))
 
 	def testCutsUnreleasedIntoVersion(self):
 		# CHANGELOG mẫu cố định: mục CHƯA PHÁT HÀNH của tệp thật trống ngay sau mỗi lần phát hành.
@@ -111,7 +115,9 @@ class ReleaseTest(unittest.TestCase):
 		"""Repository có origin, tag v2099.01.Stable và một commit sau tag, đang ở main trùng origin/main."""
 		origin, clone = Path(folder) / 'origin.git', Path(folder) / 'clone'
 		subprocess.run(['git', 'init', '-q', '--bare', str(origin)], check=True)
-		subprocess.run(['git', 'clone', '-q', str(origin), str(clone)], check=True)
+		subprocess.run(
+			['git', 'clone', '-q', str(origin), str(clone)], capture_output=True, check=True
+		)
 		(clone / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
 		# Không phụ thuộc cấu hình git của máy (runner chưa đặt danh tính, máy bật ký commit, tag).
 		git = ['git', '-c', 'user.name=test', '-c', 'user.email=', '-c', 'commit.gpgsign=false']

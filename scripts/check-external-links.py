@@ -1,4 +1,5 @@
-"""Kiểm tra các liên kết http(s) trong tài liệu Markdown, YAML, CITATION.cff và security.txt còn hoạt động.
+"""Kiểm tra các liên kết http(s) trong tài liệu Markdown, YAML, CITATION.cff và security.txt còn hoạt động, và bản
+security.txt đăng trên website (URL Canonical) khớp bản trong repository.
 
 Chạy: python3 scripts/check-external-links.py
 Workflow links.yml chạy hằng tuần; hook post-merge chạy sau mỗi lần git pull (make links).
@@ -71,7 +72,7 @@ def quickConnection(connectionClass):
 
 def quickOpener():
 	"""Opener của urllib mở kết nối bằng connectQuickly. Gán http_open, https_open (tên urllib quy định) cho
-	từng handler thay vì kế thừa lớp — tên hàm trong script viết camelCase (ADR 0012)."""
+	từng handler thay vì kế thừa lớp — tên hàm trong script viết camelCase (ADR 0010)."""
 	plain, secure = urllib.request.HTTPHandler(), urllib.request.HTTPSHandler()
 	plain.http_open = lambda request: plain.do_open(
 		quickConnection(http.client.HTTPConnection), request
@@ -142,6 +143,24 @@ def linkStatus(url):
 	return code
 
 
+def publishedCopyDiffers(path):
+	"""Thông báo khi bản đăng tại URL Canonical của tệp (ví dụ security.txt trên website) khác bản trong
+	repository; None khi giống nhau hoặc tệp không khai báo Canonical."""
+	text = path.read_text(encoding='utf-8')
+	match = re.search(r'^Canonical:\s*(\S+)$', text, re.MULTILINE)
+	if not match:
+		return None
+	request = urllib.request.Request(match.group(1), headers=HEADERS)
+	try:
+		with OPENER.open(request, timeout=15) as response:
+			published = response.read().decode('utf-8')
+	except (urllib.error.URLError, TimeoutError, UnicodeDecodeError) as exc:
+		return f'không đọc được {match.group(1)} ({getattr(exc, "reason", exc)})'
+	if published.replace('\r\n', '\n') != text:
+		return f'{match.group(1)} khác {path.relative_to(ROOT)} — đăng lại tệp lên website'
+	return None
+
+
 def main():
 	broken = 0
 	links = sorted(collectLinks().items())
@@ -157,7 +176,14 @@ def main():
 		else:
 			broken += 1
 			print(f'❌ {code} {url} ({where})')
-	print(f'{"✅ Không có liên kết hỏng" if not broken else f"❌ {broken} liên kết hỏng"}.')
+	for path in sorted(ROOT.glob('.well-known/*.txt')):
+		problem = publishedCopyDiffers(path)
+		if problem:
+			broken += 1
+			print(f'❌ {problem}')
+		else:
+			print(f'✅ Bản đăng trên web khớp {path.relative_to(ROOT)}')
+	print(f'{"✅ Không có liên kết hỏng" if not broken else f"❌ {broken} lỗi"}.')
 	return 1 if broken else 0
 
 

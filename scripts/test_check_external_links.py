@@ -6,8 +6,10 @@ Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make t
 import http.server
 import socket
 import socketserver
+import tempfile
 import threading
 import unittest
+from pathlib import Path
 from unittest import mock
 
 # discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
@@ -34,7 +36,7 @@ def answerWith(codes):
 
 def handlerClass(head, get=None):
 	# do_HEAD, do_GET, log_message là tên http.server quy định — gán qua type() để tên hàm vẫn camelCase
-	# (ADR 0012).
+	# (ADR 0010).
 	return type(
 		'QuietHandler',
 		(http.server.BaseHTTPRequestHandler,),
@@ -85,6 +87,34 @@ class ExternalLinksTest(unittest.TestCase):
 			finally:
 				server.shutdown()
 				server.server_close()
+
+	def testPublishedCopyMustMatch(self):
+		# security.txt đăng trên website (URL Canonical) phải giống bản trong repository.
+		module = loadScript('check-external-links')
+		served = []
+
+		def answer(handler):
+			body = served[0].encode()
+			handler.send_response(200)
+			handler.send_header('Content-Length', str(len(body)))
+			handler.end_headers()
+			handler.wfile.write(body)
+
+		server = socketserver.TCPServer(('127.0.0.1', 0), handlerClass(answer))
+		threading.Thread(target=server.serve_forever, daemon=True).start()
+		url = f'http://127.0.0.1:{server.server_address[1]}/.well-known/security.txt'
+		try:
+			with tempfile.TemporaryDirectory() as folder:
+				module.ROOT = Path(folder)
+				path = Path(folder) / 'security.txt'
+				path.write_text(f'Contact: mailto:a\nCanonical: {url}\n', encoding='utf-8')
+				served.append(path.read_text(encoding='utf-8').replace('\n', '\r\n'))
+				self.assertIsNone(module.publishedCopyDiffers(path))
+				served[0] = 'Contact: mailto:b\n'
+				self.assertIn('khác security.txt', module.publishedCopyDiffers(path))
+		finally:
+			server.shutdown()
+			server.server_close()
 
 
 if __name__ == '__main__':

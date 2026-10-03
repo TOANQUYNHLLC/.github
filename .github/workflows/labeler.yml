@@ -11,9 +11,9 @@ permissions:
     contents: read
 
 concurrency:
-    # Push mới trên cùng Pull Request hủy lượt chạy cũ; lượt chạy trên nhánh chính luôn chạy hết.
+    # Push mới trên cùng Pull Request hủy lượt chạy cũ.
     group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    cancel-in-progress: true
 
 jobs:
     label:

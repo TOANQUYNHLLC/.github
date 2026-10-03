@@ -14,6 +14,7 @@ import subprocess
 import tempfile
 import unicodedata
 import unittest
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 # discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
@@ -71,16 +72,27 @@ class ValidateTest(unittest.TestCase):
 		self.git('read-tree', '--empty')
 
 	def runValidate(self):
-		# Nạp validate.py của bản chép (test có thể sửa chính script) và chạy trong tiến trình này — nhanh hơn
-		# gấp đôi so với chạy python3 riêng cho mỗi test.
-		spec = importlib.util.spec_from_file_location(
-			'validate_copy', self.repo / 'scripts' / 'validate.py'
+		# Chạy validate.py của bản chép trong tiến trình này — nhanh hơn nhiều so với chạy python3 riêng cho mỗi
+		# test. Module chỉ được nạp lại khi script trong scripts/ của bản chép đổi (test có thể sửa chính
+		# validate.py hoặc script nó nạp như conventions.py).
+		sources = b''.join(
+			path.read_bytes() for path in sorted((self.repo / 'scripts').glob('*.py'))
 		)
-		module = importlib.util.module_from_spec(spec)
+		cls = type(self)
+		if getattr(cls, 'validatorSources', None) != sources:
+			spec = importlib.util.spec_from_file_location(
+				'validate_copy', self.repo / 'scripts' / 'validate.py'
+			)
+			cls.validator = importlib.util.module_from_spec(spec)
+			with (
+				contextlib.redirect_stdout(io.StringIO()),
+				contextlib.redirect_stderr(io.StringIO()),
+			):
+				spec.loader.exec_module(cls.validator)
+			cls.validatorSources = sources
 		output = io.StringIO()
 		with contextlib.redirect_stdout(output), contextlib.redirect_stderr(io.StringIO()):
-			spec.loader.exec_module(module)
-			code = module.main()
+			code = cls.validator.main()
 		return code, output.getvalue()
 
 	def edit(self, name, old, new):
@@ -276,6 +288,21 @@ class ValidateTest(unittest.TestCase):
 		self.edit('scripts/release.py', 'def releaseNotes(', 'def release_notes(')
 		self.assertFails('tên hàm "release_notes" phải viết camelCase tiếng Anh')
 
+	def testParameterAndVariableNamesMustNotBeSnakeCase(self):
+		self.edit(
+			'scripts/release.py', 'def releaseNotes(changelog,', 'def releaseNotes(change_log,'
+		)
+		self.assertFails('tham số "change_log" phải viết camelCase tiếng Anh')
+		self.edit(
+			'scripts/release.py', 'def releaseNotes(change_log,', 'def releaseNotes(changelog,'
+		)
+		self.edit('scripts/release.py', 'changelogPath = ROOT', 'changelog_path = ROOT')
+		self.assertFails('tên biến "changelog_path" phải viết camelCase tiếng Anh')
+
+	def testInvalidPythonIsReported(self):
+		self.edit('scripts/check-gofmt.py', 'def goFiles():', 'def goFiles(:')
+		self.assertFails('scripts/check-gofmt.py: Python không hợp lệ')
+
 	def testWorkflowHasNoMultilineShell(self):
 		self.edit(
 			'.github/workflows/validate.yml',
@@ -418,6 +445,12 @@ class ValidateTest(unittest.TestCase):
 		self.edit('.devcontainer/post-create.sh', '#!/usr/bin/env bash\n', '')
 		self.assertFails('shell script thiếu shebang')
 
+	def testSecurityTxtExpiringSoonIsReported(self):
+		# Báo trước khi hết hạn để kịp gia hạn, đăng lại lên website.
+		soon = (datetime.now(UTC) + timedelta(days=10)).strftime('%Y-%m-%dT%H:%M:%S.000Z')
+		self.editRegex('.well-known/security.txt', r'^Expires: .+$', f'Expires: {soon}')
+		self.assertFails('ngày — gia hạn')
+
 	def testSecurityTxtExpiresWithinOneYear(self):
 		self.editRegex(
 			'.well-known/security.txt', r'^Expires: .+$', 'Expires: 2099-01-01T00:00:00.000Z'
@@ -449,21 +482,38 @@ class ValidateTest(unittest.TestCase):
 
 	def testAdrIndexMatchesStatus(self):
 		self.edit(
-			'docs/adr/0007-mise-single-version-source.md',
+			'docs/adr/0001-tab-indentation.md',
 			'- **Trạng thái:** Chấp nhận',
-			'- **Trạng thái:** Bị thay thế bởi [0008](0008-x.md)',
+			'- **Trạng thái:** Bị thay thế bởi [0002](0002-line-endings.md)',
 		)
-		self.assertFails('ADR 0007: trạng thái')
+		self.assertFails('ADR 0001: trạng thái')
 
 	def testAdrIndexAcceptsUnlinkedNumber(self):
-		# Mẫu ADR ghi "Bị thay thế bởi NNNN" không kèm liên kết — phải hợp lệ.
+		# Mẫu ADR ghi "Bị thay thế bởi NNNN" không kèm liên kết; bảng có liên kết — vẫn khớp vì cùng số.
 		self.edit(
-			'docs/adr/0005-merge-protect-main.md',
-			'Bị thay thế một phần bởi [0006](0006-allow-all-merge-methods.md)',
-			'Bị thay thế một phần bởi 0006',
+			'docs/adr/0001-tab-indentation.md',
+			'- **Trạng thái:** Chấp nhận',
+			'- **Trạng thái:** Bị thay thế bởi 0002',
+		)
+		self.editRegex(
+			'docs/adr/README.md',
+			r'^(\| \[0001\][^|]+\|[^|]+\|) Chấp nhận +\|',
+			r'\1 Bị thay thế bởi [0002](0002-line-endings.md) |',
 		)
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
+
+	def testChangelogLinksMustBeAbsolute(self):
+		self.edit(
+			'CHANGELOG.md',
+			'# 📝 NHẬT KÝ THAY ĐỔI\n',
+			'# 📝 NHẬT KÝ THAY ĐỔI\n\nXem [ADR](docs/adr/README.md).\n',
+		)
+		self.assertFails('phải là URL tuyệt đối (mỗi mục thành nội dung GitHub Release)')
+
+	def testMaintainersMatchTeamsScript(self):
+		self.editRegex('MAINTAINERS.md', r'^\| .+\[@trongtoandl81\].+\n', '')
+		self.assertFails('người quản trị "trongtoandl81" chỉ có ở một trong MAINTAINERS.md')
 
 	def testAdrIndexListsEveryAdr(self):
 		# Số 9999 không trùng ADR thật nào — test không phải sửa mỗi khi thêm ADR.

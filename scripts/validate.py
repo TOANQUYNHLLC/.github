@@ -4,6 +4,8 @@ Chạy: python3 scripts/validate.py  (cần Python ≥ 3.11 — tomllib, datetim
 cả hai có sẵn trên runner GitHub; trên máy dùng Python do mise cài, không dùng Python 3.9 của macOS).
 """
 
+import ast
+import hashlib
 import importlib.util
 import json
 import re
@@ -46,14 +48,18 @@ WORKFLOW_GENERAL_CATEGORIES = {
 }
 # Email liên hệ chung của công ty — mọi tài liệu phải dùng đúng địa chỉ này.
 COMPANY_EMAIL = 'toanquynhvn@gmail.com'
+# security.txt: báo trước khi Expires hết hạn để kịp gia hạn và đăng lại lên website.
+EXPIRY_NOTICE_DAYS = 30
 errors = []
 FORM_LABELS = []
-# Đuôi tệp script ngoài Python ở bất kỳ đâu — phải ghi lý do không dùng Python (ADR 0015); trong scripts/ thì mọi
+# Đuôi tệp script ngoài Python ở bất kỳ đâu — phải ghi lý do không dùng Python (ADR 0009); trong scripts/ thì mọi
 # tệp không phải Python (kể cả .js) đều phải ghi.
 SCRIPT_SUFFIXES = ('.sh', '.bash', '.zsh', '.rb', '.pl', '.ps1')
 NOT_PYTHON_REASON = 'Không viết bằng Python vì:'
-# Tên hàm Python: camelCase tiếng Anh (ADR 0012); setUp, tearDown của unittest cũng khớp.
-FUNCTION_NAME = re.compile(r'[a-z][a-zA-Z0-9]*')
+# Tên trong mã Python (ADR 0010): hàm, tham số camelCase (setUp, tearDown của unittest cũng khớp); biến không
+# dùng snake_case — camelCase, hằng số UPPER_CASE, hoặc PascalCase khi giữ một lớp.
+FUNCTION_NAME = re.compile(r'_?[a-z][a-zA-Z0-9]*')
+VARIABLE_NAME = re.compile(r'_?[A-Za-z][A-Za-z0-9]*|[A-Z][A-Z0-9_]*|_')
 
 
 def loadScript(name):
@@ -82,19 +88,28 @@ YAML_BATCH = (
 	'rescue Exception => e; out[f] = {"error" => e.message}; end }; puts JSON.dump(out)'
 )
 yamlCache = {}
+# Kết quả đọc theo nội dung tệp, giữ qua các lần runChecks() trong cùng tiến trình (bộ test chạy validate hàng
+# trăm lần): tệp không đổi thì không gọi lại Ruby.
+yamlResults = {}
 
 
 def readYamlFiles(paths):
 	"""Đọc nhiều tệp YAML trong một lần gọi Ruby; mỗi tệp trả {"data": …} hoặc {"error": …}."""
-	result = subprocess.run(
-		['ruby', '-ryaml', '-rjson', '-e', YAML_BATCH, *map(str, paths)],
-		capture_output=True,
-		text=True,
-		check=False,
-	)
-	if result.returncode != 0:
-		return {str(path): {'error': result.stderr.strip()} for path in paths}
-	return json.loads(result.stdout)
+	keys = {str(path): hashlib.sha256(Path(path).read_bytes()).hexdigest() for path in paths}
+	missing = [str(path) for path in paths if keys[str(path)] not in yamlResults]
+	if missing:
+		result = subprocess.run(
+			['ruby', '-ryaml', '-rjson', '-e', YAML_BATCH, *missing],
+			capture_output=True,
+			text=True,
+			check=False,
+		)
+		if result.returncode != 0:
+			return {str(path): {'error': result.stderr.strip()} for path in paths}
+		for name, entry in json.loads(result.stdout).items():
+			yamlResults[keys[name]] = entry
+	# Bản sao: loadYaml đánh dấu "reported" trên từng mục của lần chạy.
+	return {str(path): dict(yamlResults[keys[str(path)]]) for path in paths}
 
 
 def loadYaml(path):
@@ -275,14 +290,12 @@ def checkLinks(path, text):
 		error(path, message)
 
 
-def checkAbsoluteLinks(path, text):
-	"""Biểu mẫu hiển thị trong repository khác: liên kết tương đối sẽ trỏ sai repository."""
+def checkAbsoluteLinks(path, text, reason='biểu mẫu dùng ở mọi repository'):
+	"""Nội dung hiển thị ngoài repository (biểu mẫu ở repository khác, nội dung GitHub Release): liên kết tương
+	đối sẽ trỏ sai chỗ."""
 	for match in re.finditer(r'\]\(([^)\s]+)\)', text):
 		if not re.match(r'(https?|mailto):', match.group(1)):
-			error(
-				path,
-				f'liên kết "{match.group(1)}" phải là URL tuyệt đối (biểu mẫu dùng ở mọi repository)',
-			)
+			error(path, f'liên kết "{match.group(1)}" phải là URL tuyệt đối ({reason})')
 
 
 def checkSecurityMailto(path, text):
@@ -332,10 +345,10 @@ def checkForm(path, required=('name', 'description', 'body')):
 			error(path, f'phần tử {index}: thiếu label')
 		elif attributes['label'] != attributes['label'].upper():
 			error(path, f'phần tử {index}: tiêu đề trường "{attributes["label"]}" phải viết hoa')
-		item_id = item.get('id')
-		if item_id in ids:
-			error(path, f'phần tử {index}: id "{item_id}" bị trùng')
-		ids.add(item_id)
+		itemId = item.get('id')
+		if itemId in ids:
+			error(path, f'phần tử {index}: id "{itemId}" bị trùng')
+		ids.add(itemId)
 		if kind in ('dropdown', 'checkboxes') and not attributes.get('options'):
 			error(path, f'phần tử {index}: {kind} thiếu options')
 
@@ -358,21 +371,21 @@ def checkWorkflow(path, text):
 		error(
 			path, '$default-branch chỉ dùng trong workflow-templates/ — ghi tên nhánh thật (main)'
 		)
-	# Kiểm tra luôn là tệp riêng trong scripts/, không viết trực tiếp trong YAML (ADR 0013): mỗi bước gọi một
+	# Kiểm tra luôn là tệp riêng trong scripts/, không viết trực tiếp trong YAML (ADR 0009): mỗi bước gọi một
 	# lệnh. Workflow của repository này gọi scripts/ để chạy được y hệt tại máy (make check); workflow mẫu gọi
 	# script của tổ chức (checkout vào .org/).
 	for number, line in enumerate(text.split('\n'), start=1):
 		if re.match(r'^\s*run:\s*[|>]', line):
 			error(
 				path,
-				f'dòng {number}: lệnh nhiều dòng — tách thành script trong scripts/, mỗi bước gọi một lệnh (ADR 0013)',
+				f'dòng {number}: lệnh nhiều dòng — tách thành script trong scripts/, mỗi bước gọi một lệnh (ADR 0009)',
 			)
 		if re.match(r'^\s*shell:\s*(python|node|pwsh|ruby|perl)', line) or re.search(
 			r'^\s*run:.*\b(python3?|node|ruby|perl|bash|sh)\s+-(c|e)\b', line
 		):
 			error(
 				path,
-				f'dòng {number}: mã nhúng trong YAML — viết thành script trong scripts/ (ADR 0013)',
+				f'dòng {number}: mã nhúng trong YAML — viết thành script trong scripts/ (ADR 0009)',
 			)
 	if not re.search(r'^concurrency:', text, re.MULTILINE):
 		error(path, 'thiếu khai báo "concurrency" ở cấp workflow')
@@ -413,7 +426,7 @@ def checkWorkflowTemplate(path):
 
 
 def checkToolVersions():
-	"""Phiên bản công cụ chỉ ở mise.toml; Node.js chỉ ở .nvmrc (ADR 0007). Công cụ trong mise.toml (trừ Python, Node.js)
+	"""Phiên bản công cụ chỉ ở mise.toml; Node.js chỉ ở .nvmrc (ADR 0008). Công cụ trong mise.toml (trừ Python, Node.js)
 	khớp danh sách check-tool-versions.py theo dõi bản mới."""
 	mise = (ROOT / 'mise.toml').read_text(encoding='utf-8') if (ROOT / 'mise.toml').exists() else ''
 	tools = set(re.findall(r'^([a-z-]+) = "[^"]+"$', mise.split('[settings]')[0], re.MULTILINE))
@@ -430,6 +443,7 @@ def checkToolVersions():
 	# Không quét validate.py và test_*.py: các tệp này chứa chính các mẫu để so khớp.
 	sources = [
 		*(ROOT / '.github' / 'workflows').glob('*.yml'),
+		*(ROOT / 'workflow-templates').glob('*.yml'),
 		*(ROOT / '.devcontainer').glob('*.sh'),
 		*(
 			path
@@ -441,7 +455,7 @@ def checkToolVersions():
 	for path in sorted(path for path in sources if path.exists()):
 		for number, line in enumerate(path.read_text(encoding='utf-8').split('\n'), start=1):
 			if pinned.search(line):
-				error(path, f'dòng {number}: phiên bản công cụ phải lấy từ mise.toml (ADR 0007)')
+				error(path, f'dòng {number}: phiên bản công cụ phải lấy từ mise.toml (ADR 0008)')
 
 
 def checkFormatConfig():
@@ -480,8 +494,8 @@ def checkFormatConfig():
 		text = path.read_text(encoding='utf-8') if path.exists() else ''
 		if re.search(r'(indent_size|tab_width|indent-width)\s*=\s*2\b|"tabWidth"\s*:\s*2\b', text):
 			errors.append(f'{path.name}: không được dùng độ rộng 2')
-	ruff_path = ROOT / 'ruff.toml'
-	ruff = ruff_path.read_text(encoding='utf-8') if ruff_path.exists() else ''
+	ruffPath = ROOT / 'ruff.toml'
+	ruff = ruffPath.read_text(encoding='utf-8') if ruffPath.exists() else ''
 	if 'indent-width = 4' not in ruff or 'indent-style = "tab"' not in ruff:
 		errors.append('ruff.toml: bắt buộc indent-width = 4 và indent-style = "tab"')
 	# Đối chiếu đầy đủ với cấu hình chuẩn.
@@ -493,14 +507,14 @@ def checkFormatConfig():
 		elif key not in prettier:
 			errors.append(f'.prettierrc.json: thiếu "{key}"')
 	try:
-		ruff_config = tomllib.loads(ruff)
+		ruffConfig = tomllib.loads(ruff)
 	except tomllib.TOMLDecodeError as exc:
 		errors.append(f'ruff.toml: TOML không hợp lệ ({exc})')
-		ruff_config = {}
+		ruffConfig = {}
 	for key, value in RUFF_STANDARD.items():
 		pairs = value.items() if isinstance(value, dict) else [(None, value)]
 		for sub, expected in pairs:
-			actual = (ruff_config.get(key) or {}).get(sub) if sub else ruff_config.get(key)
+			actual = (ruffConfig.get(key) or {}).get(sub) if sub else ruffConfig.get(key)
 			if actual != expected:
 				name = f'{key}.{sub}' if sub else key
 				errors.append(f'ruff.toml: {name} phải là {json.dumps(expected)}')
@@ -527,10 +541,10 @@ def checkLintIgnoreConfig():
 	for entry in sorted(entries('.prettierignore') & entries('.gitignore')):
 		errors.append(f'.prettierignore: "{entry}" đã có trong .gitignore — Prettier 3 tự bỏ qua')
 	# Quy tắc chung của tổ chức, áp dụng khi repository dùng ESLint.
-	eslint_path = ROOT / 'eslint.config.js'
-	if not eslint_path.exists():
+	eslintPath = ROOT / 'eslint.config.js'
+	if not eslintPath.exists():
 		return
-	eslint = eslint_path.read_text(encoding='utf-8')
+	eslint = eslintPath.read_text(encoding='utf-8')
 	if "from 'eslint-config-prettier'" not in eslint:
 		errors.append('eslint.config.js: phải dùng eslint-config-prettier để tắt quy tắc định dạng')
 	if re.search(r"""['"]?\bindent['"]?\s*:""", eslint):
@@ -661,15 +675,73 @@ def checkConventions():
 			errors.append(f'scripts/conventions.py: {name} {where} "{word}" so với CONTRIBUTING.md')
 
 
-def checkFunctionNames(path, text):
-	"""Tên hàm Python viết camelCase bằng tiếng Anh (ADR 0012)."""
-	for number, line in enumerate(text.split('\n'), start=1):
-		match = re.match(r'^\s*def ([A-Za-z_][A-Za-z0-9_]*)', line)
-		if match and not FUNCTION_NAME.fullmatch(match.group(1)):
-			error(
-				path,
-				f'dòng {number}: tên hàm "{match.group(1)}" phải viết camelCase tiếng Anh (ADR 0012)',
-			)
+def nameProblems(text):
+	"""(dòng, loại, tên) của mọi tên sai quy ước trong mã Python; None khi mã không hợp lệ."""
+	try:
+		tree = ast.parse(text)
+	except SyntaxError:
+		return None
+	problems = []
+	for node in ast.walk(tree):
+		if isinstance(
+			node, (ast.FunctionDef, ast.AsyncFunctionDef)
+		) and not FUNCTION_NAME.fullmatch(node.name):
+			problems.append((node.lineno, 'tên hàm', node.name))
+		if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
+			arguments = node.args
+			for argument in (
+				*arguments.posonlyargs,
+				*arguments.args,
+				*arguments.kwonlyargs,
+				arguments.vararg,
+				arguments.kwarg,
+			):
+				if argument and not FUNCTION_NAME.fullmatch(argument.arg):
+					problems.append((argument.lineno, 'tham số', argument.arg))
+		elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+			if not VARIABLE_NAME.fullmatch(node.id):
+				problems.append((node.lineno, 'tên biến', node.id))
+		elif isinstance(node, ast.ExceptHandler) and node.name:
+			if not VARIABLE_NAME.fullmatch(node.name):
+				problems.append((node.lineno, 'tên biến', node.name))
+	return problems
+
+
+# Kết quả theo nội dung tệp, giữ qua các lần runChecks() trong cùng tiến trình như yamlResults.
+nameResults = {}
+
+
+def checkNames(path, text):
+	"""Tên hàm, tham số viết camelCase tiếng Anh; biến không dùng snake_case (ADR 0010)."""
+	key = hashlib.sha256(text.encode('utf-8')).hexdigest()
+	if key not in nameResults:
+		nameResults[key] = nameProblems(text)
+	problems = nameResults[key]
+	if problems is None:
+		error(path, 'Python không hợp lệ (lỗi cú pháp)')
+		return
+	for line, kind, name in problems:
+		error(path, f'dòng {line}: {kind} "{name}" phải viết camelCase tiếng Anh (ADR 0010)')
+
+
+def checkMaintainers():
+	"""Người quản trị trong MAINTAINERS.md khớp MAINTAINERS của scripts/orgsetup/teams.py (org-setup.py team thêm
+	họ vào mọi team)."""
+	listing, source = ROOT / 'MAINTAINERS.md', ROOT / 'scripts' / 'orgsetup' / 'teams.py'
+	if not listing.exists() or not source.exists():
+		return
+	current = contributingSection(listing.read_text(encoding='utf-8'), 'NGƯỜI QUẢN TRỊ HIỆN TẠI')
+	documented = set(re.findall(r'\[@([A-Za-z0-9-]+)\]\(https://github\.com/\1\)', current))
+	match = re.search(
+		r'^MAINTAINERS = (\(.*?\))$', source.read_text(encoding='utf-8'), re.MULTILINE
+	)
+	configured = set(ast.literal_eval(match.group(1))) if match else set()
+	for name in sorted(documented ^ configured):
+		where = listing if name in configured else source
+		error(
+			where,
+			f'người quản trị "{name}" chỉ có ở một trong MAINTAINERS.md và MAINTAINERS của teams.py',
+		)
 
 
 def checkRulesets():
@@ -688,42 +760,42 @@ def checkRulesets():
 	for workflow in sorted((ROOT / '.github' / 'workflows').glob('*.yml')):
 		for job in ((loadYaml(workflow) or {}).get('jobs') or {}).values():
 			jobs.add(job.get('name'))
-	# Mọi ruleset nhánh, tag (cấp repository, cấp tổ chức) bắt buộc commit có chữ ký (ADR 0009); push
-	# ruleset không nhận quy tắc này (ADR 0010).
-	for ruleset_path in sorted((ROOT / 'rulesets').glob('*.json')):
+	# Mọi ruleset nhánh, tag (cấp repository, cấp tổ chức) bắt buộc commit có chữ ký (ADR 0006); push
+	# ruleset không nhận quy tắc này (ADR 0007).
+	for rulesetPath in sorted((ROOT / 'rulesets').glob('*.json')):
 		try:
-			data = json.loads(ruleset_path.read_text(encoding='utf-8'))
+			data = json.loads(rulesetPath.read_text(encoding='utf-8'))
 		except json.JSONDecodeError:
 			continue
 		if data.get('target') == 'push':
 			continue
 		if 'required_signatures' not in {r.get('type') for r in data.get('rules', [])}:
 			error(
-				ruleset_path, 'ruleset phải có quy tắc required_signatures (Require signed commits)'
+				rulesetPath, 'ruleset phải có quy tắc required_signatures (Require signed commits)'
 			)
-	tag_path = ROOT / 'rulesets' / 'protect-release-tags.json'
-	if not tag_path.exists():
+	tagPath = ROOT / 'rulesets' / 'protect-release-tags.json'
+	if not tagPath.exists():
 		errors.append('thiếu tệp bắt buộc rulesets/protect-release-tags.json')
 	else:
 		try:
-			tags = json.loads(tag_path.read_text(encoding='utf-8'))
+			tags = json.loads(tagPath.read_text(encoding='utf-8'))
 		except json.JSONDecodeError:
 			tags = {}
 		include = ((tags.get('conditions') or {}).get('ref_name') or {}).get('include') or []
 		if tags.get('name') != 'Protect Release Tags' or tags.get('target') != 'tag':
-			error(tag_path, 'ruleset phải tên "Protect Release Tags", target "tag" (ADR 0008)')
+			error(tagPath, 'ruleset phải tên "Protect Release Tags", target "tag" (ADR 0005)')
 		if 'refs/tags/v*' not in include:
-			error(tag_path, 'ruleset phải áp dụng cho refs/tags/v* (tag phát hành)')
+			error(tagPath, 'ruleset phải áp dụng cho refs/tags/v* (tag phát hành)')
 		if not {'creation', 'update', 'deletion'} <= {
 			rule.get('type') for rule in tags.get('rules') or []
 		}:
-			error(tag_path, 'ruleset phải chặn creation, update, deletion của tag phát hành')
-	org_path = ROOT / 'rulesets' / 'org-protect-main.json'
-	if not org_path.exists():
+			error(tagPath, 'ruleset phải chặn creation, update, deletion của tag phát hành')
+	orgPath = ROOT / 'rulesets' / 'org-protect-main.json'
+	if not orgPath.exists():
 		errors.append('thiếu tệp bắt buộc rulesets/org-protect-main.json')
 	else:
 		try:
-			org = json.loads(org_path.read_text(encoding='utf-8'))
+			org = json.loads(orgPath.read_text(encoding='utf-8'))
 		except json.JSONDecodeError:
 			org = {}
 		repositories = ((org.get('conditions') or {}).get('repository_name') or {}).get(
@@ -731,40 +803,40 @@ def checkRulesets():
 		) or []
 		if org.get('name') != 'Protect Main (Organization)' or '~ALL' not in repositories:
 			error(
-				org_path,
+				orgPath,
 				'ruleset phải tên "Protect Main (Organization)" và nhắm mọi repository (~ALL)',
 			)
 	# Import ruleset cấp tổ chức báo "contains an invalid actor" với actor loại User.
-	for org_file in sorted((ROOT / 'rulesets').glob('org-*.json')):
-		if re.search(r'"(actor_type|type)":\s*"User"', org_file.read_text(encoding='utf-8')):
+	for orgFile in sorted((ROOT / 'rulesets').glob('org-*.json')):
+		if re.search(r'"(actor_type|type)":\s*"User"', orgFile.read_text(encoding='utf-8')):
 			error(
-				org_file,
+				orgFile,
 				'ruleset cấp tổ chức không dùng actor loại User — GitHub từ chối khi import',
 			)
-	org_tag_path = ROOT / 'rulesets' / 'org-protect-release-tags.json'
-	if not org_tag_path.exists():
+	orgTagPath = ROOT / 'rulesets' / 'org-protect-release-tags.json'
+	if not orgTagPath.exists():
 		errors.append('thiếu tệp bắt buộc rulesets/org-protect-release-tags.json')
 	else:
 		try:
-			org_tags = json.loads(org_tag_path.read_text(encoding='utf-8'))
+			orgTags = json.loads(orgTagPath.read_text(encoding='utf-8'))
 		except json.JSONDecodeError:
-			org_tags = {}
-		conditions = org_tags.get('conditions') or {}
+			orgTags = {}
+		conditions = orgTags.get('conditions') or {}
 		if (
-			org_tags.get('name') != 'Protect Release Tags (Organization)'
+			orgTags.get('name') != 'Protect Release Tags (Organization)'
 			or '~ALL' not in (conditions.get('repository_name') or {}).get('include', [])
 			or 'refs/tags/v*' not in (conditions.get('ref_name') or {}).get('include', [])
 		):
 			error(
-				org_tag_path,
+				orgTagPath,
 				'ruleset phải tên "Protect Release Tags (Organization)", nhắm ~ALL repository và refs/tags/v*',
 			)
-	push_path = ROOT / 'rulesets' / 'org-protect-pushes.json'
-	if not push_path.exists():
+	pushPath = ROOT / 'rulesets' / 'org-protect-pushes.json'
+	if not pushPath.exists():
 		errors.append('thiếu tệp bắt buộc rulesets/org-protect-pushes.json')
 	else:
 		try:
-			pushes = json.loads(push_path.read_text(encoding='utf-8'))
+			pushes = json.loads(pushPath.read_text(encoding='utf-8'))
 		except json.JSONDecodeError:
 			pushes = {}
 		conditions = pushes.get('conditions') or {}
@@ -774,8 +846,8 @@ def checkRulesets():
 			or '~ALL' not in (conditions.get('repository_name') or {}).get('include', [])
 		):
 			error(
-				push_path,
-				'ruleset phải tên "Protect Pushes (Organization)", target "push" và nhắm ~ALL repository (ADR 0010)',
+				pushPath,
+				'ruleset phải tên "Protect Pushes (Organization)", target "push" và nhắm ~ALL repository (ADR 0007)',
 			)
 	for rule in ruleset.get('rules', []):
 		for check in (rule.get('parameters') or {}).get('required_status_checks', []):
@@ -789,14 +861,14 @@ def checkRulesets():
 def checkAdrIndex():
 	"""Bảng trong docs/adr/README.md phải liệt kê mọi ADR, cùng ngày và cùng trạng thái với từng tệp."""
 	folder = ROOT / 'docs' / 'adr'
-	index_path = folder / 'README.md'
-	if not index_path.exists():
+	indexPath = folder / 'README.md'
+	if not indexPath.exists():
 		return
 	rows = {
 		number: (status.strip(), date.strip())
 		for number, status, date in re.findall(
 			r'^\| \[(\d{4})\]\([^)]+\) +\|[^|]+\|([^|]+)\|([^|]+)\|$',
-			index_path.read_text(encoding='utf-8'),
+			indexPath.read_text(encoding='utf-8'),
 			re.MULTILINE,
 		)
 	}
@@ -809,32 +881,32 @@ def checkAdrIndex():
 			error(path, 'thiếu dòng "Trạng thái" hoặc "Ngày"')
 			continue
 		if number not in rows:
-			error(index_path, f'bảng thiếu ADR {number}')
+			error(indexPath, f'bảng thiếu ADR {number}')
 			continue
-		row_status, row_date = rows[number]
-		if row_date != date.group(1).strip():
-			error(index_path, f'ADR {number}: ngày "{row_date}" khác tệp ADR ({date.group(1)})')
+		rowStatus, rowDate = rows[number]
+		if rowDate != date.group(1).strip():
+			error(indexPath, f'ADR {number}: ngày "{rowDate}" khác tệp ADR ({date.group(1)})')
 		superseded = 'thay thế' in status.group(1).lower()
-		if superseded != ('thay thế' in row_status.lower()) or (
+		if superseded != ('thay thế' in rowStatus.lower()) or (
 			superseded
-			and set(re.findall(r'\b\d{4}\b', row_status))
+			and set(re.findall(r'\b\d{4}\b', rowStatus))
 			!= set(re.findall(r'\b\d{4}\b', status.group(1)))
 		):
 			error(
-				index_path,
-				f'ADR {number}: trạng thái "{row_status}" khác tệp ADR ({status.group(1)})',
+				indexPath,
+				f'ADR {number}: trạng thái "{rowStatus}" khác tệp ADR ({status.group(1)})',
 			)
 
 
 def checkSpaceOnly(path, text):
 	"""Ngôn ngữ bắt buộc dấu cách (4 hoặc 2 mỗi cấp theo formatter chính thức): không dùng tab."""
 	width = 2 if path.suffix in TWO_SPACE_SUFFIXES else 4
-	in_fence = False
+	inFence = False
 	for number, line in enumerate(text.split('\n'), start=1):
 		if path.suffix == '.md' and line.lstrip().startswith('```'):
-			in_fence = not in_fence
+			inFence = not inFence
 			continue
-		if not in_fence and re.match(r'^ *\t', line):
+		if not inFence and re.match(r'^ *\t', line):
 			error(
 				path,
 				f'dòng {number}: {path.suffix} phải thụt lề bằng {width} dấu cách, không dùng tab',
@@ -856,13 +928,13 @@ def checkTabOnly(path, text):
 
 def checkHeadings(path, text):
 	"""Phong cách thống nhất của repository: mọi tiêu đề Markdown viết hoa."""
-	in_fence = False
+	inFence = False
 	for number, line in enumerate(text.split('\n'), start=1):
 		if line.lstrip().startswith('```'):
-			in_fence = not in_fence
+			inFence = not inFence
 		heading = re.match(r'#{1,6} (.+)', line)
 		title = re.sub(r'`[^`]*`|\[[^\]]*\]\([^)]*\)', '', heading.group(1)) if heading else ''
-		if heading and not in_fence and title != title.upper():
+		if heading and not inFence and title != title.upper():
 			error(path, f'dòng {number}: tiêu đề phải viết hoa — "{heading.group(1)}"')
 
 
@@ -956,6 +1028,11 @@ def checkSecurityTxt(path, text):
 	remaining = (moment - datetime.now(UTC)).days
 	if remaining < 0:
 		error(path, 'Expires đã hết hạn — gia hạn tối đa 1 năm')
+	elif remaining < EXPIRY_NOTICE_DAYS:
+		error(
+			path,
+			f'Expires còn {remaining} ngày — gia hạn (tối đa 1 năm) rồi đăng lại tệp lên website',
+		)
 	elif remaining > 366:
 		error(path, 'Expires vượt quá 1 năm (RFC 9116 khuyến nghị tối đa 1 năm)')
 
@@ -966,6 +1043,7 @@ def checkChangelog(path, text):
 		error(path, 'mục đầu tiên phải là "## [CHƯA PHÁT HÀNH]"')
 	if len(versions) != len(set(versions)):
 		error(path, 'có phiên bản bị lặp')
+	checkAbsoluteLinks(path, text, 'mỗi mục thành nội dung GitHub Release')
 
 
 def checkScriptLanguage(path):
@@ -975,7 +1053,7 @@ def checkScriptLanguage(path):
 		error(
 			path,
 			f'script không viết bằng Python — thêm dòng "{NOT_PYTHON_REASON} <lý do>" ở đầu tệp, '
-			'nêu vì sao ngôn ngữ này xử lý tốt hơn; nếu không, viết bằng Python (ADR 0015)',
+			'nêu vì sao ngôn ngữ này xử lý tốt hơn; nếu không, viết bằng Python (ADR 0009)',
 		)
 
 
@@ -1005,13 +1083,13 @@ def checkFile(file):
 		and file.parent.parent != ROOT / '.github'
 	) or (file.name == 'FUNDING.yml' and file.parent != ROOT / '.github'):
 		error(file, 'phải nằm trong thư mục .github/ để GitHub nhận diện')
-	# Script ưu tiên Python; ngôn ngữ khác chỉ khi xử lý việc đó tốt hơn, ghi lý do ở đầu tệp (ADR 0015).
+	# Script ưu tiên Python; ngôn ngữ khác chỉ khi xử lý việc đó tốt hơn, ghi lý do ở đầu tệp (ADR 0009).
 	if (file.parent == ROOT / 'scripts' and file.suffix != '.py') or file.suffix in SCRIPT_SUFFIXES:
 		checkScriptLanguage(file)
 	if file.suffix == '.sh':
 		checkShell(file)
 	if file.suffix == '.py':
-		checkFunctionNames(file, file.read_text(encoding='utf-8'))
+		checkNames(file, file.read_text(encoding='utf-8'))
 	if file.suffix in SPACE_SUFFIXES + TWO_SPACE_SUFFIXES:
 		checkSpaceOnly(file, file.read_text(encoding='utf-8'))
 	if file.suffix in BINARY_SUFFIXES:
@@ -1105,6 +1183,7 @@ def runChecks():
 		checkEditorExtensions,
 		checkConventions,
 		checkRulesets,
+		checkMaintainers,
 		checkAdrIndex,
 		checkRequiredFiles,
 		checkLabelUsage,
