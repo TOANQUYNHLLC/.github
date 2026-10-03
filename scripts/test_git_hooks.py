@@ -15,9 +15,9 @@ from unittest import mock
 
 # discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
 try:
-	from testsupport import ROOT, loadScript
+	from testsupport import ROOT, loadScript, silenced
 except ModuleNotFoundError:
-	from scripts.testsupport import ROOT, loadScript
+	from scripts.testsupport import ROOT, loadScript, silenced
 
 
 class GitHooksTest(unittest.TestCase):
@@ -79,7 +79,7 @@ class GitHooksTest(unittest.TestCase):
 		path.write_text('#  Tiêu đề\n\n*  mục\n', encoding='utf-8')
 		self.git('add', 'a.md')
 		path.write_text('# Tiêu đề\n\n- mục\n', encoding='utf-8')
-		with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+		with silenced():
 			self.assertEqual(self.module.preCommit(self.repo, []), 1)
 			self.git('add', 'a.md')
 			path.write_text('#  sai\n', encoding='utf-8')
@@ -94,7 +94,7 @@ class GitHooksTest(unittest.TestCase):
 		path = self.repo / 'tool.py'
 		path.write_text('import os\n', encoding='utf-8')
 		self.git('add', 'tool.py')
-		with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+		with silenced():
 			self.assertEqual(self.module.preCommit(self.repo, []), 1)
 			path.write_text("print('ok')\n", encoding='utf-8')
 			self.git('add', 'tool.py')

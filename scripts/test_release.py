@@ -115,7 +115,9 @@ class ReleaseTest(unittest.TestCase):
 		"""Repository có origin, tag v2099.01.Stable và một commit sau tag, đang ở main trùng origin/main."""
 		origin, clone = Path(folder) / 'origin.git', Path(folder) / 'clone'
 		subprocess.run(['git', 'init', '-q', '--bare', str(origin)], check=True)
-		subprocess.run(['git', 'clone', '-q', str(origin), str(clone)], check=True)
+		subprocess.run(
+			['git', 'clone', '-q', str(origin), str(clone)], capture_output=True, check=True
+		)
 		(clone / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
 		# Không phụ thuộc cấu hình git của máy (runner chưa đặt danh tính, máy bật ký commit, tag).
 		git = ['git', '-c', 'user.name=test', '-c', 'user.email=', '-c', 'commit.gpgsign=false']
