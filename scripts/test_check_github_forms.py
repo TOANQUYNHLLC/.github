@@ -3,6 +3,7 @@
 Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make test)
 """
 
+import contextlib
 import io
 import unittest
 import urllib.error
@@ -39,6 +40,25 @@ class GithubFormsTest(unittest.TestCase):
 				module.fetchPage('https://github.com')
 			raised.exception.close()
 			self.assertEqual(len(responses), 1)
+
+	def testMissingRefIsReportedOnce(self):
+		# Branch chưa đẩy lên GitHub: mọi trang 404 — báo một dòng, không báo từng biểu mẫu lỗi.
+		module = loadScript('check-github-forms')
+
+		def missing(url):
+			raise urllib.error.HTTPError(url, 404, 'Not Found', {}, None)
+
+		output = io.StringIO()
+		with (
+			mock.patch.object(module, 'fetchPage', missing),
+			mock.patch.object(module.sys, 'argv', ['check-github-forms.py', 'feature/x']),
+			contextlib.redirect_stdout(output),
+		):
+			self.assertEqual(module.main(), 1)
+		self.assertEqual(
+			output.getvalue().strip(),
+			'❌ Không có "feature/x" trên GitHub — đẩy branch trước: git push -u origin feature/x',
+		)
 
 
 if __name__ == '__main__':

@@ -407,6 +407,19 @@ class OrgSetupTest(unittest.TestCase):
 			'python3 scripts/org-setup.py preview',
 		)
 
+	def testPreviewChecksLoginOnce(self):
+		# Chưa đăng nhập GitHub CLI: dừng trước khi chạy song song các lệnh, báo một lần.
+		module = loadScript('org-setup')
+		with (
+			mock.patch.object(module.github, 'gh', side_effect=RuntimeError('chưa đăng nhập')),
+			mock.patch.object(module.subprocess, 'run') as run,
+			mock.patch.object(module.sys, 'argv', ['org-setup.py', 'preview']),
+			self.assertRaises(SystemExit) as stopped,
+		):
+			module.main()
+		self.assertIn('gh auth login', str(stopped.exception.code))
+		run.assert_not_called()
+
 
 if __name__ == '__main__':
 	unittest.main()

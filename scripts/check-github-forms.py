@@ -80,11 +80,20 @@ def main():
 		try:
 			return templateData(ref, relative)
 		except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+			if isinstance(exc, urllib.error.HTTPError):
+				exc.close()  # chỉ cần mã lỗi, không cần nội dung phản hồi
 			return exc
 
 	# Đọc các trang song song — mỗi trang mất khoảng một giây.
 	with ThreadPoolExecutor(max_workers=4) as pool:
 		templates = list(pool.map(fetch, relatives))
+	# Mọi trang đều 404: ref chưa có trên GitHub, không phải biểu mẫu lỗi.
+	if templates and all(
+		isinstance(template, urllib.error.HTTPError) and template.code == 404
+		for template in templates
+	):
+		print(f'❌ Không có "{ref}" trên GitHub — đẩy branch trước: git push -u origin {ref}')
+		return 1
 	for relative, template in zip(relatives, templates, strict=True):
 		if isinstance(template, Exception):
 			failed += 1
