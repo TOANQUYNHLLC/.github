@@ -10,10 +10,12 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ⚡ HIỆU NĂNG
 
+- `make links` kiểm tra song song và chờ kết nối mỗi địa chỉ tối đa 3 giây, nhớ địa chỉ hỏng (IPv6 của conventionalcommits.org không kết nối được — urllib chờ trọn thời gian cho từng địa chỉ, curl thì tự chuyển IPv4): từ khoảng 52 giây còn 7 giây.
 - `validate.py` đọc mọi tệp YAML trong một lần gọi Ruby (trước đây mỗi tệp một lần, có tệp bị đọc lại): mỗi lần chạy từ khoảng 3,3 giây còn 0,25 giây; bộ test từ khoảng 5,5 phút còn 30 giây, nên `make check` và hook `pre-push` nhanh hơn tương ứng.
 
 ### 🐛 SỬA LỖI
 
+- `make check` không chặn khi `npm audit` không kết nối được máy chủ npm (mất mạng): chỉ cảnh báo; lỗ hổng thật vẫn chặn.
 - `conventions.py branch` không báo lỗi khi HEAD không ở branch nào (đang rebase); `conventions.py title` bỏ qua merge commit (nút **Update branch** của GitHub tạo "Merge branch 'main' into …") — trước đây `make check`, hook `pre-push` chặn oan.
 - `release.py prepare` báo rõ khi repository chưa có tag `v*` thay vì văng lỗi git.
 - `check.py`, `validate.py` báo rõ khi chạy bằng Python cũ hơn 3.11 (python3 của macOS là 3.9; git hook chạy từ ứng dụng giao diện có thể không có PATH của mise); `mise.toml` ghim Python 3.14 như các công cụ khác.
@@ -24,6 +26,9 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ♻️ THAY ĐỔI
 
+- Hook `post-merge`, `post-rewrite` chạy thêm `make links`, `make versions` sau `git pull` (chỉ báo) — môi trường đám mây của routine hằng tuần chặn mạng ra ngoài nên hai kiểm tra này chạy tại máy; `check-tool-versions.py` dùng token của GitHub CLI đã đăng nhập khi không có `GH_TOKEN`.
+- Thêm `make release-pr` (`release.py prepare --open-pr`): chuẩn bị và mở Pull Request phát hành tại máy khi GitHub Actions tắt, chỉ chạy trên `main` sạch trùng `origin/main`, xong trả `CHANGELOG.md` tại máy về như cũ.
+- Tổ chức lại script: `scripts/org-setup.py` (1.070 dòng) tách thành gói `scripts/orgsetup/` — mỗi nhóm lệnh một module, `org-setup.py` chỉ còn dòng lệnh; `scripts/test_scripts.py` (1.140 dòng) tách mỗi script một tệp `test_*.py` cùng `testsupport.py`; `validate.py` gói kiểm tra trong `main()`/`runChecks()` — nạp được để gọi trực tiếp, không tự chạy khi import.
 - Git hook kiểm tra đúng nội dung (ADR 0016): `pre-commit` kiểm tra phần đã stage; `pre-push` chặn khi còn thay đổi chưa commit hoặc đẩy branch khác HEAD, bỏ qua khi chỉ đẩy tag hoặc xóa branch; thêm `post-rewrite` để chạy `make org-preview` sau `git pull --rebase`; `make hooks` gọi `git-hooks.py install` — cài vào thư mục hook chuẩn của git, cảnh báo `core.hooksPath`, hook mới tự cài sau khi kéo.
 - Script ưu tiên Python, kể cả git hook; ngôn ngữ khác chỉ khi xử lý tốt hơn và ghi dòng `Không viết bằng Python vì: <lý do>` ở đầu tệp (ADR 0014, 0015): `scripts/pre-commit.sh` thành `scripts/git-hooks.py`, thêm hook `pre-push` (chạy `make check`, lỗi thì không đẩy) và `post-merge` (chạy `make org-preview` sau `git pull`); `validate.py` báo lỗi khi script không phải Python (mọi tệp trong `scripts/`, tệp `.sh`, `.rb`… ở bất kỳ đâu) thiếu dòng lý do.
 - Dev Container không cài Python hai lần: Python lấy từ image, `mise` bỏ qua Python (`MISE_DISABLE_TOOLS=python`).

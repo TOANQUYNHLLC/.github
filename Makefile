@@ -5,7 +5,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help check validate test format format-check lint conventions audit tools links versions forms release-notes release-prepare labels-preview labels-apply hooks org-preview
+.PHONY: help check validate test format format-check lint conventions audit tools links versions forms release-notes release-prepare release-pr labels-preview labels-apply hooks org-preview
 
 help: ## Hiển thị danh sách lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-15s %s\n", $$1, $$2}'
@@ -57,6 +57,9 @@ release-notes: ## Xem trước nội dung Release của một tag: make release-
 
 release-prepare: ## Chuyển CHƯA PHÁT HÀNH của CHANGELOG.md thành phiên bản của tháng nếu có thay đổi từ tag trước
 	python3 scripts/release.py prepare
+
+release-pr: ## Chuẩn bị rồi mở Pull Request phát hành tại máy (khi GitHub Actions tắt; cần gh, đứng ở main)
+	python3 scripts/release.py prepare --open-pr
 
 labels-preview: ## Xem trước việc đồng bộ nhãn lên các repository
 	python3 scripts/org-setup.py labels

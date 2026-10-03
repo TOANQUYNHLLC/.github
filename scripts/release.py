@@ -2,13 +2,14 @@
 
 Chạy:
 	python3 scripts/release.py notes <tag>                    # in nội dung mục ## [<tag>] (make release-notes)
-	python3 scripts/release.py prepare [--version] [--date]   # chuyển CHƯA PHÁT HÀNH thành phiên bản của tháng
+	python3 scripts/release.py prepare [--version] [--date] [--open-pr]   # CHƯA PHÁT HÀNH → phiên bản của tháng
 	python3 scripts/release.py open-pr <phiên bản> <tag trước> <số commit>   # Pull Request phát hành
 	python3 scripts/release.py create <tag> [--allow-generated-notes]       # tạo GitHub Release
 
 prepare: phiên bản mặc định là vYYYY.MM.Stable theo ngày ở Việt Nam; bỏ qua (mã thoát 0) khi tag đã có hoặc
 không có commit kể từ tag trước; báo lỗi khi có commit mà mục CHƯA PHÁT HÀNH trống; ghi kết quả vào
-$GITHUB_OUTPUT cho workflow monthly-release.yml.
+$GITHUB_OUTPUT cho workflow monthly-release.yml. --open-pr (make release-pr, khi GitHub Actions tắt): làm tiếp
+open-pr tại máy rồi trả CHANGELOG.md về như cũ — chỉ chạy trên main sạch, trùng origin/main.
 open-pr: tạo branch release/vYYYY.MM, commit CHANGELOG.md qua GraphQL createCommitOnBranch (GitHub ký, thỏa
 quy tắc commit có chữ ký) rồi mở Pull Request; branch đã có thì bỏ qua.
 create: workflow release.yml (và workflow mẫu release.yml của repository khác, với --changelog CHANGELOG.md
@@ -92,8 +93,26 @@ def writeOutputs(**values):
 			file.writelines(f'{key}={value}\n' for key, value in values.items())
 
 
-def prepareRelease(version, date):
+def onCleanMain():
+	"""open-pr lấy HEAD làm gốc branch phát hành — tại máy phải đứng ở main sạch, trùng origin/main."""
+	runCommand('git', 'fetch', '--quiet', '--tags', 'origin', 'main')
+	if (
+		runCommand('git', 'branch', '--show-current') == 'main'
+		and not runCommand('git', 'status', '--porcelain')
+		and runCommand('git', 'rev-parse', 'HEAD') == runCommand('git', 'rev-parse', 'origin/main')
+	):
+		return True
+	reportMessage(
+		'error',
+		'Cần đứng ở main sạch, trùng origin/main: git switch main && git pull --ff-only',
+	)
+	return False
+
+
+def prepareRelease(version, date, openPullRequest=False):
 	changelogPath = ROOT / 'CHANGELOG.md'
+	if openPullRequest and not onCleanMain():
+		return 1
 	if runCommand('git', 'tag', '--list', version):
 		print(f'Đã có tag {version} — bỏ qua.')
 		return 0
@@ -126,7 +145,13 @@ def prepareRelease(version, date):
 	changelogPath.write_text(cutRelease(changelog, version, date), encoding='utf-8')
 	print(f'Đã chuyển CHƯA PHÁT HÀNH thành {version} ({commits} commit kể từ {previous}).')
 	writeOutputs(version=version, previous=previous, commits=commits)
-	return 0
+	if not openPullRequest:
+		return 0
+	try:
+		return openReleasePullRequest(version, previous, commits)
+	finally:
+		# CHANGELOG.md đã commit lên branch phát hành qua GraphQL — main tại máy giữ nguyên.
+		runCommand('git', 'checkout', '--', 'CHANGELOG.md')
 
 
 def openReleasePullRequest(version, previous, commits):
@@ -263,6 +288,9 @@ def main():
 	prepare = commands.add_parser('prepare', help='chuyển CHƯA PHÁT HÀNH thành phiên bản của tháng')
 	prepare.add_argument('--version', default=f'v{today:%Y.%m}.Stable')
 	prepare.add_argument('--date', default=today.isoformat())
+	prepare.add_argument(
+		'--open-pr', action='store_true', help='mở luôn Pull Request phát hành (chạy tại máy)'
+	)
 	openPr = commands.add_parser('open-pr', help='mở Pull Request phát hành')
 	openPr.add_argument('version')
 	openPr.add_argument('previous')
@@ -279,7 +307,7 @@ def main():
 	if args.command == 'notes':
 		return printNotes(args.tag, args.changelog)
 	if args.command == 'prepare':
-		return prepareRelease(args.version, args.date)
+		return prepareRelease(args.version, args.date, args.open_pr)
 	if args.command == 'open-pr':
 		return openReleasePullRequest(args.version, args.previous, args.commits)
 	return createRelease(args.tag, args.changelog, args.allow_generated_notes)

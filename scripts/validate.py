@@ -427,14 +427,14 @@ def checkToolVersions():
 	if re.search(r'^node = ', mise, re.MULTILINE):
 		errors.append('mise.toml: Node.js khai báo trong .nvmrc, không lặp trong mise.toml')
 	pinned = re.compile(r'ruff==|pipx install ruff|actionlint@v|download-actionlint|shellcheck-v\d')
-	# Không quét validate.py và test: hai tệp chứa chính các mẫu này để so khớp.
+	# Không quét validate.py và test_*.py: các tệp này chứa chính các mẫu để so khớp.
 	sources = [
 		*(ROOT / '.github' / 'workflows').glob('*.yml'),
 		*(ROOT / '.devcontainer').glob('*.sh'),
 		*(
 			path
 			for path in (ROOT / 'scripts').glob('*.py')
-			if path.name not in ('validate.py', 'test_scripts.py')
+			if path.name != 'validate.py' and not path.name.startswith('test_')
 		),
 		ROOT / 'Makefile',
 	]
@@ -997,7 +997,8 @@ def checkIssueConfig(path):
 				error(path, f'contact_links thiếu "{key}"')
 
 
-for file in trackedFiles():
+def checkFile(file):
+	"""Kiểm tra từng tệp: vị trí, ngôn ngữ script, định dạng, mã hóa, nội dung theo loại tệp."""
 	# GitHub chỉ nhận biểu mẫu Issue, Discussion và FUNDING.yml trong thư mục .github/.
 	if (
 		file.parent.name in ('ISSUE_TEMPLATE', 'DISCUSSION_TEMPLATE')
@@ -1014,10 +1015,10 @@ for file in trackedFiles():
 	if file.suffix in SPACE_SUFFIXES + TWO_SPACE_SUFFIXES:
 		checkSpaceOnly(file, file.read_text(encoding='utf-8'))
 	if file.suffix in BINARY_SUFFIXES:
-		continue
+		return
 	content = checkText(file)
 	if content is None:
-		continue
+		return
 	if not file.name.endswith(SPACE_SUFFIXES + TWO_SPACE_SUFFIXES + KEEP_TRAILING_SPACE_SUFFIXES):
 		checkTabOnly(file, content)
 	# .mailmap ánh xạ email tác giả commit (kể cả địa chỉ noreply của GitHub), không phải email liên hệ.
@@ -1032,7 +1033,7 @@ for file in trackedFiles():
 		or file.suffix == ''
 		or file.name.startswith('.')
 	):
-		continue
+		return
 	if file.suffix == '.md':
 		checkLinks(file, content)
 		checkHeadings(file, content)
@@ -1062,36 +1063,63 @@ for file in trackedFiles():
 		except json.JSONDecodeError as exc:
 			error(file, f'JSON không hợp lệ: {exc}')
 
-checkFormatConfig()
-checkLintIgnoreConfig()
-checkDependabotCooldown()
-checkToolVersions()
-checkSuffixLists()
-checkEditorExtensions()
-checkConventions()
-checkRulesets()
-checkAdrIndex()
 
-for required in (
-	'README.md',
-	'CHANGELOG.md',
-	'LICENSE',
-	'SECURITY.md',
-	'CONTRIBUTING.md',
-	'CODE_OF_CONDUCT.md',
-	'SUPPORT.md',
-):
-	if not (ROOT / required).exists():
-		errors.append(f'thiếu tệp bắt buộc {required}')
+def checkRequiredFiles():
+	for required in (
+		'README.md',
+		'CHANGELOG.md',
+		'LICENSE',
+		'SECURITY.md',
+		'CONTRIBUTING.md',
+		'CODE_OF_CONDUCT.md',
+		'SUPPORT.md',
+	):
+		if not (ROOT / required).exists():
+			errors.append(f'thiếu tệp bắt buộc {required}')
 
-label_file = ROOT / 'labels.yml'
-if label_file.exists():
-	known = checkLabels(label_file)
-	for form_path, label in FORM_LABELS + configLabels():
+
+def checkLabelUsage():
+	"""Nhãn dùng trong biểu mẫu và cấu hình phải có trong labels.yml."""
+	labelFile = ROOT / 'labels.yml'
+	if not labelFile.exists():
+		return
+	known = checkLabels(labelFile)
+	for formPath, label in FORM_LABELS + configLabels():
 		if label.lower() not in known:
-			error(form_path, f'nhãn "{label}" chưa có trong labels.yml')
+			error(formPath, f'nhãn "{label}" chưa có trong labels.yml')
 
-for message in errors:
-	print(f'❌ {message}')
-print(f'{"✅ Không có lỗi" if not errors else f"❌ {len(errors)} lỗi"}.')
-sys.exit(1 if errors else 0)
+
+def runChecks():
+	"""Chạy mọi kiểm tra, trả danh sách lỗi."""
+	errors.clear()
+	FORM_LABELS.clear()
+	yamlCache.clear()
+	for file in trackedFiles():
+		checkFile(file)
+	for check in (
+		checkFormatConfig,
+		checkLintIgnoreConfig,
+		checkDependabotCooldown,
+		checkToolVersions,
+		checkSuffixLists,
+		checkEditorExtensions,
+		checkConventions,
+		checkRulesets,
+		checkAdrIndex,
+		checkRequiredFiles,
+		checkLabelUsage,
+	):
+		check()
+	return list(errors)
+
+
+def main():
+	found = runChecks()
+	for message in found:
+		print(f'❌ {message}')
+	print(f'{"✅ Không có lỗi" if not found else f"❌ {len(found)} lỗi"}.')
+	return 1 if found else 0
+
+
+if __name__ == '__main__':
+	sys.exit(main())

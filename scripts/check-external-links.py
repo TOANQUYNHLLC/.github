@@ -1,15 +1,18 @@
 """Kiểm tra các liên kết http(s) trong tài liệu Markdown, YAML, CITATION.cff và security.txt còn hoạt động.
 
 Chạy: python3 scripts/check-external-links.py
-Workflow links.yml chạy định kỳ hằng tuần. Trang chặn truy cập tự động (403, 429, 999)
-chỉ được cảnh báo, không tính là lỗi.
+Workflow links.yml chạy hằng tuần; hook post-merge chạy sau mỗi lần git pull (make links).
+Trang chặn truy cập tự động (403, 429, 999) chỉ được cảnh báo, không tính là lỗi.
 """
 
+import http.client
 import re
+import socket
 import subprocess
 import sys
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,6 +23,63 @@ HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; TOANQUYNH-link-check/1.0)'}
 SKIP = ('img.shields.io', '/actions/workflows/')
 # Tệp ngoài Markdown: URL đứng trần (khóa YAML, trường của security.txt), không nằm trong (…).
 PATTERNS = ('*.md', '*.yml', '*.yaml', '*.cff', '*.txt')
+# Giây chờ kết nối tới mỗi địa chỉ của máy chủ; chờ phản hồi vẫn 15 giây.
+CONNECT_TIMEOUT = 3
+# Địa chỉ đã không kết nối được — các lần kết nối sau (HEAD rồi GET, chuyển hướng) thử sau cùng.
+UNREACHABLE = set()
+
+
+def connectQuickly(address, timeout, sourceAddress=None):
+	"""Như socket.create_connection nhưng mỗi địa chỉ chỉ chờ CONNECT_TIMEOUT giây và nhớ địa chỉ hỏng: máy chủ
+	có IPv6 hỏng (ví dụ conventionalcommits.org) thì urllib thử lần lượt, mỗi địa chỉ chờ trọn timeout mới sang
+	IPv4 — curl, trình duyệt thử song song nên không chậm."""
+	host, port = address
+	candidates = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+	candidates.sort(key=lambda candidate: candidate[4][0] in UNREACHABLE)
+	error = OSError(f'không có địa chỉ cho {host}')
+	for family, kind, protocol, _, socketAddress in candidates:
+		connection = socket.socket(family, kind, protocol)
+		try:
+			connection.settimeout(CONNECT_TIMEOUT)
+			if sourceAddress:
+				connection.bind(sourceAddress)
+			connection.connect(socketAddress)
+		except OSError as exc:
+			connection.close()
+			UNREACHABLE.add(socketAddress[0])
+			error = exc
+			continue
+		connection.settimeout(timeout)
+		return connection
+	raise error
+
+
+def quickConnection(connectionClass):
+	"""Tạo kết nối http.client dùng connectQuickly — gán cho từng kết nối vì __init__ (Python 3.14) đặt lại
+	_create_connection, ghi đè ở lớp không có tác dụng."""
+
+	def create(*args, **kwargs):
+		connection = connectionClass(*args, **kwargs)
+		connection._create_connection = connectQuickly
+		return connection
+
+	return create
+
+
+def quickOpener():
+	"""Opener của urllib mở kết nối bằng connectQuickly. Gán http_open, https_open (tên urllib quy định) cho
+	từng handler thay vì kế thừa lớp — tên hàm trong script viết camelCase (ADR 0012)."""
+	plain, secure = urllib.request.HTTPHandler(), urllib.request.HTTPSHandler()
+	plain.http_open = lambda request: plain.do_open(
+		quickConnection(http.client.HTTPConnection), request
+	)
+	secure.https_open = lambda request: secure.do_open(
+		quickConnection(http.client.HTTPSConnection), request, context=secure._context
+	)
+	return urllib.request.build_opener(plain, secure)
+
+
+OPENER = quickOpener()
 
 
 def textFiles():
@@ -57,7 +117,7 @@ def linkStatus(url):
 	for method in ('HEAD', 'GET'):
 		try:
 			request = urllib.request.Request(url, method=method, headers=HEADERS)
-			with urllib.request.urlopen(request, timeout=15) as response:
+			with OPENER.open(request, timeout=15) as response:
 				return response.status
 		except urllib.error.HTTPError as exc:
 			if method == 'GET' or exc.code not in (405, 501):
@@ -69,8 +129,11 @@ def linkStatus(url):
 
 def main():
 	broken = 0
-	for url, files in sorted(collectLinks().items()):
-		code = linkStatus(url)
+	links = sorted(collectLinks().items())
+	# Kiểm tra song song: tuần tự thì cả lượt mất vài chục giây.
+	with ThreadPoolExecutor(max_workers=16) as pool:
+		codes = list(pool.map(linkStatus, [url for url, _ in links]))
+	for (url, files), code in zip(links, codes, strict=True):
 		where = ', '.join(sorted(files))
 		if isinstance(code, int) and code < 400:
 			print(f'✅ {code} {url}')
