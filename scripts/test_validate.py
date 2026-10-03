@@ -612,6 +612,24 @@ class Holder:
 		self.editRegex('labels.yml', r'^- name: wontfix\n(  .+\n)+', '')
 		self.assertFails('thiếu nhãn mặc định của GitHub "wontfix"')
 
+	def testBadgesUseEnglishTitleCase(self):
+		# Chữ trên huy hiệu: tiếng Anh, hoa đầu mỗi từ — chữ thay thế, nhãn tự đặt hoặc nhãn mặc định của shields
+		# (chữ thường), và huy hiệu GitHub Actions lấy chữ theo tên workflow tiếng Việt.
+		self.edit(
+			'README.md',
+			'[![Last Commit](',
+			'[![Commit gần nhất](https://img.shields.io/github/v/release/x/y?label=release)]'
+			'(https://x.y)\n[![Stars](https://img.shields.io/github/stars/x/y)](https://x.y)\n'
+			'[![Build](https://github.com/x/y/actions/workflows/a.yml/badge.svg)](https://x.y)\n'
+			'[![Last Commit](',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 1, output)
+		self.assertIn('huy hiệu "Commit gần nhất": chữ thay thế phải tiếng Anh', output)
+		self.assertIn('nhãn "release" phải tiếng Anh, hoa đầu mỗi từ', output)
+		self.assertIn('huy hiệu "Stars": đặt label=', output)
+		self.assertIn('huy hiệu "Build": huy hiệu của GitHub lấy chữ theo tên workflow', output)
+
 	def testAdrIndexListsEveryAdr(self):
 		# Số 9999 không trùng ADR thật nào — test không phải sửa mỗi khi thêm ADR.
 		(self.repo / 'docs' / 'adr' / '9999-thu.md').write_text(

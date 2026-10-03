@@ -1085,6 +1085,48 @@ def checkTabOnly(path, text):
 			return
 
 
+def titleCase(text):
+	"""Chữ tiếng Anh (ASCII), mỗi từ bắt đầu bằng chữ hoa hoặc số: Last Commit, Code Style: Prettier."""
+	return text.isascii() and all(
+		word[0].isupper() or word[0].isdigit() for word in re.findall(r'[^\s:/()-]+', text)
+	)
+
+
+def badgeLabel(url):
+	"""Nhãn của huy hiệu shields.io: tham số label=, hoặc phần đầu của /badge/<nhãn>-<nội dung>-<màu>
+	("_" là dấu cách, "--" là dấu gạch ngang); None khi không đặt nhãn (shields tự đặt chữ thường)."""
+	parsed = urllib.parse.urlparse(url)
+	label = urllib.parse.parse_qs(parsed.query).get('label')
+	if label:
+		return label[0]
+	match = re.match(r'/badge/((?:[^-]|--)+)-', parsed.path)
+	if not match:
+		return None
+	return urllib.parse.unquote(match.group(1)).replace('--', '-').replace('_', ' ')
+
+
+def checkBadges(path, text):
+	"""Chữ trên huy hiệu viết tiếng Anh, hoa đầu mỗi từ (Last Commit, Code Style): chữ thay thế và nhãn."""
+	for alt, url in re.findall(r'\[!\[([^\]]*)\]\(([^)\s]+)\)\]', text):
+		if not titleCase(alt):
+			error(path, f'huy hiệu "{alt}": chữ thay thế phải tiếng Anh, hoa đầu mỗi từ')
+		parsed = urllib.parse.urlparse(url)
+		if parsed.netloc == 'img.shields.io' and not parsed.path.startswith('/endpoint'):
+			label = badgeLabel(url)
+			if label is None:
+				error(
+					path,
+					f'huy hiệu "{alt}": đặt label= tiếng Anh, hoa đầu mỗi từ (shields tự đặt chữ thường)',
+				)
+			elif not titleCase(label):
+				error(path, f'huy hiệu "{alt}": nhãn "{label}" phải tiếng Anh, hoa đầu mỗi từ')
+		elif parsed.path.endswith('/badge.svg'):
+			error(
+				path,
+				f'huy hiệu "{alt}": huy hiệu của GitHub lấy chữ theo tên workflow — dùng huy hiệu shields.io có label=',
+			)
+
+
 def checkHeadings(path, text):
 	"""Phong cách thống nhất của repository: mọi tiêu đề Markdown viết hoa."""
 	inFence = False
@@ -1274,6 +1316,7 @@ def checkFile(file):
 	if file.suffix == '.md':
 		checkLinks(file, content)
 		checkHeadings(file, content)
+		checkBadges(file, content)
 	if file.name == 'SECURITY.md':
 		checkSecurityMailto(file, content)
 	if file.name == 'PULL_REQUEST_TEMPLATE.md':

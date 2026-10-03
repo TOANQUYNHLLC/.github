@@ -5,7 +5,7 @@
 [![Website](https://img.shields.io/badge/Website-toanquynh.com-0969da?logo=googlechrome&logoColor=white)](https://toanquynh.com)
 [![Facebook](https://img.shields.io/badge/Facebook-To%C3%A0n%20Qu%E1%BB%B3nh%20LLC-1877f2?logo=facebook&logoColor=white)](https://www.facebook.com/ToanQuynhLLC)
 [![Email](https://img.shields.io/badge/Email-toanquynhvn%40gmail.com-ea4335?logo=gmail&logoColor=white)](mailto:toanquynhvn@gmail.com)
-[![Điện thoại](https://img.shields.io/badge/%C4%90i%E1%BB%87n%20tho%E1%BA%A1i-0332%20911%20829-2ea44f)](tel:+84332911829)
+[![Phone](https://img.shields.io/badge/Phone-0332%20911%20829-2ea44f)](tel:+84332911829)
 
 ---
 
