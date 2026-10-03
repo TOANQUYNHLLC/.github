@@ -1,0 +1,171 @@
+"""Test tự động cho scripts/release.py: nội dung phát hành, chuyển mục CHƯA PHÁT HÀNH thành phiên bản.
+
+Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make test)
+"""
+
+import contextlib
+import io
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+from unittest import mock
+
+# discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
+try:
+	from testsupport import ROOT, loadScript
+except ModuleNotFoundError:
+	from scripts.testsupport import ROOT, loadScript
+
+RELEASE_FIXTURE = """# NHẬT KÝ THAY ĐỔI
+
+## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2099.01.Stable...HEAD)
+
+### ✨ THÊM
+
+- Mục mới.
+
+---
+
+## [v2099.01.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2099.01.Stable) — 2099-01-01
+
+### ✨ THÊM
+
+- Mục cũ.
+
+---
+
+<p align="center">© 2099</p>
+"""
+
+
+class ReleaseTest(unittest.TestCase):
+	def setUp(self):
+		self.module = loadScript('release')
+		self.changelog = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
+
+	def testExtractsVersionNotes(self):
+		notes = self.module.releaseNotes(self.changelog, 'v2026.09.Stable')
+		self.assertIn('### ✨ THÊM', notes)
+		self.assertIn('PULL_REQUEST_TEMPLATE.md', notes)
+		self.assertNotIn('<p align="center">', notes)
+		self.assertNotIn('CHƯA PHÁT HÀNH', notes)
+
+	def testMissingVersionReturnsNone(self):
+		self.assertIsNone(self.module.releaseNotes(self.changelog, 'v1999.01.Stable'))
+
+	def testCutsUnreleasedIntoVersion(self):
+		# CHANGELOG mẫu cố định: mục CHƯA PHÁT HÀNH của tệp thật trống ngay sau mỗi lần phát hành.
+		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'v2099.02.Stable', '2099-02-01')
+		self.assertIn(
+			'## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2099.02.Stable...HEAD)',
+			changelog,
+		)
+		self.assertIn(
+			'## [v2099.02.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2099.02.Stable)'
+			' — 2099-02-01',
+			changelog,
+		)
+		# Mục mới trống; nội dung cũ thành nội dung Release của phiên bản mới; phiên bản cũ giữ nguyên.
+		self.assertEqual(self.module.unreleasedNotes(changelog), '')
+		self.assertEqual(
+			self.module.releaseNotes(changelog, 'v2099.02.Stable'), '### ✨ THÊM\n\n- Mục mới.'
+		)
+		self.assertEqual(
+			self.module.releaseNotes(changelog, 'v2099.01.Stable'), '### ✨ THÊM\n\n- Mục cũ.'
+		)
+		self.assertLess(
+			changelog.index('## [v2099.02.Stable]'), changelog.index('## [v2099.01.Stable]')
+		)
+
+	def testPrepareWithoutTagReportsClearly(self):
+		# Repository chưa có tag v*: báo rõ cần gắn tag đầu tiên, không văng lỗi git.
+		with tempfile.TemporaryDirectory() as folder:
+			subprocess.run(['git', 'init', '-q'], cwd=folder, check=True)
+			subprocess.run(
+				[
+					'git',
+					'-c',
+					'user.name=test',
+					'-c',
+					'user.email=',
+					'-c',
+					'commit.gpgsign=false',
+					'commit',
+					'-q',
+					'--allow-empty',
+					'-m',
+					'x',
+				],
+				cwd=folder,
+				check=True,
+			)
+			self.module.ROOT = Path(folder)
+			output = io.StringIO()
+			with contextlib.redirect_stdout(output):
+				code = self.module.prepareRelease('v2099.01.Stable', '2099-01-01')
+		self.assertEqual(code, 1)
+		self.assertIn('Chưa có tag v* nào', output.getvalue())
+
+	def releaseClone(self, folder):
+		"""Repository có origin, tag v2099.01.Stable và một commit sau tag, đang ở main trùng origin/main."""
+		origin, clone = Path(folder) / 'origin.git', Path(folder) / 'clone'
+		subprocess.run(['git', 'init', '-q', '--bare', str(origin)], check=True)
+		subprocess.run(['git', 'clone', '-q', str(origin), str(clone)], check=True)
+		(clone / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
+		# Không phụ thuộc cấu hình git của máy (runner chưa đặt danh tính, máy bật ký commit, tag).
+		git = ['git', '-c', 'user.name=test', '-c', 'user.email=', '-c', 'commit.gpgsign=false']
+		for command in (
+			['add', 'CHANGELOG.md'],
+			['commit', '-q', '-m', 'đầu'],
+			['-c', 'tag.gpgsign=false', 'tag', 'v2099.01.Stable'],
+			['commit', '-q', '--allow-empty', '-m', 'sau tag'],
+			['branch', '-M', 'main'],
+			['push', '-q', 'origin', 'main'],
+		):
+			subprocess.run([*git, *command], cwd=clone, check=True)
+		self.module.ROOT = clone
+		return clone
+
+	def testOpenPrRequiresCleanMain(self):
+		# make release-pr lấy HEAD làm gốc branch phát hành: đứng ở branch khác main thì dừng trước khi sửa
+		# CHANGELOG.md hay gọi GitHub.
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			subprocess.run(['git', 'switch', '-q', '-c', 'feature'], cwd=clone, check=True)
+			output = io.StringIO()
+			with contextlib.redirect_stdout(output):
+				code = self.module.prepareRelease('v2099.02.Stable', '2099-02-01', True)
+			self.assertEqual(code, 1)
+			self.assertIn('Cần đứng ở main sạch', output.getvalue())
+			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
+
+	def testOpenPrCommitsPreparedChangelogThenRestores(self):
+		# make release-pr: mở Pull Request với CHANGELOG.md đã chuyển phiên bản, rồi trả tệp tại máy về như cũ.
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			opened = []
+
+			def openPullRequest(version, previous, commits):
+				changelog = (clone / 'CHANGELOG.md').read_text(encoding='utf-8')
+				opened.append((version, previous, commits, '## [v2099.02.Stable]' in changelog))
+				return 0
+
+			with (
+				mock.patch.object(self.module, 'openReleasePullRequest', openPullRequest),
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				code = self.module.prepareRelease('v2099.02.Stable', '2099-02-01', True)
+			self.assertEqual(code, 0)
+			self.assertEqual(opened, [('v2099.02.Stable', 'v2099.01.Stable', 1, True)])
+			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
+
+	def testEmptyUnreleasedSection(self):
+		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'v2099.02.Stable', '2099-02-01')
+		self.assertEqual(self.module.unreleasedNotes(changelog), '')
+		self.assertIsNone(self.module.releaseNotes(changelog, 'CHƯA PHÁT HÀNH'))
+		self.assertIsNone(self.module.unreleasedNotes('# NHẬT KÝ\n'))
+
+
+if __name__ == '__main__':
+	unittest.main()

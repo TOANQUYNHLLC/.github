@@ -4,7 +4,8 @@
 pre-commit: Prettier, ruff format kiểm tra đúng nội dung đã stage (không phải tệp trên đĩa).
 pre-push: make check trên đúng nội dung được đẩy — chặn khi còn thay đổi chưa commit hoặc đẩy branch khác
 	HEAD; bỏ qua khi chỉ đẩy tag hoặc xóa branch; make check lỗi thì không đẩy.
-post-merge: sau git pull (gộp, tua nhanh) — cài lại hook (nhận hook mới) rồi make org-preview; chỉ báo.
+post-merge: sau git pull (gộp, tua nhanh) — cài lại hook (nhận hook mới), make org-preview, links, versions;
+	chỉ báo, không chặn.
 post-rewrite: như post-merge sau git pull --rebase; bỏ qua git commit --amend.
 Chạy tay: python3 scripts/git-hooks.py <install|pre-commit|pre-push|post-merge|post-rewrite [rebase]>
 """
@@ -14,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve()
@@ -114,20 +116,42 @@ def prePush(root, args):
 
 
 def afterPull(root):
-	"""Sau khi kéo code: cài lại hook (nhận hook mới thêm) rồi so cài đặt trên GitHub với code; chỉ báo."""
+	"""Sau khi kéo code: cài lại hook (nhận hook mới thêm), so cài đặt trên GitHub với code, kiểm tra liên kết
+	bên ngoài và phiên bản công cụ; chỉ báo, không chặn. Liên kết, phiên bản kiểm tra tại máy vì môi trường đám
+	mây của routine hằng tuần chặn mạng ra ngoài."""
 	installHooks(root)
 	signedIn = shutil.which('gh') and (
 		subprocess.run(['gh', 'auth', 'status'], capture_output=True, check=False).returncode == 0
 	)
+	reports = [('org-preview', 'so cài đặt trên GitHub với code vừa kéo về')] if signedIn else []
 	if not signedIn:
 		print(
 			'⚠️  Bỏ qua make org-preview: cần GitHub CLI đã đăng nhập (gh auth login).',
 			file=sys.stderr,
 		)
-		return 0
-	print('== make org-preview: so cài đặt trên GitHub với code vừa kéo về', flush=True)
-	if subprocess.run(['make', 'org-preview'], cwd=root, check=False).returncode != 0:
-		print('⚠️  make org-preview lỗi — xem thông báo ở trên.', file=sys.stderr)
+	reports += [
+		('links', 'liên kết bên ngoài còn hoạt động'),
+		('versions', 'công cụ trong mise.toml có bản mới'),
+	]
+
+	def report(target):
+		return subprocess.run(
+			['make', '--no-print-directory', target],
+			cwd=root,
+			capture_output=True,
+			text=True,
+			check=False,
+		)
+
+	# Chạy song song (mỗi lệnh chờ mạng vài giây), in liền khối theo thứ tự.
+	with ThreadPoolExecutor(max_workers=len(reports)) as pool:
+		results = list(pool.map(report, [target for target, _ in reports]))
+	for (target, purpose), result in zip(reports, results, strict=True):
+		print(f'== make {target}: {purpose}', flush=True)
+		print(result.stdout, end='', flush=True)
+		print(result.stderr, end='', file=sys.stderr, flush=True)
+		if result.returncode != 0:
+			print(f'⚠️  make {target} báo lỗi — xem thông báo ở trên.', file=sys.stderr, flush=True)
 	return 0
 
 

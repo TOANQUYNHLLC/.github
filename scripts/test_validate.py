@@ -1,40 +1,34 @@
-"""Test tự động cho các script trong scripts/: validate.py, conventions.py, release.py, check.py, org-setup.py.
+"""Test tự động cho scripts/validate.py: chép repository sang thư mục tạm, mỗi test cố ý làm hỏng một điểm rồi
+khẳng định validate.py phát hiện đúng lỗi — để việc sửa script không vô tình làm mất một luật. Sau mỗi test bản
+chép được trả về như lúc đầu.
 
 Chạy: python3 -m unittest discover -s scripts -p 'test_*.py'   (hoặc: make test)
-Mỗi test chép repository sang thư mục tạm, cố ý làm hỏng một điểm rồi khẳng định
-validate.py phát hiện đúng lỗi — để việc sửa script không vô tình làm mất một luật.
 """
 
 import contextlib
 import importlib.util
 import io
-import json
 import re
 import shutil
 import subprocess
-import sys
 import tempfile
 import unicodedata
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-
-
-def loadScript(name):
-	"""Nạp một script trong scripts/ (tên có dấu gạch ngang nên không import thường được)."""
-	spec = importlib.util.spec_from_file_location(
-		name.replace('-', '_'), ROOT / 'scripts' / f'{name}.py'
-	)
-	module = importlib.util.module_from_spec(spec)
-	spec.loader.exec_module(module)
-	return module
+# discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
+try:
+	from testsupport import ROOT
+except ModuleNotFoundError:
+	from scripts.testsupport import ROOT
 
 
 class ValidateTest(unittest.TestCase):
-	def setUp(self):
-		self.tmp = tempfile.TemporaryDirectory()
-		self.repo = Path(self.tmp.name)
+	@classmethod
+	def setUpClass(cls):
+		# Chép repository một lần cho cả lớp và lưu bản chép làm mốc; tearDown trả về đúng mốc này.
+		cls.tmp = tempfile.TemporaryDirectory()
+		cls.repo = Path(cls.tmp.name)
 		names = (
 			subprocess.run(
 				['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'],
@@ -48,23 +42,46 @@ class ValidateTest(unittest.TestCase):
 		for name in filter(None, names):
 			source = ROOT / name
 			if source.is_file():
-				target = self.repo / name
+				target = cls.repo / name
 				target.parent.mkdir(parents=True, exist_ok=True)
 				shutil.copy2(source, target)
-		subprocess.run(['git', 'init', '-q'], cwd=self.repo, check=True)
+		cls.git('init', '-q')
+		cls.git('add', '-A')
+		cls.baseline = cls.git('write-tree')
+		# Index rỗng như repository mới git init: mọi tệp là "chưa theo dõi", tệp test xóa thì biến mất khỏi
+		# git ls-files của validate.py.
+		cls.git('read-tree', '--empty')
+
+	@classmethod
+	def tearDownClass(cls):
+		cls.tmp.cleanup()
+
+	@classmethod
+	def git(cls, *args):
+		return subprocess.run(
+			['git', *args], cwd=cls.repo, capture_output=True, text=True, check=True
+		).stdout.strip()
 
 	def tearDown(self):
-		self.tmp.cleanup()
+		# Trả bản chép về mốc (cây tệp đã lưu bằng write-tree): ghi lại tệp bị sửa, xóa, đổi tên; xóa tệp
+		# test tạo thêm.
+		self.git('read-tree', self.baseline)
+		self.git('checkout-index', '--all', '--force')
+		self.git('clean', '-qfdx')
+		self.git('read-tree', '--empty')
 
 	def runValidate(self):
-		result = subprocess.run(
-			[sys.executable, 'scripts/validate.py'],
-			cwd=self.repo,
-			capture_output=True,
-			text=True,
-			check=False,
+		# Nạp validate.py của bản chép (test có thể sửa chính script) và chạy trong tiến trình này — nhanh hơn
+		# gấp đôi so với chạy python3 riêng cho mỗi test.
+		spec = importlib.util.spec_from_file_location(
+			'validate_copy', self.repo / 'scripts' / 'validate.py'
 		)
-		return result.returncode, result.stdout
+		module = importlib.util.module_from_spec(spec)
+		output = io.StringIO()
+		with contextlib.redirect_stdout(output), contextlib.redirect_stderr(io.StringIO()):
+			spec.loader.exec_module(module)
+			code = module.main()
+		return code, output.getvalue()
 
 	def edit(self, name, old, new):
 		path = self.repo / name
@@ -88,10 +105,12 @@ class ValidateTest(unittest.TestCase):
 
 	def testNoHardcodedActionShaInTests(self):
 		# SHA gắn cứng làm mọi Pull Request Dependabot nâng action bị chặn vì test mất đoạn neo.
-		source = Path(__file__).read_text(encoding='utf-8')
-		self.assertIsNone(
-			re.search(r'@[0-9a-f]{40}', source), 'dùng edit_re() với mẫu [0-9a-f]{40}'
-		)
+		for path in sorted((ROOT / 'scripts').glob('test_*.py')):
+			source = path.read_text(encoding='utf-8')
+			self.assertIsNone(
+				re.search(r'@[0-9a-f]{40}', source),
+				f'{path.name}: dùng editRegex() với mẫu [0-9a-f]{{40}}',
+			)
 
 	def testCurrentRepositoryIsValid(self):
 		code, output = self.runValidate()
@@ -608,531 +627,6 @@ class ValidateTest(unittest.TestCase):
 	def testChangelogMustStartWithUnreleased(self):
 		self.edit('CHANGELOG.md', '## [CHƯA PHÁT HÀNH]', '## [v2099.01.Stable]')
 		self.assertFails('mục đầu tiên phải là')
-
-
-RELEASE_FIXTURE = """# NHẬT KÝ THAY ĐỔI
-
-## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2099.01.Stable...HEAD)
-
-### ✨ THÊM
-
-- Mục mới.
-
----
-
-## [v2099.01.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2099.01.Stable) — 2099-01-01
-
-### ✨ THÊM
-
-- Mục cũ.
-
----
-
-<p align="center">© 2099</p>
-"""
-
-
-class ReleaseTest(unittest.TestCase):
-	def setUp(self):
-		self.module = loadScript('release')
-		self.changelog = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
-
-	def testExtractsVersionNotes(self):
-		notes = self.module.releaseNotes(self.changelog, 'v2026.09.Stable')
-		self.assertIn('### ✨ THÊM', notes)
-		self.assertIn('PULL_REQUEST_TEMPLATE.md', notes)
-		self.assertNotIn('<p align="center">', notes)
-		self.assertNotIn('CHƯA PHÁT HÀNH', notes)
-
-	def testMissingVersionReturnsNone(self):
-		self.assertIsNone(self.module.releaseNotes(self.changelog, 'v1999.01.Stable'))
-
-	def testCutsUnreleasedIntoVersion(self):
-		# CHANGELOG mẫu cố định: mục CHƯA PHÁT HÀNH của tệp thật trống ngay sau mỗi lần phát hành.
-		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'v2099.02.Stable', '2099-02-01')
-		self.assertIn(
-			'## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2099.02.Stable...HEAD)',
-			changelog,
-		)
-		self.assertIn(
-			'## [v2099.02.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2099.02.Stable)'
-			' — 2099-02-01',
-			changelog,
-		)
-		# Mục mới trống; nội dung cũ thành nội dung Release của phiên bản mới; phiên bản cũ giữ nguyên.
-		self.assertEqual(self.module.unreleasedNotes(changelog), '')
-		self.assertEqual(
-			self.module.releaseNotes(changelog, 'v2099.02.Stable'), '### ✨ THÊM\n\n- Mục mới.'
-		)
-		self.assertEqual(
-			self.module.releaseNotes(changelog, 'v2099.01.Stable'), '### ✨ THÊM\n\n- Mục cũ.'
-		)
-		self.assertLess(
-			changelog.index('## [v2099.02.Stable]'), changelog.index('## [v2099.01.Stable]')
-		)
-
-	def testPrepareWithoutTagReportsClearly(self):
-		# Repository chưa có tag v*: báo rõ cần gắn tag đầu tiên, không văng lỗi git.
-		with tempfile.TemporaryDirectory() as folder:
-			subprocess.run(['git', 'init', '-q'], cwd=folder, check=True)
-			subprocess.run(
-				['git', '-c', 'commit.gpgsign=false', 'commit', '-q', '--allow-empty', '-m', 'x'],
-				cwd=folder,
-				check=True,
-			)
-			self.module.ROOT = Path(folder)
-			output = io.StringIO()
-			with contextlib.redirect_stdout(output):
-				code = self.module.prepareRelease('v2099.01.Stable', '2099-01-01')
-		self.assertEqual(code, 1)
-		self.assertIn('Chưa có tag v* nào', output.getvalue())
-
-	def testEmptyUnreleasedSection(self):
-		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'v2099.02.Stable', '2099-02-01')
-		self.assertEqual(self.module.unreleasedNotes(changelog), '')
-		self.assertIsNone(self.module.releaseNotes(changelog, 'CHƯA PHÁT HÀNH'))
-		self.assertIsNone(self.module.unreleasedNotes('# NHẬT KÝ\n'))
-
-
-class ConventionsTest(unittest.TestCase):
-	def setUp(self):
-		self.module = loadScript('conventions')
-
-	def check(self, function, value):
-		with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-			return function(value)
-
-	def testBranchNames(self):
-		for name in ('feature/appointment_booking', 'fix/123_login_error', 'release/v2026.10'):
-			self.assertTrue(self.check(self.module.checkBranch, name), name)
-		for name in ('feat/x', 'feature/Booking', 'feature/appointment-booking', 'chore'):
-			self.assertFalse(self.check(self.module.checkBranch, name), name)
-		# Branch của Dependabot và nhánh chính được bỏ qua.
-		self.assertTrue(self.check(self.module.checkBranch, 'dependabot/npm_and_yarn/x-1.0'))
-		self.assertTrue(self.check(self.module.checkBranch, 'main'))
-		# HEAD không ở branch nào (đang rebase): không có tên để kiểm tra, không báo lỗi.
-		self.assertTrue(self.check(self.module.checkBranch, ''))
-
-	def testTitles(self):
-		for title in ('feat: thêm', 'fix(booking)!: sửa', 'revert: feat: thêm'):
-			self.assertTrue(self.check(self.module.checkTitle, title), title)
-		for title in ('Sửa lỗi', 'feature: thêm', 'fix(Booking): sửa', 'fix:thiếu dấu cách'):
-			self.assertFalse(self.check(self.module.checkTitle, title), title)
-
-
-class GitHooksTest(unittest.TestCase):
-	def setUp(self):
-		self.module = loadScript('git-hooks')
-		self.tmp = tempfile.TemporaryDirectory()
-		self.repo = Path(self.tmp.name)
-		self.git('init', '-q')
-		for name in self.module.FORMAT_CONFIGS:
-			shutil.copy2(ROOT / name, self.repo / name)
-		self.git('add', '-A')
-		self.git('-c', 'commit.gpgsign=false', 'commit', '-qm', 'init')
-
-	def tearDown(self):
-		self.tmp.cleanup()
-
-	def git(self, *args):
-		return subprocess.run(
-			['git', *args], cwd=self.repo, capture_output=True, text=True, check=True
-		).stdout.strip()
-
-	def testPushedBranchesSkipsTagsAndDeletions(self):
-		zero = self.module.ZERO_SHA
-		lines = [
-			f'refs/heads/main {"a" * 40} refs/heads/main {"b" * 40}',
-			f'refs/tags/v1 {"c" * 40} refs/tags/v1 {zero}',
-			f'(delete) {zero} refs/heads/old {"d" * 40}',
-		]
-		self.assertEqual(self.module.pushedBranches(lines), [('refs/heads/main', 'a' * 40)])
-		self.assertEqual(self.module.pushedBranches(lines[1:]), [])
-
-	def testInstallLinksEveryHookAndWarnsHooksPath(self):
-		self.git('config', 'core.hooksPath', '.husky')
-		output = io.StringIO()
-		with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(output):
-			self.module.installHooks(self.repo)
-		self.assertIn('core.hooksPath = .husky', output.getvalue())
-		for name in self.module.HOOKS:
-			link = self.repo / '.git' / 'hooks' / name
-			self.assertEqual(link.resolve(), self.module.SCRIPT, name)
-
-	@unittest.skipUnless(
-		(ROOT / 'node_modules' / '.bin' / 'prettier').exists(), 'cần Prettier (make tools)'
-	)
-	def testPreCommitChecksStagedContent(self):
-		# Stage nội dung sai định dạng, sửa tệp trên đĩa cho đúng: hook vẫn phải chặn — và ngược lại.
-		path = self.repo / 'a.md'
-		path.write_text('#  Tiêu đề\n\n*  mục\n', encoding='utf-8')
-		self.git('add', 'a.md')
-		path.write_text('# Tiêu đề\n\n- mục\n', encoding='utf-8')
-		with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-			self.assertEqual(self.module.preCommit(self.repo, []), 1)
-			self.git('add', 'a.md')
-			path.write_text('#  sai\n', encoding='utf-8')
-			self.assertEqual(self.module.preCommit(self.repo, []), 0)
-
-
-class CheckTest(unittest.TestCase):
-	def testValidateWorkflowRunsCheckGroups(self):
-		# Mỗi job của validate.yml gọi đúng một nhóm của check.py — tại máy và trên GitHub chạy cùng lệnh.
-		groups = loadScript('check').checkGroups()
-		workflow = (ROOT / '.github' / 'workflows' / 'validate.yml').read_text(encoding='utf-8')
-		called = re.findall(r'run: python3 scripts/check\.py (\w+)$', workflow, re.MULTILINE)
-		self.assertEqual(called, ['content', 'format', 'lint'])
-		self.assertTrue(set(called) <= set(groups))
-		self.assertEqual(list(groups), ['content', 'format', 'lint', 'conventions', 'audit'])
-
-
-class OrgSetupTest(unittest.TestCase):
-	def setUp(self):
-		self.module = loadScript('org-setup')
-		self.template = (ROOT / 'repository-templates' / 'dependabot.yml').read_text(
-			encoding='utf-8'
-		)
-
-	def ecosystems(self, text):
-		return re.findall(r'package-ecosystem: (\S+)', text)
-
-	def testDependabotKeepsOnlyUsedEcosystems(self):
-		text = self.module.filterDependabot(self.template, {'package.json', 'README.md'})
-		self.assertEqual(self.ecosystems(text), ['github-actions', 'npm'])
-
-	def testDependabotDetectsPythonGoDocker(self):
-		text = self.module.filterDependabot(
-			self.template, {'pyproject.toml', 'go.mod', 'Dockerfile'}
-		)
-		self.assertEqual(self.ecosystems(text), ['github-actions', 'pip', 'gomod', 'docker'])
-
-	def testGeneratedDependabotIsValidYaml(self):
-		text = self.module.filterDependabot(self.template, {'package.json'})
-		result = subprocess.run(
-			['ruby', '-ryaml', '-rjson', '-e', 'puts JSON.dump(YAML.load(STDIN.read))'],
-			input=text,
-			capture_output=True,
-			text=True,
-			check=True,
-		)
-		self.assertEqual(json.loads(result.stdout)['version'], 2)
-
-	def testSharedFilesAndRulesetPerRepository(self):
-		files = self.module.plannedFiles(set())
-		self.assertEqual(
-			sorted(files),
-			sorted(
-				[
-					'.editorconfig',
-					'.gitattributes',
-					'.github/workflows/pr-title.yml',
-					'.github/workflows/branch-name.yml',
-					'.github/workflows/labeler.yml',
-					'.github/labeler.yml',
-					'.github/CODEOWNERS',
-					'.github/dependabot.yml',
-					'.github/release.yml',
-				]
-			),
-		)
-
-	def testLanguageFiles(self):
-		files = self.module.plannedFiles(
-			{'package.json', 'pyproject.toml', 'Cargo.toml', 'Dockerfile'}
-		)
-		for path in (
-			'.prettierrc.json',
-			'ruff.toml',
-			'.python-version',
-			'rustfmt.toml',
-			'.dockerignore',
-		):
-			self.assertIn(path, files)
-		self.assertNotIn('.clang-format', files)
-		self.assertIn('indent-style = "tab"', files['ruff.toml'])
-		self.assertIn('hard_tabs = true', files['rustfmt.toml'])
-
-	def testRulesetSummaryIgnoresGithubFields(self):
-		wanted = json.loads((ROOT / 'rulesets' / 'protect-main.json').read_text(encoding='utf-8'))
-		live = dict(
-			wanted, id=1, node_id='RRS_x', source_type='Repository', source='o/r', _links={}
-		)
-		live['bypass_actors'] = list(reversed(wanted['bypass_actors']))
-		live['rules'] = list(reversed(wanted['rules']))
-		self.assertEqual(self.module.rulesetSummary(live), self.module.rulesetSummary(wanted))
-		changed = dict(wanted, rules=wanted['rules'][1:])
-		self.assertNotEqual(self.module.rulesetSummary(changed), self.module.rulesetSummary(wanted))
-
-	def testPrivateRepositorySkipsPrivateVulnerabilityReporting(self):
-		self.assertIn(
-			'private-vulnerability-reporting', self.module.securityEndpoints(False).values()
-		)
-		self.assertNotIn(
-			'private-vulnerability-reporting', self.module.securityEndpoints(True).values()
-		)
-		self.assertIn('automated-security-fixes', self.module.securityEndpoints(True).values())
-		self.assertIn('immutable-releases', self.module.securityEndpoints(True).values())
-		# Dependabot security updates cần Dependabot alerts bật trước.
-		endpoints = list(self.module.securityEndpoints(False).values())
-		self.assertLess(
-			endpoints.index('vulnerability-alerts'), endpoints.index('automated-security-fixes')
-		)
-
-	def testRepositorySettingsMergeOverrides(self):
-		own = self.module.repositorySettings('.github')
-		other = self.module.repositorySettings('app')
-		self.assertFalse(own['allow_rebase_merge'])
-		self.assertTrue(own['has_discussions'])
-		self.assertNotIn('has_discussions', other)
-		self.assertNotIn('homepage', other)
-		self.assertTrue(self.module.repositorySettings('app', discussions=True)['has_discussions'])
-		self.assertIn('rulesets', self.module.citationKeywords())
-
-	def testActionsPermissionsKeepEnabledState(self):
-		calls = []
-		live = {
-			'repos/x/actions/permissions': {'enabled': True, 'allowed_actions': 'all'},
-			'repos/x/actions/permissions/workflow': dict(self.module.WORKFLOW_PERMISSIONS),
-		}
-		self.module.ghJson = lambda *args: live[args[1]]
-		self.module.gh = lambda *args, **kwargs: calls.append((args, kwargs.get('stdin')))
-		with contextlib.redirect_stdout(io.StringIO()):
-			self.module.syncActions(
-				'repos/x/actions/permissions', self.module.ACTIONS_PERMISSIONS, 'enabled', True
-			)
-		# Chỉ ghi phần khác (sha_pinning_required) và gửi lại enabled đang có — không bật, tắt Actions.
-		self.assertEqual(len(calls), 1)
-		self.assertEqual(json.loads(calls[0][1]), {'sha_pinning_required': True, 'enabled': True})
-		# Actions đang tắt: GitHub không trả quyền — bỏ qua, không ghi.
-		calls.clear()
-		live['repos/x/actions/permissions'] = {'enabled': False, 'sha_pinning_required': False}
-		with contextlib.redirect_stdout(io.StringIO()):
-			self.module.syncActions(
-				'repos/x/actions/permissions', self.module.ACTIONS_PERMISSIONS, 'enabled', True
-			)
-		self.assertEqual(calls, [])
-
-	def testOrgRulesetFilesMatchGenerated(self):
-		# Tệp để import trên web phải đúng bằng orgRulesets() sinh từ bản cấp repository.
-		for source, ruleset in self.module.orgRulesets():
-			self.assertEqual(json.loads(source.read_text(encoding='utf-8')), ruleset, source.name)
-
-	def testOrgCodeScanningRuleMatchesGraphql(self):
-		# Dạng GraphQL trả về cho quy tắc code scanning trên web phải khớp quy tắc trong tệp cấp tổ chức.
-		node = {
-			'type': 'CODE_SCANNING',
-			'parameters': {
-				'__typename': 'CodeScanningParameters',
-				'codeScanningTools': [
-					{
-						'tool': 'CodeQL',
-						'alertsThreshold': 'errors',
-						'securityAlertsThreshold': 'high_or_higher',
-					}
-				],
-			},
-		}
-		live = {
-			'name': 'x',
-			'target': 'BRANCH',
-			'enforcement': 'ACTIVE',
-			'conditions': {},
-			'bypassActors': {'nodes': []},
-			'rules': {'nodes': [node]},
-		}
-		self.assertEqual(
-			self.module.graphqlRuleset(live)['rules'], [self.module.ORG_CODE_SCANNING_RULE]
-		)
-		# Chỉ bản cấp tổ chức có code scanning, như trên web.
-		self.assertIn(self.module.ORG_CODE_SCANNING_RULE, self.module.orgRuleset()['rules'])
-		self.assertNotIn(
-			'code_scanning', [r['type'] for r in self.module.rulesetFor('app')['rules']]
-		)
-
-	def testCompareOrgRulesetsViaGraphql(self):
-		# Dạng GraphQL trả về cho Protect Release Tags (Organization) trên web.
-		node = {
-			'name': 'Protect Release Tags (Organization)',
-			'target': 'TAG',
-			'enforcement': 'ACTIVE',
-			'conditions': {
-				'refName': {'include': ['refs/tags/v*'], 'exclude': []},
-				'repositoryName': {'include': ['~ALL'], 'exclude': [], 'protected': False},
-			},
-			'bypassActors': {
-				'nodes': [
-					{
-						'bypassMode': 'ALWAYS',
-						'organizationAdmin': True,
-						'repositoryRoleDatabaseId': None,
-						'actor': None,
-					}
-				]
-			},
-			'rules': {
-				'nodes': [
-					{'type': 'CREATION', 'parameters': None},
-					{'type': 'UPDATE', 'parameters': {'__typename': 'UpdateParameters'}},
-					{'type': 'DELETION', 'parameters': None},
-					{'type': 'NON_FAST_FORWARD', 'parameters': None},
-					{'type': 'REQUIRED_SIGNATURES', 'parameters': None},
-					{
-						'type': 'REQUIRED_STATUS_CHECKS',
-						'parameters': {
-							'__typename': 'RequiredStatusChecksParameters',
-							'doNotEnforceOnCreate': False,
-							'strictRequiredStatusChecksPolicy': True,
-							'requiredStatusChecks': [],
-						},
-					},
-				]
-			},
-		}
-		wanted = self.module.graphqlVisible(self.module.orgTagRuleset())
-		live = self.module.graphqlRuleset(node)
-		self.assertEqual(self.module.rulesetSummary(live), self.module.rulesetSummary(wanted))
-		node['rules']['nodes'].pop()
-		self.assertNotEqual(
-			self.module.rulesetSummary(self.module.graphqlRuleset(node)),
-			self.module.rulesetSummary(wanted),
-		)
-		# Push ruleset: không có refName, tham số của quy tắc push đổi sang dạng REST.
-		pushes = self.module.orgPushRuleset()
-		parameters = {rule['type']: rule['parameters'] for rule in pushes['rules']}
-		paths = parameters['file_path_restriction']['restricted_file_paths']
-		extensions = parameters['file_extension_restriction']['restricted_file_extensions']
-		node = {
-			'name': pushes['name'],
-			'target': 'PUSH',
-			'enforcement': 'ACTIVE',
-			'conditions': {
-				'refName': None,
-				'repositoryName': {'include': ['~ALL'], 'exclude': [], 'protected': False},
-			},
-			'bypassActors': node['bypassActors'],
-			'rules': {
-				'nodes': [
-					{
-						'type': 'FILE_PATH_RESTRICTION',
-						'parameters': {
-							'__typename': 'FilePathRestrictionParameters',
-							'restrictedFilePaths': paths,
-						},
-					},
-					{
-						'type': 'FILE_EXTENSION_RESTRICTION',
-						'parameters': {
-							'__typename': 'FileExtensionRestrictionParameters',
-							'restrictedFileExtensions': extensions,
-						},
-					},
-					{
-						'type': 'MAX_FILE_SIZE',
-						'parameters': {'__typename': 'MaxFileSizeParameters', 'maxFileSize': 10},
-					},
-					{
-						'type': 'MAX_FILE_PATH_LENGTH',
-						'parameters': {
-							'__typename': 'MaxFilePathLengthParameters',
-							'maxFilePathLength': 200,
-						},
-					},
-				]
-			},
-		}
-		self.assertEqual(
-			self.module.rulesetSummary(self.module.graphqlRuleset(node)),
-			self.module.rulesetSummary(self.module.graphqlVisible(pushes)),
-		)
-		main = self.module.graphqlVisible(self.module.orgRuleset())
-		for rule in main['rules']:
-			self.assertNotIn(
-				'require_extra_approval_for_unattributed_changes', rule.get('parameters', {})
-			)
-
-	def testTeamsAlreadyCorrectAreNotWritten(self):
-		calls = []
-		self.module.ghExists = lambda endpoint: True
-		details = {
-			team: {'name': name, 'description': description, 'privacy': privacy}
-			for team, (name, _, privacy, description) in self.module.TEAMS.items()
-		}
-		self.module.teamDetails = lambda team: details[team]
-		self.module.teamRole = lambda team, user: 'maintainer'
-		# Quyền cao hơn (admin) đã đủ cho mọi team — không hạ quyền.
-		self.module.teamPermission = lambda team, repo: 'admin'
-		self.module.gh = lambda *args, **kwargs: calls.append(args)
-		output = io.StringIO()
-		with contextlib.redirect_stdout(output):
-			self.module.syncTeams(['.github', 'app'], apply=True)
-		self.assertEqual(output.getvalue().count('✔ đủ người quản trị'), len(self.module.TEAMS))
-		self.assertEqual(calls, [])
-		# Chỉ ghi phần còn thiếu: một người chưa là maintainer, một repository chưa đủ quyền.
-		self.module.teamRole = lambda team, user: (
-			'member' if (team, user) == ('maintainers', 'trongtoandl81') else 'maintainer'
-		)
-		self.module.teamPermission = lambda team, repo: (
-			'write' if (team, repo) == ('maintainers', 'app') else 'admin'
-		)
-		with contextlib.redirect_stdout(io.StringIO()):
-			self.module.syncTeams(['.github', 'app'], apply=True)
-		self.assertEqual(
-			[args[3] for args in calls],
-			[
-				'orgs/TOANQUYNHLLC/teams/maintainers/memberships/trongtoandl81',
-				'orgs/TOANQUYNHLLC/teams/maintainers/repos/TOANQUYNHLLC/app',
-			],
-		)
-
-	def testTeamDescriptionDriftIsPatched(self):
-		calls = []
-		self.module.ghExists = lambda endpoint: True
-		self.module.teamRole = lambda team, user: 'maintainer'
-		self.module.teamPermission = lambda team, repo: 'admin'
-		self.module.teamDetails = lambda team: {
-			'name': self.module.TEAMS[team][0],
-			'description': 'mô tả cũ' if team == 'qa' else self.module.TEAMS[team][3],
-			'privacy': self.module.TEAMS[team][2],
-		}
-		self.module.gh = lambda *args, **kwargs: calls.append((args, kwargs.get('stdin')))
-		with contextlib.redirect_stdout(io.StringIO()):
-			self.module.syncTeams(['.github'], apply=True)
-		self.assertEqual([args[3] for args, _ in calls], ['orgs/TOANQUYNHLLC/teams/qa'])
-		self.assertEqual(json.loads(calls[0][1]), {'description': self.module.TEAMS['qa'][3]})
-
-	def testLabelsOnlyWriteDifferences(self):
-		calls = []
-		wanted = self.module.loadLabels()
-		live = [dict(label) for label in wanted[1:]]
-		live[0]['color'] = '000000'
-		self.module.ghJson = lambda *args: live
-		self.module.gh = lambda *args, **kwargs: calls.append(args)
-		with contextlib.redirect_stdout(io.StringIO()):
-			self.module.syncLabels(['app'], apply=True)
-		# Một nhãn thiếu (tạo) và một nhãn sai màu (cập nhật); nhãn đúng không ghi lại.
-		self.assertEqual([args[2] for args in calls], [wanted[0]['name'], wanted[1]['name']])
-
-	def testProtectMainPerRepository(self):
-		def checks(ruleset):
-			return [
-				check['context']
-				for rule in ruleset['rules']
-				if rule['type'] == 'required_status_checks'
-				for check in rule['parameters']['required_status_checks']
-			]
-
-		self.assertEqual(
-			[ruleset['name'] for _, ruleset in self.module.rulesetsFor('app')],
-			['Protect Main', 'Protect Release Tags'],
-		)
-		own = self.module.rulesetFor('.github')
-		other = self.module.rulesetFor('app')
-		self.assertEqual(own['name'], 'Protect Main')
-		self.assertEqual(other['name'], 'Protect Main')
-		self.assertEqual(len(checks(own)), 5)
-		self.assertEqual(
-			sorted(checks(other)), ['Kiểm tra tiêu đề Pull Request', 'Kiểm tra tên branch']
-		)
 
 
 if __name__ == '__main__':

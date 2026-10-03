@@ -6,6 +6,7 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ## ✅ ĐÃ HOÀN THÀNH GẦN ĐÂY
 
+- [x] GitHub Actions tắt nên việc định kỳ chuyển sang routine Claude Code và git hook (2026-10-03). Môi trường đám mây của routine chặn mạng ra ngoài (trừ github.com) và không có GitHub CLI đã đăng nhập, nên: **Nhắc phát hành hằng tháng** (08:00 ngày 1, giờ Việt Nam) chỉ kiểm tra có cần phát hành và nhắc chạy `make release-pr` tại máy; **Kiểm tra biểu mẫu hằng tháng** (09:00 ngày 1) chỉ kiểm tra biểu mẫu; liên kết bên ngoài, phiên bản công cụ do hook `post-merge` chạy tại máy sau mỗi lần `git pull`. Quản lý tại claude.ai/code/routines.
 - [x] Ruleset cấp tổ chức trên web khớp `rulesets/org-*.json`: Protect Main (Organization) bỏ Rebase và có thêm code scanning (CodeQL — đã chép xuống `org-setup.py`), Protect Pushes (Organization) đã import (2026-10-03).
 - [x] Áp dụng cho `.github`: tắt Rebase (`org-setup.py settings`), Protect Main bỏ Rebase và đổi kiểm tra bắt buộc thành "Định dạng (Prettier, ruff)" (`org-setup.py rulesets`). Đối chiếu lại: cài đặt repository, ruleset, 6 team, 47 nhãn, cài đặt tổ chức, quyền Actions khớp web (2026-10-03).
 - [x] Kiểm tra viết bằng Python trong `scripts/`, chạy tại máy bằng `make check` giống GitHub Actions ([ADR 0012](docs/adr/0012-python-checks-camel-case.md)); GitHub Actions của `.github` **đang tắt** để tiết kiệm chi phí — kiểm tra tại máy trước khi đẩy, hợp nhất bằng quyền bỏ qua của người quản trị (2026-10-03).
@@ -60,10 +61,9 @@ GitHub không có API cho các mục này — người quản trị làm trên w
 
 ## 💡 CÂN NHẮC
 
-- [ ] Khi GitHub Actions còn tắt: ngày 1 hằng tháng chạy `make release-prepare` (bỏ qua nếu không có commit mới), mở Pull Request phát hành, hợp nhất rồi gắn tag và chạy `python3 scripts/release.py create <tag>` — workflow [`monthly-release.yml`](.github/workflows/monthly-release.yml), `release.yml` chỉ tự chạy khi bật lại Actions.
 - [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`.github/DISCUSSION_TEMPLATE/`](.github/DISCUSSION_TEMPLATE/).
 - [ ] Khi nâng lên gói **Team**: ruleset cấp tổ chức được thực thi — cân nhắc ADR mới để bỏ ruleset cấp repository trùng lặp.
-- [ ] Xóa quy tắc kiểm tra bắt buộc rỗng (không chặn gì) của **Protect Release Tags (Organization)** trên web, rồi bỏ khỏi `orgTagRuleset()` trong [`scripts/org-setup.py`](scripts/org-setup.py) và sinh lại tệp.
+- [ ] Xóa quy tắc kiểm tra bắt buộc rỗng (không chặn gì) của **Protect Release Tags (Organization)** trên web, rồi bỏ khỏi `orgTagRuleset()` trong [`scripts/orgsetup/rulesets.py`](scripts/orgsetup/rulesets.py) và sinh lại tệp.
 - [ ] Code security configuration **GitHub recommended** (**Organization settings → Advanced Security → Configurations**): đã có nhưng chưa gắn repository nào và chưa là mặc định cho repository mới — đây là cách GitHub khuyên dùng thay cho bật từng tính năng (`org-setup.py settings`). Lưu ý cấu hình này bật code scanning default setup: cần GitHub Actions (đang tắt) và không dùng chung với workflow CodeQL (advanced setup) của repository.
 - [ ] Quét bí mật theo mẫu tùy chỉnh (non-provider patterns) và kiểm tra bí mật còn hiệu lực (validity checks): cần gói **GitHub Secret Protection**.
 

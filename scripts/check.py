@@ -8,6 +8,7 @@ Mỗi nhóm khớp một job của workflow validate.yml (content, format, lint)
 (conventions: branch-name.yml, pr-title.yml; audit: dependency-review.yml). CodeQL không chạy tại máy.
 """
 
+import re
 import shutil
 import subprocess
 import sys
@@ -16,6 +17,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 # Công cụ nhóm cần mà không đứng đầu lệnh: validate.py đọc YAML bằng Ruby và liệt kê tệp bằng git.
 INDIRECT_TOOLS = {'content': ('ruby', 'git'), 'conventions': ('git',)}
+# Lỗi kết nối mạng của npm: audit không chạy được thì chỉ cảnh báo, không chặn (lỗ hổng thật vẫn chặn).
+NETWORK_ERROR = re.compile(
+	r'ENOTFOUND|EAI_AGAIN|ETIMEDOUT|ECONNREFUSED|ECONNRESET|ENETUNREACH|request to https?://\S+ failed'
+)
 
 
 def shellScripts():
@@ -66,12 +71,25 @@ def ensureTools(groups):
 	return True
 
 
+def runCommand(name, command):
+	"""Chạy một lệnh kiểm tra; True khi đạt. audit mất mạng thì cảnh báo và tính là đạt."""
+	if name != 'audit':
+		return subprocess.run(command, cwd=ROOT, check=False).returncode == 0
+	result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, check=False)
+	print(result.stdout, end='')
+	print(result.stderr, end='', file=sys.stderr)
+	if result.returncode != 0 and NETWORK_ERROR.search(result.stdout + result.stderr):
+		print('⚠️  Bỏ qua audit: không kết nối được máy chủ npm — chạy lại make audit khi có mạng.')
+		return True
+	return result.returncode == 0
+
+
 def runGroups(groups):
 	failed = []
 	for name in groups:
 		for command in checkGroups()[name]:
 			print(f'$ {" ".join(command)}', flush=True)
-			if subprocess.run(command, cwd=ROOT, check=False).returncode != 0:
+			if not runCommand(name, command):
 				failed.append(f'{name}: {" ".join(command)[:80]}')
 	for item in failed:
 		print(f'❌ {item}')
