@@ -73,7 +73,7 @@ FORM_LABELS = []
 # tệp không phải Python (kể cả .js) đều phải ghi.
 SCRIPT_SUFFIXES = ('.sh', '.bash', '.zsh', '.rb', '.pl', '.ps1')
 NOT_PYTHON_REASON = 'Không viết bằng Python vì:'
-# Tên tự đặt trong mã Python (ADR 0010, 0014): hàm, tham số camelCase (setUp, tearDown của unittest cũng khớp);
+# Tên tự đặt trong mã Python (ADR 0010): hàm, tham số camelCase (setUp, tearDown của unittest cũng khớp);
 # biến không dùng snake_case — camelCase, hằng số UPPER_CASE, hoặc PascalCase khi giữ một lớp.
 FUNCTION_NAME = re.compile(r'_?[a-z][a-zA-Z0-9]*')
 VARIABLE_NAME = re.compile(r'_?[A-Za-z][A-Za-z0-9]*|[A-Z][A-Z0-9_]*|_')
@@ -820,7 +820,7 @@ nameResults = {}
 
 
 def checkNames(path, text):
-	"""Tên hàm, tham số tự đặt viết camelCase tiếng Anh; biến không dùng snake_case (ADR 0010, 0014)."""
+	"""Tên hàm, tham số tự đặt viết camelCase tiếng Anh; biến không dùng snake_case (ADR 0010)."""
 	key = hashlib.sha256(text.encode('utf-8')).hexdigest()
 	if key not in nameResults:
 		nameResults[key] = nameProblems(text)
@@ -829,7 +829,7 @@ def checkNames(path, text):
 		error(path, 'Python không hợp lệ (lỗi cú pháp)')
 		return
 	for line, kind, name in problems:
-		error(path, f'dòng {line}: {kind} "{name}" phải viết camelCase tiếng Anh (ADR 0010, 0014)')
+		error(path, f'dòng {line}: {kind} "{name}" phải viết camelCase tiếng Anh (ADR 0010)')
 
 
 def checkMaintainers():
