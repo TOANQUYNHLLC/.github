@@ -9,7 +9,13 @@ import json
 import re
 import subprocess
 import sys
-import tomllib
+
+try:
+	import tomllib
+except ModuleNotFoundError:
+	sys.exit(
+		f'Cần Python ≥ 3.11 (đang dùng {sys.version.split()[0]}) — chạy mise install, mở terminal có mise.'
+	)
 import unicodedata
 import urllib.parse
 from datetime import UTC, datetime

@@ -57,6 +57,10 @@ def reportError(message):
 
 
 def checkBranch(name):
+	if not name:
+		# HEAD không ở branch nào (đang rebase, checkout một commit): không có tên để kiểm tra.
+		print('Bỏ qua: HEAD không ở branch nào (detached HEAD).')
+		return True
 	if SKIPPED_BRANCHES.match(name):
 		print(f'Bỏ qua branch: {name}')
 		return True
@@ -95,7 +99,12 @@ def main():
 	args = parser.parse_args()
 	if args.kind == 'branch':
 		return 0 if checkBranch(args.value or gitOutput('branch', '--show-current')) else 1
-	titles = [args.value] if args.value else gitOutput('log', '--format=%s', 'origin/main..HEAD')
+	# Bỏ merge commit: nút Update branch của GitHub tạo "Merge branch 'main' into …" không theo quy ước.
+	titles = (
+		[args.value]
+		if args.value
+		else gitOutput('log', '--no-merges', '--format=%s', 'origin/main..HEAD')
+	)
 	if isinstance(titles, str):
 		titles = titles.splitlines()
 	results = [checkTitle(title) for title in titles]
