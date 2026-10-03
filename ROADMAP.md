@@ -6,6 +6,7 @@ Các việc dự kiến cho repository `.github` và quy trình làm việc chun
 
 ## ✅ ĐÃ HOÀN THÀNH GẦN ĐÂY
 
+- [x] Áp dụng cho `.github`: tắt Rebase (`org-setup.py settings`), Protect Main bỏ Rebase và đổi kiểm tra bắt buộc thành "Định dạng (Prettier, ruff)" (`org-setup.py rulesets`). Đối chiếu lại: cài đặt repository, ruleset, 6 team, 47 nhãn, cài đặt tổ chức, quyền Actions khớp web (2026-10-03).
 - [x] Kiểm tra viết bằng Python trong `scripts/`, chạy tại máy bằng `make check` giống GitHub Actions ([ADR 0012](docs/adr/0012-python-checks-camel-case.md)); GitHub Actions của `.github` **đang tắt** để tiết kiệm chi phí — kiểm tra tại máy trước khi đẩy, hợp nhất bằng quyền bỏ qua của người quản trị (2026-10-03).
 - [x] Tổ chức và repository cho phép GitHub Actions tạo Pull Request, quyền mặc định của `GITHUB_TOKEN` là `read` (2026-10-03); 6 team (`admins`, `maintainers`, `developers`, `qa`, `design`, `marketing`) và cài đặt web được ghi vào `scripts/org-setup.py`.
 - [x] Sửa lỗi chính tả mô tả tổ chức: "The Official Repository of TOAN QUYNH Co., Ltd" (kiểm tra 2026-10-03).
@@ -43,7 +44,6 @@ Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.p
 - [ ] `python3 scripts/org-setup.py settings --apply --repo <tên>` — cho phép Merge, Squash, tắt Rebase; tự xóa branch; bật Dependabot alerts và security updates, secret scanning, push protection, báo cáo lỗ hổng riêng tư, Release bất biến; quyền GitHub Actions.
 - [ ] `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — ruleset **Protect Release Tags** từ [`protect-release-tags.json`](rulesets/protect-release-tags.json) và **Protect Main** từ [`protect-main.json`](rulesets/protect-main.json), Protect Main chỉ giữ 2 kiểm tra bắt buộc mà repository có.
 - [ ] `python3 scripts/org-setup.py labels --apply --repo <tên>` — bộ nhãn chuẩn.
-- [ ] Áp dụng cho `.github` các thay đổi chưa có trên web: `python3 scripts/org-setup.py settings --apply --repo .github` (tắt Rebase) và `rulesets --apply --repo .github` (Protect Main bỏ Rebase, kiểm tra bắt buộc đổi tên thành "Định dạng (Prettier, ruff)"); sửa **Protect Main (Organization)** trên web.
 - [ ] `python3 scripts/org-setup.py team --apply --repo <tên>` — cấp quyền cho 6 team (**maintainers** quyền **Maintain** để `CODEOWNERS` có hiệu lực).
 
 ---
@@ -60,6 +60,7 @@ GitHub không có API cho các mục này — người quản trị làm trên w
 
 - [ ] Khi GitHub Actions còn tắt: ngày 1 hằng tháng chạy `make release-prepare` (bỏ qua nếu không có commit mới), mở Pull Request phát hành, hợp nhất rồi gắn tag và chạy `python3 scripts/release.py create <tag>` — workflow [`monthly-release.yml`](.github/workflows/monthly-release.yml), `release.yml` chỉ tự chạy khi bật lại Actions.
 - [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`.github/DISCUSSION_TEMPLATE/`](.github/DISCUSSION_TEMPLATE/).
+- [ ] Sửa **Protect Main (Organization)** trên web cho khớp [`rulesets/org-protect-main.json`](rulesets/org-protect-main.json) — bỏ **Rebase** khỏi cách hợp nhất (hoặc xóa rồi import lại tệp). Ở gói Free, ghi ruleset cấp tổ chức qua REST lẫn GraphQL đều bị chặn ("Upgrade to GitHub Team"), chỉ làm được trên web; kiểm tra lại bằng `python3 scripts/org-setup.py org-rulesets`.
 - [ ] Import push ruleset **Protect Pushes (Organization)** từ [`rulesets/org-protect-pushes.json`](rulesets/org-protect-pushes.json) (**Organization settings → Repository → Rulesets → New ruleset → Import a ruleset**), rồi chạy `python3 scripts/org-setup.py org-rulesets` để so với tệp ([ADR 0010](docs/adr/0010-org-push-ruleset.md)).
 - [ ] Khi nâng lên gói **Team**: ruleset cấp tổ chức được thực thi — cân nhắc ADR mới để bỏ ruleset cấp repository trùng lặp.
 - [ ] Xóa quy tắc kiểm tra bắt buộc rỗng (không chặn gì) của **Protect Release Tags (Organization)** trên web, rồi bỏ khỏi `orgTagRuleset()` trong [`scripts/org-setup.py`](scripts/org-setup.py) và sinh lại tệp.
