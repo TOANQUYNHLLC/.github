@@ -7,7 +7,7 @@ from orgsetup import files, github
 
 RULESET_FILE = github.ROOT / 'rulesets' / 'protect-main.json'
 
-# Ruleset tag: chặn tạo, dời, xóa tag phát hành v* ngoài danh sách bỏ qua (ADR 0008).
+# Ruleset tag: chặn tạo, dời, xóa tag phát hành v* ngoài danh sách bỏ qua (ADR 0005).
 TAG_RULESET_FILE = github.ROOT / 'rulesets' / 'protect-release-tags.json'
 
 # Ruleset cấp tổ chức: tệp để import trên web, sinh từ bản cấp repository bằng orgRulesets(), khớp ruleset
@@ -20,7 +20,7 @@ ORG_TAG_RULESET_FILE = github.ROOT / 'rulesets' / 'org-protect-release-tags.json
 
 ORG_TAG_RULESET_NAME = 'Protect Release Tags (Organization)'
 
-# Push ruleset chặn tệp bí mật, cơ sở dữ liệu, tệp lớn (ADR 0010): chỉ có ở cấp tổ chức nên tệp là nguồn —
+# Push ruleset chặn tệp bí mật, cơ sở dữ liệu, tệp lớn (ADR 0007): chỉ có ở cấp tổ chức nên tệp là nguồn —
 # GitHub chỉ áp dụng cho repository riêng tư, internal.
 ORG_PUSH_RULESET_FILE = github.ROOT / 'rulesets' / 'org-protect-pushes.json'
 
@@ -138,17 +138,17 @@ def graphqlRuleset(node):
 	actors = []
 	for actor in node['bypassActors']['nodes']:
 		if actor['organizationAdmin']:
-			actor_id, actor_type = 1, 'OrganizationAdmin'
+			actorId, actorType = 1, 'OrganizationAdmin'
 		elif actor['repositoryRoleDatabaseId']:
-			actor_id, actor_type = actor['repositoryRoleDatabaseId'], 'RepositoryRole'
+			actorId, actorType = actor['repositoryRoleDatabaseId'], 'RepositoryRole'
 		else:
 			who = actor['actor'] or {}
-			actor_id = who.get('databaseId')
-			actor_type = {'App': 'Integration'}.get(who.get('__typename'), who.get('__typename'))
+			actorId = who.get('databaseId')
+			actorType = {'App': 'Integration'}.get(who.get('__typename'), who.get('__typename'))
 		actors.append(
 			{
-				'actor_id': actor_id,
-				'actor_type': actor_type,
+				'actor_id': actorId,
+				'actor_type': actorType,
 				'bypass_mode': actor['bypassMode'].lower(),
 			}
 		)

@@ -152,5 +152,5 @@ def syncTeams(repos, apply):
 			print(f'   ✔ {permission} {github.ORG}/{repo}')
 	if apply:
 		print(
-			f'   CODEOWNERS dùng @{github.ORG}/{TEAM}; đổi thành viên thì cập nhật MAINTAINERS.md và MAINTAINERS trong script này.'
+			f'   CODEOWNERS dùng @{github.ORG}/{TEAM}; đổi thành viên thì cập nhật MAINTAINERS.md và MAINTAINERS trong scripts/orgsetup/teams.py.'
 		)

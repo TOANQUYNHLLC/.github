@@ -1,6 +1,6 @@
 {
 	"name": "Kiểm tra tài liệu — TOÀN QUỲNH",
-	"description": "Báo lỗi khi tài liệu Markdown có liên kết nội bộ trỏ tới file không tồn tại.",
+	"description": "Báo lỗi khi tài liệu Markdown có liên kết nội bộ trỏ tới tệp không tồn tại hoặc mục #… không có tiêu đề tương ứng.",
 	"iconName": "docs-check",
 	"categories": ["Continuous integration", "Markdown"],
 	"filePatterns": ["README.md$"]

@@ -1,4 +1,4 @@
-"""Báo công cụ trong mise.toml có bản phát hành mới hơn (Dependabot chưa cập nhật mise.toml, ADR 0007).
+"""Báo công cụ trong mise.toml có bản phát hành mới hơn (Dependabot chưa cập nhật mise.toml, ADR 0008).
 
 Chạy: python3 scripts/check-tool-versions.py
 Đọc bản phát hành mới nhất trên GitHub; dùng GH_TOKEN (workflow links.yml đặt sẵn) hoặc token của GitHub CLI đã

@@ -25,7 +25,7 @@ STATUS_ONLY_ENDPOINTS = ('vulnerability-alerts',)
 MERGE_SETTINGS = {
 	'allow_squash_merge': True,
 	'allow_merge_commit': True,
-	# Rebase and merge tạo lại commit không có chữ ký (ADR 0011).
+	# Rebase and merge tạo lại commit không có chữ ký (ADR 0006).
 	'allow_rebase_merge': False,
 	'allow_auto_merge': True,
 	'allow_update_branch': True,
@@ -36,7 +36,7 @@ MERGE_SETTINGS = {
 	'merge_commit_message': 'PR_TITLE',
 }
 
-# Cài đặt mọi repository (khớp .github trên web, kiểm tra 2026-10-03; giữ allow_rebase_merge của ADR 0011).
+# Cài đặt mọi repository (khớp .github trên web, kiểm tra 2026-10-03; giữ allow_rebase_merge của ADR 0006).
 REPOSITORY_SETTINGS = {
 	'has_issues': True,
 	'has_projects': False,
