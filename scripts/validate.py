@@ -345,8 +345,7 @@ def checkForm(path, required=('name', 'description', 'body')):
 	if path.parent.name == 'ISSUE_TEMPLATE':
 		for key in sorted(set(form) - ISSUE_FORM_KEYS):
 			error(path, f'khóa "{key}" không được GitHub chấp nhận trong biểu mẫu Issue')
-	for label in form.get('labels') or []:
-		FORM_LABELS.append((path, label))
+	FORM_LABELS.extend((path, label) for label in form.get('labels') or [])
 	ids = set()
 	for index, item in enumerate(form.get('body') or [], start=1):
 		kind = item.get('type')
@@ -618,7 +617,7 @@ def checkSuffixLists():
 	for suffix in sorted(set(SPACE_SUFFIXES) ^ spaces):
 		where = 'thiếu' if suffix in SPACE_SUFFIXES else 'thừa'
 		errors.append(f'.editorconfig: {where} {suffix} trong mục dấu cách so với validate.py')
-	crlf = {m for m in re.findall(r'^\*(\.\S+) .*\beol=crlf\b', attributes, re.MULTILINE)}
+	crlf = set(re.findall(r'^\*(\.\S+) .*\beol=crlf\b', attributes, re.MULTILINE))
 	for suffix in sorted(set(CRLF_SUFFIXES) ^ crlf):
 		where = 'thiếu' if suffix in CRLF_SUFFIXES else 'thừa'
 		errors.append(f'.gitattributes: {where} {suffix} text eol=crlf so với validate.py')

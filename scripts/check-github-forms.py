@@ -41,17 +41,20 @@ def formPaths():
 
 
 def fetchPage(url, attempts=3):
-	"""Nội dung trang; lỗi tạm thời của GitHub (429, 5xx — hay gặp khi gọi dồn) thì chờ rồi thử lại."""
+	"""Nội dung trang; lỗi tạm thời của GitHub (429, 5xx — hay gặp khi gọi dồn) thì chờ rồi thử lại, lần cuối
+	vẫn lỗi thì ném lỗi."""
 	request = urllib.request.Request(url, headers=HEADERS)
-	for attempt in range(1, attempts + 1):
+	for attempt in range(1, attempts):
 		try:
 			with urllib.request.urlopen(request, timeout=30) as response:
 				return response.read().decode('utf-8')
 		except urllib.error.HTTPError as exc:
-			if attempt == attempts or (exc.code != 429 and exc.code < 500):
+			if exc.code != 429 and exc.code < 500:
 				raise
 			exc.close()  # lỗi HTTP giữ phản hồi đang mở — đóng trước khi thử lại
 			time.sleep(RETRY_DELAY * attempt)
+	with urllib.request.urlopen(request, timeout=30) as response:
+		return response.read().decode('utf-8')
 
 
 def templateData(ref, relative):
