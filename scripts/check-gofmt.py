@@ -12,14 +12,19 @@ import sys
 def goFiles():
 	"""Tệp Go git quản lý, trừ vendor/ (mã của bên thứ ba); ngoài git thì để gofmt tự quét thư mục."""
 	result = subprocess.run(
-		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '*.go'],
+		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z', '*.go'],
 		capture_output=True,
 		text=True,
 		check=False,
 	)
 	if result.returncode != 0:
 		return ['.']
-	return [name for name in result.stdout.splitlines() if not name.startswith('vendor/')]
+	# -z: tên tệp nguyên văn; bỏ tệp đã xóa trên đĩa nhưng còn trong index.
+	return [
+		name
+		for name in result.stdout.split('\0')
+		if name and not name.startswith('vendor/') and os.path.isfile(name)
+	]
 
 
 def unformattedFiles():
