@@ -474,7 +474,7 @@ def checkFormatConfig():
 
 
 def checkLintIgnoreConfig():
-	""".prettierignore không lặp .gitignore (Prettier 3 tự đọc); ESLint dùng eslint-config-prettier, không bật indent."""
+	""".prettierignore không lặp .gitignore (Prettier 3 tự đọc); nếu có ESLint thì dùng eslint-config-prettier, không bật indent."""
 
 	def entries(name):
 		path = ROOT / name
@@ -485,12 +485,33 @@ def checkLintIgnoreConfig():
 
 	for entry in sorted(entries('.prettierignore') & entries('.gitignore')):
 		errors.append(f'.prettierignore: "{entry}" đã có trong .gitignore — Prettier 3 tự bỏ qua')
+	# Quy tắc chung của tổ chức, áp dụng khi repository dùng ESLint.
 	eslint_path = ROOT / 'eslint.config.js'
-	eslint = eslint_path.read_text(encoding='utf-8') if eslint_path.exists() else ''
+	if not eslint_path.exists():
+		return
+	eslint = eslint_path.read_text(encoding='utf-8')
 	if "from 'eslint-config-prettier'" not in eslint:
 		errors.append('eslint.config.js: phải dùng eslint-config-prettier để tắt quy tắc định dạng')
 	if re.search(r"""['"]?\bindent['"]?\s*:""", eslint):
 		errors.append('eslint.config.js: không bật quy tắc indent — định dạng do Prettier đảm nhận')
+
+
+def checkEditorExtensions():
+	"""Extension VS Code gợi ý tại máy (.vscode/extensions.json) và cài trong Dev Container phải giống nhau."""
+	try:
+		local = json.loads((ROOT / '.vscode' / 'extensions.json').read_text(encoding='utf-8'))
+		container = json.loads(
+			(ROOT / '.devcontainer' / 'devcontainer.json').read_text(encoding='utf-8')
+		)
+	except (OSError, json.JSONDecodeError):
+		return
+	wanted = set(local.get('recommendations') or [])
+	installed = set(
+		((container.get('customizations') or {}).get('vscode') or {}).get('extensions') or []
+	)
+	for name in sorted(wanted ^ installed):
+		where = '.devcontainer/devcontainer.json' if name in wanted else '.vscode/extensions.json'
+		errors.append(f'{where}: thiếu extension "{name}" — hai danh sách phải giống nhau')
 
 
 def editorconfigSuffixes(editorconfig, setting):
@@ -976,6 +997,7 @@ checkLintIgnoreConfig()
 checkDependabotCooldown()
 checkToolVersions()
 checkSuffixLists()
+checkEditorExtensions()
 checkConventions()
 checkRulesets()
 checkAdrIndex()

@@ -1,4 +1,4 @@
-# Giữ các GitHub Action (đang ghim theo commit SHA) và công cụ Node.js (Prettier, ESLint) luôn được cập nhật.
+# Giữ các GitHub Action (đang ghim theo commit SHA) và công cụ Node.js (Prettier) luôn được cập nhật.
 # cooldown: chờ 7 ngày sau khi một phiên bản phát hành mới đề xuất (tránh gói độc vừa phát hành);
 # không áp dụng cho cập nhật bảo mật.
 version: 2

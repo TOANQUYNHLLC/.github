@@ -332,9 +332,9 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails('quyền ghi chỉ cấp ở job cần dùng')
 
 	def testFilesWithoutExtensionAreChecked(self):
-		path = self.repo / 'NOTICE'
+		path = self.repo / 'LICENSE'
 		path.write_bytes(path.read_bytes().replace(b'\n', b'\r\n'))
-		self.assertFails('NOTICE: phải xuống dòng bằng LF')
+		self.assertFails('LICENSE: phải xuống dòng bằng LF')
 
 	def testBinaryListMatchesGitattributes(self):
 		self.edit('.gitattributes', '*.zip binary\n', '')
@@ -431,9 +431,9 @@ class ValidateTest(unittest.TestCase):
 		self.assertRegex(output, r'mise\.toml: dòng \d+: thụt lề phải dùng tab')
 
 	def testJsBlockCommentIsValid(self):
-		path = self.repo / 'eslint.config.js'
+		path = self.repo / 'tool.js'
 		path.write_text(
-			path.read_text(encoding='utf-8') + '\n/**\n * Chú thích khối.\n */\n', encoding='utf-8'
+			"/**\n * Chú thích khối.\n */\nexport const name = 'x';\n", encoding='utf-8'
 		)
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
@@ -458,13 +458,22 @@ class ValidateTest(unittest.TestCase):
 		self.edit('.prettierignore', 'LICENSE\n', 'LICENSE\nnode_modules/\n')
 		self.assertFails('.prettierignore: "node_modules/" đã có trong .gitignore')
 
+	def testEditorExtensionsMustMatch(self):
+		self.edit('.vscode/extensions.json', '\t\t"charliermarsh.ruff",\n', '')
+		self.assertFails('.vscode/extensions.json: thiếu extension "charliermarsh.ruff"')
+
 	def testEslintMustNotEnableIndent(self):
-		self.edit(
-			'eslint.config.js',
-			"eqeqeq: ['error', 'always'],",
-			"eqeqeq: ['error', 'always'],\n\t\t\tindent: ['error', 'tab'],",
+		# Repository dùng ESLint: phải có eslint-config-prettier và không bật indent.
+		(self.repo / 'eslint.config.js').write_text(
+			"import prettier from 'eslint-config-prettier';\n\n"
+			"export default [{ rules: { indent: ['error', 'tab'] } }, prettier];\n",
+			encoding='utf-8',
 		)
 		self.assertFails('eslint.config.js: không bật quy tắc indent')
+
+	def testEslintMustUsePrettierConfig(self):
+		(self.repo / 'eslint.config.js').write_text('export default [];\n', encoding='utf-8')
+		self.assertFails('eslint.config.js: phải dùng eslint-config-prettier')
 
 	def testIssueFormUsesOnlyAcceptedKeys(self):
 		# GitHub từ chối cả biểu mẫu khi gặp khóa lạ, kể cả `type` dù tài liệu có nhắc tới.

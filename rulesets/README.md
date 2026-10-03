@@ -56,7 +56,7 @@ Khác hai ruleset cấp tổ chức kia:
 | Kiểm tra                                                    | Repository `.github` | Repository khác |
 | ----------------------------------------------------------- | -------------------- | --------------- |
 | `Liên kết, biểu mẫu, nhãn, cấu hình định dạng và mẫu email` | ✔                    |                 |
-| `Định dạng (Prettier, ruff) và ESLint`                      | ✔                    |                 |
+| `Định dạng (Prettier, ruff)`                                | ✔                    |                 |
 | `Shell script và workflow`                                  | ✔                    |                 |
 | `Kiểm tra tiêu đề Pull Request`                             | ✔                    | ✔               |
 | `Kiểm tra tên branch`                                       | ✔                    | ✔               |
