@@ -1,6 +1,5 @@
 # 🏢 CÔNG TY TNHH TOÀN QUỲNH
 
-[![Kiểm tra repository](https://github.com/TOANQUYNHLLC/.github/actions/workflows/validate.yml/badge.svg)](https://github.com/TOANQUYNHLLC/.github/actions/workflows/validate.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Repository `.github` chính thức của **CÔNG TY TNHH TOÀN QUỲNH**: hồ sơ tổ chức, tệp cộng đồng mặc định và cấu hình GitHub dùng chung cho mọi repository. Giới thiệu về công ty xem tại [`profile/README.md`](profile/README.md).
@@ -63,7 +62,7 @@ GitHub chỉ kế thừa `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`,
 | [`rulesets/`](rulesets/)                         | Ruleset **Protect Main**, **Protect Release Tags** (cấp repository) và bản cấp tổ chức, push ruleset **Protect Pushes** — xem [`rulesets/README.md`](rulesets/README.md)                                                                                                                    |
 | [`labels.yml`](labels.yml)                       | Bộ nhãn chuẩn: nhãn mặc định của GitHub, loại thay đổi (khớp tiền tố branch), phạm vi `area: …`, mức độ ưu tiên, trạng thái xử lý, nhãn Dependabot                                                                                                                                          |
 
-**Workflow của repository này**
+**Workflow của repository này** — GitHub Actions của repository đang tắt; việc thay thế xem mục **PHÁT HÀNH** → _Khi GitHub Actions tắt_
 
 | Đường dẫn                                                                                                                                     | Chức năng                                                                                                                           |
 | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -201,6 +200,7 @@ Phát hành vào **ngày 1 hằng tháng**, chỉ khi có commit mới kể từ
 **Khi GitHub Actions tắt** (tiết kiệm chi phí), mọi việc định kỳ vẫn có người làm:
 
 - Kiểm tra: hook `pre-push` chạy `make check` trước mỗi lần đẩy.
+- Hợp nhất: kiểm tra bắt buộc của ruleset **Protect Main** không có lượt chạy để báo kết quả, nên chỉ người quản trị (danh sách bỏ qua của ruleset) hợp nhất được Pull Request — sau khi `make check` đã đạt tại máy.
 - Liên kết, phiên bản công cụ, cài đặt trên GitHub: hook sau `git pull` chạy `make links`, `make versions`, `make org-preview`.
 - Routine Claude Code (claude.ai/code/routines): **Nhắc phát hành hằng tháng** (08:00 ngày 1) báo có cần phát hành không; **Kiểm tra biểu mẫu hằng tháng** (09:00 ngày 1) chạy `check-github-forms.py`. Môi trường đám mây chặn mạng ra ngoài github.com và không có GitHub CLI đã đăng nhập, nên phần còn lại chạy tại máy.
 - Phát hành: `git switch main && git pull --ff-only && make release-pr` thay cho bước 1; sau bước 3 tạo Release bằng `python3 scripts/release.py create v2026.11.Stable`.
