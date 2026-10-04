@@ -1,6 +1,6 @@
 # 🛡️ RULESET BẢO VỆ NHÁNH CHÍNH VÀ TAG PHÁT HÀNH
 
-Mỗi repository của tổ chức có hai [ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets): **Protect Main** cho nhánh chính ([`protect-main.json`](protect-main.json)) và **Protect Release Tags** cho tag phát hành `Stable.v*`, `Beta.v*` và `v*` cũ ([`protect-release-tags.json`](protect-release-tags.json), [ADR 0005](../docs/adr/0005-protect-release-tags.md), [ADR 0014](../docs/adr/0014-release-sequence.md)), để các quy tắc trong [`CONTRIBUTING.md`](../CONTRIBUTING.md) được GitHub thực thi. Ruleset **không** tự áp dụng từ repository này — người quản trị import trên web hoặc chạy `python3 scripts/org-setup.py rulesets --apply`.
+Mỗi repository của tổ chức có hai [ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets): **Protect Main** cho nhánh chính ([`protect-main.json`](protect-main.json)) và **Protect Release Tags** cho tag phát hành `Stable.v*`, `Beta.v*` và `v*` ([`protect-release-tags.json`](protect-release-tags.json), [ADR 0005](../docs/adr/0005-protect-release-tags.md), [ADR 0014](../docs/adr/0014-release-sequence.md)), để các quy tắc trong [`CONTRIBUTING.md`](../CONTRIBUTING.md) được GitHub thực thi. Ruleset **không** tự áp dụng từ repository này — người quản trị import trên web hoặc chạy `python3 scripts/org-setup.py rulesets --apply`.
 
 Ruleset đặt ở **cấp repository**: tổ chức dùng gói GitHub Free nên ruleset cấp tổ chức (**Organization settings → Repository → Rulesets**) không được thực thi; **push ruleset** (chặn tệp theo đường dẫn, đuôi, kích thước) chỉ dùng được cho repository riêng tư hoặc internal. Gói Free cũng không thực thi ruleset trên repository **riêng tư** — `org-setup.py` cảnh báo và bỏ qua thay vì dừng.
 
@@ -26,7 +26,7 @@ Mọi ruleset nhánh và tag — cấp repository và cấp tổ chức — có 
 Ba ruleset cho mọi repository (`~ALL`), cả ba đã có trên web (**Active**) và khớp tệp (`make org-preview` đối chiếu) nhưng chỉ được thực thi khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức):
 
 - [`org-protect-main.json`](org-protect-main.json) — **Protect Main (Organization)**: cùng quy tắc với Protect Main trên nhánh mặc định, thêm **code scanning** như trên web: kết quả CodeQL của Pull Request không có cảnh báo mức `errors` hay cảnh báo bảo mật từ `high_or_higher` (`ORG_CODE_SCANNING_RULE` trong `scripts/orgsetup/rulesets.py`). Repository cần workflow CodeQL ([`workflow-templates/codeql.yml`](../workflow-templates/codeql.yml)) để có kết quả, nếu không Pull Request bị chặn khi gói Team thực thi ruleset.
-- [`org-protect-release-tags.json`](org-protect-release-tags.json) — **Protect Release Tags (Organization)**: cùng quy tắc với Protect Release Tags trên tag `Stable.v*`, `Beta.v*` và `v*` cũ.
+- [`org-protect-release-tags.json`](org-protect-release-tags.json) — **Protect Release Tags (Organization)**: cùng quy tắc với Protect Release Tags trên tag `Stable.v*`, `Beta.v*` và `v*`.
 - [`org-protect-pushes.json`](org-protect-pushes.json) — **Protect Pushes (Organization)**: push ruleset, xem [mục dưới](#-protect-pushes-cấp-tổ-chức).
 
 Khác với bản cấp repository:

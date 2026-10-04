@@ -8,7 +8,7 @@ from orgsetup import files, github
 
 RULESET_FILE = github.ROOT / 'rulesets' / 'protect-main.json'
 
-# Ruleset tag: chặn tạo, dời, xóa tag phát hành Stable.v*, Beta.v* và v* cũ ngoài danh sách bỏ qua (ADR 0005, ADR 0014).
+# Ruleset tag: chặn tạo, dời, xóa tag phát hành Stable.v*, Beta.v* và v* ngoài danh sách bỏ qua (ADR 0005, ADR 0014).
 TAG_RULESET_FILE = github.ROOT / 'rulesets' / 'protect-release-tags.json'
 
 # Ruleset cấp tổ chức: tệp để import trên web, sinh từ bản cấp repository bằng orgRulesets(), để so với ruleset
