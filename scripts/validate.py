@@ -509,10 +509,11 @@ def checkToolVersions():
 		errors.append(f'{where} {tool}')
 	if re.search(r'^node = ', mise, re.MULTILINE):
 		errors.append('mise.toml: Node.js khai báo trong .nvmrc, không lặp trong mise.toml')
-	# devEngines của package.json chặn Node.js cũ hơn bản trong .nvmrc — phải đúng ">=<bản trong .nvmrc>".
+	# devEngines của package.json phải đúng bản trong .nvmrc: npm chặn Node.js khác bản đó, và mise đọc devEngines
+	# để chọn Node.js (">=24" làm mise cài bản mới nhất, khác CI).
 	nvmrc, package = ROOT / '.nvmrc', ROOT / 'package.json'
 	if nvmrc.exists() and package.exists():
-		wanted = f'>={readText(nvmrc).strip()}'
+		wanted = readText(nvmrc).strip()
 		runtime = (json.loads(readText(package)).get('devEngines') or {}).get('runtime') or {}
 		if runtime.get('version') != wanted:
 			errors.append(
