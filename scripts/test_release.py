@@ -42,6 +42,155 @@ RELEASE_FIXTURE = """# NHẬT KÝ THAY ĐỔI
 
 
 class ReleaseTest(unittest.TestCase):
+	def testValidLeapDatePreparesRealRepositoryRelease(self):
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			with (
+				mock.patch.object(
+					self.module.sys,
+					'argv',
+					[
+						'release.py',
+						'prepare',
+						'--version',
+						'v2104.02.Stable',
+						'--date',
+						'2104-02-29',
+					],
+				),
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				self.assertEqual(self.module.main(), 0)
+			changelog = (clone / 'CHANGELOG.md').read_text(encoding='utf-8')
+			self.assertIn('— 2104-02-29', changelog)
+			self.assertEqual(self.module.unreleasedNotes(changelog), '')
+			self.assertEqual(
+				self.module.releaseNotes(changelog, 'v2104.02.Stable'), '### ✨ THÊM\n\n- Mục mới.'
+			)
+
+	def testInvalidDateLeavesRealRepositoryChangelogUntouched(self):
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			with (
+				mock.patch.object(
+					self.module.sys,
+					'argv',
+					[
+						'release.py',
+						'prepare',
+						'--version',
+						'v2099.02.Stable',
+						'--date',
+						'2099-02-29',
+					],
+				),
+				contextlib.redirect_stdout(io.StringIO()) as output,
+			):
+				self.assertEqual(self.module.main(), 1)
+			self.assertIn('Ngày phát hành không có thật', output.getvalue())
+			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
+			self.assertEqual(
+				subprocess.check_output(['git', 'status', '--porcelain'], cwd=clone), b''
+			)
+
+	def testInvalidPreparationInputsDoNotTouchFilesOrRunCommands(self):
+		module = loadScript('release')
+		cases = (
+			('v2099.13.Stable', '2099-01-01'),
+			('v2099.00.Stable', '2099-01-01'),
+			('v0000.01.Stable', '2099-01-01'),
+			('v2099.1.Stable', '2099-01-01'),
+			('v2099.01.Stable\n## BROKEN', '2099-01-01'),
+			('v2099.01.Stable', '2099-02-29'),
+			('v2099.01.Stable', '2099-1-01'),
+			('v2099.01.Stable', '2099-01-01\n## BROKEN'),
+		)
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			path = module.ROOT / 'CHANGELOG.md'
+			path.write_text(RELEASE_FIXTURE, encoding='utf-8')
+			for version, date in cases:
+				with self.subTest(version=version, date=date):
+					with (
+						mock.patch.object(
+							module.sys,
+							'argv',
+							[
+								'release.py',
+								'prepare',
+								'--version',
+								version,
+								'--date',
+								date,
+								'--open-pr',
+							],
+						),
+						mock.patch.object(module, 'runCommand') as run,
+						mock.patch.object(module, 'onCleanMain') as clean,
+						contextlib.redirect_stdout(io.StringIO()) as output,
+					):
+						self.assertEqual(module.main(), 1)
+					self.assertIn('❌', output.getvalue())
+					self.assertEqual(path.read_text(encoding='utf-8'), RELEASE_FIXTURE)
+					run.assert_not_called()
+					clean.assert_not_called()
+
+	def testInvalidOpenPrVersionDoesNotCallGitOrGithub(self):
+		module = loadScript('release')
+		with (
+			mock.patch.object(
+				module.sys,
+				'argv',
+				['release.py', 'open-pr', 'v2099.13.Stable', 'v2099.01.Stable', '1'],
+			),
+			mock.patch.object(module, 'runCommand') as run,
+			mock.patch.object(module.github, 'ghExists') as read,
+			contextlib.redirect_stdout(io.StringIO()) as output,
+		):
+			self.assertEqual(module.main(), 1)
+		self.assertIn('Phiên bản', output.getvalue())
+		run.assert_not_called()
+		read.assert_not_called()
+
+	def testMalformedExistingReleasePrIsNotReportedAsPending(self):
+		module = loadScript('release')
+		for data in (None, {}, {'message': 'lỗi'}, [42], [{}], [{'url': None}], [{'url': ''}]):
+			with self.subTest(data=data):
+				with (
+					mock.patch.object(module, 'runCommand', return_value='abc123') as run,
+					mock.patch.object(module.github, 'ghExists', return_value=True),
+					mock.patch.object(module.github, 'ghJson', return_value=data),
+					contextlib.redirect_stdout(io.StringIO()) as output,
+				):
+					self.assertEqual(
+						module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 1), 1
+					)
+				self.assertIn('Không đọc được trạng thái', output.getvalue())
+				self.assertNotIn('đang chờ:', output.getvalue())
+				self.assertFalse(any(call.args[0] == 'gh' for call in run.call_args_list))
+
+	def testActionMessagesEscapeNewlinesAndPercentSigns(self):
+		module = loadScript('release')
+		message = 'gh lỗi 50%\r\n::notice::dòng tiếp theo'
+		for onActions in (False, True):
+			with self.subTest(onActions=onActions):
+				output = io.StringIO()
+				with (
+					mock.patch.dict(
+						module.os.environ,
+						{'GITHUB_ACTIONS': 'true'} if onActions else {},
+						clear=True,
+					),
+					contextlib.redirect_stdout(output),
+				):
+					module.reportMessage('error', message)
+				self.assertEqual(
+					output.getvalue(),
+					'::error::gh lỗi 50%25%0D%0A::notice::dòng tiếp theo\n'
+					if onActions
+					else message + '\n',
+				)
+
 	def testUnreadableChangelogDoesNotCreateReleaseBranch(self):
 		module = loadScript('release')
 		with tempfile.TemporaryDirectory() as folder:

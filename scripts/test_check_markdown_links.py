@@ -19,6 +19,41 @@ except ModuleNotFoundError:
 
 
 class MarkdownLinksTest(unittest.TestCase):
+	def testEscapedBackticksDoNotHideRealLinks(self):
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'README.md'
+			self.assertEqual(
+				module.findBrokenLinks(path, r'\`[x](missing.md)\`'),
+				['liên kết hỏng: missing.md'],
+			)
+			# Trong mã, backslash không escape dấu đóng. Ngoài mã, nó chỉ escape backtick đầu của cụm.
+			for text in (r'`[x](missing.md)\`', r'\``[x](missing.md)`'):
+				with self.subTest(text=text):
+					self.assertEqual(module.findBrokenLinks(path, text), [])
+
+	def testCodeSpansKeepParagraphBoundariesAndLineNumbers(self):
+		module = loadScript('markdown')
+		for text, expected in (
+			('a `code\ncode` b', 'a \n b'),
+			('a `open\n \t\nclose` b', 'a `open\n \t\nclose` b'),
+			('a ``code ` still code`` b `next`', 'a  b '),
+			('a `open ``code``', 'a `open '),
+			('a ' + '\\' * 2 + '`code` b', 'a ' + '\\' * 2 + ' b'),
+		):
+			with self.subTest(text=text):
+				self.assertEqual(module.withoutCode(text), expected)
+				self.assertEqual(module.withoutCode(text).count('\n'), text.count('\n'))
+
+	def testUnmatchedBacktickRunsKeepFollowingLinksVisible(self):
+		module = loadScript('check-markdown-links')
+		text = ' '.join('text' + '`' * size for size in range(1, 201))
+		with tempfile.TemporaryDirectory() as folder:
+			self.assertEqual(
+				module.findBrokenLinks(Path(folder) / 'README.md', text + ' [x](missing.md)'),
+				['liên kết hỏng: missing.md'],
+			)
+
 	def testCodeExamplesAreNotLinksOrHeadings(self):
 		module = loadScript('check-markdown-links')
 		with tempfile.TemporaryDirectory() as folder:

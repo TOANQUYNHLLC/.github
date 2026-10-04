@@ -170,7 +170,7 @@ Chỉ các tệp test được chọn được nạp; tên sai hoặc tệp khô
 
 Bộ kiểm tra liên kết Markdown dùng anchor giống GitHub, kể cả tiêu đề trùng với hậu tố tự sinh; mỗi tệp đích được phân tích một lần trong một lượt kiểm tra và được đọc lại ở lượt sau. Tệp không đọc được hoặc sai UTF-8 làm kiểm tra thất bại và báo tên tệp; `validate.py` tiếp tục đối chiếu các nội dung còn đọc được để báo lỗi cùng lượt.
 
-Khối mã dùng backtick hoặc dấu ngã (`~~~`) không tạo liên kết, tiêu đề hay lỗi thụt lề. Dấu đóng phải cùng loại và dài ít nhất bằng dấu mở; khối chưa đóng kéo dài đến cuối tệp. Bộ kiểm tra liên kết cũng bỏ qua mã nội tuyến và không coi URL có scheme viết hoa, dấu `+` hoặc dạng `//máy-chủ/đường-dẫn` là tệp cục bộ.
+Khối mã dùng backtick hoặc dấu ngã (`~~~`) không tạo liên kết, tiêu đề hay lỗi thụt lề. Dấu đóng phải cùng loại và dài ít nhất bằng dấu mở; khối chưa đóng kéo dài đến cuối tệp. Bộ kiểm tra liên kết bỏ qua mã nội tuyến có cụm backtick đóng dài đúng bằng cụm mở, không ghép qua dòng trống. Backtick được escape ngoài mã vẫn là văn bản; backslash bên trong mã không escape dấu đóng. Chỉ mục dấu đóng tránh quét lại phần văn bản phía sau cho từng cụm không có dấu đóng. URL có scheme viết hoa, dấu `+` hoặc dạng `//máy-chủ/đường-dẫn` không bị coi là tệp cục bộ.
 
 `make conventions` kiểm tra tiêu đề có mô tả không trống, chỉ một dòng, tối đa 72 ký tự và không kết thúc bằng dấu chấm theo `CONTRIBUTING.md`. Lỗi đọc trạng thái Git làm kiểm tra thất bại; thiếu `origin/main` hoặc không có commit để so được báo rõ là bỏ qua. Khi lệnh `git log` đã thành công, script không dò lại ref. Chú thích lỗi trên Actions mã hóa ký tự `%` và xuống dòng trước khi in.
 
@@ -219,7 +219,7 @@ Lệnh `team` chỉ coi thành viên có trạng thái `active` là đã tham gi
 
 Danh sách ruleset và nhãn được đọc đầy đủ bằng [phân trang của GitHub CLI](https://cli.github.com/manual/gh_api), mỗi trang REST tối đa 100 phần tử; lần chạy sau đọc lại GitHub. Lỗi trang sau không trả danh sách dở dang để ghi. Phép đối chiếu ruleset tổ chức qua GraphQL cũng đọc hết các trang; dữ liệu quy tắc hoặc danh sách bỏ qua bị cắt được báo chưa đọc đầy đủ.
 
-Lệnh đồng bộ nhãn đọc `labels.yml` bằng chế độ YAML an toàn như validator, hỗ trợ anchor/alias không tạo vòng lặp. YAML lỗi hoặc cấu trúc không phải danh sách object nhãn chặn lệnh trước khi đọc hay ghi GitHub.
+Lệnh đồng bộ nhãn đọc `labels.yml` bằng chế độ YAML an toàn như validator, hỗ trợ anchor/alias không tạo vòng lặp. Hai lệnh dùng chung kiểm tra schema: tên là chuỗi không trống và không trùng khi bỏ qua hoa/thường; màu là chuỗi hex 6 ký tự; mô tả tùy chọn là chuỗi tối đa 100 ký tự. YAML hoặc schema sai chặn lệnh trước khi đọc hay ghi GitHub. Phản hồi nhãn thiếu trường, sai kiểu hoặc trùng tên chặn việc ghi lên repository đó; mô tả `null` của API được coi là chuỗi rỗng. Nhãn riêng được giữ nguyên.
 
 ---
 
@@ -243,11 +243,13 @@ Khi cập nhật nội dung, cần bảo đảm:
 
 Phát hành vào **ngày 1 hằng tháng**, chỉ khi có commit mới kể từ tag phát hành trước; phiên bản đặt theo tháng (`vYYYY.MM.Stable`).
 
+Lệnh `prepare` kiểm tra phiên bản có năm, tháng hợp lệ và ngày phát hành có thật theo dạng `YYYY-MM-DD` trước khi gọi Git hoặc sửa `CHANGELOG.md`; `open-pr` cũng kiểm tra phiên bản trước khi đọc hay ghi GitHub. Các lệnh `notes` và `create` nhận tag của nội dung phát hành cần đọc, kể cả khi dùng workflow mẫu cho repository khác. Phản hồi danh sách Pull Request thiếu hoặc sai kiểu được báo lỗi; chỉ xác nhận đang chờ khi đọc được URL không trống.
+
 1. Workflow [`monthly-release.yml`](.github/workflows/monthly-release.yml) chạy lúc 07:00 ngày 1 (giờ Việt Nam): chuyển mục **CHƯA PHÁT HÀNH** của [`CHANGELOG.md`](CHANGELOG.md) thành phiên bản của tháng (ví dụ `## [v2026.11.Stable] — 2026-11-01`) và mở Pull Request `release/v2026.11`. Có commit mà mục **CHƯA PHÁT HÀNH** trống thì báo lỗi — ghi `CHANGELOG.md` rồi chạy lại (**Actions → Chuẩn bị phát hành hằng tháng → Run workflow**).
 2. Xem trước nội dung: `make release-notes TAG=v2026.11.Stable`; hợp nhất Pull Request bằng **Squash** hoặc **Merge**.
 3. Người quản trị gắn và đẩy tag trên `main` (ruleset **Protect Release Tags** chỉ cho người quản trị tạo tag `v*`): `git tag v2026.11.Stable && git push origin v2026.11.Stable` — workflow [`release.yml`](.github/workflows/release.yml) tạo GitHub Release. Tổ chức bật **Immutable releases**: Release đã phát hành không dời được tag, không dùng lại được tên tag.
 
-Chạy lại khi branch phát hành đã có: script xác minh và in URL của Pull Request đang mở. Nếu branch chưa có Pull Request đang mở, script báo lỗi kèm liên kết để kiểm tra và mở tay. Script đọc `CHANGELOG.md` và kiểm tra UTF-8 trước khi tạo branch mới; lỗi đọc trạng thái hoặc tệp không tạo branch mới. Lỗi commit sẽ thử xóa branch vừa tạo và báo rõ nếu chưa xóa được. Lỗi tạo Pull Request giữ branch để mở tay. Các lệnh phát hành báo lỗi đọc/ghi tệp và lỗi lệnh ngoài bằng thông báo vận hành, thoát mã 1.
+Chạy lại khi branch phát hành đã có: script xác minh và in URL của Pull Request đang mở. Nếu branch chưa có Pull Request đang mở, script báo lỗi kèm liên kết để kiểm tra và mở tay. Script đọc `CHANGELOG.md` và kiểm tra UTF-8 trước khi tạo branch mới; lỗi đọc trạng thái hoặc tệp không tạo branch mới. Lỗi commit sẽ thử xóa branch vừa tạo và báo rõ nếu chưa xóa được. Lỗi tạo Pull Request giữ branch để mở tay. Các lệnh phát hành báo lỗi đọc/ghi tệp và lỗi lệnh ngoài bằng thông báo vận hành, thoát mã 1. Khi chạy trên Actions, `%`, CR và LF trong thông báo được mã hóa để lỗi nhiều dòng vẫn thuộc cùng một chú thích.
 
 **Khi GitHub Actions tắt** (ví dụ để tiết kiệm chi phí), mọi việc định kỳ vẫn có người làm:
 
