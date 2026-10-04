@@ -27,6 +27,100 @@ from orgsetup import files, github, labels, rulesets, settings, teams
 
 
 class OrgSetupTest(unittest.TestCase):
+	def testUnknownTeamPermissionsStopBeforeAnyWrite(self):
+		for value in (
+			{'role_name': 'release_manager', 'permissions': {'push': True}},
+			{},
+			{'role_name': []},
+			[],
+		):
+
+			def read(*args, value=value):
+				path = args[-1]
+				if '/memberships/' in path:
+					return {'role': 'maintainer', 'state': 'active'}
+				if '/repos/' in path:
+					return value
+				team = path.rsplit('/', 1)[-1]
+				name, _, privacy, description = teams.TEAMS[team]
+				return {'name': name, 'privacy': privacy, 'description': description}
+
+			with (
+				self.subTest(value=value),
+				mock.patch.object(github, 'ghJson', read),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+				self.assertRaisesRegex(RuntimeError, 'quyền'),
+			):
+				teams.syncTeams(['app'], apply=True)
+			write.assert_not_called()
+
+	def testPendingOrMalformedMembershipStopsBeforeAnyWrite(self):
+		for membership in (
+			{'role': 'maintainer', 'state': 'pending'},
+			{'role': 'maintainer'},
+			{'role': 'owner', 'state': 'active'},
+			[],
+		):
+
+			def read(*args, membership=membership):
+				path = args[-1]
+				if '/memberships/' in path:
+					return membership
+				if '/repos/' in path:
+					return {'role_name': 'admin'}
+				team = path.rsplit('/', 1)[-1]
+				name, _, privacy, description = teams.TEAMS[team]
+				return {'name': name, 'privacy': privacy, 'description': description}
+
+			with (
+				self.subTest(membership=membership),
+				mock.patch.object(github, 'ghJson', read),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+				self.assertRaises(RuntimeError),
+			):
+				teams.syncTeams(['app'], apply=True)
+			write.assert_not_called()
+
+	def testMalformedTeamDetailsStopBeforeAnyWrite(self):
+		for details in ({}, {'name': 'QA', 'privacy': []}, {'name': 'QA', 'privacy': 'closed'}, []):
+			with (
+				self.subTest(details=details),
+				mock.patch.object(github, 'ghJson', return_value=details),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				with self.assertRaises(RuntimeError):
+					teams.teamDetails('qa')
+				with self.assertRaises(RuntimeError):
+					teams.syncTeams(['app'], apply=True)
+			write.assert_not_called()
+
+	def testMembershipWriteDistinguishesInvitationFromActiveMember(self):
+		teams.teamDetails = lambda team: {
+			'name': teams.TEAMS[team][0],
+			'description': teams.TEAMS[team][3],
+			'privacy': teams.TEAMS[team][2],
+		}
+		teams.teamRole = lambda team, user: None
+		teams.teamPermission = lambda team, repo: 'admin'
+		for state in ('pending', 'active'):
+			output = io.StringIO()
+			with (
+				self.subTest(state=state),
+				mock.patch.object(
+					github, 'gh', return_value=json.dumps({'role': 'maintainer', 'state': state})
+				),
+				contextlib.redirect_stdout(output),
+			):
+				teams.syncTeams(['app'], apply=True)
+			if state == 'pending':
+				self.assertIn('chờ chấp nhận lời mời', output.getvalue())
+				self.assertNotIn('✔ thêm nguyentrongtoandl (maintainer)', output.getvalue())
+			else:
+				self.assertIn('✔ thêm nguyentrongtoandl (maintainer)', output.getvalue())
+
 	def testLabelsSupportYamlAliases(self):
 		with tempfile.TemporaryDirectory() as folder:
 			path = Path(folder) / 'labels.yml'
@@ -450,7 +544,9 @@ class OrgSetupTest(unittest.TestCase):
 		teams.teamRole = lambda team, user: 'maintainer'
 		# Quyền cao hơn (admin) đã đủ cho mọi team — không hạ quyền.
 		teams.teamPermission = lambda team, repo: 'admin'
-		github.gh = lambda *args, **kwargs: calls.append(args)
+		github.gh = lambda *args, **kwargs: (
+			calls.append(args) or json.dumps({'role': 'maintainer', 'state': 'active'})
+		)
 		output = io.StringIO()
 		with contextlib.redirect_stdout(output):
 			teams.syncTeams(['.github', 'app'], apply=True)
@@ -561,7 +657,7 @@ class OrgSetupTest(unittest.TestCase):
 				if path.endswith(failingPath) or failingPath in path:
 					raise RuntimeError('Forbidden (HTTP 403)')
 				if '/memberships/' in path:
-					return {'role': 'maintainer'}
+					return {'role': 'maintainer', 'state': 'active'}
 				if '/repos/' in path:
 					return {'role_name': 'admin'}
 				team = path.rsplit('/', 1)[-1]

@@ -46,27 +46,50 @@ PERMISSION_RANK = {
 def teamRole(team, user):
 	"""Vai trò của người dùng trong team; None chỉ khi HTTP 404, lỗi đọc khác phải dừng trước khi ghi."""
 	try:
-		return (
-			github.ghJson('api', f'orgs/{github.ORG}/teams/{team}/memberships/{user}') or {}
-		).get('role')
+		role, state = membershipState(
+			github.ghJson('api', f'orgs/{github.ORG}/teams/{team}/memberships/{user}'),
+			f'{team}/{user}',
+		)
+		if state == 'pending':
+			raise RuntimeError(
+				f'{team}/{user}: chờ chấp nhận lời mời vào team — chưa có thành viên hoạt động'
+			)
+		return role
 	except RuntimeError as exc:
 		if github.isNotFound(exc):
 			return None
 		raise
 
 
+def membershipState(data, location):
+	"""Vai trò và trạng thái lời mời phải đọc được; không coi phản hồi thiếu trường là chưa có thành viên."""
+	if (
+		not isinstance(data, dict)
+		or data.get('role') not in ('member', 'maintainer')
+		or data.get('state') not in ('active', 'pending')
+	):
+		raise RuntimeError(f'{location}: không đọc được vai trò hoặc trạng thái thành viên team')
+	return data['role'], data['state']
+
+
 def teamPermission(team, repo):
 	"""Quyền của team trên repository; None chỉ khi HTTP 404, lỗi đọc khác phải dừng trước khi ghi."""
 	try:
-		return (
-			github.ghJson(
-				'api',
-				'-H',
-				'Accept: application/vnd.github.v3.repository+json',
-				f'orgs/{github.ORG}/teams/{team}/repos/{github.ORG}/{repo}',
+		data = github.ghJson(
+			'api',
+			'-H',
+			'Accept: application/vnd.github.v3.repository+json',
+			f'orgs/{github.ORG}/teams/{team}/repos/{github.ORG}/{repo}',
+		)
+		if (
+			not isinstance(data, dict)
+			or not isinstance(data.get('role_name'), str)
+			or data['role_name'] not in PERMISSION_RANK
+		):
+			raise RuntimeError(
+				f'{team}/{repo}: không xếp được quyền team — kiểm tra quyền tùy chỉnh hoặc phản hồi GitHub, giữ nguyên quyền trên repository'
 			)
-			or {}
-		).get('role_name')
+		return data['role_name']
 	except RuntimeError as exc:
 		if github.isNotFound(exc):
 			return None
@@ -75,7 +98,17 @@ def teamPermission(team, repo):
 
 def teamDetails(team):
 	"""Tên, mô tả, chế độ hiển thị của team trên GitHub."""
-	return github.ghJson('api', f'orgs/{github.ORG}/teams/{team}') or {}
+	data = github.ghJson('api', f'orgs/{github.ORG}/teams/{team}')
+	if (
+		not isinstance(data, dict)
+		or not isinstance(data.get('name'), str)
+		or not data['name']
+		or data.get('privacy') not in ('secret', 'closed')
+		or 'description' not in data
+		or not isinstance(data.get('description'), (str, type(None)))
+	):
+		raise RuntimeError(f'{team}: không đọc được tên, chế độ hiển thị hoặc mô tả team')
+	return data
 
 
 def teamState(team, repos):
@@ -147,7 +180,7 @@ def syncTeams(repos, apply):
 				f'description={description}',
 			)
 		for user in users:
-			github.gh(
+			data = github.ghJson(
 				'api',
 				'-X',
 				'PUT',
@@ -155,7 +188,13 @@ def syncTeams(repos, apply):
 				'-f',
 				'role=maintainer',
 			)
-			print(f'   ✔ thêm {user} (maintainer)')
+			role, state = membershipState(data, f'{team}/{user}')
+			if state == 'pending':
+				print(f'   ⚠ {user}: chờ chấp nhận lời mời vào team {team}')
+			elif role == 'maintainer':
+				print(f'   ✔ thêm {user} (maintainer)')
+			else:
+				raise RuntimeError(f'{team}/{user}: GitHub chưa cấp vai trò maintainer')
 		for repo in missing:
 			github.gh(
 				'api',

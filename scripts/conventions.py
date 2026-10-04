@@ -51,6 +51,7 @@ def joinChoices(choices):
 def reportError(message):
 	"""Chú thích ::error:: khi chạy trên GitHub Actions, dòng ✘ khi chạy tại máy."""
 	if os.environ.get('GITHUB_ACTIONS'):
+		message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
 		print(f'::error::{message}')
 	else:
 		print(f'✘ {message}', file=sys.stderr)
@@ -64,7 +65,7 @@ def checkBranch(name):
 	if SKIPPED_BRANCHES.match(name):
 		print(f'Bỏ qua branch: {name}')
 		return True
-	if BRANCH_PATTERN.match(name):
+	if BRANCH_PATTERN.fullmatch(name):
 		print(f'Tên branch hợp lệ: {name}')
 		return True
 	reportError(
@@ -76,20 +77,31 @@ def checkBranch(name):
 
 
 def checkTitle(title):
-	if TITLE_PATTERN.match(title):
+	if (
+		TITLE_PATTERN.fullmatch(title)
+		and title.split(': ', 1)[1].strip()
+		and len(title) <= 72
+		and title.splitlines() == [title]
+		and not title.rstrip().endswith('.')
+	):
 		print(f'Tiêu đề hợp lệ: {title}')
 		return True
 	reportError(
 		"Tiêu đề phải theo dạng '<loại>(<phạm vi>): <mô tả>' (phạm vi tùy chọn) với loại là "
-		f'{joinChoices(COMMIT_TYPES)} — xem CONTRIBUTING.md. Tiêu đề hiện tại: {title}'
+		f'{joinChoices(COMMIT_TYPES)}; mô tả không trống, một dòng tối đa 72 ký tự, không kết thúc bằng dấu chấm '
+		f'— xem CONTRIBUTING.md. Tiêu đề hiện tại: {title}'
 	)
 	return False
 
 
-def gitOutput(*args):
-	"""Kết quả lệnh git, chuỗi rỗng khi lỗi (ví dụ chưa có origin/main)."""
+def gitOutput(*args, missingOk=False):
+	"""Kết quả lệnh Git; chỉ bỏ qua mã 1 của phép dò ref khi người gọi cho phép."""
 	result = subprocess.run(['git', *args], capture_output=True, text=True, check=False)
-	return result.stdout.strip() if result.returncode == 0 else ''
+	if result.returncode and not (missingOk and result.returncode == 1):
+		raise subprocess.CalledProcessError(
+			result.returncode, result.args, result.stdout, result.stderr
+		)
+	return result.stdout.strip()
 
 
 def main():
@@ -97,24 +109,38 @@ def main():
 	parser.add_argument('kind', choices=('branch', 'title'))
 	parser.add_argument('value', nargs='?', help='tên branch hoặc tiêu đề cần kiểm tra')
 	args = parser.parse_args()
+	try:
+		return checkValue(args)
+	except (OSError, subprocess.CalledProcessError) as exc:
+		detail = (
+			exc.stderr.strip()
+			if isinstance(exc, subprocess.CalledProcessError) and exc.stderr
+			else str(exc)
+		)
+		reportError(f'Không đọc được trạng thái Git: {detail}')
+		return 1
+
+
+def checkValue(args):
 	if args.kind == 'branch':
-		return 0 if checkBranch(args.value or gitOutput('branch', '--show-current')) else 1
+		name = args.value if args.value is not None else gitOutput('branch', '--show-current')
+		return 0 if checkBranch(name) else 1
 	# Bỏ merge commit: nút Update branch của GitHub tạo "Merge branch 'main' into …" không theo quy ước.
-	titles = (
-		[args.value]
-		if args.value
-		else gitOutput('log', '--no-merges', '--format=%s', 'origin/main..HEAD')
-	)
+	if args.value is not None:
+		titles = [args.value]
+	else:
+		try:
+			titles = gitOutput('log', '--no-merges', '--format=%s', 'origin/main..HEAD')
+		except subprocess.CalledProcessError:
+			if gitOutput('rev-parse', '--verify', '--quiet', 'origin/main', missingOk=True):
+				raise
+			print('Bỏ qua: chưa có origin/main để so — chạy git fetch origin main.')
+			return 0
 	if isinstance(titles, str):
 		titles = titles.splitlines()
 	if not titles:
 		# Không lặng lẽ báo đạt: nói rõ vì sao không có tiêu đề nào để kiểm tra.
-		known = gitOutput('rev-parse', '--verify', '--quiet', 'origin/main')
-		print(
-			'Bỏ qua: chưa có commit nào so với origin/main.'
-			if known
-			else 'Bỏ qua: chưa có origin/main để so — chạy git fetch origin main.'
-		)
+		print('Bỏ qua: chưa có commit nào so với origin/main.')
 		return 0
 	results = [checkTitle(title) for title in titles]
 	return 0 if all(results) else 1

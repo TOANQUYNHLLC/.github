@@ -10,9 +10,10 @@ import sys
 import urllib.parse
 from pathlib import Path
 
+from markdown import withoutCode, withoutCodeBlocks
+
 # Repository chứa script; workflow mẫu checkout nó vào .org/ bên trong repository đang được kiểm tra.
 SCRIPT_ROOT = Path(__file__).resolve().parents[1]
-CODE_FENCE = re.compile(r'```.*?```', re.DOTALL)
 LINK = re.compile(r'\]\(([^)\s#]*)(?:#([^)\s]*))?\)')
 
 
@@ -27,7 +28,7 @@ def headingSlug(title):
 
 def headingAnchors(path):
 	"""Anchor của mọi tiêu đề Markdown trong tệp; tiêu đề trùng thêm hậu tố -1, -2…."""
-	text = CODE_FENCE.sub('', path.read_text(encoding='utf-8'))
+	text = withoutCodeBlocks(path.read_text(encoding='utf-8'))
 	seen, anchors = {}, set()
 	for match in re.finditer(r'^#{1,6} (.+)$', text, re.MULTILINE):
 		original = slug = headingSlug(match.group(1))
@@ -46,9 +47,9 @@ def findBrokenLinks(path, text, anchorsCache=None):
 	if anchorsCache is None:
 		anchorsCache = {}
 	messages = []
-	for match in LINK.finditer(CODE_FENCE.sub('', text)):
+	for match in LINK.finditer(withoutCode(text)):
 		target, fragment = match.group(1), match.group(2)
-		if re.match(r'[a-z]+:', target) or (not target and fragment is None):
+		if re.match(r'^[A-Za-z][A-Za-z0-9+.-]*:|^//', target) or (not target and fragment is None):
 			continue
 		# Liên kết có thể mã hóa phần trăm (khoảng trắng %20, chữ có dấu trong tên tệp hay mục #…).
 		target = urllib.parse.unquote(target)

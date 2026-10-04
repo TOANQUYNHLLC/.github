@@ -19,6 +19,8 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from markdown import withoutCode
+
 ROOT = Path(__file__).resolve().parents[1]
 BLOCKED = {401, 403, 429, 999}
 HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; TOANQUYNH-link-check/1.0)'}
@@ -126,13 +128,11 @@ def collectLinks(documents=None):
 	links = {}
 	for path, text in documents.items():
 		if path.suffix == '.md':
-			urls = re.findall(
-				r'\((https?://[^)\s]+)\)', re.sub(r'```.*?```', '', text, flags=re.DOTALL)
-			)
+			urls = re.findall(r'\((https?://[^)\s]+)\)', withoutCode(text), flags=re.IGNORECASE)
 		else:
 			urls = [
 				url.rstrip('.,;:')
-				for url in re.findall(r'https?://[^\s)\]\'"<>`]+', text)
+				for url in re.findall(r'https?://[^\s)\]\'"<>`]+', text, flags=re.IGNORECASE)
 				if '${' not in url
 			]
 		for url in urls:
