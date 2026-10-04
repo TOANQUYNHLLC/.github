@@ -18,7 +18,7 @@ quy tắc commit có chữ ký) rồi mở Pull Request; đọc và kiểm tra U
 branch đã có thì chỉ bỏ qua khi có Pull Request đang mở;
 commit lỗi thì thử xóa branch vừa tạo và báo kết quả để lần chạy sau làm lại.
 create: workflow release.yml (và workflow mẫu release.yml của repository khác, với --changelog CHANGELOG.md
---allow-generated-notes) gọi khi đẩy tag Stable.v*, Beta.v* hoặc v* cũ; Beta là bản phát hành thử nghiệm.
+--allow-generated-notes) gọi khi đẩy tag Stable.v*, Beta.v* hoặc v*; Beta là bản phát hành thử nghiệm.
 Khi GitHub Actions tắt, người quản trị chạy tại máy.
 """
 

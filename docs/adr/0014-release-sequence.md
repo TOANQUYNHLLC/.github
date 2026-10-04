@@ -2,7 +2,6 @@
 
 - **Trạng thái:** Chấp nhận
 - **Ngày:** 2026-10-04
-- **Điều chỉnh:** [0012](0012-monthly-releases.md) — định dạng phiên bản và tên branch phát hành; [0005](0005-protect-release-tags.md) — phạm vi tag được bảo vệ.
 
 ## 📌 BỐI CẢNH
 
@@ -15,8 +14,8 @@ Mỗi lần phát hành Stable hoặc Beta cần một tag riêng, có ngày chu
 - Pull Request phát hành mang nhãn `Pre-Release` và nhãn kênh `Stable` hoặc `Beta`; bộ nhãn chuẩn và cấu hình gắn nhãn dùng tên thống nhất.
 - Mặc định chuẩn bị bản Stable; `--channel Beta` chọn bản Beta khi không truyền `--version`. GitHub Release của Beta được đánh dấu là bản thử nghiệm.
 - Branch phát hành có dạng `release/stable.vYYYY.MM.DDXXXX` / `release/beta.vYYYY.MM.DDXXXX`, tương ứng với phiên bản được chuẩn bị và tuân thủ quy ước chữ thường của tên branch.
-- Workflow phát hành và workflow mẫu nhận tag `Stable.v*`, `Beta.v*` và `v*` cũ. Ruleset cấp repository và cấp tổ chức bảo vệ cả ba nhóm tag, giữ các quy tắc chặn tạo, cập nhật, xóa, force push và yêu cầu chữ ký.
-- Giữ lịch phát hành ngày 1 hằng tháng và quy trình lấy nội dung từ `CHANGELOG.md` của ADR 0012.
+- Workflow phát hành và workflow mẫu nhận tag `Stable.v*`, `Beta.v*` và `v*`. Ruleset cấp repository và cấp tổ chức bảo vệ cả ba nhóm tag, giữ các quy tắc chặn tạo, cập nhật, xóa, force push và yêu cầu chữ ký.
+- Lịch phát hành ngày 1 hằng tháng và quy trình lấy nội dung từ `CHANGELOG.md` theo [ADR 0012](0012-monthly-releases.md).
 
 ## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
 

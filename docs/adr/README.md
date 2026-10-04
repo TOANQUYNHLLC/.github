@@ -8,7 +8,7 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0002](0002-line-endings.md)                  | Xuống dòng LF; chỉ loại tệp bắt buộc mới dùng CRLF                           | Chấp nhận  | 2026-10-03 |
 | [0003](0003-branch-and-commit-conventions.md) | Tên branch tiếng Anh; commit, tiêu đề Pull Request theo Conventional Commits | Chấp nhận  | 2026-10-03 |
 | [0004](0004-protect-main-ruleset.md)          | Ruleset Protect Main bảo vệ nhánh chính                                      | Chấp nhận  | 2026-10-03 |
-| [0005](0005-protect-release-tags.md)          | Ruleset Protect Release Tags cho tag phát hành `v*`                          | Chấp nhận  | 2026-10-03 |
+| [0005](0005-protect-release-tags.md)          | Ruleset Protect Release Tags cho tag phát hành                               | Chấp nhận  | 2026-10-03 |
 | [0006](0006-signed-commits-no-rebase.md)      | Commit có chữ ký trên nhánh chính và tag; không hợp nhất bằng Rebase         | Chấp nhận  | 2026-10-03 |
 | [0007](0007-org-push-ruleset.md)              | Push ruleset Protect Pushes cấp tổ chức                                      | Chấp nhận  | 2026-10-03 |
 | [0008](0008-mise-single-version-source.md)    | `mise.toml` là nguồn phiên bản công cụ duy nhất                              | Chấp nhận  | 2026-10-03 |

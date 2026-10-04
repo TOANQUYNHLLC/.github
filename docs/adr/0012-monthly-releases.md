@@ -9,8 +9,8 @@ Quy ước của tổ chức thay đổi liên tục; các repository khác cầ
 
 ## ✅ QUYẾT ĐỊNH
 
-- Phát hành vào **ngày 1 hằng tháng**, chỉ khi có commit mới kể từ tag trước; phiên bản `vYYYY.MM.Stable` theo tháng phát hành.
-- Nội dung lấy từ `CHANGELOG.md` theo cấu trúc tiêu đề phiên bản của Keep a Changelog: khi chuẩn bị phát hành, điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH**; mục này chuyển thành phiên bản của tháng. Mỗi phiên bản đã công bố được ghi lại bằng tag, ngày công bố theo giờ Việt Nam và liên kết tới GitHub Release. Parser cũng nhận tệp chỉ có mục **CHƯA PHÁT HÀNH**, phù hợp trước lần phát hành đầu tiên.
+- Phát hành vào **ngày 1 hằng tháng**, chỉ khi có commit mới kể từ tag trước; phiên bản Stable theo định dạng và số thứ tự của [ADR 0014](0014-release-sequence.md).
+- Nội dung lấy từ `CHANGELOG.md` theo cấu trúc tiêu đề phiên bản của Keep a Changelog: khi chuẩn bị phát hành, điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH**; mục này chuyển thành phiên bản được chuẩn bị. Mỗi phiên bản đã công bố được ghi lại bằng tag, ngày công bố theo giờ Việt Nam và liên kết tới GitHub Release. Parser cũng nhận tệp chỉ có mục **CHƯA PHÁT HÀNH**, phù hợp trước lần phát hành đầu tiên.
 - `scripts/release.py` làm mọi bước: `prepare` chuyển mục, `open-pr` mở Pull Request phát hành có commit do GitHub ký (workflow `monthly-release.yml`; khi GitHub Actions tắt, `make release-pr` làm cả hai tại máy); người quản trị hợp nhất rồi gắn tag; `create` tạo GitHub Release từ mục của tag (workflow `release.yml`, hoặc chạy tại máy).
 
 ## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
