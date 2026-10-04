@@ -646,6 +646,18 @@ class Holder:
 		)
 		self.assertFails('phải là URL tuyệt đối (mỗi mục thành nội dung GitHub Release)')
 
+	def testRulesetBypassMatchesMaintainers(self):
+		# Thêm người quản trị mà quên thêm vào danh sách bỏ qua của ruleset: báo lỗi.
+		self.edit('scripts/orgsetup/teams.py', "'trongtoandl81')", "'trongtoandl81', 'nguoimoi')")
+		self.editRegex(
+			'MAINTAINERS.md',
+			r'^(\| .+\[@trongtoandl81\].+\n)',
+			r'\1| Mới | [@nguoimoi](https://github.com/nguoimoi) | x |\n',
+		)
+		self.assertFails(
+			'rulesets/protect-main.json: danh sách bỏ qua có 2 tài khoản, MAINTAINERS có 3 người'
+		)
+
 	def testMaintainersMatchTeamsScript(self):
 		self.editRegex('MAINTAINERS.md', r'^\| .+\[@trongtoandl81\].+\n', '')
 		self.assertFails('người quản trị "trongtoandl81" chỉ có ở một trong MAINTAINERS.md')

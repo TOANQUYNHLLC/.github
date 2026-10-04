@@ -28,7 +28,7 @@ ORG_PUSH_RULESET_FILE = github.ROOT / 'rulesets' / 'org-protect-pushes.json'
 ORG_PUSH_RULESET_NAME = 'Protect Pushes (Organization)'
 
 # Import cấp tổ chức không nhận actor loại User ("contains an invalid actor"): bỏ qua là chủ tổ chức (actor_id
-# bị bỏ qua) — cùng hai người quản trị; ruleset trên web tắt giới hạn hủy phê duyệt.
+# bị bỏ qua) — cùng người quản trị; ruleset trên web tắt giới hạn hủy phê duyệt.
 ORG_BYPASS_ACTORS = [{'actor_id': 1, 'actor_type': 'OrganizationAdmin', 'bypass_mode': 'always'}]
 
 # Ruleset cấp tổ chức có thêm code scanning: kết quả CodeQL của Pull Request không được
