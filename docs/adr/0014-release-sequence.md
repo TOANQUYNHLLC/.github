@@ -1,6 +1,6 @@
 # 0014. SỐ THỨ TỰ PHÁT HÀNH TRONG THÁNG
 
-- **Trạng thái:** Đề xuất
+- **Trạng thái:** Chấp nhận
 - **Ngày:** 2026-10-04
 - **Điều chỉnh:** [0012](0012-monthly-releases.md) — định dạng phiên bản và tên branch phát hành; [0005](0005-protect-release-tags.md) — phạm vi tag được bảo vệ.
 
