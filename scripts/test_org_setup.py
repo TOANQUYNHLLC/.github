@@ -11,6 +11,7 @@ import json
 import re
 import subprocess
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -27,6 +28,298 @@ from orgsetup import files, github, labels, rulesets, settings, teams
 
 
 class OrgSetupTest(unittest.TestCase):
+	def testGraphqlDeployKeysKeepNullableIds(self):
+		node = {
+			'name': 'x',
+			'target': 'BRANCH',
+			'enforcement': 'ACTIVE',
+			'conditions': {},
+			'bypassActors': {
+				'pageInfo': {'hasNextPage': False},
+				'nodes': [
+					{
+						'bypassMode': 'ALWAYS',
+						'organizationAdmin': False,
+						'deployKey': True,
+						'repositoryRoleDatabaseId': None,
+						'actor': None,
+					}
+				],
+			},
+			'rules': {'pageInfo': {'hasNextPage': False}, 'nodes': []},
+		}
+		self.assertEqual(
+			rulesets.graphqlRuleset(node)['bypass_actors'],
+			[
+				{'actor_id': None, 'actor_type': 'DeployKey', 'bypass_mode': 'always'},
+			],
+		)
+
+	def testMalformedGraphqlRulesetsAreReportedWithoutSuccessOrTraceback(self):
+		valid = {
+			'name': 'x',
+			'target': 'BRANCH',
+			'enforcement': 'ACTIVE',
+			'conditions': {},
+			'bypassActors': {'nodes': [], 'pageInfo': {'hasNextPage': False}},
+			'rules': {'nodes': [], 'pageInfo': {'hasNextPage': False}},
+		}
+		cases = (
+			('target', 42),
+			('conditions', []),
+			('bypassActors', []),
+			('rules', {'nodes': [], 'pageInfo': {}}),
+			('rules', {'nodes': [], 'pageInfo': {'hasNextPage': 'false'}}),
+			('rules', {'nodes': [42], 'pageInfo': {'hasNextPage': False}}),
+			(
+				'rules',
+				{
+					'nodes': [{'type': 'CODE_QUALITY', 'parameters': {'severity': 42}}],
+					'pageInfo': {'hasNextPage': False},
+				},
+			),
+			(
+				'bypassActors',
+				{
+					'nodes': [
+						{
+							'organizationAdmin': 'false',
+							'deployKey': False,
+							'bypassMode': 'ALWAYS',
+							'repositoryRoleDatabaseId': None,
+							'actor': None,
+						}
+					],
+					'pageInfo': {'hasNextPage': False},
+				},
+			),
+		)
+		for field, value in cases:
+			with self.subTest(field=field, value=value):
+				node = dict(valid, **{field: value})
+				data = [
+					{
+						'data': {
+							'organization': {
+								'rulesets': {'nodes': [node], 'pageInfo': {'hasNextPage': False}}
+							}
+						}
+					}
+				]
+				with (
+					mock.patch.object(github, 'ghJson', return_value=data),
+					contextlib.redirect_stdout(io.StringIO()) as output,
+				):
+					rulesets.compareOrgRulesets()
+				self.assertIn('không đọc được qua GraphQL', output.getvalue())
+				self.assertNotIn('đã đúng', output.getvalue())
+				self.assertNotIn('chưa có ruleset', output.getvalue())
+
+	def testGraphqlPageErrorsOrMissingLastPageDoNotLookLikeMissingRulesets(self):
+		connection = {'nodes': [], 'pageInfo': {'hasNextPage': False}}
+		valid = {'data': {'organization': {'rulesets': connection}}}
+		for data in (
+			[],
+			[None],
+			[valid, valid],
+			[{'errors': [{'message': 'Không được đọc'}], **valid}],
+			[
+				{
+					'data': {
+						'organization': {
+							'rulesets': {'nodes': [], 'pageInfo': {'hasNextPage': True}}
+						}
+					}
+				}
+			],
+			[{'data': {'organization': {'rulesets': {'nodes': []}}}}],
+		):
+			with self.subTest(data=data):
+				with (
+					mock.patch.object(github, 'ghJson', return_value=data),
+					contextlib.redirect_stdout(io.StringIO()) as output,
+				):
+					rulesets.compareOrgRulesets()
+				self.assertIn('không đọc được qua GraphQL', output.getvalue())
+				self.assertNotIn('chưa có ruleset', output.getvalue())
+
+	def testDuplicateGraphqlRulesetsAreNotCollapsed(self):
+		wanted = rulesets.orgRulesets()[0][1]
+		data = [
+			{
+				'data': {
+					'organization': {
+						'rulesets': {'nodes': [wanted, wanted], 'pageInfo': {'hasNextPage': False}}
+					}
+				}
+			}
+		]
+		with (
+			mock.patch.object(github, 'ghJson', return_value=data),
+			mock.patch.object(rulesets, 'graphqlRuleset', rulesets.graphqlVisible),
+			contextlib.redirect_stdout(io.StringIO()) as output,
+		):
+			rulesets.compareOrgRulesets()
+		self.assertIn('không đọc được qua GraphQL', output.getvalue())
+		self.assertNotIn('đã đúng', output.getvalue())
+
+	def testRulesetSummarySupportsNullableActorIds(self):
+		wanted = rulesets.rulesetFor('.github')
+		actors = [
+			{'actor_id': None, 'actor_type': 'DeployKey', 'bypass_mode': 'always'},
+			{'actor_id': 7, 'actor_type': 'Integration', 'bypass_mode': 'exempt'},
+			{'actor_id': None, 'actor_type': 'OrganizationAdmin', 'bypass_mode': 'always'},
+		]
+		live = dict(wanted, bypass_actors=actors)
+		other = dict(wanted, bypass_actors=[dict(actor) for actor in reversed(actors)])
+		other['bypass_actors'][0]['actor_id'] = 1
+		self.assertEqual(rulesets.rulesetSummary(live), rulesets.rulesetSummary(other))
+
+	def testMalformedRulesetListsStopBeforeDetailReadsAndWrites(self):
+		invalid = (42, {}, {'name': 'x', 'id': True}, {'name': 'x', 'id': 0}, {'name': [], 'id': 1})
+		for organization in (False, True):
+			for item in invalid:
+				with self.subTest(organization=organization, item=item):
+					with (
+						mock.patch.object(github, 'ghList', return_value=[item]),
+						mock.patch.object(github, 'ghJson') as read,
+						mock.patch.object(github, 'gh') as write,
+						contextlib.redirect_stdout(io.StringIO()),
+						self.assertRaisesRegex(ValueError, 'ruleset'),
+					):
+						if organization:
+							rulesets.syncOrgRulesets(apply=True)
+						else:
+							rulesets.syncRulesets(['.github'], apply=True)
+					read.assert_not_called()
+					write.assert_not_called()
+
+	def testDuplicateRulesetIdentitiesDoNotChooseAnArbitraryId(self):
+		for listing in (
+			[{'name': 'Protect Main', 'id': 1}, {'name': 'Protect Main', 'id': 2}],
+			[{'name': 'Protect Main', 'id': 1}, {'name': 'Other', 'id': 1}],
+		):
+			with self.subTest(listing=listing):
+				with (
+					mock.patch.object(github, 'ghList', return_value=listing),
+					mock.patch.object(github, 'ghJson') as read,
+					mock.patch.object(github, 'gh') as write,
+					contextlib.redirect_stdout(io.StringIO()),
+					self.assertRaisesRegex(ValueError, 'trùng'),
+				):
+					rulesets.syncRulesets(['.github'], apply=True)
+				read.assert_not_called()
+				write.assert_not_called()
+
+	def testRulesetSummaryRejectsMissingAndMalformedFields(self):
+		wanted = rulesets.rulesetFor('.github')
+		for field, value in (
+			('name', None),
+			('target', 42),
+			('enforcement', 'unknown'),
+			('conditions', []),
+			('conditions', {'ref_name': {'include': [42], 'exclude': []}}),
+			('bypass_actors', None),
+			('bypass_actors', [42]),
+			('bypass_actors', [{'actor_type': 'User', 'actor_id': None, 'bypass_mode': 'always'}]),
+			('rules', None),
+			('rules', [42]),
+			('rules', [{'type': 'pull_request', 'parameters': []}]),
+		):
+			with (
+				self.subTest(field=field, value=value),
+				self.assertRaisesRegex((TypeError, ValueError), 'ruleset'),
+			):
+				rulesets.rulesetSummary(dict(wanted, **{field: value}))
+		for field in ('name', 'target', 'enforcement', 'conditions', 'bypass_actors', 'rules'):
+			with self.subTest(missing=field):
+				current = {key: value for key, value in wanted.items() if key != field}
+				with self.assertRaisesRegex(TypeError, field):
+					rulesets.rulesetSummary(current)
+
+	def testEveryRulesetIsValidatedBeforeTheFirstWrite(self):
+		for organization in (False, True):
+			wanted = rulesets.orgRulesets() if organization else rulesets.rulesetsFor('.github')
+			listing = [
+				{'name': item['name'], 'id': index + 1} for index, (_, item) in enumerate(wanted)
+			]
+			for failure in ({}, RuntimeError('HTTP 429 ở ruleset sau')):
+				with self.subTest(organization=organization, failure=failure):
+
+					def read(*args, failure=failure, wanted=wanted):
+						index = int(args[-1].rsplit('/', 1)[-1]) - 1
+						if index == 1:
+							if isinstance(failure, Exception):
+								raise failure
+							return failure
+						return dict(wanted[index][1], enforcement='disabled', id=index + 1)
+
+					with (
+						mock.patch.object(github, 'ghList', return_value=listing),
+						mock.patch.object(github, 'ghJson', read),
+						mock.patch.object(github, 'gh') as write,
+						contextlib.redirect_stdout(io.StringIO()),
+						self.assertRaises((TypeError, ValueError, RuntimeError)),
+					):
+						if organization:
+							rulesets.syncOrgRulesets(apply=True)
+						else:
+							rulesets.syncRulesets(['.github'], apply=True)
+					write.assert_not_called()
+
+	def testRulesetDetailMustMatchTheListedIdentity(self):
+		wanted = rulesets.rulesetsFor('.github')
+		with (
+			mock.patch.object(
+				github, 'ghList', return_value=[{'name': wanted[0][1]['name'], 'id': 1}]
+			),
+			mock.patch.object(github, 'ghJson', return_value=dict(wanted[1][1], id=1)),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+			self.assertRaisesRegex(ValueError, 'name'),
+		):
+			rulesets.syncRulesets(['.github'], apply=True)
+		write.assert_not_called()
+
+	def testRulesetDetailIdMustMatchTheListedId(self):
+		wanted = rulesets.rulesetFor('.github')
+		for badId in (None, '1', True, 2):
+			with (
+				self.subTest(id=badId),
+				mock.patch.object(
+					github, 'ghList', return_value=[{'name': wanted['name'], 'id': 1}]
+				),
+				mock.patch.object(github, 'ghJson', return_value=dict(wanted, id=badId)),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+				self.assertRaisesRegex(ValueError, 'id'),
+			):
+				rulesets.syncRulesets(['.github'], apply=True)
+			write.assert_not_called()
+
+	def testOrgRulesetReadsOverlapAndWritesFollowSourceOrder(self):
+		wanted = rulesets.orgRulesets()
+		listing = [
+			{'name': item['name'], 'id': index + 1} for index, (_, item) in enumerate(wanted)
+		]
+		barrier = threading.Barrier(len(wanted))
+
+		def read(*args):
+			barrier.wait(timeout=2)
+			index = int(args[-1].rsplit('/', 1)[-1]) - 1
+			return dict(wanted[index][1], enforcement='disabled', id=index + 1)
+
+		with (
+			mock.patch.object(github, 'ghList', return_value=listing),
+			mock.patch.object(github, 'ghJson', read),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			rulesets.syncOrgRulesets(apply=True)
+		self.assertEqual(
+			[call.args[3].rsplit('/', 1)[-1] for call in write.call_args_list], ['1', '2', '3']
+		)
+
 	def testSettingsSchemaErrorsAreReportedByCli(self):
 		module = loadScript('org-setup')
 		output = io.StringIO()
@@ -597,7 +890,11 @@ class OrgSetupTest(unittest.TestCase):
 
 	def testTruncatedGraphqlCollectionsAreNotCompared(self):
 		for collection in ('rules', 'bypassActors'):
-			node = {'name': 'x', 'rules': {'nodes': []}, 'bypassActors': {'nodes': []}}
+			node = {
+				'name': 'x',
+				'rules': {'nodes': [], 'pageInfo': {'hasNextPage': False}},
+				'bypassActors': {'nodes': [], 'pageInfo': {'hasNextPage': False}},
+			}
 			node[collection]['pageInfo'] = {'hasNextPage': True}
 			with (
 				self.subTest(collection=collection),
@@ -612,7 +909,8 @@ class OrgSetupTest(unittest.TestCase):
 				{'name': item['name'], 'id': index + 1} for index, (_, item) in enumerate(wanted)
 			]
 			current = {
-				str(item['id']): value for item, (_, value) in zip(listing, wanted, strict=True)
+				str(item['id']): dict(value, id=item['id'])
+				for item, (_, value) in zip(listing, wanted, strict=True)
 			}
 			reads = []
 
@@ -663,8 +961,20 @@ class OrgSetupTest(unittest.TestCase):
 	def testGraphqlRulesetsOnLaterPageAreCompared(self):
 		wanted = [item for _, item in rulesets.orgRulesets()]
 		pages = [
-			{'data': {'organization': {'rulesets': {'nodes': wanted[:1]}}}},
-			{'data': {'organization': {'rulesets': {'nodes': wanted[1:]}}}},
+			{
+				'data': {
+					'organization': {
+						'rulesets': {'nodes': wanted[:1], 'pageInfo': {'hasNextPage': True}}
+					}
+				}
+			},
+			{
+				'data': {
+					'organization': {
+						'rulesets': {'nodes': wanted[1:], 'pageInfo': {'hasNextPage': False}}
+					}
+				}
+			},
 		]
 		output = io.StringIO()
 		with (
@@ -851,8 +1161,8 @@ class OrgSetupTest(unittest.TestCase):
 			'target': 'BRANCH',
 			'enforcement': 'ACTIVE',
 			'conditions': {},
-			'bypassActors': {'nodes': []},
-			'rules': {'nodes': [node]},
+			'bypassActors': {'nodes': [], 'pageInfo': {'hasNextPage': False}},
+			'rules': {'nodes': [node], 'pageInfo': {'hasNextPage': False}},
 		}
 		self.assertEqual(rulesets.graphqlRuleset(live)['rules'], [rulesets.ORG_CODE_SCANNING_RULE])
 		# Chỉ bản cấp tổ chức có code scanning, như trên web.
@@ -870,16 +1180,19 @@ class OrgSetupTest(unittest.TestCase):
 				'repositoryName': {'include': ['~ALL'], 'exclude': [], 'protected': False},
 			},
 			'bypassActors': {
+				'pageInfo': {'hasNextPage': False},
 				'nodes': [
 					{
 						'bypassMode': 'ALWAYS',
 						'organizationAdmin': True,
+						'deployKey': False,
 						'repositoryRoleDatabaseId': None,
 						'actor': None,
 					}
-				]
+				],
 			},
 			'rules': {
+				'pageInfo': {'hasNextPage': False},
 				'nodes': [
 					{'type': 'CREATION', 'parameters': None},
 					{'type': 'UPDATE', 'parameters': {'__typename': 'UpdateParameters'}},
@@ -895,7 +1208,7 @@ class OrgSetupTest(unittest.TestCase):
 							'requiredStatusChecks': [],
 						},
 					},
-				]
+				],
 			},
 		}
 		wanted = rulesets.graphqlVisible(rulesets.orgTagRuleset())
@@ -921,6 +1234,7 @@ class OrgSetupTest(unittest.TestCase):
 			},
 			'bypassActors': node['bypassActors'],
 			'rules': {
+				'pageInfo': {'hasNextPage': False},
 				'nodes': [
 					{
 						'type': 'FILE_PATH_RESTRICTION',
@@ -947,7 +1261,7 @@ class OrgSetupTest(unittest.TestCase):
 							'maxFilePathLength': 200,
 						},
 					},
-				]
+				],
 			},
 		}
 		self.assertEqual(

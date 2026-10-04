@@ -10,6 +10,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### 🐛 SỬA
 
+- Đồng bộ ruleset xác minh tên, ID và cấu trúc phản hồi trước mọi lần ghi trong từng repository hoặc cấp tổ chức; danh sách trùng, chi tiết nhầm tài nguyên hoặc lỗi đọc ruleset sau chặn ghi cả phạm vi đó. Đối chiếu GraphQL báo dữ liệu sai, lỗi trang và trạng thái phân trang mâu thuẫn; actor `DeployKey` có ID `null` được xử lý đúng.
 - Chuẩn bị phát hành từ chối phiên bản sai tháng hoặc ngày sai trước khi gọi Git hay sửa `CHANGELOG.md`; lệnh mở Pull Request cũng kiểm tra phiên bản và cấu trúc phản hồi danh sách PR, không báo đang chờ khi chưa đọc được URL.
 - ADR 0007 mô tả đúng việc GitHub hỗ trợ push ruleset cấp repository trên gói Team; cấu hình của tổ chức vẫn chỉ có nguồn push ruleset cấp tổ chức nhắm `~ALL`.
 - Nhãn dùng chung schema giữa validator và lệnh đồng bộ: tên, màu, mô tả sai kiểu hoặc tên trùng chặn việc gọi GitHub; phản hồi nhãn sai chặn ghi lên repository đó. Mô tả `null` hợp lệ của API và nhãn riêng được giữ đúng khi đối chiếu.
@@ -43,6 +44,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ⚡ TỐI ƯU
 
+- Đọc chi tiết ruleset cấp tổ chức song song như cấp repository, kiểm tra toàn bộ trước khi ghi tuần tự theo thứ tự nguồn; mỗi lượt vẫn đọc mới từ GitHub.
 - Kiểm tra phiên bản không gọi GitHub CLI lấy token khi môi trường đã cung cấp; token được dùng chung trong lượt kiểm tra và đọc lại ở lượt sau, không giữ token đăng nhập cũ trong cache.
 - Kiểm tra tiêu đề commit bỏ phép dò `origin/main` dư thừa sau khi `git log` thành công; chỉ dò ref để phân biệt lỗi Git với nhánh đích chưa có.
 - Kiểm tra liên kết đọc mỗi tệp một lần trong lượt chạy; GET so bản `security.txt` trên website cũng kiểm tra URL Canonical, tránh request HEAD trùng và chạy song song với các liên kết khác.

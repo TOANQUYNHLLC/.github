@@ -217,7 +217,11 @@ Cài đặt repository và tổ chức thiếu trường hoặc sai kiểu dừn
 
 Lệnh `team` chỉ coi thành viên có trạng thái `active` là đã tham gia. Lời mời đang `pending`, phản hồi thiếu hoặc sai trường và tên quyền tùy chỉnh chưa xếp hạng được làm lượt đồng bộ team dừng trước mọi thay đổi để người quản trị kiểm tra. Sau khi gửi lời mời mới, script đọc phản hồi và báo đang chờ chấp nhận nếu GitHub trả `pending`; chỉ xác nhận đã thêm maintainer khi vai trò và trạng thái đều đúng. Các quyền chuẩn đã cao hơn được giữ nguyên.
 
-Danh sách ruleset và nhãn được đọc đầy đủ bằng [phân trang của GitHub CLI](https://cli.github.com/manual/gh_api), mỗi trang REST tối đa 100 phần tử; lần chạy sau đọc lại GitHub. Lỗi trang sau không trả danh sách dở dang để ghi. Phép đối chiếu ruleset tổ chức qua GraphQL cũng đọc hết các trang; dữ liệu quy tắc hoặc danh sách bỏ qua bị cắt được báo chưa đọc đầy đủ.
+Danh sách ruleset và nhãn được đọc đầy đủ bằng [phân trang của GitHub CLI](https://cli.github.com/manual/gh_api), mỗi trang REST tối đa 100 phần tử; lần chạy sau đọc lại GitHub. Lỗi trang sau không trả danh sách dở dang để ghi.
+
+Đồng bộ ruleset kiểm tra tên và ID không trùng trong danh sách REST; phản hồi chi tiết phải khớp cả tên lẫn ID đó. Với từng repository hoặc cấp tổ chức, script đọc chi tiết song song rồi kiểm tra các trường bắt buộc, kiểu cấu trúc điều kiện, quy tắc và danh sách bỏ qua của toàn bộ ruleset cần so trước lần ghi đầu tiên. Lỗi đọc hoặc dữ liệu sai chặn ghi trong phạm vi đó. Những thay đổi hợp lệ được ghi tuần tự theo thứ tự tệp nguồn; lỗi ở một lần ghi vẫn được cảnh báo riêng, các lần ghi trước không được tự hoàn tác. Actor `DeployKey` có ID `null`; ID của `OrganizationAdmin` được chuẩn hóa vì API bỏ qua giá trị này.
+
+Phép đối chiếu ruleset tổ chức qua GraphQL kiểm tra dữ liệu và trạng thái phân trang, kể cả quy tắc và danh sách bỏ qua. Trang có lỗi, thiếu trường, dữ liệu bị cắt, tên trùng hoặc trạng thái phân trang mâu thuẫn đều được báo chưa đọc đầy đủ, không kết luận ruleset đã đúng hay chưa có từ phản hồi đó.
 
 Lệnh đồng bộ nhãn đọc `labels.yml` bằng chế độ YAML an toàn như validator, hỗ trợ anchor/alias không tạo vòng lặp. Hai lệnh dùng chung kiểm tra schema: tên là chuỗi không trống và không trùng khi bỏ qua hoa/thường; màu là chuỗi hex 6 ký tự; mô tả tùy chọn là chuỗi tối đa 100 ký tự. YAML hoặc schema sai chặn lệnh trước khi đọc hay ghi GitHub. Phản hồi nhãn thiếu trường, sai kiểu hoặc trùng tên chặn việc ghi lên repository đó; mô tả `null` của API được coi là chuỗi rỗng. Nhãn riêng được giữ nguyên.
 
