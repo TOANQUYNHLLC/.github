@@ -136,7 +136,11 @@ def collectLinks(documents=None):
 				if '${' not in url
 			]
 		for url in urls:
-			if not any(part in url for part in SKIP):
+			try:
+				skipped = urllib.parse.urlsplit(url).hostname in SKIP
+			except ValueError:
+				skipped = False  # URL sai vẫn được đưa vào kiểm tra để báo lỗi.
+			if not skipped:
 				links.setdefault(url, set()).add(str(path.relative_to(ROOT)))
 	return links
 
@@ -228,17 +232,22 @@ def main():
 		and path.suffix == '.txt'
 		and canonicalUrl(path, text)
 	)
-	canonicalUrls = {canonicalUrl(path, text) for path, text in copies}
+	canonicalUrls = {canonicalUrl(path, text).partition('#')[0] for path, text in copies}
 	# GET so nội dung cũng xác nhận URL Canonical hoạt động — không gửi thêm HEAD tới cùng URL.
 	links = sorted(
-		(url, files) for url, files in collectLinks(documents).items() if url not in canonicalUrls
+		(url, files)
+		for url, files in collectLinks(documents).items()
+		if url.partition('#')[0] not in canonicalUrls
 	)
+	# Fragment không được gửi trong HTTP; các mục trong cùng trang dùng chung một kết quả mỗi lượt.
+	targets = sorted({url.partition('#')[0] for url, _ in links})
 	# Kiểm tra song song: tuần tự thì cả lượt mất vài chục giây.
 	with ThreadPoolExecutor(max_workers=16) as pool:
 		copyResults = [pool.submit(publishedCopyDiffers, path, text) for path, text in copies]
-		codes = list(pool.map(linkStatus, [url for url, _ in links]))
+		codes = dict(zip(targets, pool.map(linkStatus, targets), strict=True))
 		copyProblems = [result.result() for result in copyResults]
-	for (url, files), code in zip(links, codes, strict=True):
+	for url, files in links:
+		code = codes[url.partition('#')[0]]
 		where = ', '.join(sorted(files))
 		if isinstance(code, int) and code < 400:
 			print(f'✅ {code} {url}')

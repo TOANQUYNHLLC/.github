@@ -125,7 +125,7 @@ Workflow gắn nhãn dùng `pull_request_target` theo [hướng dẫn của acti
 | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | [`docs/adr/`](docs/adr/)                                                                                                   | Bản ghi các quyết định kiến trúc đang có hiệu lực và lý do |
 | [`AGENTS.md`](AGENTS.md) · [`CLAUDE.md`](CLAUDE.md) · [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | Hướng dẫn cho AI coding agent và GitHub Copilot            |
-| [`CHANGELOG.md`](CHANGELOG.md)                                                                                             | Khung nội dung cho phiên bản chuẩn bị phát hành            |
+| [`CHANGELOG.md`](CHANGELOG.md)                                                                                             | Nội dung phiên bản chuẩn bị phát hành và lịch sử release   |
 | [`LICENSE`](LICENSE)                                                                                                       | Giấy phép MIT cho nội dung của repository này              |
 
 ---
@@ -168,7 +168,7 @@ python3 scripts/run-tests.py test_check test_check_markdown_links.py
 
 Không truyền tên thì chạy toàn bộ test. Tên sai, tệp không có test, lỗi import hoặc cú pháp đều làm lệnh thất bại. Bộ kiểm tra liên kết Markdown hỗ trợ anchor của GitHub, tiêu đề trùng, khối mã và mã nội tuyến; tệp đích được đọc một lần trong lượt kiểm tra, lượt sau đọc lại.
 
-`make links` kiểm tra liên kết HTTP(S) và nội dung `security.txt` trên website; `make forms` xác minh biểu mẫu trên GitHub; `make versions` đối chiếu công cụ với phiên bản phát hành mới nhất. Kiểm tra phiên bản ưu tiên `GH_TOKEN`, rồi `GITHUB_TOKEN`, sau đó token GitHub CLI; thông tin đăng nhập được đọc mới mỗi lượt. `make audit` cần kết nối registry npm; khi mất mạng, chạy lại để xác minh dependency. Lỗi cài thư viện npm làm kiểm tra dừng.
+`make links` kiểm tra liên kết HTTP(S) và nội dung `security.txt` trên website. Các URL chỉ khác fragment dùng chung một lần kiểm tra HTTP trong lượt chạy; đường dẫn và query khác vẫn được kiểm tra riêng. Máy chủ `img.shields.io` được bỏ qua; URL sai được báo lỗi. Phép kiểm tra HTTP không xác minh anchor bên trong trang ngoài. Kết quả được đọc mới ở lượt sau. `make forms` xác minh biểu mẫu trên GitHub; `make versions` đối chiếu công cụ với phiên bản phát hành mới nhất. Kiểm tra phiên bản ưu tiên `GH_TOKEN`, rồi `GITHUB_TOKEN`, sau đó token GitHub CLI; thông tin đăng nhập được đọc mới mỗi lượt. `make audit` cần kết nối registry npm; khi mất mạng, chạy lại để xác minh dependency. Lỗi cài thư viện npm làm kiểm tra dừng.
 
 | Lệnh                       | Tác dụng                                                                                     |
 | -------------------------- | -------------------------------------------------------------------------------------------- |
@@ -227,7 +227,7 @@ Khi cập nhật nội dung, cần bảo đảm:
 
 ## 🚀 PHÁT HÀNH
 
-Phiên bản có dạng `vYYYY.MM.Stable`, phát hành ngày 1 hằng tháng khi có commit mới kể từ tag trước. [`CHANGELOG.md`](CHANGELOG.md) là khung chuẩn bị nội dung phiên bản; điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH** trước khi chuẩn bị phát hành. Mục này trống thì script báo lỗi. Tệp có thể chỉ chứa khung hiện tại; nội dung các phiên bản đã công bố xem trên [GitHub Releases](https://github.com/TOANQUYNHLLC/.github/releases).
+Phiên bản có dạng `vYYYY.MM.Stable`, phát hành ngày 1 hằng tháng khi có commit mới kể từ tag trước. [`CHANGELOG.md`](CHANGELOG.md) là khung chuẩn bị nội dung phiên bản; điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH** trước khi chuẩn bị phát hành. Mục này trống thì script báo lỗi. Lịch sử phiên bản trong tệp ghi tag, ngày công bố theo giờ Việt Nam và liên kết tới nội dung trên [GitHub Releases](https://github.com/TOANQUYNHLLC/.github/releases).
 
 1. Workflow [`monthly-release.yml`](.github/workflows/monthly-release.yml) chạy lúc 07:00 ngày 1 (giờ Việt Nam): chuyển nội dung đã chuẩn bị thành phiên bản của tháng và mở Pull Request `release/vYYYY.MM`. Có thể chạy tay tại **Actions → Chuẩn bị phát hành hằng tháng → Run workflow**.
 2. Xem trước bằng `make release-notes TAG=v2026.11.Stable`; đánh giá và hợp nhất Pull Request bằng **Squash** hoặc **Merge**.

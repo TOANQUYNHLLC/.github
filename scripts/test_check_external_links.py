@@ -57,6 +57,63 @@ QuietHandler = handlerClass(answerOk)
 
 
 class ExternalLinksTest(unittest.TestCase):
+	def testBadgeHostsDoNotHideOtherLinks(self):
+		module = loadScript('check-external-links')
+		urls = (
+			'https://example.test/img.shields.io/missing',
+			'https://example.test/?ref=img.shields.io',
+			'https://img.shields.io.other.test/missing',
+			'https://[bad]/',
+		)
+		documents = {
+			module.ROOT / 'README.md': '\n'.join(f'[x]({url})' for url in urls)
+			+ '\n[x](https://IMG.SHIELDS.IO/badge/x)\n',
+		}
+		self.assertEqual(module.collectLinks(documents), {url: {'README.md'} for url in urls})
+
+	def testFragmentsShareRequestsAndReadFreshStatus(self):
+		module = loadScript('check-external-links')
+		requests, statuses = [], [200]
+
+		def answer(handler):
+			requests.append((handler.command, handler.path))
+			handler.send_response(statuses[0])
+			handler.end_headers()
+
+		server = socketserver.ThreadingTCPServer(('127.0.0.1', 0), handlerClass(answer))
+		threading.Thread(
+			target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+		).start()
+		try:
+			base = f'http://127.0.0.1:{server.server_address[1]}/docs'
+			urls = [
+				f'{base}{query}#{fragment}' for query in ('', '?v=1') for fragment in ('a', 'b')
+			]
+			documents = {module.ROOT / 'README.md': '\n'.join(f'[x]({url})' for url in urls)}
+			with mock.patch.object(module, 'readDocuments', return_value=(documents, [])):
+				with contextlib.redirect_stdout(io.StringIO()) as output:
+					self.assertEqual(module.main(), 0)
+				self.assertCountEqual(requests, [('HEAD', '/docs'), ('HEAD', '/docs?v=1')])
+				for url in urls:
+					self.assertIn(f'✅ 200 {url}', output.getvalue())
+				requests.clear()
+				statuses[0] = 410
+				with contextlib.redirect_stdout(io.StringIO()) as output:
+					self.assertEqual(module.main(), 1)
+				self.assertCountEqual(
+					requests,
+					[
+						(method, path)
+						for method in ('HEAD', 'GET')
+						for path in ('/docs', '/docs?v=1')
+					],
+				)
+				for url in urls:
+					self.assertIn(f'❌ 410 {url} (README.md)', output.getvalue())
+		finally:
+			server.shutdown()
+			server.server_close()
+
 	def testEscapedBackticksDoNotHideExternalLinks(self):
 		module = loadScript('check-external-links')
 		documents = {
@@ -140,9 +197,11 @@ class ExternalLinksTest(unittest.TestCase):
 				url = f'http://127.0.0.1:{server.server_address[1]}/security.txt'
 				original = f'Contact: mailto:a\nCanonical: {url}\n'
 				path.write_text(original, encoding='utf-8')
+				doc = module.ROOT / 'README.md'
+				doc.write_text(f'[x]({url}#contact)\n', encoding='utf-8')
 				served.append(original)
 				with (
-					mock.patch.object(module, 'textFiles', return_value=[path]),
+					mock.patch.object(module, 'textFiles', return_value=[path, doc]),
 					contextlib.redirect_stdout(io.StringIO()),
 				):
 					self.assertEqual(module.main(), 0)
