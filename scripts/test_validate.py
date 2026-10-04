@@ -237,6 +237,7 @@ class ValidateTest(unittest.TestCase):
 		)
 		cls = type(self)
 		if getattr(cls, 'validatorSources', None) != sources:
+			previous = getattr(cls, 'validator', None)
 			spec = importlib.util.spec_from_file_location(
 				'validate_copy', self.repo / 'scripts' / 'validate.py'
 			)
@@ -247,6 +248,13 @@ class ValidateTest(unittest.TestCase):
 			):
 				spec.loader.exec_module(cls.validator)
 			cls.validatorSources = sources
+			# Kết quả đọc YAML (Ruby) và kiểm tra tên theo nội dung tệp chỉ phụ thuộc chính validate.py: test sửa
+			# script khác thì giữ lại, không gọi lại Ruby và phân tích lại mọi tệp Python sau mỗi lần nạp lại.
+			validateSource = (self.repo / 'scripts' / 'validate.py').read_bytes()
+			if previous is not None and getattr(cls, 'validateSource', None) == validateSource:
+				cls.validator.yamlResults.update(previous.yamlResults)
+				cls.validator.nameResults.update(previous.nameResults)
+			cls.validateSource = validateSource
 		output = io.StringIO()
 		with contextlib.redirect_stdout(output), contextlib.redirect_stderr(io.StringIO()):
 			code = cls.validator.main()
