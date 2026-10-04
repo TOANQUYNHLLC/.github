@@ -11,7 +11,8 @@ không có commit kể từ tag trước; báo lỗi khi có commit mà mục CH
 $GITHUB_OUTPUT cho workflow monthly-release.yml. --open-pr (make release-pr, khi GitHub Actions tắt): làm tiếp
 open-pr tại máy rồi trả CHANGELOG.md về như cũ — chỉ chạy trên main sạch, trùng origin/main.
 open-pr: tạo branch release/vYYYY.MM, commit CHANGELOG.md qua GraphQL createCommitOnBranch (GitHub ký, thỏa
-quy tắc commit có chữ ký) rồi mở Pull Request; branch đã có thì chỉ bỏ qua khi có Pull Request đang mở;
+quy tắc commit có chữ ký) rồi mở Pull Request; đọc và kiểm tra UTF-8 của CHANGELOG.md trước khi tạo branch;
+branch đã có thì chỉ bỏ qua khi có Pull Request đang mở;
 commit lỗi thì thử xóa branch vừa tạo và báo kết quả để lần chạy sau làm lại.
 create: workflow release.yml (và workflow mẫu release.yml của repository khác, với --changelog CHANGELOG.md
 --allow-generated-notes) gọi khi đẩy tag v*; khi GitHub Actions tắt, người quản trị chạy tại máy.
@@ -196,6 +197,13 @@ def openReleasePullRequest(version, previous, commits):
 		)
 		return 1
 	try:
+		changelog = (ROOT / 'CHANGELOG.md').read_bytes()
+		changelog.decode('utf-8')
+	except (OSError, UnicodeError) as exc:
+		reportMessage('error', f'Không đọc được CHANGELOG.md: {exc}')
+		return 1
+	contents = base64.b64encode(changelog).decode('ascii')
+	try:
 		runCommand(
 			'gh',
 			'api',
@@ -209,7 +217,6 @@ def openReleasePullRequest(version, previous, commits):
 	except subprocess.CalledProcessError as exc:
 		reportMessage('error', f'Không tạo được branch {branch}: {exc.stderr.strip()}')
 		return 1
-	contents = base64.b64encode((ROOT / 'CHANGELOG.md').read_bytes()).decode('ascii')
 	body = {
 		'query': github.COMMIT_MUTATION,
 		'variables': {
@@ -362,13 +369,22 @@ def main():
 		help='CHANGELOG không có mục của tag thì để GitHub tự tạo nội dung',
 	)
 	args = parser.parse_args()
-	if args.command == 'notes':
-		return printNotes(args.tag, args.changelog)
-	if args.command == 'prepare':
-		return prepareRelease(args.version, args.date, args.open_pr)
-	if args.command == 'open-pr':
-		return openReleasePullRequest(args.version, args.previous, args.commits)
-	return createRelease(args.tag, args.changelog, args.allow_generated_notes)
+	try:
+		if args.command == 'notes':
+			return printNotes(args.tag, args.changelog)
+		if args.command == 'prepare':
+			return prepareRelease(args.version, args.date, args.open_pr)
+		if args.command == 'open-pr':
+			return openReleasePullRequest(args.version, args.previous, args.commits)
+		return createRelease(args.tag, args.changelog, args.allow_generated_notes)
+	except (OSError, ValueError, subprocess.CalledProcessError) as exc:
+		detail = (
+			exc.stderr.strip()
+			if isinstance(exc, subprocess.CalledProcessError) and exc.stderr
+			else str(exc)
+		)
+		reportMessage('error', f'❌ Không thực hiện được lệnh {args.command}: {detail}')
+		return 1
 
 
 if __name__ == '__main__':

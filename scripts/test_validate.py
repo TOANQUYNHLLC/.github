@@ -8,6 +8,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 import contextlib
 import importlib.util
 import io
+import json
 import os
 import re
 import shutil
@@ -26,6 +27,79 @@ except ModuleNotFoundError:
 
 
 class ValidateTest(unittest.TestCase):
+	def testNestedYamlShapesAreReportedWithoutStoppingChecks(self):
+		cases = (
+			(
+				'.github/ISSUE_TEMPLATE/bug_report.yml',
+				'name: a\ndescription: a\nbody: [42]\n',
+				'body',
+			),
+			('.github/ISSUE_TEMPLATE/config.yml', 'contact_links: [42]\n', 'contact_links'),
+			('.github/dependabot.yml', 'updates: [42]\n', 'updates'),
+			(
+				'.github/dependabot.yml',
+				'updates:\n    - cooldown: []\n      labels: [42]\n',
+				'cooldown',
+			),
+			('repository-templates/release.yml', 'changelog: []\n', 'changelog'),
+			(
+				'repository-templates/release.yml',
+				'changelog:\n    categories: [42]\n',
+				'categories',
+			),
+		)
+		for name, content, field in cases:
+			with self.subTest(path=name, field=field):
+				(self.repo / name).write_text(content, encoding='utf-8')
+				(self.repo / 'SUPPORT.md').unlink()
+				code, output = self.runValidate()
+				self.assertEqual(code, 1)
+				self.assertIn(name + ':', output)
+				self.assertIn(field, output)
+				self.assertIn('thiếu tệp bắt buộc SUPPORT.md', output)
+				self.tearDown()
+
+	def testNestedJsonShapesAreReportedWithoutStoppingChecks(self):
+		cases = (
+			('package.json', 'devEngines', []),
+			('.prettierrc.json', 'overrides', [42]),
+			('.devcontainer/devcontainer.json', 'customizations', []),
+			('.vscode/extensions.json', 'recommendations', [{}]),
+			('workflow-templates/go-ci.properties.json', 'categories', {}),
+			('rulesets/protect-main.json', 'rules', [42]),
+			('rulesets/protect-main.json', 'bypass_actors', [42]),
+			('rulesets/protect-release-tags.json', 'conditions', []),
+		)
+		for name, field, value in cases:
+			with self.subTest(path=name, field=field):
+				path = self.repo / name
+				data = json.loads(path.read_text(encoding='utf-8'))
+				data[field] = value
+				path.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
+				(self.repo / 'SUPPORT.md').unlink()
+				code, output = self.runValidate()
+				self.assertEqual(code, 1)
+				self.assertIn(name + ':', output)
+				self.assertIn(field, output)
+				self.assertIn('thiếu tệp bắt buộc SUPPORT.md', output)
+				self.tearDown()
+
+	def testFormFieldTypesAreReported(self):
+		path = self.repo / '.github/ISSUE_TEMPLATE/bug_report.yml'
+		for content in (
+			'body: [{type: input, attributes: []}]\n',
+			'body: [{type: input, id: [], attributes: {label: 42}}]\n',
+			'labels: [42]\nbody: []\n',
+		):
+			with self.subTest(content=content):
+				path.write_text(content, encoding='utf-8')
+				self.assertFails('phải là')
+
+	def testYamlWorkflowCannotPinToolVersions(self):
+		path = self.repo / '.github/workflows/extra.yaml'
+		path.write_text('name: test\n# ruff==0.0.1\n', encoding='utf-8')
+		self.assertFails('phiên bản công cụ phải lấy từ mise.toml')
+
 	def testLabelItemsMustBeObjects(self):
 		(self.repo / 'labels.yml').write_text('- 42\n', encoding='utf-8')
 		self.assertFails('nhãn 1: phải là object')

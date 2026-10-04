@@ -42,6 +42,47 @@ RELEASE_FIXTURE = """# NHẬT KÝ THAY ĐỔI
 
 
 class ReleaseTest(unittest.TestCase):
+	def testUnreadableChangelogDoesNotCreateReleaseBranch(self):
+		module = loadScript('release')
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			for content in (None, b'\xff'):
+				with self.subTest(content=content):
+					if content is not None:
+						(module.ROOT / 'CHANGELOG.md').write_bytes(content)
+					output = io.StringIO()
+					with (
+						mock.patch.object(module.github, 'ghExists', return_value=False),
+						mock.patch.object(module, 'runCommand', return_value='abc123') as run,
+						contextlib.redirect_stdout(output),
+					):
+						self.assertEqual(
+							module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 3),
+							1,
+						)
+					self.assertIn('CHANGELOG.md', output.getvalue())
+					self.assertFalse(any(call.args[0] == 'gh' for call in run.call_args_list))
+
+	def testNotesReportsUnreadableChangelog(self):
+		module = loadScript('release')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'CHANGELOG.md'
+			for content in (None, b'\xff'):
+				with self.subTest(content=content):
+					if content is not None:
+						path.write_bytes(content)
+					output = io.StringIO()
+					with (
+						mock.patch.object(
+							module.sys,
+							'argv',
+							['release.py', 'notes', 'v2099.02.Stable', '--changelog', str(path)],
+						),
+						contextlib.redirect_stdout(output),
+					):
+						self.assertEqual(module.main(), 1)
+					self.assertIn('❌', output.getvalue())
+
 	def setUp(self):
 		self.module = loadScript('release')
 

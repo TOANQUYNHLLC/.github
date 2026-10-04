@@ -215,6 +215,31 @@ def readJsonObject(path):
 	return jsonCache[key]
 
 
+def configField(path, data, key, expectedType):
+	"""Đọc trường tùy chọn; sai kiểu thì báo tại tệp và trả giá trị rỗng để các luật khác vẫn chạy."""
+	value = data.get(key)
+	if value is None:
+		return expectedType()
+	if not isinstance(value, expectedType):
+		kind = {dict: 'object', list: 'danh sách', str: 'chuỗi'}[expectedType]
+		error(path, f'{key}: phải là {kind}')
+		return expectedType()
+	return value
+
+
+def configItems(path, data, key, itemType=dict):
+	"""Danh sách chỉ giữ phần tử đúng kiểu, không làm mất lỗi ở phần tử hoặc tệp kế tiếp."""
+	items = configField(path, data, key, list)
+	valid = []
+	for index, item in enumerate(items, start=1):
+		if isinstance(item, itemType):
+			valid.append(item)
+		else:
+			kind = 'object' if itemType is dict else 'chuỗi'
+			error(path, f'{key}[{index}]: phải là {kind}')
+	return valid
+
+
 # Bắt buộc thụt lề bằng 4 dấu cách: YAML, Markdown (Prettier), F#, Elm, Nim, Zig.
 SPACE_SUFFIXES = (
 	'.yml',
@@ -411,23 +436,24 @@ def checkForm(path, required=('name', 'description', 'body')):
 	if path.parent.name == 'ISSUE_TEMPLATE':
 		for key in sorted(set(form) - ISSUE_FORM_KEYS):
 			error(path, f'khóa "{key}" không được GitHub chấp nhận trong biểu mẫu Issue')
-	FORM_LABELS.extend((path, label) for label in form.get('labels') or [])
+	FORM_LABELS.extend((path, label) for label in configItems(path, form, 'labels', str))
 	ids = set()
-	for index, item in enumerate(form.get('body') or [], start=1):
+	for index, item in enumerate(configItems(path, form, 'body'), start=1):
 		kind = item.get('type')
-		attributes = item.get('attributes') or {}
-		if kind not in FORM_TYPES:
+		attributes = configField(path, item, 'attributes', dict)
+		if not isinstance(kind, str) or kind not in FORM_TYPES:
 			error(path, f'phần tử {index}: type "{kind}" không hợp lệ')
 			continue
 		if kind == 'markdown':
 			if not attributes.get('value'):
 				error(path, f'phần tử {index}: markdown thiếu value')
 			continue
-		if not attributes.get('label'):
+		label = configField(path, attributes, 'label', str)
+		if not label:
 			error(path, f'phần tử {index}: thiếu label')
-		elif attributes['label'] != attributes['label'].upper():
+		elif label != label.upper():
 			error(path, f'phần tử {index}: tiêu đề trường "{attributes["label"]}" phải viết hoa')
-		itemId = item.get('id')
+		itemId = configField(path, item, 'id', str)
 		if itemId in ids:
 			error(path, f'phần tử {index}: id "{itemId}" bị trùng')
 		ids.add(itemId)
@@ -548,7 +574,7 @@ def checkWorkflowTemplate(path):
 	for key in ('name', 'description'):
 		if not meta.get(key):
 			error(properties, f'thiếu khóa bắt buộc "{key}"')
-	categories = meta.get('categories') or []
+	categories = configItems(properties, meta, 'categories', str)
 	if not categories or categories[0] not in WORKFLOW_GENERAL_CATEGORIES:
 		error(
 			properties,
@@ -579,7 +605,8 @@ def checkToolVersions():
 	if nvmrc.exists() and package.exists():
 		wanted = readText(nvmrc).strip()
 		try:
-			runtime = (readJsonObject(package).get('devEngines') or {}).get('runtime') or {}
+			engines = configField(package, readJsonObject(package), 'devEngines', dict)
+			runtime = configField(package, engines, 'runtime', dict)
 		except json.JSONDecodeError:
 			runtime = (
 				None  # checkFile đã báo lỗi cú pháp; tiếp tục kiểm tra các nguồn phiên bản khác.
@@ -592,8 +619,12 @@ def checkToolVersions():
 	pinned = re.compile(r'ruff==|pipx install ruff|actionlint@v|download-actionlint|shellcheck-v\d')
 	# Không quét validate.py và test_*.py: các tệp này chứa chính các mẫu để so khớp.
 	sources = [
-		*(ROOT / '.github' / 'workflows').glob('*.yml'),
-		*(ROOT / 'workflow-templates').glob('*.yml'),
+		*repositoryWorkflows(),
+		*(
+			path
+			for path in (ROOT / 'workflow-templates').glob('*')
+			if path.suffix in ('.yml', '.yaml')
+		),
 		*(ROOT / '.devcontainer').glob('*.sh'),
 		*(
 			path
@@ -617,9 +648,14 @@ def checkFormatConfig():
 		prettier = {}
 	if prettier.get('useTabs') is not True or prettier.get('tabWidth') != 4:
 		errors.append('.prettierrc.json: bắt buộc "useTabs": true và "tabWidth": 4')
-	for override in prettier.get('overrides', []):
-		options = override.get('options', {})
-		files = set(override.get('files', []))
+	for override in configItems(ROOT / '.prettierrc.json', prettier, 'overrides'):
+		options = configField(ROOT / '.prettierrc.json', override, 'options', dict)
+		patterns = override.get('files')
+		files = (
+			{patterns}
+			if isinstance(patterns, str)
+			else set(configItems(ROOT / '.prettierrc.json', override, 'files', str))
+		)
 		if 'tabWidth' in options and options['tabWidth'] != 4:
 			errors.append('.prettierrc.json: overrides không được đổi tabWidth khác 4')
 		if options.get('useTabs') is False and not files <= {'*.md', '*.yml', '*.yaml'}:
@@ -664,7 +700,11 @@ def checkFormatConfig():
 	for key, value in RUFF_STANDARD.items():
 		pairs = value.items() if isinstance(value, dict) else [(None, value)]
 		for sub, expected in pairs:
-			actual = (ruffConfig.get(key) or {}).get(sub) if sub else ruffConfig.get(key)
+			actual = (
+				configField(ruffPath, ruffConfig, key, dict).get(sub)
+				if sub
+				else ruffConfig.get(key)
+			)
 			if actual != expected:
 				name = f'{key}.{sub}' if sub else key
 				errors.append(f'ruff.toml: {name} phải là {json.dumps(expected)}')
@@ -708,10 +748,11 @@ def checkEditorExtensions():
 		container = readJsonObject(ROOT / '.devcontainer' / 'devcontainer.json')
 	except (OSError, json.JSONDecodeError):
 		return
-	wanted = set(local.get('recommendations') or [])
-	installed = set(
-		((container.get('customizations') or {}).get('vscode') or {}).get('extensions') or []
-	)
+	wanted = set(configItems(ROOT / '.vscode/extensions.json', local, 'recommendations', str))
+	containerPath = ROOT / '.devcontainer/devcontainer.json'
+	customizations = configField(containerPath, container, 'customizations', dict)
+	vscode = configField(containerPath, customizations, 'vscode', dict)
+	installed = set(configItems(containerPath, vscode, 'extensions', str))
 	for name in sorted(wanted ^ installed):
 		where = '.devcontainer/devcontainer.json' if name in wanted else '.vscode/extensions.json'
 		errors.append(f'{where}: thiếu extension "{name}" — hai danh sách phải giống nhau')
@@ -981,7 +1022,9 @@ def checkMaintainers():
 		except json.JSONDecodeError:
 			continue  # checkFile đã báo lỗi cú pháp của tệp này.
 		users = [
-			actor for actor in ruleset.get('bypass_actors', []) if actor.get('actor_type') == 'User'
+			actor
+			for actor in configItems(path, ruleset, 'bypass_actors')
+			if actor.get('actor_type') == 'User'
 		]
 		if len(users) != len(configured):
 			error(
@@ -1028,7 +1071,10 @@ def checkRulesets():
 			continue
 		if data.get('target') == 'push':
 			continue
-		if 'required_signatures' not in {r.get('type') for r in data.get('rules', [])}:
+		if 'required_signatures' not in {
+			configField(rulesetPath, r, 'type', str)
+			for r in configItems(rulesetPath, data, 'rules')
+		}:
 			error(
 				rulesetPath, 'ruleset phải có quy tắc required_signatures (Require signed commits)'
 			)
@@ -1040,13 +1086,15 @@ def checkRulesets():
 			tags = readJsonObject(tagPath)
 		except json.JSONDecodeError:
 			tags = {}
-		include = ((tags.get('conditions') or {}).get('ref_name') or {}).get('include') or []
+		conditions = configField(tagPath, tags, 'conditions', dict)
+		refName = configField(tagPath, conditions, 'ref_name', dict)
+		include = configItems(tagPath, refName, 'include', str)
 		if tags.get('name') != 'Protect Release Tags' or tags.get('target') != 'tag':
 			error(tagPath, 'ruleset phải tên "Protect Release Tags", target "tag" (ADR 0005)')
 		if 'refs/tags/v*' not in include:
 			error(tagPath, 'ruleset phải áp dụng cho refs/tags/v* (tag phát hành)')
 		if not {'creation', 'update', 'deletion'} <= {
-			rule.get('type') for rule in tags.get('rules') or []
+			configField(tagPath, rule, 'type', str) for rule in configItems(tagPath, tags, 'rules')
 		}:
 			error(tagPath, 'ruleset phải chặn creation, update, deletion của tag phát hành')
 	orgPath = ROOT / 'rulesets' / 'org-protect-main.json'
@@ -1057,9 +1105,9 @@ def checkRulesets():
 			org = readJsonObject(orgPath)
 		except json.JSONDecodeError:
 			org = {}
-		repositories = ((org.get('conditions') or {}).get('repository_name') or {}).get(
-			'include'
-		) or []
+		conditions = configField(orgPath, org, 'conditions', dict)
+		repositoryName = configField(orgPath, conditions, 'repository_name', dict)
+		repositories = configItems(orgPath, repositoryName, 'include', str)
 		if org.get('name') != 'Protect Main (Organization)' or '~ALL' not in repositories:
 			error(
 				orgPath,
@@ -1080,11 +1128,13 @@ def checkRulesets():
 			orgTags = readJsonObject(orgTagPath)
 		except json.JSONDecodeError:
 			orgTags = {}
-		conditions = orgTags.get('conditions') or {}
+		conditions = configField(orgTagPath, orgTags, 'conditions', dict)
+		repositoryName = configField(orgTagPath, conditions, 'repository_name', dict)
+		refName = configField(orgTagPath, conditions, 'ref_name', dict)
 		if (
 			orgTags.get('name') != 'Protect Release Tags (Organization)'
-			or '~ALL' not in (conditions.get('repository_name') or {}).get('include', [])
-			or 'refs/tags/v*' not in (conditions.get('ref_name') or {}).get('include', [])
+			or '~ALL' not in configItems(orgTagPath, repositoryName, 'include', str)
+			or 'refs/tags/v*' not in configItems(orgTagPath, refName, 'include', str)
 		):
 			error(
 				orgTagPath,
@@ -1098,19 +1148,22 @@ def checkRulesets():
 			pushes = readJsonObject(pushPath)
 		except json.JSONDecodeError:
 			pushes = {}
-		conditions = pushes.get('conditions') or {}
+		conditions = configField(pushPath, pushes, 'conditions', dict)
+		repositoryName = configField(pushPath, conditions, 'repository_name', dict)
 		if (
 			pushes.get('name') != 'Protect Pushes (Organization)'
 			or pushes.get('target') != 'push'
-			or '~ALL' not in (conditions.get('repository_name') or {}).get('include', [])
+			or '~ALL' not in configItems(pushPath, repositoryName, 'include', str)
 		):
 			error(
 				pushPath,
 				'ruleset phải tên "Protect Pushes (Organization)", target "push" và nhắm ~ALL repository (ADR 0007)',
 			)
-	for rule in ruleset.get('rules', []):
-		for check in (rule.get('parameters') or {}).get('required_status_checks', []):
-			if check.get('context') not in jobs:
+	for rule in configItems(path, ruleset, 'rules'):
+		parameters = configField(path, rule, 'parameters', dict)
+		for check in configItems(path, parameters, 'required_status_checks'):
+			context = configField(path, check, 'context', str)
+			if context not in jobs:
 				error(
 					path,
 					f'kiểm tra bắt buộc "{check.get("context")}" không trùng tên job nào trong .github/workflows',
@@ -1323,10 +1376,9 @@ def checkDependabotCooldown():
 		ROOT / '.github' / 'dependabot.yml',
 		ROOT / 'repository-templates' / 'dependabot.yml',
 	):
-		for update in ((loadYaml(path, dict) if path.exists() else None) or {}).get(
-			'updates'
-		) or []:
-			days = (update.get('cooldown') or {}).get('default-days')
+		data = (loadYaml(path, dict) if path.exists() else None) or {}
+		for update in configItems(path, data, 'updates'):
+			days = configField(path, update, 'cooldown', dict).get('default-days')
 			if not isinstance(days, int) or days < 7:
 				error(path, f'{update.get("package-ecosystem")}: cần cooldown.default-days ≥ 7')
 
@@ -1338,19 +1390,27 @@ def configLabels():
 		ROOT / '.github' / 'dependabot.yml',
 		ROOT / 'repository-templates' / 'dependabot.yml',
 	):
-		for update in ((loadYaml(path, dict) if path.exists() else None) or {}).get(
-			'updates'
-		) or []:
-			found += [(path, label) for label in update.get('labels') or []]
+		data = (loadYaml(path, dict) if path.exists() else None) or {}
+		for update in configItems(path, data, 'updates'):
+			found += [(path, label) for label in configItems(path, update, 'labels', str)]
 	for path in (ROOT / 'repository-templates' / 'release.yml',):
-		changelog = ((loadYaml(path, dict) if path.exists() else None) or {}).get('changelog') or {}
-		found += [(path, label) for label in (changelog.get('exclude') or {}).get('labels') or []]
-		for category in changelog.get('categories') or []:
-			found += [(path, label) for label in category.get('labels') or [] if label != '*']
+		data = (loadYaml(path, dict) if path.exists() else None) or {}
+		changelog = configField(path, data, 'changelog', dict)
+		exclude = configField(path, changelog, 'exclude', dict)
+		found += [(path, label) for label in configItems(path, exclude, 'labels', str)]
+		for category in configItems(path, changelog, 'categories'):
+			found += [
+				(path, label)
+				for label in configItems(path, category, 'labels', str)
+				if label != '*'
+			]
 	for path in (ROOT / '.github' / 'labeler.yml', ROOT / 'repository-templates' / 'labeler.yml'):
-		found += [
-			(path, label) for label in ((loadYaml(path, dict) if path.exists() else None) or {})
-		]
+		data = (loadYaml(path, dict) if path.exists() else None) or {}
+		for label in data:
+			if isinstance(label, str):
+				found.append((path, label))
+			else:
+				error(path, 'tên nhãn phải là chuỗi')
 	for path in (
 		ROOT / '.github' / 'workflows' / 'stale.yml',
 		ROOT / 'workflow-templates' / 'stale.yml',
@@ -1438,7 +1498,7 @@ def checkIssueConfig(path):
 	config = loadYaml(path, dict)
 	if config is None:
 		return
-	for link in config.get('contact_links') or []:
+	for link in configItems(path, config, 'contact_links'):
 		for key in ('name', 'url', 'about'):
 			if not link.get(key):
 				error(path, f'contact_links thiếu "{key}"')

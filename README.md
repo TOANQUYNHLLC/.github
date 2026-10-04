@@ -140,7 +140,7 @@ make hooks
 
 Không dùng mise thì cài Node.js đúng bản trong `.nvmrc` (ví dụ `brew install node@24` rồi đưa `$(brew --prefix node@24)/bin` lên đầu `PATH`): `devEngines` của `package.json` làm npm báo `EBADDEVENGINES` và dừng khi Node.js khác bản này. Thư viện Node.js (Prettier) tự cài khi chạy kiểm tra lần đầu. Git hook ([`scripts/git-hooks.py`](scripts/git-hooks.py)) chạy tự động:
 
-- `git commit`: Prettier, `ruff format`, `ruff check` trên đúng phần đã stage; lỗi thì không commit.
+- `git commit`: Prettier, `ruff format`, `ruff check` trên đúng phần đã stage, dùng cấu hình trong Git index kể cả khi bản trên đĩa đã bị xóa; không xuất được nội dung đã stage hoặc kiểm tra lỗi thì không commit.
 - `git push` một branch: `make check` trên đúng nội dung được đẩy — commit hết hoặc `git stash -u` trước; lỗi thì không đẩy; chỉ đẩy tag thì bỏ qua.
 - `git pull` (cả `--rebase`): chạy song song `make org-preview` (so cài đặt trên GitHub với code), `make links`, `make versions` — chỉ báo, không chặn.
 
@@ -169,9 +169,13 @@ Chỉ các tệp test được chọn được nạp; tên sai hoặc tệp khô
 
 Bộ kiểm tra liên kết Markdown dùng anchor giống GitHub, kể cả tiêu đề trùng với hậu tố tự sinh; mỗi tệp đích được phân tích một lần trong một lượt kiểm tra và được đọc lại ở lượt sau. Tệp không đọc được hoặc sai UTF-8 làm kiểm tra thất bại và báo tên tệp; `validate.py` tiếp tục đối chiếu các nội dung còn đọc được để báo lỗi cùng lượt.
 
-Validator kiểm tra cấu trúc workflow, action và lệnh theo giá trị YAML đã phân tích, gồm khóa có dấu nháy, dạng `{run: …}` và [anchor/alias](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations#yaml-anchors-and-aliases). Biểu thức trong chú thích không phải nội dung lệnh. YAML chỉ đọc dữ liệu thông thường; alias tạo vòng lặp được báo ở tệp gây lỗi. Cấu hình JSON phải là object; kết quả đọc cấu hình chỉ dùng lại trong cùng lượt kiểm tra và được làm mới ở lượt sau.
+Validator kiểm tra cấu trúc workflow, action và lệnh theo giá trị YAML đã phân tích, gồm khóa có dấu nháy, dạng `{run: …}` và [anchor/alias](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations#yaml-anchors-and-aliases). Biểu thức trong chú thích không phải nội dung lệnh. YAML chỉ đọc dữ liệu thông thường; alias tạo vòng lặp được báo ở tệp gây lỗi. Cấu hình JSON phải là object; các trường lồng nhau của biểu mẫu, Dependabot, release, ruleset, formatter và editor được kiểm tra kiểu trước khi đối chiếu. Trường hoặc phần tử sai kiểu được báo tại tệp, các kiểm tra còn lại tiếp tục chạy. Kết quả đọc cấu hình chỉ dùng lại trong cùng lượt kiểm tra và được làm mới ở lượt sau.
 
 Workflow đuôi `.yml` và `.yaml` đều được actionlint kiểm tra, đối chiếu job với ruleset và yêu cầu liệt kê trong README.
+
+`make links` báo riêng tệp không đọc được, sai UTF-8 hoặc URL sai dạng và vẫn kiểm tra các liên kết còn lại. Mỗi tệp được đọc một lần trong lượt chạy; GET so nội dung `security.txt` tại URL Canonical đồng thời xác nhận liên kết hoạt động, không cần HEAD riêng. Canonical chỉ nhận HTTP(S); nội dung trên đĩa được đọc lại ở lượt sau.
+
+`make forms` báo lỗi từng biểu mẫu khi cấu trúc dữ liệu nhúng trên trang GitHub thay đổi hoặc GitHub đánh dấu biểu mẫu không hợp lệ; không có biểu mẫu để kiểm tra thì lệnh thất bại. `make versions` yêu cầu phiên bản số chính xác của các công cụ được theo dõi trong `mise.toml` trước khi gọi mạng; phản hồi thiếu hoặc sai dạng `tag_name` được báo cho công cụ đó. Script định dạng Go báo lỗi khi không chạy được `gofmt` hoặc công cụ thoát lỗi, kể cả không có nội dung stderr.
 
 | Lệnh                       | Tác dụng                                                                                     |
 | -------------------------- | -------------------------------------------------------------------------------------------- |
@@ -230,7 +234,7 @@ Phát hành vào **ngày 1 hằng tháng**, chỉ khi có commit mới kể từ
 2. Xem trước nội dung: `make release-notes TAG=v2026.11.Stable`; hợp nhất Pull Request bằng **Squash** hoặc **Merge**.
 3. Người quản trị gắn và đẩy tag trên `main` (ruleset **Protect Release Tags** chỉ cho người quản trị tạo tag `v*`): `git tag v2026.11.Stable && git push origin v2026.11.Stable` — workflow [`release.yml`](.github/workflows/release.yml) tạo GitHub Release. Tổ chức bật **Immutable releases**: Release đã phát hành không dời được tag, không dùng lại được tên tag.
 
-Chạy lại khi branch phát hành đã có: script xác minh và in URL của Pull Request đang mở. Nếu branch chưa có Pull Request đang mở, script báo lỗi kèm liên kết để kiểm tra và mở tay. Lỗi đọc trạng thái không tạo branch mới; lỗi commit sẽ thử xóa branch vừa tạo và báo rõ nếu chưa xóa được. Lỗi tạo Pull Request giữ branch để mở tay.
+Chạy lại khi branch phát hành đã có: script xác minh và in URL của Pull Request đang mở. Nếu branch chưa có Pull Request đang mở, script báo lỗi kèm liên kết để kiểm tra và mở tay. Script đọc `CHANGELOG.md` và kiểm tra UTF-8 trước khi tạo branch mới; lỗi đọc trạng thái hoặc tệp không tạo branch mới. Lỗi commit sẽ thử xóa branch vừa tạo và báo rõ nếu chưa xóa được. Lỗi tạo Pull Request giữ branch để mở tay. Các lệnh phát hành báo lỗi đọc/ghi tệp và lỗi lệnh ngoài bằng thông báo vận hành, thoát mã 1.
 
 **Khi GitHub Actions tắt** (ví dụ để tiết kiệm chi phí), mọi việc định kỳ vẫn có người làm:
 

@@ -48,14 +48,22 @@ def preCommit(root, args):
 		return 0
 	with tempfile.TemporaryDirectory() as folder:
 		# Xuất đúng nội dung đã stage (kể cả khi chỉ stage một phần tệp) cùng cấu hình định dạng.
-		configs = [name for name in FORMAT_CONFIGS if (root / name).exists()]
+		configs = [
+			name for name in git(root, 'ls-files', '-z', '--', *FORMAT_CONFIGS).split('\0') if name
+		]
 		paths = sorted(set(files) | set(configs))
-		subprocess.run(
+		exported = subprocess.run(
 			['git', 'checkout-index', f'--prefix={folder}/', '--', *paths],
 			cwd=root,
 			capture_output=True,
 			check=False,
 		)
+		if exported.returncode:
+			print(
+				f'❌ Không xuất được nội dung đã stage: {exported.stderr.decode("utf-8", "replace").strip()}',
+				file=sys.stderr,
+			)
+			return 1
 		failed = False
 		if PRETTIER.exists():
 			command = [str(PRETTIER), '--check', '--ignore-unknown', *files]
