@@ -383,6 +383,33 @@ class ReleaseTest(unittest.TestCase):
 					self.assertIn('CHANGELOG.md', output.getvalue())
 					self.assertFalse(any(call.args[0] == 'gh' for call in run.call_args_list))
 
+	def testNotesOfPublishedTagPointToGithubRelease(self):
+		# CHANGELOG.md không giữ mục của phiên bản đã phát hành: tag đã có thì chỉ tới GitHub Release (mã 0); tag
+		# chưa có thì vẫn báo cần chuẩn bị nội dung (mã 1).
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			changelog = clone / 'CHANGELOG.md'
+			changelog.write_text(
+				RELEASE_FIXTURE[: RELEASE_FIXTURE.index('## [v2099.01.Stable]')], encoding='utf-8'
+			)
+			for tag, code, expected in (
+				(
+					'v2099.01.Stable',
+					0,
+					'https://github.com/TOANQUYNHLLC/.github/releases/tag/v2099.01.Stable',
+				),
+				('Stable.v2099.02.010001', 1, 'hãy chuyển nội dung CHƯA PHÁT HÀNH'),
+			):
+				with self.subTest(tag=tag):
+					output = io.StringIO()
+					with (
+						mock.patch.dict(self.module.os.environ, {'GITHUB_REPOSITORY': ''}),
+						contextlib.redirect_stdout(output),
+						contextlib.redirect_stderr(output),
+					):
+						self.assertEqual(self.module.printNotes(tag, changelog), code)
+					self.assertIn(expected, output.getvalue())
+
 	def testNotesReportsUnreadableChangelog(self):
 		module = loadScript('release')
 		with tempfile.TemporaryDirectory() as folder:
