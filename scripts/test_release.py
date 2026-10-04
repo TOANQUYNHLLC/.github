@@ -42,7 +42,9 @@ RELEASE_FIXTURE = """# NHẬT KÝ THAY ĐỔI
 
 
 class ReleaseTest(unittest.TestCase):
-	def testDefaultPreparationStartsAtOneAndPreservesLegacyHistory(self):
+	def testDefaultPreparationStartsAtOneAfterLegacyTag(self):
+		# Tag v* đã phát hành là tag trước để đếm commit; số thứ tự của tháng bắt đầu từ 0001. CHANGELOG.md chỉ giữ
+		# mục của phiên bản đang chuẩn bị, bỏ mục phiên bản trước (lịch sử nằm ở GitHub Release).
 		with tempfile.TemporaryDirectory() as folder:
 			clone = self.releaseClone(folder)
 			outputs = Path(folder) / 'outputs'
@@ -59,9 +61,8 @@ class ReleaseTest(unittest.TestCase):
 				self.module.releaseNotes(changelog, 'Stable.v2099.02.010001'),
 				'### ✨ THÊM\n\n- Mục mới.',
 			)
-			self.assertTrue(
-				changelog.endswith(RELEASE_FIXTURE[RELEASE_FIXTURE.index('## [v2099') :])
-			)
+			self.assertIsNone(self.module.releaseNotes(changelog, 'v2099.01.Stable'))
+			self.assertTrue(changelog.endswith('---\n\n<p align="center">© 2099</p>\n'))
 			self.assertEqual(
 				outputs.read_text(encoding='utf-8'),
 				'version=Stable.v2099.02.010001\nprevious=v2099.01.Stable\ncommits=1\n',
@@ -533,18 +534,17 @@ class ReleaseTest(unittest.TestCase):
 			' — 2099-02-01',
 			changelog,
 		)
-		# Mục mới trống; nội dung cũ thành nội dung Release của phiên bản mới; phiên bản cũ giữ nguyên.
+		# Mục mới trống; nội dung chuẩn bị thành nội dung Release của phiên bản mới. Mục của phiên bản trước bị
+		# bỏ — CHANGELOG.md không tích luỹ lịch sử (lịch sử ở GitHub Release); chân trang giữ nguyên.
 		self.assertEqual(self.module.unreleasedNotes(changelog), '')
 		self.assertEqual(
 			self.module.releaseNotes(changelog, 'Stable.v2099.02.010001'),
 			'### ✨ THÊM\n\n- Mục mới.',
 		)
-		self.assertEqual(
-			self.module.releaseNotes(changelog, 'v2099.01.Stable'), '### ✨ THÊM\n\n- Mục cũ.'
-		)
-		self.assertLess(
-			changelog.index('## [Stable.v2099.02.010001]'), changelog.index('## [v2099.01.Stable]')
-		)
+		self.assertIsNone(self.module.releaseNotes(changelog, 'v2099.01.Stable'))
+		self.assertNotIn('Mục cũ', changelog)
+		self.assertEqual(len(self.module.VERSION_HEADING.findall(changelog)), 2)
+		self.assertTrue(changelog.endswith('---\n\n<p align="center">© 2099</p>\n'))
 
 	def testPrepareWithoutTagReportsClearly(self):
 		# Repository chưa có tag v*: báo rõ cần gắn tag đầu tiên, không văng lỗi git.

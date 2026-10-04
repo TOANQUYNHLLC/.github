@@ -121,12 +121,13 @@ Workflow gắn nhãn dùng `pull_request_target` theo [hướng dẫn của acti
 
 **Tài liệu cho người phát triển**
 
-| Đường dẫn                                                                                                                  | Chức năng                                                  |
-| -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| [`docs/adr/`](docs/adr/)                                                                                                   | Bản ghi các quyết định kiến trúc đang có hiệu lực và lý do |
-| [`AGENTS.md`](AGENTS.md) · [`CLAUDE.md`](CLAUDE.md) · [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | Hướng dẫn cho AI coding agent và GitHub Copilot            |
-| [`CHANGELOG.md`](CHANGELOG.md)                                                                                             | Khung nội dung chuẩn bị phát hành                          |
-| [`LICENSE`](LICENSE)                                                                                                       | Giấy phép MIT cho nội dung của repository này              |
+| Đường dẫn                                                                                                                  | Chức năng                                                                                                           |
+| -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| [`docs/adr/`](docs/adr/)                                                                                                   | Bản ghi các quyết định kiến trúc đang có hiệu lực và lý do                                                          |
+| [`AGENTS.md`](AGENTS.md) · [`CLAUDE.md`](CLAUDE.md) · [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | Hướng dẫn cho AI coding agent và GitHub Copilot                                                                     |
+| [`JobsGuideLine.md`](JobsGuideLine.md)                                                                                     | Yêu cầu chuẩn cho một đợt rà soát toàn dự án: phạm vi, cách kiểm chứng, điều kiện hoàn tất và nội dung Pull Request |
+| [`CHANGELOG.md`](CHANGELOG.md)                                                                                             | Khung nội dung chuẩn bị phát hành                                                                                   |
+| [`LICENSE`](LICENSE)                                                                                                       | Giấy phép MIT cho nội dung của repository này                                                                       |
 
 ---
 
@@ -227,7 +228,7 @@ Khi cập nhật nội dung, cần bảo đảm:
 
 ## 🚀 PHÁT HÀNH
 
-Phiên bản có dạng `Stable.vYYYY.MM.DDXXXX` / `Beta.vYYYY.MM.DDXXXX`. `YYYY.MM.DD` là ngày chuẩn bị phát hành theo giờ Việt Nam; `XXXX` là số thứ tự gồm 4 chữ số, từ `0001` đến `9999`, dùng chung cho Stable và Beta, bắt đầu lại từ `0001` mỗi tháng. Script chọn số lớn nhất trong các tag đúng định dạng của tháng rồi tăng một, kể cả khi đổi ngày hoặc đổi kênh. Workflow hằng tháng chuẩn bị bản Stable ngày 1 khi có commit mới kể từ tag trước. [`CHANGELOG.md`](CHANGELOG.md) là khung chuẩn bị nội dung phiên bản; điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH** trước khi chuẩn bị phát hành. Mục này trống thì script báo lỗi. Tệp dùng để chuẩn bị nội dung dành cho người sử dụng; tài liệu dự án không ghi nhật ký phát triển hay báo cáo kiểm tra.
+Phiên bản có dạng `Stable.vYYYY.MM.DDXXXX` / `Beta.vYYYY.MM.DDXXXX`. `YYYY.MM.DD` là ngày chuẩn bị phát hành theo giờ Việt Nam; `XXXX` là số thứ tự gồm 4 chữ số, từ `0001` đến `9999`, dùng chung cho Stable và Beta, bắt đầu lại từ `0001` mỗi tháng. Script chọn số lớn nhất trong các tag đúng định dạng của tháng rồi tăng một, kể cả khi đổi ngày hoặc đổi kênh. Workflow hằng tháng chuẩn bị bản Stable ngày 1 khi có commit mới kể từ tag trước. [`CHANGELOG.md`](CHANGELOG.md) là khung chuẩn bị nội dung phiên bản; điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH** trước khi chuẩn bị phát hành. Mục này trống thì script báo lỗi. Lần chuẩn bị sau bỏ mục của phiên bản trước — lịch sử phát hành xem tại [GitHub Releases](https://github.com/TOANQUYNHLLC/.github/releases). Tệp dùng để chuẩn bị nội dung dành cho người sử dụng; tài liệu dự án không ghi nhật ký phát triển hay báo cáo kiểm tra.
 
 1. Workflow [`monthly-release.yml`](.github/workflows/monthly-release.yml) chạy lúc 07:00 ngày 1 (giờ Việt Nam): chuyển nội dung đã chuẩn bị thành phiên bản của tháng và mở Pull Request `release/stable.vYYYY.MM.DDXXXX`. Có thể chạy tay tại **Actions → Chuẩn bị phát hành hằng tháng → Run workflow**.
 2. Xem trước bằng `make release-notes TAG=Stable.v2026.11.010001`; đánh giá và hợp nhất Pull Request bằng **Squash** hoặc **Merge**.
