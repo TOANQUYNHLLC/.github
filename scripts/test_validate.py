@@ -260,6 +260,22 @@ class ValidateTest(unittest.TestCase):
 			code = cls.validator.main()
 		return code, output.getvalue()
 
+	def testEditedValidatorRecomputesCachedResults(self):
+		# runValidate chỉ giữ kết quả kiểm tra tên, đọc YAML qua lần nạp lại khi validate.py không đổi: sửa luật trong
+		# validate.py thì phải tính lại theo luật mới, không dùng kết quả của luật cũ.
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
+		self.edit(
+			'scripts/validate.py',
+			"FUNCTION_NAME = re.compile(r'_?[a-z][a-zA-Z0-9]*')",
+			"FUNCTION_NAME = re.compile(r'khongkhop')",
+		)
+		# Tệp không đổi (release.py) cũng phải được kiểm tra lại theo luật mới — chính validate.py đã đổi nội dung
+		# nên luôn được kiểm tra lại, không chứng minh được gì.
+		code, output = self.runValidate()
+		self.assertNotEqual(code, 0, output)
+		self.assertRegex(output, r'scripts/release\.py: dòng \d+: tên hàm .* phải viết camelCase')
+
 	def edit(self, name, old, new):
 		path = self.repo / name
 		text = path.read_text(encoding='utf-8')
