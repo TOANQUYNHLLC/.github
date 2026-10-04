@@ -216,7 +216,12 @@ def main():
 	name, args = Path(sys.argv[0]).name, sys.argv[1:]
 	if name not in HOOKS:
 		name, args = (args[0], args[1:]) if args else ('', [])
-	root = repositoryRoot()
+	try:
+		root = repositoryRoot()
+	except subprocess.CalledProcessError as exc:
+		# Không phải repository git, hoặc git từ chối (dubious ownership…): báo đúng lời git thay vì traceback.
+		print(f'❌ {exc.stderr.strip()}', file=sys.stderr)
+		return 1
 	if name == 'install':
 		return installHooks(root)
 	if name not in HOOKS:

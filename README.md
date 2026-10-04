@@ -136,7 +136,7 @@ mise install
 make hooks
 ```
 
-Thư viện Node.js (Prettier) tự cài khi chạy kiểm tra lần đầu. Git hook ([`scripts/git-hooks.py`](scripts/git-hooks.py)) chạy tự động:
+Không dùng mise thì cài Node.js đúng bản trong `.nvmrc` (ví dụ `brew install node@24` rồi đưa `$(brew --prefix node@24)/bin` lên đầu `PATH`): `devEngines` của `package.json` làm npm báo `EBADDEVENGINES` và dừng khi Node.js khác bản này. Thư viện Node.js (Prettier) tự cài khi chạy kiểm tra lần đầu. Git hook ([`scripts/git-hooks.py`](scripts/git-hooks.py)) chạy tự động:
 
 - `git commit`: Prettier, `ruff format`, `ruff check` trên đúng phần đã stage; lỗi thì không commit.
 - `git push` một branch: `make check` trên đúng nội dung được đẩy — commit hết hoặc `git stash -u` trước; lỗi thì không đẩy; chỉ đẩy tag thì bỏ qua.

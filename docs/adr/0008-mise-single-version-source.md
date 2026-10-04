@@ -10,7 +10,7 @@ Phiên bản công cụ ghi ở nhiều nơi (CI, Dev Container, máy cục bộ
 ## ✅ QUYẾT ĐỊNH
 
 - `mise.toml` là nơi duy nhất khai báo phiên bản Python, ruff, ShellCheck, actionlint.
-- Node.js chỉ khai báo trong `.nvmrc` (`actions/setup-node` và mise cùng đọc); `devEngines` của `package.json` nhắc lại đúng bản đó làm mức tối thiểu (`>=<bản trong .nvmrc>`) để npm chặn Node.js cũ. Thư viện Node.js chỉ trong `package.json`.
+- Node.js chỉ khai báo trong `.nvmrc` (`actions/setup-node` và mise cùng đọc); `devEngines` của `package.json` nhắc lại đúng bản đó (cùng giá trị với `.nvmrc`): npm chặn Node.js khác bản này, và mise cũng đọc `devEngines` để chọn Node.js — ghi khoảng như `>=24` thì mise cài bản mới nhất, khác CI. Thư viện Node.js chỉ trong `package.json`.
 - CI cài ruff, ShellCheck, actionlint bằng `jdx/mise-action` và Node.js bằng `actions/setup-node`; Dev Container cài mise rồi chạy `mise install` (Python lấy từ image).
 - `validate.py` báo lỗi khi workflow hoặc script tự ghi phiên bản ruff, ShellCheck, actionlint; khi công cụ trong `mise.toml` không có trong danh sách kiểm tra bản mới; khi Node.js khai báo trong `mise.toml`; khi `devEngines` lệch `.nvmrc`.
 

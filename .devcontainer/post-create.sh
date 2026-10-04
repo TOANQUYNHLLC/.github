@@ -18,4 +18,7 @@ mise trust --yes
 mise install
 
 npm install --no-audit --no-fund
+# Thư mục làm việc gắn vào container có thể thuộc người dùng khác (root): git báo "dubious ownership" và từ chối
+# chạy. Tin cậy đúng repository này như tiện ích Dev Containers của VS Code — công cụ khác không tự làm.
+git config --global --get-all safe.directory | grep -qxF "$PWD" || git config --global --add safe.directory "$PWD"
 make hooks

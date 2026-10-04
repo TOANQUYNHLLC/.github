@@ -566,7 +566,7 @@ class Holder:
 		# Nâng Node.js trong .nvmrc mà quên devEngines của package.json: báo lỗi.
 		(self.repo / '.nvmrc').write_text('26\n', encoding='utf-8')
 		self.assertFails(
-			'package.json: devEngines.runtime.version là ">=24", phải là ">=26" theo .nvmrc'
+			'package.json: devEngines.runtime.version là "24", phải là "26" theo .nvmrc'
 		)
 
 	def testNodeNotDeclaredInMise(self):

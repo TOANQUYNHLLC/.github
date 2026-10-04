@@ -60,6 +60,20 @@ class GitHooksTest(unittest.TestCase):
 		self.assertEqual(self.module.pushedBranches(lines), [('refs/heads/main', 'a' * 40)])
 		self.assertEqual(self.module.pushedBranches(lines[1:]), [])
 
+	def testOutsideRepositoryReportsGitError(self):
+		# Không phải repository git (hoặc git từ chối vì dubious ownership): in đúng lời git, thoát mã 1, không
+		# traceback.
+		output = io.StringIO()
+		with (
+			tempfile.TemporaryDirectory() as folder,
+			contextlib.chdir(folder),
+			mock.patch.object(self.module.sys, 'argv', ['git-hooks.py', 'install']),
+			mock.patch.dict('os.environ', {'GIT_CEILING_DIRECTORIES': str(Path(folder).parent)}),
+			contextlib.redirect_stderr(output),
+		):
+			self.assertEqual(self.module.main(), 1)
+		self.assertRegex(output.getvalue(), r'^❌ fatal: not a git repository')
+
 	def testInstallLinksEveryHookAndWarnsHooksPath(self):
 		self.git('config', 'core.hooksPath', '.husky')
 		output = io.StringIO()
