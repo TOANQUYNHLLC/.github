@@ -26,6 +26,15 @@ def ghJson(*args):
 	return json.loads(output) if output.strip() else None
 
 
+def ghList(endpoint):
+	"""Đọc đầy đủ danh sách REST, gộp các trang; lỗi trang sau không trả lại danh sách thiếu."""
+	separator = '&' if '?' in endpoint else '?'
+	pages = ghJson('api', '--paginate', '--slurp', f'{endpoint}{separator}per_page=100')
+	if not isinstance(pages, list) or any(not isinstance(page, list) for page in pages):
+		raise ValueError(f'{endpoint}: phản hồi phân trang phải là danh sách các trang')
+	return [item for page in pages for item in page]
+
+
 def isNotFound(exc):
 	"""GitHub CLI ghi mã HTTP trong stderr; lỗi quyền, giới hạn API hoặc mạng không phải tệp thiếu."""
 	return re.search(r'\bHTTP 404\b', str(exc)) is not None

@@ -71,6 +71,8 @@ GitHub chỉ kế thừa `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`,
 
 **Workflow của repository này** — huy hiệu **Checks**, **CodeQL** ở đầu trang hiển thị kết quả lượt chạy gần nhất của `validate.yml`, `codeql.yml` trên `main`; bấm vào mở tệp workflow trên cùng nhánh. Khi GitHub Actions tắt, huy hiệu giữ kết quả lượt cuối và không xác nhận các commit mới. `make check` chạy các nhóm kiểm tra tại máy qua hook `pre-push`; CodeQL cần GitHub Actions. Quy trình khi Actions tắt xem mục **PHÁT HÀNH**.
 
+Workflow gắn nhãn dùng `pull_request_target` theo [hướng dẫn của actions/labeler](https://github.com/actions/labeler#recommended-permissions) để xử lý cả Pull Request từ fork: chỉ đọc metadata và cấu hình của nhánh đích qua API. Quyền ghi nằm ở job gắn nhãn; workflow không checkout hay chạy mã của Pull Request. Nhóm concurrency dùng số Pull Request để các PR không hủy lượt chạy của nhau. Workflow mẫu gắn nhãn dùng cùng cách này.
+
 | Đường dẫn                                                                                                                                     | Chức năng                                                                                                                           |
 | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | [`.github/workflows/validate.yml`](.github/workflows/validate.yml)                                                                            | Mỗi job gọi một nhóm của `scripts/check.py`: `content` (validate, test), `format` (Prettier, ruff), `lint` (shellcheck, actionlint) |
@@ -169,6 +171,8 @@ Bộ kiểm tra liên kết Markdown dùng anchor giống GitHub, kể cả tiê
 
 Validator kiểm tra cấu trúc workflow, action và lệnh theo giá trị YAML đã phân tích, gồm khóa có dấu nháy, dạng `{run: …}` và [anchor/alias](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations#yaml-anchors-and-aliases). Biểu thức trong chú thích không phải nội dung lệnh. YAML chỉ đọc dữ liệu thông thường; alias tạo vòng lặp được báo ở tệp gây lỗi. Cấu hình JSON phải là object; kết quả đọc cấu hình chỉ dùng lại trong cùng lượt kiểm tra và được làm mới ở lượt sau.
 
+Workflow đuôi `.yml` và `.yaml` đều được actionlint kiểm tra, đối chiếu job với ruleset và yêu cầu liệt kê trong README.
+
 | Lệnh                       | Tác dụng                                                                                     |
 | -------------------------- | -------------------------------------------------------------------------------------------- |
 | `make`                     | Xem danh sách lệnh                                                                           |
@@ -195,6 +199,10 @@ Validator kiểm tra cấu trúc workflow, action và lệnh theo giá trị YAM
 `scripts/org-setup.py files` tìm tệp dùng chung còn thiếu bằng [Git Trees API](https://docs.github.com/en/rest/git/trees#get-a-tree) tại một commit cố định và tạo branch từ cùng commit đó. Mỗi lần chạy đọc lại trạng thái GitHub; nếu API cắt danh sách cây, script dò từng đường dẫn tại cùng commit. Khi áp dụng, toàn bộ tệp thiếu được gửi trong một commit qua [`createCommitOnBranch`](https://github.blog/changelog/2021-09-13-a-simpler-api-for-authoring-commits/) để GitHub ký; `expectedHeadOid` chặn ghi nếu branch đã đổi. Commit thất bại thì không mở Pull Request; branch đã tạo được giữ lại để người quản trị kiểm tra.
 
 Các phép dò sự tồn tại chỉ coi HTTP 404 là chưa có; lỗi quyền, giới hạn API và lỗi mạng được báo để tránh ghi dựa trên dữ liệu chưa đọc được. Lệnh `team` dừng trước khi ghi nếu không đọc được trạng thái; `settings` cảnh báo và bỏ qua tính năng bảo mật không đọc được trạng thái.
+
+Danh sách ruleset và nhãn được đọc đầy đủ bằng [phân trang của GitHub CLI](https://cli.github.com/manual/gh_api), mỗi trang REST tối đa 100 phần tử; lần chạy sau đọc lại GitHub. Lỗi trang sau không trả danh sách dở dang để ghi. Phép đối chiếu ruleset tổ chức qua GraphQL cũng đọc hết các trang; dữ liệu quy tắc hoặc danh sách bỏ qua bị cắt được báo chưa đọc đầy đủ.
+
+Lệnh đồng bộ nhãn đọc `labels.yml` bằng chế độ YAML an toàn như validator, hỗ trợ anchor/alias không tạo vòng lặp. YAML lỗi hoặc cấu trúc không phải danh sách object nhãn chặn lệnh trước khi đọc hay ghi GitHub.
 
 ---
 

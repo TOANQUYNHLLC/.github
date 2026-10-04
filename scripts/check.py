@@ -42,7 +42,10 @@ def shellScripts():
 def workflowFiles():
 	folders = (ROOT / '.github' / 'workflows', ROOT / 'workflow-templates')
 	return sorted(
-		str(path.relative_to(ROOT)) for folder in folders for path in folder.glob('*.yml')
+		str(path.relative_to(ROOT))
+		for folder in folders
+		for path in folder.glob('*')
+		if path.name.endswith(('.yml', '.yaml')) and path.is_file()
 	)
 
 

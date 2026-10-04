@@ -991,6 +991,16 @@ def checkMaintainers():
 			)
 
 
+def repositoryWorkflows():
+	"""Workflow GitHub quản lý, nhận cả hai đuôi YAML; dùng danh sách tệp của lượt kiểm tra hiện tại."""
+	folderParts = (ROOT / '.github' / 'workflows').parts
+	return [
+		path
+		for path in trackedFiles()
+		if path.name.endswith(('.yml', '.yaml')) and path.parts[:-1] == folderParts
+	]
+
+
 def checkRulesets():
 	"""Kiểm tra bắt buộc trong ruleset Protect Main phải trùng tên một job có thật, nếu không PR chờ mãi."""
 	path = ROOT / 'rulesets' / 'protect-main.json'
@@ -1004,7 +1014,7 @@ def checkRulesets():
 	if ruleset.get('name') != 'Protect Main':
 		error(path, 'ruleset phải tên "Protect Main"')
 	jobs = set()
-	for workflow in sorted((ROOT / '.github' / 'workflows').glob('*.yml')):
+	for workflow in repositoryWorkflows():
 		for job in workflowJobs(workflow).values():
 			name = job.get('name')
 			if isinstance(name, str):
@@ -1153,7 +1163,7 @@ def checkDocsMatchCode():
 		folder = path.parent.relative_to(ROOT).as_posix() + '/'
 		if f'`{relative}`' not in readme and (folder == 'scripts/' or f'`{folder}`' not in readme):
 			error(readmePath, f'mục cấu trúc thiếu {relative}')
-	for workflow in sorted((ROOT / '.github' / 'workflows').glob('*.yml')):
+	for workflow in repositoryWorkflows():
 		if f'`.github/workflows/{workflow.name}`' not in readme:
 			error(readmePath, f'mục cấu trúc thiếu .github/workflows/{workflow.name}')
 
@@ -1290,6 +1300,9 @@ def checkLabels(path):
 		return set()
 	names = set()
 	for index, label in enumerate(labels, start=1):
+		if not isinstance(label, dict):
+			error(path, f'nhãn {index}: phải là object')
+			continue
 		name = str(label.get('name') or '')
 		if not name:
 			error(path, f'nhãn {index}: thiếu name')

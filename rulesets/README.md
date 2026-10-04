@@ -36,6 +36,7 @@ Khác với bản cấp repository:
 - Protect Release Tags (Organization) có thêm quy tắc kiểm tra bắt buộc với danh sách rỗng như trên web — quy tắc này không chặn gì, có thể xóa trên web rồi bỏ trong `orgTagRuleset()`.
 - Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `orgRulesets()` trong `scripts/orgsetup/rulesets.py` và khớp ruleset đang cài trên web; test bảo đảm tệp khớp `orgRulesets()` — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức.
 - Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json` và `org-protect-pushes.json`. Ở gói Free, ghi ruleset cấp tổ chức qua REST (HTTP 403, dù token có quyền `admin:org`) lẫn GraphQL (`updateRepositoryRuleset`, `createRepositoryRuleset`) đều bị chặn, nên `python3 scripts/org-setup.py org-rulesets` chỉ so tệp với ruleset trên web (đọc qua GraphQL); `--apply` chỉ tạo, cập nhật được khi tổ chức dùng gói Team.
+- Danh sách ruleset được đọc hết các trang REST hoặc GraphQL trước khi đối chiếu. GraphQL kiểm tra `pageInfo` của quy tắc và danh sách bỏ qua; nếu còn dữ liệu chưa đọc thì báo lỗi đọc, không kết luận ruleset đã đúng dựa trên phần bị cắt.
 
 ## 📤 PROTECT PUSHES (CẤP TỔ CHỨC)
 

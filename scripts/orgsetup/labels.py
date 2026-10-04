@@ -10,20 +10,30 @@ LABELS_FILE = github.ROOT / 'labels.yml'
 
 def loadLabels():
 	"""Nhãn chuẩn trong labels.yml (đọc YAML bằng Ruby như validate.py — Python không có sẵn thư viện YAML)."""
-	output = subprocess.run(
+	result = subprocess.run(
 		[
 			'ruby',
 			'-ryaml',
 			'-rjson',
 			'-e',
-			'puts JSON.dump(YAML.load_file(ARGV[0]))',
+			'puts JSON.dump(YAML.safe_load(File.read(ARGV[0]), aliases: true, filename: ARGV[0]))',
 			str(LABELS_FILE),
 		],
 		capture_output=True,
 		text=True,
-		check=True,
-	).stdout
-	return json.loads(output)
+		check=False,
+	)
+	if result.returncode != 0:
+		detail = (
+			result.stderr.strip().splitlines()[0]
+			if result.stderr.strip()
+			else 'Ruby không đọc được tệp'
+		)
+		raise ValueError(f'{LABELS_FILE.name}: YAML không hợp lệ ({detail})')
+	data = json.loads(result.stdout)
+	if not isinstance(data, list) or any(not isinstance(label, dict) for label in data):
+		raise ValueError(f'{LABELS_FILE.name}: phải là danh sách các object nhãn')
+	return data
 
 
 def syncLabels(repos, apply):
@@ -33,17 +43,7 @@ def syncLabels(repos, apply):
 		print(f'== {github.ORG}/{repo}')
 		current = {
 			label['name'].lower(): label
-			for label in github.ghJson(
-				'label',
-				'list',
-				'--repo',
-				f'{github.ORG}/{repo}',
-				'--limit',
-				'500',
-				'--json',
-				'name,color,description',
-			)
-			or []
+			for label in github.ghList(f'repos/{github.ORG}/{repo}/labels')
 		}
 		changes = []
 		for label in wanted:
