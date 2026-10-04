@@ -26,6 +26,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from datetime import date as CalendarDate
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -82,7 +83,11 @@ def runCommand(*args, stdin=None):
 
 def reportMessage(level, message):
 	"""Chú thích ::notice::/::warning::/::error:: trên GitHub Actions, dòng thường khi chạy tại máy."""
-	print(f'::{level}::{message}' if os.environ.get('GITHUB_ACTIONS') else message)
+	if os.environ.get('GITHUB_ACTIONS'):
+		message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+		print(f'::{level}::{message}')
+	else:
+		print(message)
 
 
 def writeOutputs(**values):
@@ -116,7 +121,25 @@ def onCleanMain():
 	return False
 
 
+def validateReleaseInputs(version, date=None):
+	"""Phiên bản theo tháng và ngày ISO có thật; kiểm tra trước khi gọi Git hoặc thay đổi CHANGELOG."""
+	if (
+		not isinstance(version, str)
+		or not re.fullmatch(r'v[0-9]{4}\.(?:0[1-9]|1[0-2])\.Stable', version)
+		or version[1:5] == '0000'
+	):
+		raise ValueError('Phiên bản phát hành phải là vYYYY.MM.Stable với năm và tháng hợp lệ.')
+	if date is not None:
+		if not isinstance(date, str) or not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', date):
+			raise ValueError('Ngày phát hành phải có dạng YYYY-MM-DD.')
+		try:
+			CalendarDate.fromisoformat(date)
+		except ValueError as exc:
+			raise ValueError(f'Ngày phát hành không có thật: {date}') from exc
+
+
 def prepareRelease(version, date, openPullRequest=False):
+	validateReleaseInputs(version, date)
 	changelogPath = ROOT / 'CHANGELOG.md'
 	if openPullRequest and not onCleanMain():
 		return 1
@@ -162,6 +185,7 @@ def prepareRelease(version, date, openPullRequest=False):
 
 
 def openReleasePullRequest(version, previous, commits):
+	validateReleaseInputs(version)
 	repository = os.environ.get('GITHUB_REPOSITORY') or DEFAULT_REPOSITORY
 	base = runCommand('git', 'rev-parse', 'HEAD')
 	branch = f'release/{version.removesuffix(".Stable")}'
@@ -183,7 +207,14 @@ def openReleasePullRequest(version, previous, commits):
 				'--json',
 				'url',
 			)
-	except (RuntimeError, json.JSONDecodeError) as exc:
+			if not isinstance(pullRequests, list) or any(
+				not isinstance(item, dict)
+				or not isinstance(item.get('url'), str)
+				or not item['url']
+				for item in pullRequests
+			):
+				raise ValueError('phản hồi danh sách Pull Request không hợp lệ')
+	except (RuntimeError, ValueError) as exc:
 		reportMessage('error', f'Không đọc được trạng thái phát hành {branch}: {exc}')
 		return 1
 	if exists:

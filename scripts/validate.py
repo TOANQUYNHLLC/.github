@@ -25,6 +25,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from markdown import withoutCodeBlocks
+from orgsetup.labels import inspectLabels
 
 ROOT = Path(__file__).resolve().parents[1]
 FORM_TYPES = {'markdown', 'textarea', 'input', 'dropdown', 'checkboxes'}
@@ -1344,26 +1345,9 @@ def checkHeadings(path, text):
 
 
 def checkLabels(path):
-	labels = loadYaml(path)
-	if not isinstance(labels, list):
-		error(path, 'phải là danh sách nhãn')
-		return set()
-	names = set()
-	for index, label in enumerate(labels, start=1):
-		if not isinstance(label, dict):
-			error(path, f'nhãn {index}: phải là object')
-			continue
-		name = str(label.get('name') or '')
-		if not name:
-			error(path, f'nhãn {index}: thiếu name')
-			continue
-		if name.lower() in names:
-			error(path, f'nhãn "{name}" bị trùng')
-		names.add(name.lower())
-		if not re.fullmatch(r'[0-9a-fA-F]{6}', str(label.get('color') or '')):
-			error(path, f'nhãn "{name}": color phải là mã hex 6 ký tự')
-		if len(str(label.get('description') or '')) > 100:
-			error(path, f'nhãn "{name}": description vượt quá 100 ký tự')
+	names, problems = inspectLabels(loadYaml(path))
+	for problem in problems:
+		error(path, problem)
 	return names
 
 

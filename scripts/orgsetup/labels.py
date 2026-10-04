@@ -1,11 +1,41 @@
 """Lệnh labels: đồng bộ bộ nhãn chuẩn trong labels.yml."""
 
 import json
+import re
 import subprocess
 
 from orgsetup import github
 
 LABELS_FILE = github.ROOT / 'labels.yml'
+
+
+def inspectLabels(data):
+	"""Tên không phân biệt hoa/thường và lỗi schema nhãn; dùng chung cho validator và lệnh đồng bộ."""
+	names, problems = set(), []
+	if not isinstance(data, list):
+		return names, ['phải là danh sách nhãn']
+	for index, label in enumerate(data, start=1):
+		prefix = f'nhãn {index}'
+		if not isinstance(label, dict):
+			problems.append(f'{prefix}: phải là object')
+			continue
+		name = label.get('name')
+		if not isinstance(name, str) or not name.strip():
+			problems.append(f'{prefix}: name phải là chuỗi không trống')
+		else:
+			prefix = f'nhãn "{name}"'
+			if name.lower() in names:
+				problems.append(f'{prefix} bị trùng')
+			names.add(name.lower())
+		color = label.get('color')
+		if not isinstance(color, str) or not re.fullmatch(r'[0-9a-fA-F]{6}', color):
+			problems.append(f'{prefix}: color phải là mã hex 6 ký tự dạng chuỗi')
+		description = label.get('description', '')
+		if not isinstance(description, str):
+			problems.append(f'{prefix}: description phải là chuỗi')
+		elif len(description) > 100:
+			problems.append(f'{prefix}: description vượt quá 100 ký tự')
+	return names, problems
 
 
 def loadLabels():
@@ -31,9 +61,26 @@ def loadLabels():
 		)
 		raise ValueError(f'{LABELS_FILE.name}: YAML không hợp lệ ({detail})')
 	data = json.loads(result.stdout)
-	if not isinstance(data, list) or any(not isinstance(label, dict) for label in data):
-		raise ValueError(f'{LABELS_FILE.name}: phải là danh sách các object nhãn')
+	_, problems = inspectLabels(data)
+	if problems:
+		raise ValueError(f'{LABELS_FILE.name}: {"; ".join(problems)}')
 	return data
+
+
+def readLabels(repo):
+	"""Đọc đủ nhãn và kiểm tra phản hồi trước khi tính thay đổi; description null của API là chuỗi rỗng."""
+	data = github.ghList(f'repos/{github.ORG}/{repo}/labels')
+	normalized = []
+	for index, label in enumerate(data, start=1):
+		if not isinstance(label, dict) or 'description' not in label:
+			raise ValueError(f'{repo}: nhãn {index} thiếu trường trong phản hồi GitHub')
+		normalized.append(
+			{**label, 'description': '' if label['description'] is None else label['description']}
+		)
+	_, problems = inspectLabels(normalized)
+	if problems:
+		raise ValueError(f'{repo}: phản hồi nhãn không hợp lệ ({"; ".join(problems)})')
+	return {label['name'].lower(): label for label in normalized}
 
 
 def syncLabels(repos, apply):
@@ -41,16 +88,13 @@ def syncLabels(repos, apply):
 	wanted = loadLabels()
 	for repo in repos:
 		print(f'== {github.ORG}/{repo}')
-		current = {
-			label['name'].lower(): label
-			for label in github.ghList(f'repos/{github.ORG}/{repo}/labels')
-		}
+		current = readLabels(repo)
 		changes = []
 		for label in wanted:
-			live = current.get(str(label['name']).lower())
+			live = current.get(label['name'].lower())
 			if (
 				live is None
-				or live['color'].lower() != str(label['color']).lower()
+				or live['color'].lower() != label['color'].lower()
 				or (live.get('description') or '') != (label.get('description') or '')
 			):
 				changes.append((label, 'cập nhật' if live else 'tạo'))
@@ -64,11 +108,11 @@ def syncLabels(repos, apply):
 			github.gh(
 				'label',
 				'create',
-				str(label['name']),
+				label['name'],
 				'--repo',
 				f'{github.ORG}/{repo}',
 				'--color',
-				str(label['color']),
+				label['color'],
 				'--description',
 				label.get('description') or '',
 				'--force',

@@ -10,6 +10,11 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### 🐛 SỬA
 
+- Chuẩn bị phát hành từ chối phiên bản sai tháng hoặc ngày sai trước khi gọi Git hay sửa `CHANGELOG.md`; lệnh mở Pull Request cũng kiểm tra phiên bản và cấu trúc phản hồi danh sách PR, không báo đang chờ khi chưa đọc được URL.
+- ADR 0007 mô tả đúng việc GitHub hỗ trợ push ruleset cấp repository trên gói Team; cấu hình của tổ chức vẫn chỉ có nguồn push ruleset cấp tổ chức nhắm `~ALL`.
+- Nhãn dùng chung schema giữa validator và lệnh đồng bộ: tên, màu, mô tả sai kiểu hoặc tên trùng chặn việc gọi GitHub; phản hồi nhãn sai chặn ghi lên repository đó. Mô tả `null` hợp lệ của API và nhãn riêng được giữ đúng khi đối chiếu.
+- Kiểm tra liên kết Markdown nhận đúng backtick được escape ngoài mã và dấu đóng sau backslash trong mã; tìm dấu đóng bằng chỉ mục tránh quét lại phần còn lại cho từng cụm không ghép được.
+- Thông báo phát hành trên Actions mã hóa `%`, CR và LF để lỗi lệnh nhiều dòng không bị tách thành các chú thích khác.
 - Đồng bộ cài đặt kiểm tra trường và kiểu phản hồi trước khi PATCH; quyền Actions thiếu trạng thái bật/tắt và tính năng bảo mật có dữ liệu sai được cảnh báo và bỏ qua, không ghi theo giá trị suy đoán. Dependabot security updates chờ đọc được hoặc bật thành công Dependabot alerts.
 - Topics đọc `keywords` theo YAML thay vì biểu thức văn bản; hỗ trợ dấu nháy, chú thích và anchor/alias, dữ liệu lỗi không xóa topics đang có.
 - Đồng bộ tệp xác minh nhánh mặc định, SHA và cấu trúc cây Git trước khi tạo branch; chỉ nhận diện manifest từ tệp, không từ thư mục trùng tên.

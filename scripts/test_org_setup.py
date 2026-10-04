@@ -489,6 +489,78 @@ class OrgSetupTest(unittest.TestCase):
 					[{'name': 'first', 'color': 'ffffff'}, {'name': 'second', 'color': 'ffffff'}],
 				)
 
+	def testLabelFieldsStopBeforeAnyGithubCall(self):
+		valid = {'name': 'valid', 'color': 'ffffff', 'description': 'Đúng'}
+		invalid = (
+			{'color': 'ffffff'},
+			{'name': 42, 'color': 'ffffff'},
+			{'name': '  ', 'color': 'ffffff'},
+			{'name': 'invalid', 'color': 123456},
+			{'name': 'invalid', 'color': 'gggggg'},
+			{'name': 'invalid', 'color': 'ffffff', 'description': False},
+			{'name': 'invalid', 'color': 'ffffff', 'description': None},
+			{'name': 'invalid', 'color': 'ffffff', 'description': 'a' * 101},
+			{'name': 'VALID', 'color': 'ffffff'},
+		)
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'labels.yml'
+			for label in invalid:
+				with self.subTest(label=label):
+					path.write_text(json.dumps([valid, label]), encoding='utf-8')
+					with (
+						mock.patch.object(labels, 'LABELS_FILE', path),
+						mock.patch.object(github, 'ghList') as read,
+						mock.patch.object(github, 'gh') as write,
+						contextlib.redirect_stdout(io.StringIO()),
+						self.assertRaisesRegex(ValueError, 'labels.yml'),
+					):
+						labels.syncLabels(['app'], apply=True)
+					read.assert_not_called()
+					write.assert_not_called()
+
+	def testMalformedLiveLabelsPreventWritesAndSuccessMessage(self):
+		valid = {'name': 'custom', 'color': 'ffffff', 'description': None}
+		invalid = (
+			42,
+			{},
+			{'name': 'bug', 'color': 'd73a4a'},
+			{'name': 42, 'color': 'ffffff', 'description': None},
+			{'name': 'bug', 'color': 123456, 'description': None},
+			{'name': 'bug', 'color': 'ffffff', 'description': False},
+			{'name': 'CUSTOM', 'color': 'ffffff', 'description': None},
+		)
+		for label in invalid:
+			with self.subTest(label=label):
+				output = io.StringIO()
+				with (
+					mock.patch.object(github, 'ghList', return_value=[valid, label]),
+					mock.patch.object(github, 'gh') as write,
+					contextlib.redirect_stdout(output),
+					self.assertRaisesRegex(ValueError, 'app.*nhãn'),
+				):
+					labels.syncLabels(['app'], apply=True)
+				write.assert_not_called()
+				self.assertNotIn('✔', output.getvalue())
+
+	def testLabelComparisonPreservesCaseAndNullableDescription(self):
+		wanted = [
+			{'name': 'Bug', 'color': 'FFaa00'},
+			{'name': 'Security', 'color': 'ABCDEF', 'description': 'Mô tả'},
+		]
+		current = [
+			{'name': 'bug', 'color': 'ffaa00', 'description': None},
+			{'name': 'SECURITY', 'color': 'abcdef', 'description': 'Mô tả'},
+			{'name': 'custom', 'color': 'ffffff', 'description': None},
+		]
+		with (
+			mock.patch.object(labels, 'loadLabels', return_value=wanted),
+			mock.patch.object(github, 'ghList', return_value=current),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			labels.syncLabels(['app'], apply=True)
+		write.assert_not_called()
+
 	def testInvalidLabelsStopBeforeGithubRead(self):
 		with tempfile.TemporaryDirectory() as folder:
 			path = Path(folder) / 'labels.yml'

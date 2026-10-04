@@ -57,6 +57,13 @@ QuietHandler = handlerClass(answerOk)
 
 
 class ExternalLinksTest(unittest.TestCase):
+	def testEscapedBackticksDoNotHideExternalLinks(self):
+		module = loadScript('check-external-links')
+		documents = {
+			module.ROOT / 'README.md': r'\`[x](https://real.test/)\` `[x](https://code.test/)`',
+		}
+		self.assertEqual(module.collectLinks(documents), {'https://real.test/': {'README.md'}})
+
 	def testUppercaseHttpSchemesAreCollected(self):
 		module = loadScript('check-external-links')
 		documents = {

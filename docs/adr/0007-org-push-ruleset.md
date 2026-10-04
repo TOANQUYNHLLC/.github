@@ -19,7 +19,7 @@ Quy tắc chung cấm đưa mật khẩu, khóa, dữ liệu cá nhân và hồ 
 ## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
 
 - **Chỉ dựa vào `.gitignore` và secret scanning (push protection)**: không ngăn được tệp khóa riêng, kho khóa, tệp cơ sở dữ liệu hay tệp lớn bị thêm bằng `git add -f` hoặc ở repository chưa có `.gitignore` chung.
-- **Push ruleset cấp repository**: GitHub chỉ có push ruleset ở cấp tổ chức cho mục đích này; tệp JSON cấp tổ chức là nguồn duy nhất.
+- **Push ruleset cấp repository**: [GitHub hỗ trợ trên gói Team cho repository riêng tư hoặc internal](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets#push-rulesets). Cấu hình hiện tại chỉ có bản cấp tổ chức nhắm `~ALL`; tệp JSON cấp tổ chức là nguồn duy nhất, không có các bản cấp repository.
 - **Thêm `required_signatures` vào push ruleset** như các ruleset khác: push ruleset chỉ nhận bốn quy tắc push, GitHub không chấp nhận.
 
 ## ⚖️ HỆ QUẢ

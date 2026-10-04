@@ -119,6 +119,27 @@ class ValidateTest(unittest.TestCase):
 		(self.repo / 'labels.yml').write_text('- 42\n', encoding='utf-8')
 		self.assertFails('nhãn 1: phải là object')
 
+	def testLabelFieldsKeepTheirDeclaredTypes(self):
+		cases = (
+			('name: bug', 'name: 42', 'name'),
+			('name: bug', 'name: "  "', 'name'),
+			("color: 'd73a4a'", 'color: 123456', 'color'),
+			(
+				'description: Một chức năng chạy sai, không chạy hoặc hiển thị không đúng',
+				'description: false',
+				'description',
+			),
+		)
+		for old, new, field in cases:
+			with self.subTest(field=field):
+				self.edit('labels.yml', old, new)
+				self.assertFails(field)
+				self.tearDown()
+
+	def testDuplicateLabelNamesIgnoreCase(self):
+		self.edit('labels.yml', '- name: regression', '- name: BUG')
+		self.assertFails('bị trùng')
+
 	def testYamlWorkflowKeepsRequiredJobs(self):
 		path = self.repo / '.github/workflows/validate.yml'
 		path.rename(path.with_suffix('.yaml'))
