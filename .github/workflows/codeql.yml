@@ -28,6 +28,8 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
+                # javascript-typescript: giữ cấu hình code scanning đã có trên main (thiếu thì Pull Request báo
+                # "configuration not found") và quét JavaScript, TypeScript khi repository có.
                 include:
                     - language: actions
                       build-mode: none
