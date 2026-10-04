@@ -3,6 +3,7 @@
 Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
 """
 
+import base64
 import contextlib
 import importlib
 import io
@@ -407,6 +408,181 @@ class OrgSetupTest(unittest.TestCase):
 		self.assertEqual(github.listRepos('app'), ['app'])
 		self.assertEqual(len(calls), 1)
 
+	def testExistenceCheckDistinguishesMissingFromReadErrors(self):
+		for message in ('HTTP 403', 'HTTP 429', 'HTTP 500', 'mất mạng', 'HTTP 4040'):
+			with (
+				self.subTest(message=message),
+				mock.patch.object(github, 'gh', side_effect=RuntimeError(message)),
+				self.assertRaisesRegex(RuntimeError, message),
+			):
+				github.ghExists('repos/o/r/contents/file')
+		with mock.patch.object(github, 'gh', side_effect=RuntimeError('Not Found (HTTP 404)')):
+			self.assertFalse(github.ghExists('repos/o/r/contents/file'))
+
+	def testTeamReadErrorsPreventWrites(self):
+		for failingPath in ('/teams/admins', '/memberships/', '/repos/'):
+
+			def read(*args, failingPath=failingPath):
+				path = args[-1]
+				if path.endswith(failingPath) or failingPath in path:
+					raise RuntimeError('Forbidden (HTTP 403)')
+				if '/memberships/' in path:
+					return {'role': 'maintainer'}
+				if '/repos/' in path:
+					return {'role_name': 'admin'}
+				team = path.rsplit('/', 1)[-1]
+				name, _, privacy, description = teams.TEAMS[team]
+				return {'name': name, 'privacy': privacy, 'description': description}
+
+			with (
+				self.subTest(path=failingPath),
+				mock.patch.object(github, 'ghJson', read),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+				self.assertRaisesRegex(RuntimeError, 'HTTP 403'),
+			):
+				teams.syncTeams(['app'], apply=True)
+			write.assert_not_called()
+
+	def testSecurityUnreadStatusIsNotEnabled(self):
+		output = io.StringIO()
+		with (
+			mock.patch.object(github, 'ghJson', return_value={'enabled': True}),
+			mock.patch.object(
+				github, 'gh', side_effect=RuntimeError('Forbidden (HTTP 403)')
+			) as call,
+			contextlib.redirect_stdout(output),
+		):
+			settings.syncSecurity('app', {'private': True}, apply=True)
+		self.assertIn('không đọc được trạng thái', output.getvalue())
+		self.assertNotIn('đã bật Dependabot alerts', output.getvalue())
+		self.assertFalse(
+			[args for args, _ in call.call_args_list if '-X' in args and 'PUT' in args]
+		)
+
+	def testFilesReadFailurePreventsWrites(self):
+		with (
+			mock.patch.object(github, 'defaultBranch', return_value='main'),
+			mock.patch.object(github, 'ghJson', side_effect=RuntimeError('HTTP 403')),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+			self.assertRaisesRegex(RuntimeError, 'HTTP 403'),
+		):
+			files.syncFiles(['app'], apply=True)
+		write.assert_not_called()
+
+	def testFilesUseOneTreeAtFixedCommitAndRefreshNextRun(self):
+		calls, writes, bodies = [], [], []
+		planned = files.plannedFiles({'package.json'})
+		paths = set(planned) - {'.nvmrc'}
+
+		def read(*args):
+			path = args[-1]
+			calls.append(path)
+			if path.endswith('/git/ref/heads/main'):
+				return {'object': {'sha': 'abc123'}}
+			if path.endswith('/git/trees/abc123?recursive=1'):
+				return {
+					'truncated': False,
+					'tree': [{'path': name, 'type': 'blob'} for name in paths | {'package.json'}],
+				}
+			self.fail(f'Request đọc không cần thiết: {path}')
+
+		def write(*args, **kwargs):
+			writes.append(args)
+			if kwargs.get('stdin'):
+				bodies.append(json.loads(kwargs['stdin']))
+			return 'url'
+
+		with (
+			mock.patch.object(github, 'defaultBranch', return_value='main'),
+			mock.patch.object(github, 'ghJson', read),
+			mock.patch.object(github, 'ghExists', return_value=False),
+			mock.patch.object(github, 'gh', write),
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			files.syncFiles(['app'], apply=True)
+			paths.add('.nvmrc')
+			files.syncFiles(['app'], apply=True)
+		self.assertEqual(len(calls), 4)
+		self.assertEqual(len([call for call in writes if call[:2] == ('api', 'graphql')]), 1)
+		self.assertIn('sha=abc123', writes[0])
+		self.assertIn('createCommitOnBranch', bodies[0]['query'])
+		commit = bodies[0]['variables']['input']
+		self.assertEqual(commit['expectedHeadOid'], 'abc123')
+		self.assertEqual(
+			commit['branch'],
+			{'repositoryNameWithOwner': 'TOANQUYNHLLC/app', 'branchName': files.SYNC_BRANCH},
+		)
+		self.assertEqual(
+			[entry['path'] for entry in commit['fileChanges']['additions']], ['.nvmrc']
+		)
+
+	def testTruncatedTreeChecksPathsIndividually(self):
+		def read(*args):
+			path = args[-1]
+			if '/git/ref/' in path:
+				return {'object': {'sha': 'abc123'}}
+			if '/git/trees/' in path:
+				return {'truncated': True, 'tree': []}
+			self.assertTrue(path.endswith('/contents?ref=abc123'), path)
+			return [{'name': 'package.json'}]
+
+		with (
+			mock.patch.object(github, 'defaultBranch', return_value='main'),
+			mock.patch.object(github, 'ghJson', read),
+			mock.patch.object(github, 'ghExists', return_value=True) as exists,
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			files.syncFiles(['app'], apply=True)
+		self.assertEqual(exists.call_count, len(files.plannedFiles({'package.json'})))
+		self.assertTrue(all(args[0].endswith('?ref=abc123') for args, _ in exists.call_args_list))
+		write.assert_not_called()
+
+	def testFilesCommitFailureDoesNotOpenPartialPr(self):
+		def read(*args):
+			if '/git/ref/' in args[-1]:
+				return {'object': {'sha': 'abc123'}}
+			return {'truncated': False, 'tree': [{'path': 'package.json', 'type': 'blob'}]}
+
+		def write(*args, **kwargs):
+			if args[:2] == ('api', 'graphql'):
+				commit = json.loads(kwargs['stdin'])['variables']['input']
+				actual = {
+					entry['path']: base64.b64decode(entry['contents']).decode('utf-8')
+					for entry in commit['fileChanges']['additions']
+				}
+				self.assertEqual(actual, files.plannedFiles({'package.json'}))
+				self.assertEqual(commit['expectedHeadOid'], 'abc123')
+				raise RuntimeError('branch đã đổi')
+			self.assertEqual(args[:2], ('api', 'repos/TOANQUYNHLLC/app/git/refs'))
+
+		with (
+			mock.patch.object(github, 'defaultBranch', return_value='main'),
+			mock.patch.object(github, 'ghJson', read),
+			mock.patch.object(github, 'ghExists', return_value=False),
+			mock.patch.object(github, 'gh', write),
+			contextlib.redirect_stdout(io.StringIO()),
+			self.assertRaisesRegex(RuntimeError, 'branch đã đổi'),
+		):
+			files.syncFiles(['app'], apply=True)
+
+	def testEmptyRepositoryIsSkippedOnlyForMissingDefaultRef(self):
+		output = io.StringIO()
+		with (
+			mock.patch.object(github, 'defaultBranch', return_value='main'),
+			mock.patch.object(
+				github, 'ghJson', side_effect=RuntimeError('Not Found (HTTP 404)')
+			) as read,
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(output),
+		):
+			files.syncFiles(['app'], apply=True)
+		self.assertIn('repository trống', output.getvalue())
+		self.assertEqual(read.call_args.args[-1], 'repos/TOANQUYNHLLC/app/git/ref/heads/main')
+		write.assert_not_called()
+
 	def testTeamDescriptionDriftIsPatched(self):
 		calls = []
 		github.ghExists = lambda endpoint: True
@@ -500,6 +676,37 @@ class OrgSetupTest(unittest.TestCase):
 			module.main()
 		self.assertIn('gh auth login', str(stopped.exception.code))
 		run.assert_not_called()
+
+	def testCommandReadErrorReturnsFailureWithoutTraceback(self):
+		module = loadScript('org-setup')
+		output = io.StringIO()
+		with (
+			mock.patch.object(module, 'signedIn', return_value=True),
+			mock.patch.object(module.github, 'listRepos', return_value=['app']),
+			mock.patch.object(module, 'runCommand', side_effect=RuntimeError('HTTP 403')),
+			mock.patch.object(module.sys, 'argv', ['org-setup.py', 'team', '--apply']),
+			contextlib.redirect_stderr(output),
+		):
+			self.assertEqual(module.main(), 1)
+		self.assertIn('HTTP 403', output.getvalue())
+		self.assertNotIn('Traceback', output.getvalue())
+
+	def testFailedListingIsNotRequestedTwice(self):
+		module = loadScript('org-setup')
+		output = io.StringIO()
+		with (
+			mock.patch.object(module, 'signedIn', return_value=True),
+			mock.patch.object(
+				module.github, 'listRepos', side_effect=RuntimeError('HTTP 429')
+			) as listing,
+			mock.patch.object(module, 'runCommand') as run,
+			mock.patch.object(module.sys, 'argv', ['org-setup.py', 'files']),
+			contextlib.redirect_stderr(output),
+		):
+			self.assertEqual(module.main(), 1)
+		listing.assert_called_once()
+		run.assert_not_called()
+		self.assertIn('HTTP 429', output.getvalue())
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 """Lệnh files: Pull Request thêm tệp dùng chung còn thiếu vào repository."""
 
 import base64
+import json
 import re
 import tomllib
 from pathlib import Path
@@ -105,19 +106,34 @@ def syncFiles(repos, apply):
 			continue
 		base = github.defaultBranch(repo)
 		try:
-			root = {
-				item['name']
-				for item in github.ghJson('api', f'repos/{github.ORG}/{repo}/contents?ref={base}')
-			}
-		except RuntimeError:
+			sha = github.ghJson('api', f'repos/{github.ORG}/{repo}/git/ref/heads/{base}')['object'][
+				'sha'
+			]
+		except RuntimeError as exc:
+			if not github.isNotFound(exc):
+				raise
 			print('   ⚠ repository trống — bỏ qua')
 			continue
+		# Đọc một cây tại SHA cố định: mọi phép so và branch mới dùng cùng một trạng thái, không giữ cache
+		# qua lần chạy sau. API có thể cắt cây lớn; khi đó dò từng đường dẫn thay vì coi phần bị cắt là thiếu.
+		tree = github.ghJson('api', f'repos/{github.ORG}/{repo}/git/trees/{sha}?recursive=1')
+		if tree['truncated']:
+			root = {
+				item['name']
+				for item in github.ghJson('api', f'repos/{github.ORG}/{repo}/contents?ref={sha}')
+			}
+		else:
+			root = {item['path'] for item in tree['tree'] if '/' not in item['path']}
 		files = plannedFiles(root)
-		missing = {
-			path: content
-			for path, content in files.items()
-			if not github.ghExists(f'repos/{github.ORG}/{repo}/contents/{path}?ref={base}')
-		}
+		if tree['truncated']:
+			missing = {
+				path: content
+				for path, content in files.items()
+				if not github.ghExists(f'repos/{github.ORG}/{repo}/contents/{path}?ref={sha}')
+			}
+		else:
+			paths = {item['path'] for item in tree['tree']}
+			missing = {path: content for path, content in files.items() if path not in paths}
 		if not missing:
 			print('   ✔ đã đủ tệp dùng chung')
 			continue
@@ -128,9 +144,6 @@ def syncFiles(repos, apply):
 		if github.ghExists(f'repos/{github.ORG}/{repo}/git/ref/heads/{SYNC_BRANCH}'):
 			print(f'   ⚠ branch {SYNC_BRANCH} đã tồn tại — kiểm tra Pull Request đang mở')
 			continue
-		sha = github.ghJson('api', f'repos/{github.ORG}/{repo}/git/ref/heads/{base}')['object'][
-			'sha'
-		]
 		github.gh(
 			'api',
 			f'repos/{github.ORG}/{repo}/git/refs',
@@ -139,19 +152,32 @@ def syncFiles(repos, apply):
 			'-f',
 			f'sha={sha}',
 		)
-		for path, content in missing.items():
-			github.gh(
-				'api',
-				'-X',
-				'PUT',
-				f'repos/{github.ORG}/{repo}/contents/{path}',
-				'-f',
-				f'message=chore: thêm {path}',
-				'-f',
-				f'content={base64.b64encode(content.encode("utf-8")).decode("ascii")}',
-				'-f',
-				f'branch={SYNC_BRANCH}',
-			)
+		# Một commit cho toàn bộ tệp thiếu: GitHub ký, expectedHeadOid chặn ghi nếu branch đã đổi.
+		commit = {
+			'query': github.COMMIT_MUTATION,
+			'variables': {
+				'input': {
+					'branch': {
+						'repositoryNameWithOwner': f'{github.ORG}/{repo}',
+						'branchName': SYNC_BRANCH,
+					},
+					'message': {'headline': 'chore: thêm tệp dùng chung của tổ chức'},
+					'expectedHeadOid': sha,
+					'fileChanges': {
+						'additions': [
+							{
+								'path': path,
+								'contents': base64.b64encode(content.encode('utf-8')).decode(
+									'ascii'
+								),
+							}
+							for path, content in missing.items()
+						]
+					},
+				}
+			},
+		}
+		github.gh('api', 'graphql', '--input', '-', '--silent', stdin=json.dumps(commit))
 		body = (
 			f'Thêm các tệp dùng chung của tổ chức từ {github.ORG}/.github:\n\n'
 			+ ''.join(f'- `{path}`\n' for path in missing)

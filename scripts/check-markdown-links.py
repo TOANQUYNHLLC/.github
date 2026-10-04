@@ -59,7 +59,13 @@ def findBrokenLinks(path, text, anchorsCache=None):
 		elif fragment and destination.suffix == '.md':
 			key = destination.resolve()
 			if key not in anchorsCache:
-				anchorsCache[key] = headingAnchors(destination)
+				try:
+					anchorsCache[key] = headingAnchors(destination)
+				except (OSError, UnicodeError) as exc:
+					anchorsCache[key] = exc
+			if isinstance(anchorsCache[key], Exception):
+				messages.append(f'không đọc được Markdown {destination}: {anchorsCache[key]}')
+				continue
 			if fragment not in anchorsCache[key]:
 				messages.append(f'liên kết hỏng: {target}#{fragment} — không có tiêu đề tương ứng')
 	return messages
@@ -88,10 +94,14 @@ def main():
 	broken = 0
 	anchorsCache = {}
 	for path in sorted(markdownFiles()):
-		for message in findBrokenLinks(path, path.read_text(encoding='utf-8'), anchorsCache):
+		try:
+			messages = findBrokenLinks(path, path.read_text(encoding='utf-8'), anchorsCache)
+		except (OSError, UnicodeError) as exc:
+			messages = [f'không đọc được Markdown: {exc}']
+		for message in messages:
 			broken += 1
 			print(f'❌ {path}: {message}')
-	print(f'{"✅ Không có liên kết hỏng" if not broken else f"❌ {broken} liên kết hỏng"}.')
+	print(f'{"✅ Không có liên kết hỏng" if not broken else f"❌ {broken} lỗi"}.')
 	return 1 if broken else 0
 
 

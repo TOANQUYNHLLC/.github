@@ -44,17 +44,19 @@ PERMISSION_RANK = {
 
 
 def teamRole(team, user):
-	"""Vai trò của người dùng trong team (maintainer, member), None nếu chưa là thành viên."""
+	"""Vai trò của người dùng trong team; None chỉ khi HTTP 404, lỗi đọc khác phải dừng trước khi ghi."""
 	try:
 		return (
 			github.ghJson('api', f'orgs/{github.ORG}/teams/{team}/memberships/{user}') or {}
 		).get('role')
-	except RuntimeError:
-		return None
+	except RuntimeError as exc:
+		if github.isNotFound(exc):
+			return None
+		raise
 
 
 def teamPermission(team, repo):
-	"""Quyền của team trên repository (read, triage, write, maintain, admin), None nếu chưa được cấp."""
+	"""Quyền của team trên repository; None chỉ khi HTTP 404, lỗi đọc khác phải dừng trước khi ghi."""
 	try:
 		return (
 			github.ghJson(
@@ -65,8 +67,10 @@ def teamPermission(team, repo):
 			)
 			or {}
 		).get('role_name')
-	except RuntimeError:
-		return None
+	except RuntimeError as exc:
+		if github.isNotFound(exc):
+			return None
+		raise
 
 
 def teamDetails(team):
@@ -80,7 +84,9 @@ def teamState(team, repos):
 	# Đọc chi tiết team cũng cho biết team đã có chưa (không có thì gh báo lỗi 404).
 	try:
 		details, exists = teamDetails(team), True
-	except RuntimeError:
+	except RuntimeError as exc:
+		if not github.isNotFound(exc):
+			raise
 		details, exists = {}, False
 	wanted = {'name': name, 'description': description, 'privacy': privacy}
 	drift = {key: value for key, value in wanted.items() if exists and details.get(key) != value}

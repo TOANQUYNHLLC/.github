@@ -155,6 +155,18 @@ class ValidateTest(unittest.TestCase):
 		self.edit('README.md', '(SECURITY.md)', '(KHONG_TON_TAI.md)')
 		self.assertFails('liên kết hỏng: KHONG_TON_TAI.md')
 
+	def testInvalidUtf8ReportsFileAndContinues(self):
+		for name in ('README.md', 'package.json', 'scripts/check.py'):
+			with self.subTest(path=name):
+				path = self.repo / name
+				original = path.read_bytes()
+				path.write_bytes(original + b'\xff\n')
+				try:
+					# Không sửa script validator nạp trực tiếp: lỗi nằm trong nội dung được kiểm tra.
+					self.assertFails(f'{name}: không phải UTF-8')
+				finally:
+					path.write_bytes(original)
+
 	def testLinkAnchorMustExist(self):
 		self.edit('profile/README.md', '## 📞 THÔNG TIN LIÊN HỆ', '## 📞 LIÊN HỆ')
 		self.assertFails('liên kết hỏng: profile/README.md#-thông-tin-liên-hệ')

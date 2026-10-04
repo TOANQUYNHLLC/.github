@@ -139,13 +139,13 @@ def main():
 		parser.error('preview chỉ xem trước mọi lệnh, không nhận --apply, --repo, --discussions')
 
 	def repositories():
-		# Lỗi (chưa đăng nhập…) để signedIn() báo; lệnh org-* không cần danh sách repository.
+		# Giữ lỗi đọc để main báo sau khi xác minh đăng nhập; không gọi lại một request đã thất bại.
 		if args.command.startswith('org-'):
 			return []
 		try:
 			return github.listRepos(args.repo)
-		except (RuntimeError, FileNotFoundError):
-			return None
+		except (RuntimeError, OSError) as exc:
+			return exc
 
 	# Kiểm tra đăng nhập và lấy danh sách repository cùng lúc — mỗi việc chờ GitHub gần một giây.
 	with ThreadPoolExecutor(max_workers=2) as pool:
@@ -153,11 +153,16 @@ def main():
 		if not login.result():
 			sys.exit('Cần GitHub CLI đã đăng nhập: https://cli.github.com rồi chạy gh auth login')
 		repos = listing.result()
-	if repos is None:
-		repos = github.listRepos(args.repo)  # báo đúng lỗi của gh
-	if args.command == 'preview':
-		return previewAll(repos)
-	runCommand(args.command, repos, args.apply, args.discussions)
+	if isinstance(repos, Exception):
+		print(f'❌ {repos}', file=sys.stderr)
+		return 1
+	try:
+		if args.command == 'preview':
+			return previewAll(repos)
+		runCommand(args.command, repos, args.apply, args.discussions)
+	except (RuntimeError, OSError, KeyError, ValueError) as exc:
+		print(f'❌ {exc}', file=sys.stderr)
+		return 1
 	if not args.apply:
 		print(PREVIEW_NOTE)
 	return 0

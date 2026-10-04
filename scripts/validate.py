@@ -190,10 +190,10 @@ def decodeText(data, errors='strict'):
 
 
 def readText(path):
-	"""Nội dung tệp (UTF-8) như Path.read_text(), giải mã một lần mỗi lượt runChecks()."""
+	"""Giải mã một lần mỗi lượt runChecks(); checkText báo lỗi UTF-8, các đối chiếu vẫn đọc được phần còn lại."""
 	key = str(path)
 	if key not in textCache:
-		textCache[key] = decodeText(readBytes(path))
+		textCache[key] = decodeText(readBytes(path), errors='replace')
 	return textCache[key]
 
 
@@ -1371,17 +1371,17 @@ def checkFile(file):
 	# Script ưu tiên Python; ngôn ngữ khác chỉ khi xử lý việc đó tốt hơn, ghi lý do ở đầu tệp (ADR 0009).
 	if (file.parent == ROOT / 'scripts' and file.suffix != '.py') or file.suffix in SCRIPT_SUFFIXES:
 		checkScriptLanguage(file)
+	if file.suffix in BINARY_SUFFIXES:
+		return
+	content = checkText(file)
+	if content is None:
+		return
 	if file.suffix == '.sh':
 		checkShell(file)
 	if file.suffix == '.py':
 		checkNames(file, readText(file))
 	if file.suffix in SPACE_SUFFIXES + TWO_SPACE_SUFFIXES:
 		checkSpaceOnly(file, readText(file))
-	if file.suffix in BINARY_SUFFIXES:
-		return
-	content = checkText(file)
-	if content is None:
-		return
 	if not file.name.endswith(SPACE_SUFFIXES + TWO_SPACE_SUFFIXES + KEEP_TRAILING_SPACE_SUFFIXES):
 		checkTabOnly(file, content)
 	# .mailmap ánh xạ email tác giả commit (kể cả địa chỉ noreply của GitHub), không phải email liên hệ.

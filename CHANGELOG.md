@@ -10,10 +10,18 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### 🐛 SỬA
 
+- Phép dò tài nguyên GitHub chỉ coi HTTP 404 là chưa có; lỗi quyền, giới hạn API hoặc mạng chặn việc đồng bộ team, tệp và ruleset dựa trên dữ liệu chưa đọc được. Tính năng bảo mật không đọc được trạng thái được cảnh báo và bỏ qua.
+- Tệp dùng chung được thêm bằng một commit do GitHub ký qua `createCommitOnBranch`, kiểm tra HEAD trước khi ghi và không mở Pull Request khi commit thất bại.
+- Phát hành kiểm tra Pull Request đang mở khi branch đã tồn tại, báo lỗi khi chưa có; chỉ báo đã xóa branch sau lỗi commit nếu GitHub xác nhận xóa thành công.
+- Kiểm tra nội dung và liên kết Markdown báo tệp không đọc được hoặc sai UTF-8, tiếp tục các kiểm tra còn lại thay vì dừng bằng traceback.
 - Công cụ kiểm tra báo lỗi rõ khi npm không cài được thư viện hoặc tên tệp test được chọn không tồn tại; không chạy một phần danh sách test rồi báo đạt.
 - Anchor Markdown xử lý đúng tiêu đề trùng với hậu tố tự sinh của GitHub; kết quả phân tích tệp đích được dùng chung trong một lượt kiểm tra và làm mới ở lượt sau.
 - Validator báo lỗi JSON của manifest, ruleset và ngày hết hạn thiếu múi giờ; quy tắc không viết mã nhúng hoặc lệnh nhiều dòng trong workflow cũng áp dụng cho bước bắt đầu bằng `- run:`.
 - Liên kết huy hiệu workflow mở đúng tệp trên `main`; README nêu rõ kết quả huy hiệu khi Actions tắt, phạm vi kiểm tra tại máy và cách chọn tệp test.
+
+### ⚡ TỐI ƯU
+
+- Lệnh đồng bộ tệp dùng chung đọc một cây Git tại commit cố định thay vì dò riêng từng tệp; phản hồi bị cắt thì dò từng đường dẫn, lần chạy sau đọc lại GitHub.
 
 ### ✨ THÊM
 
@@ -23,7 +31,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 - `validate.py` kiểm tra: định dạng, mã hóa, xuống dòng từng loại tệp; liên kết nội bộ (cả mục `#…`, liên kết mã hóa phần trăm); tiêu đề viết hoa; chữ trên huy hiệu tiếng Anh, hoa đầu mỗi từ; biểu mẫu Issue, Discussion; nhãn (đủ nhãn mặc định của GitHub); workflow (ghim SHA, quyền tối thiểu, không viết `${{ … }}` trong `run:`, `concurrency`, `timeout-minutes`, không viết kiểm tra trong YAML); ruleset; bảng ADR và đủ mục của từng ADR; tên tự đặt camelCase (cú pháp của ngôn ngữ giữ nguyên); tài liệu khớp code (lệnh `make`, đường dẫn, hàm được nhắc tới; `README.md` liệt kê đủ lệnh, script, workflow); người quản trị khớp `scripts/orgsetup/teams.py` và danh sách bỏ qua của ruleset; `devEngines` của `package.json` khớp `.nvmrc`; `security.txt` (báo trước 30 ngày khi sắp hết hạn); liên kết trong `CHANGELOG.md` là URL tuyệt đối.
 - `make links`: liên kết bên ngoài còn hoạt động (thử IPv4 trước, thử lại khi máy chủ lỗi tạm thời; máy chủ ngắt kết nối hay trả phản hồi sai dạng thì báo liên kết đó, không dừng cả lượt) và bản `security.txt` trên website khớp repository. `make forms`: GitHub chấp nhận biểu mẫu trên một branch. `make versions`: công cụ trong `mise.toml` có bản mới.
 - `make org-preview` (`org-setup.py preview`): xem trước cùng lúc việc áp dụng tệp dùng chung, cài đặt, ruleset, team, nhãn lên mọi repository và cài đặt tổ chức; các lệnh trong `scripts/orgsetup/` đọc GitHub song song, ghi tuần tự. Lệnh `files` thêm tệp phiên bản cho workflow mẫu: `.nvmrc` (Node.js CI), `.python-version` (Python CI).
-- `make release-pr`: chuẩn bị và mở Pull Request phát hành tại máy khi GitHub Actions tắt; GitHub từ chối commit thì xóa branch phát hành vừa tạo để lần sau làm lại.
+- `make release-pr`: chuẩn bị và mở Pull Request phát hành tại máy khi GitHub Actions tắt; GitHub từ chối commit thì thử xóa branch phát hành vừa tạo và báo kết quả để lần sau làm lại.
 - Huy hiệu đầu `README.md`: kết quả `validate.yml` và CodeQL trên `main`, phiên bản phát hành, commit gần nhất, Conventional Commits, code style (Prettier, Ruff), giấy phép.
 - Workflow mẫu `docs-check.yml`, `go-ci.yml` gọi `check-markdown-links.py`, `check-gofmt.py` của tổ chức (tệp Go sai cú pháp thì báo đúng tệp, dòng, cột; đọc đúng tên tệp tiếng Việt; anchor tiêu đề tính đúng như GitHub, kể cả tiêu đề có emoji hoặc liên kết; bỏ qua `vendor/`).
 

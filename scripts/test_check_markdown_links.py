@@ -19,6 +19,22 @@ except ModuleNotFoundError:
 
 
 class MarkdownLinksTest(unittest.TestCase):
+	def testUnreadableMarkdownReturnsFailure(self):
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'target.md'
+			path.write_bytes(b'\xff\n')
+			output = io.StringIO()
+			with (
+				mock.patch.object(module, 'markdownFiles', return_value=[path]),
+				contextlib.redirect_stdout(output),
+			):
+				self.assertEqual(module.main(), 1)
+			self.assertIn('không đọc được Markdown', output.getvalue())
+			messages = module.findBrokenLinks(Path(folder) / 'source.md', '[x](target.md#a)')
+			self.assertEqual(len(messages), 1)
+			self.assertIn('không đọc được Markdown', messages[0])
+
 	def testMainSharesAnchorsAndRefreshesNextRun(self):
 		module = loadScript('check-markdown-links')
 		with tempfile.TemporaryDirectory() as folder:

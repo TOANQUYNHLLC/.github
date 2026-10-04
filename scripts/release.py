@@ -11,8 +11,8 @@ không có commit kể từ tag trước; báo lỗi khi có commit mà mục CH
 $GITHUB_OUTPUT cho workflow monthly-release.yml. --open-pr (make release-pr, khi GitHub Actions tắt): làm tiếp
 open-pr tại máy rồi trả CHANGELOG.md về như cũ — chỉ chạy trên main sạch, trùng origin/main.
 open-pr: tạo branch release/vYYYY.MM, commit CHANGELOG.md qua GraphQL createCommitOnBranch (GitHub ký, thỏa
-quy tắc commit có chữ ký) rồi mở Pull Request; branch đã có thì bỏ qua; commit lỗi thì xóa branch vừa tạo để
-lần chạy sau làm lại.
+quy tắc commit có chữ ký) rồi mở Pull Request; branch đã có thì chỉ bỏ qua khi có Pull Request đang mở;
+commit lỗi thì thử xóa branch vừa tạo và báo kết quả để lần chạy sau làm lại.
 create: workflow release.yml (và workflow mẫu release.yml của repository khác, với --changelog CHANGELOG.md
 --allow-generated-notes) gọi khi đẩy tag v*; khi GitHub Actions tắt, người quản trị chạy tại máy.
 """
@@ -29,6 +29,8 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from orgsetup import github
+
 ROOT = Path(__file__).resolve().parents[1]
 TIMEZONE = ZoneInfo('Asia/Ho_Chi_Minh')
 DEFAULT_REPOSITORY = 'TOANQUYNHLLC/.github'
@@ -37,10 +39,6 @@ UNRELEASED = re.compile(
 	re.MULTILINE | re.DOTALL,
 )
 VERSION_HEADING = re.compile(r'^## \[(?P<name>[^\]]+)\].*$', re.MULTILINE)
-COMMIT_MUTATION = (
-	'mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) '
-	'{ commit { oid } } }'
-)
 
 
 def releaseNotes(changelog, version):
@@ -167,14 +165,36 @@ def openReleasePullRequest(version, previous, commits):
 	base = runCommand('git', 'rev-parse', 'HEAD')
 	branch = f'release/{version.removesuffix(".Stable")}'
 	title = f'chore(release): phát hành {version}'
-	exists = subprocess.run(
-		['gh', 'api', f'repos/{repository}/branches/{branch}', '--silent'],
-		capture_output=True,
-		check=False,
-	)
-	if exists.returncode == 0:
-		reportMessage('notice', f'Branch {branch} đã có — Pull Request phát hành đang chờ, bỏ qua.')
-		return 0
+	try:
+		exists = github.ghExists(f'repos/{repository}/branches/{branch}')
+		if exists:
+			pullRequests = github.ghJson(
+				'pr',
+				'list',
+				'--repo',
+				repository,
+				'--base',
+				'main',
+				'--head',
+				branch,
+				'--state',
+				'open',
+				'--json',
+				'url',
+			)
+	except (RuntimeError, json.JSONDecodeError) as exc:
+		reportMessage('error', f'Không đọc được trạng thái phát hành {branch}: {exc}')
+		return 1
+	if exists:
+		if pullRequests:
+			reportMessage('notice', f'Pull Request phát hành đang chờ: {pullRequests[0]["url"]}')
+			return 0
+		reportMessage(
+			'error',
+			f'Branch {branch} đã có nhưng chưa có Pull Request đang mở — kiểm tra nội dung và mở tay: '
+			f'https://github.com/{repository}/compare/main...{branch}?expand=1',
+		)
+		return 1
 	try:
 		runCommand(
 			'gh',
@@ -191,7 +211,7 @@ def openReleasePullRequest(version, previous, commits):
 		return 1
 	contents = base64.b64encode((ROOT / 'CHANGELOG.md').read_bytes()).decode('ascii')
 	body = {
-		'query': COMMIT_MUTATION,
+		'query': github.COMMIT_MUTATION,
 		'variables': {
 			'input': {
 				'branch': {'repositoryNameWithOwner': repository, 'branchName': branch},
@@ -204,8 +224,8 @@ def openReleasePullRequest(version, previous, commits):
 	try:
 		runCommand('gh', 'api', 'graphql', '--input', '-', '--silent', stdin=json.dumps(body))
 	except subprocess.CalledProcessError as exc:
-		# Branch còn lại mà không có commit phát hành thì lần chạy sau bỏ qua vì "branch đã có" — xóa đi.
-		subprocess.run(
+		# Xóa branch vừa tạo nếu commit lỗi; giữ nguyên lỗi xóa để người vận hành kiểm tra khi chạy lại.
+		deleted = subprocess.run(
 			[
 				'gh',
 				'api',
@@ -215,12 +235,17 @@ def openReleasePullRequest(version, previous, commits):
 				'--silent',
 			],
 			capture_output=True,
+			text=True,
 			check=False,
+		)
+		cleanup = (
+			'đã xóa branch, sửa lỗi rồi chạy lại.'
+			if deleted.returncode == 0
+			else f'chưa xóa được branch ({deleted.stderr.strip()}) — kiểm tra branch trên GitHub trước khi chạy lại.'
 		)
 		reportMessage(
 			'error',
-			f'Không commit được CHANGELOG.md lên {branch}: {exc.stderr.strip()} — đã xóa branch, '
-			'sửa lỗi rồi chạy lại.',
+			f'Không commit được CHANGELOG.md lên {branch}: {exc.stderr.strip()} — {cleanup}',
 		)
 		return 1
 	description = (
@@ -260,8 +285,8 @@ def openReleasePullRequest(version, previous, commits):
 	url = f'https://github.com/{repository}/compare/main...{branch}?expand=1'
 	reportMessage(
 		'error',
-		'Chưa mở được Pull Request (GitHub Actions cần quyền Allow GitHub Actions to create and '
-		f'approve pull requests). Mở tay: {url}',
+		f'Chưa mở được Pull Request: {created.stderr.strip()}. Khi dùng GITHUB_TOKEN, kiểm tra quyền '
+		f'Allow GitHub Actions to create and approve pull requests. Mở tay: {url}',
 	)
 	summary = os.environ.get('GITHUB_STEP_SUMMARY')
 	if summary:

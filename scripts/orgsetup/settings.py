@@ -261,9 +261,9 @@ def syncSecurity(repo, current, apply):
 
 	def securityStatus(endpoint):
 		"""True/False theo trạng thái bật; lỗi đọc thì trả lỗi để báo theo thứ tự."""
-		if endpoint in STATUS_ONLY_ENDPOINTS:
-			return github.ghExists(f'repos/{github.ORG}/{repo}/{endpoint}')
 		try:
+			if endpoint in STATUS_ONLY_ENDPOINTS:
+				return github.ghExists(f'repos/{github.ORG}/{repo}/{endpoint}')
 			return bool(
 				(github.ghJson('api', f'repos/{github.ORG}/{repo}/{endpoint}') or {}).get('enabled')
 			)
