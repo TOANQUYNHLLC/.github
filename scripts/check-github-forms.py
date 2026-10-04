@@ -14,6 +14,7 @@ import re
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -59,7 +60,9 @@ def fetchPage(url, attempts=3):
 
 
 def templateData(ref, relative):
-	page = fetchPage(f'https://github.com/{REPOSITORY}/blob/{ref}/{relative}')
+	# Mã hoá phần đường dẫn: tên branch có thể chứa #, %… (git cho phép) — ghép thẳng thì URL bị cắt, đọc nhầm trang.
+	path = urllib.parse.quote(f'{ref}/{relative}', safe='/')
+	page = fetchPage(f'https://github.com/{REPOSITORY}/blob/{path}')
 	match = EMBEDDED.search(page)
 	if not match:
 		return None
