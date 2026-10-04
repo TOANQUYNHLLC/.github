@@ -49,6 +49,7 @@ WORKFLOW_GENERAL_CATEGORIES = {
 }
 # Email liên hệ chung của công ty — mọi tài liệu phải dùng đúng địa chỉ này.
 COMPANY_EMAIL = 'toanquynhvn@gmail.com'
+EMAIL = re.compile(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}')
 # Nhãn mặc định GitHub tạo cho repository mới — bộ nhãn chuẩn phải có đủ để không mất nhãn quen thuộc.
 GITHUB_DEFAULT_LABELS = (
 	'bug',
@@ -117,6 +118,7 @@ YAML_BATCH = (
 yamlCache = {}
 # Danh sách tệp và nội dung tệp của lượt runChecks() đang chạy (xóa ở đầu mỗi lượt).
 trackedCache = []
+bytesCache = {}
 textCache = {}
 # Kết quả đọc theo nội dung tệp, giữ qua các lần runChecks() trong cùng tiến trình (bộ test chạy validate hàng
 # trăm lần): tệp không đổi thì không gọi lại Ruby.
@@ -125,7 +127,7 @@ yamlResults = {}
 
 def readYamlFiles(paths):
 	"""Đọc nhiều tệp YAML trong một lần gọi Ruby; mỗi tệp trả {"data": …} hoặc {"error": …}."""
-	keys = {str(path): hashlib.sha256(Path(path).read_bytes()).hexdigest() for path in paths}
+	keys = {str(path): hashlib.sha256(readBytes(path)).hexdigest() for path in paths}
 	missing = [str(path) for path in paths if keys[str(path)] not in yamlResults]
 	if missing:
 		result = subprocess.run(
@@ -173,11 +175,24 @@ def trackedFiles():
 	return trackedCache
 
 
+def readBytes(path):
+	"""Nội dung tệp dạng byte, đọc từ đĩa một lần mỗi lượt runChecks() — nhiều luật cùng đọc một tệp."""
+	key = str(path)
+	if key not in bytesCache:
+		bytesCache[key] = Path(path).read_bytes()
+	return bytesCache[key]
+
+
+def decodeText(data, errors='strict'):
+	"""Giải mã UTF-8 và đổi mọi kiểu xuống dòng thành \n — giống Path.read_text()."""
+	return data.decode('utf-8', errors).replace('\r\n', '\n').replace('\r', '\n')
+
+
 def readText(path):
-	"""Nội dung tệp (UTF-8), đọc một lần mỗi lượt runChecks() — nhiều luật cùng đọc một tệp."""
+	"""Nội dung tệp (UTF-8) như Path.read_text(), giải mã một lần mỗi lượt runChecks()."""
 	key = str(path)
 	if key not in textCache:
-		textCache[key] = Path(path).read_text(encoding='utf-8')
+		textCache[key] = decodeText(readBytes(path))
 	return textCache[key]
 
 
@@ -294,7 +309,7 @@ def lineNumber(text, offset):
 
 
 def checkText(path):
-	data = path.read_bytes()
+	data = readBytes(path)
 	name = path.name
 	if name.endswith(UTF16_SUFFIXES):
 		if not data.startswith(b'\xff\xfe'):
@@ -719,10 +734,11 @@ def checkConventions():
 			errors.append(f'scripts/conventions.py: {name} {where} "{word}" so với CONTRIBUTING.md')
 
 
-def importedNames(tree):
-	"""Tên được import trong tệp → đường dẫn đầy đủ (import http.server → http; from x import y → x.y)."""
+def importedNames(nodes):
+	"""Tên được import trong tệp (nodes: mọi nút của cây cú pháp) → đường dẫn đầy đủ (import http.server → http;
+	from x import y → x.y)."""
 	names = {}
-	for node in ast.walk(tree):
+	for node in nodes:
 		if isinstance(node, ast.Import):
 			for alias in node.names:
 				names[alias.asname or alias.name.split('.')[0]] = (
@@ -760,13 +776,13 @@ def resolveObject(dotted):
 	return None
 
 
-def libraryMethods(tree):
+def libraryMethods(nodes):
 	"""Phương thức mang tên do thư viện quy định: ghi đè phương thức có sẵn ở lớp cha của thư viện (log_message,
 	__init__…) hoặc đặt theo mẫu tên thư viện gọi (LIBRARY_NAME_PATTERNS: do_GET, http_open…) — tên đó không do
 	người viết đặt nên không áp quy tắc camelCase, kể cả tham số theo chữ ký của lớp cha."""
-	imports = importedNames(tree)
+	imports = importedNames(nodes)
 	methods = set()
-	for node in ast.walk(tree):
+	for node in nodes:
 		if not isinstance(node, ast.ClassDef):
 			continue
 		inherited, patterns = set(), []
@@ -802,9 +818,11 @@ def nameProblems(text):
 		tree = ast.parse(text)
 	except SyntaxError:
 		return None
-	required = libraryMethods(tree)
+	# Duyệt cây một lần, ba bước dùng chung danh sách nút.
+	nodes = list(ast.walk(tree))
+	required = libraryMethods(nodes)
 	problems = []
-	for node in ast.walk(tree):
+	for node in nodes:
 		# Phương thức ghi đè lớp cha của thư viện: cả tên lẫn tham số theo chữ ký thư viện quy định.
 		if node in required:
 			continue
@@ -1080,6 +1098,8 @@ def checkAdrIndex():
 
 def checkSpaceOnly(path, text):
 	"""Ngôn ngữ bắt buộc dấu cách (4 hoặc 2 mỗi cấp theo formatter chính thức): không dùng tab."""
+	if '\t' not in text:
+		return
 	width = 2 if path.suffix in TWO_SPACE_SUFFIXES else 4
 	inFence = False
 	for number, line in enumerate(text.split('\n'), start=1):
@@ -1223,9 +1243,11 @@ def configLabels():
 
 
 def checkEmails(path, text):
-	for email in set(
-		re.findall(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}', text)
-	):
+	# Email không vắt qua hai dòng: chỉ quét các dòng có "@" (nhanh gấp vài lần quét cả tệp, cùng kết quả).
+	if '@' not in text:
+		return
+	lines = '\n'.join(line for line in text.split('\n') if '@' in line)
+	for email in set(EMAIL.findall(lines)):
 		if email.lower() != COMPANY_EMAIL:
 			error(path, f'email "{email}" khác email chung của công ty ({COMPANY_EMAIL})')
 
@@ -1268,7 +1290,7 @@ def checkChangelog(path, text):
 
 def checkScriptLanguage(path):
 	"""Script không viết bằng Python phải nêu lý do ngôn ngữ khác xử lý tốt hơn trong 10 dòng đầu."""
-	head = '\n'.join(path.read_text(encoding='utf-8', errors='replace').split('\n')[:10])
+	head = '\n'.join(decodeText(readBytes(path), 'replace').split('\n')[:10])
 	if not re.search(rf'{re.escape(NOT_PYTHON_REASON)}\s*\S', head):
 		error(
 			path,
@@ -1278,7 +1300,7 @@ def checkScriptLanguage(path):
 
 
 def checkShell(path):
-	data = path.read_bytes()
+	data = readBytes(path)
 	if b'\r' in data:
 		error(path, 'shell script phải dùng LF')
 	if not data.startswith(b'#!'):
@@ -1397,6 +1419,7 @@ def runChecks():
 	FORM_LABELS.clear()
 	yamlCache.clear()
 	trackedCache.clear()
+	bytesCache.clear()
 	textCache.clear()
 	for file in trackedFiles():
 		checkFile(file)

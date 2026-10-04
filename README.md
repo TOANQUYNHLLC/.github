@@ -1,6 +1,7 @@
 # 🏢 CÔNG TY TNHH TOÀN QUỲNH
 
 [![Checks](https://img.shields.io/github/actions/workflow/status/TOANQUYNHLLC/.github/validate.yml?branch=main&label=Checks&logo=githubactions&logoColor=white)](https://github.com/TOANQUYNHLLC/.github/actions/workflows/validate.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/TOANQUYNHLLC/.github/codeql.yml?branch=main&label=CodeQL&logo=github&logoColor=white)](https://github.com/TOANQUYNHLLC/.github/actions/workflows/codeql.yml)
 [![Release](https://img.shields.io/github/v/release/TOANQUYNHLLC/.github?label=Release&logo=github)](https://github.com/TOANQUYNHLLC/.github/releases/latest)
 [![Last Commit](https://img.shields.io/github/last-commit/TOANQUYNHLLC/.github/main?label=Last%20Commit&logo=git&logoColor=white)](https://github.com/TOANQUYNHLLC/.github/commits/main)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-fe5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org/en/v1.0.0/)
@@ -68,7 +69,7 @@ GitHub chỉ kế thừa `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`,
 | [`rulesets/`](rulesets/)                         | Ruleset **Protect Main**, **Protect Release Tags** (cấp repository) và bản cấp tổ chức, push ruleset **Protect Pushes** — xem [`rulesets/README.md`](rulesets/README.md)                                                                                                                    |
 | [`labels.yml`](labels.yml)                       | Bộ nhãn chuẩn: nhãn mặc định của GitHub, loại thay đổi (khớp tiền tố branch), phạm vi `area: …`, mức độ ưu tiên, trạng thái xử lý, nhãn Dependabot                                                                                                                                          |
 
-**Workflow của repository này** — GitHub Actions của repository đang tắt: huy hiệu **Checks** ở đầu trang hiện kết quả lần chạy gần nhất, kiểm tra thực tế chạy tại máy (`make check` trước mỗi lần đẩy); việc thay thế xem mục **PHÁT HÀNH** → _Khi GitHub Actions tắt_
+**Workflow của repository này** — huy hiệu **Checks**, **CodeQL** ở đầu trang là kết quả `validate.yml`, `codeql.yml` trên `main`; cùng các kiểm tra đó chạy tại máy bằng `make check` (hook `pre-push`). Khi GitHub Actions tắt, việc thay thế xem mục **PHÁT HÀNH** → _Khi GitHub Actions tắt_
 
 | Đường dẫn                                                                                                                                     | Chức năng                                                                                                                           |
 | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -203,12 +204,12 @@ Phát hành vào **ngày 1 hằng tháng**, chỉ khi có commit mới kể từ
 2. Xem trước nội dung: `make release-notes TAG=v2026.11.Stable`; hợp nhất Pull Request bằng **Squash** hoặc **Merge**.
 3. Người quản trị gắn và đẩy tag trên `main` (ruleset **Protect Release Tags** chỉ cho người quản trị tạo tag `v*`): `git tag v2026.11.Stable && git push origin v2026.11.Stable` — workflow [`release.yml`](.github/workflows/release.yml) tạo GitHub Release. Tổ chức bật **Immutable releases**: Release đã phát hành không dời được tag, không dùng lại được tên tag.
 
-**Khi GitHub Actions tắt** (tiết kiệm chi phí), mọi việc định kỳ vẫn có người làm:
+**Khi GitHub Actions tắt** (ví dụ để tiết kiệm chi phí), mọi việc định kỳ vẫn có người làm:
 
 - Kiểm tra: hook `pre-push` chạy `make check` trước mỗi lần đẩy.
 - Hợp nhất: kiểm tra bắt buộc của ruleset **Protect Main** không có lượt chạy để báo kết quả, nên chỉ người quản trị (danh sách bỏ qua của ruleset) hợp nhất được Pull Request — sau khi `make check` đã đạt tại máy.
 - Liên kết, phiên bản công cụ, cài đặt trên GitHub: hook sau `git pull` chạy `make links`, `make versions`, `make org-preview`.
-- Routine Claude Code (claude.ai/code/routines): **Nhắc phát hành hằng tháng** (08:00 ngày 1) báo có cần phát hành không; **Kiểm tra biểu mẫu hằng tháng** (09:00 ngày 1) chạy `check-github-forms.py`. Môi trường đám mây chặn mạng ra ngoài github.com và không có GitHub CLI đã đăng nhập, nên phần còn lại chạy tại máy.
+- Routine Claude Code (claude.ai/code/routines, người quản trị bật khi tắt Actions): **Nhắc phát hành hằng tháng** (08:00 ngày 1) báo có cần phát hành không; **Kiểm tra biểu mẫu hằng tháng** (09:00 ngày 1) chạy `check-github-forms.py`. Môi trường đám mây chặn mạng ra ngoài github.com và không có GitHub CLI đã đăng nhập, nên phần còn lại chạy tại máy.
 - Phát hành: `git switch main && git pull --ff-only && make release-pr` thay cho bước 1; sau bước 3 tạo Release bằng `python3 scripts/release.py create v2026.11.Stable`.
 
 ---
