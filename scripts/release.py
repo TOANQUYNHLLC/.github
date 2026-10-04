@@ -1,7 +1,7 @@
 """Phát hành theo CHANGELOG.md (định dạng Keep a Changelog).
 
 Chạy:
-	python3 scripts/release.py notes <tag>                    # in nội dung mục ## [<tag>] (make release-notes)
+	python3 scripts/release.py notes <tag>                    # in nội dung mục ## [<tag>] (make release-notes); tag đã phát hành: liên kết GitHub Release
 	python3 scripts/release.py prepare [--version] [--date] [--channel] [--open-pr] # chuẩn bị phiên bản
 	python3 scripts/release.py open-pr <phiên bản> <tag trước> <số commit>   # Pull Request phát hành
 	python3 scripts/release.py create <tag> [--allow-generated-notes]       # tạo GitHub Release
@@ -30,6 +30,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import urllib.parse
 from datetime import date as CalendarDate
 from datetime import datetime
 from pathlib import Path
@@ -438,6 +439,20 @@ def createRelease(tag, changelogPath, allowGeneratedNotes):
 
 def printNotes(tag, changelogPath):
 	notes = releaseNotes(changelogPath.read_text(encoding='utf-8'), tag)
+	published = subprocess.run(
+		['git', 'rev-parse', '--quiet', '--verify', f'refs/tags/{tag}'],
+		cwd=ROOT,
+		capture_output=True,
+		check=False,
+	)
+	if not notes and published.returncode == 0:
+		# CHANGELOG.md không giữ mục của phiên bản đã phát hành — nội dung nằm ở GitHub Release.
+		repository = os.environ.get('GITHUB_REPOSITORY') or DEFAULT_REPOSITORY
+		print(
+			f'{tag} đã phát hành; {changelogPath.name} không giữ mục của phiên bản đã phát hành — nội dung xem '
+			f'tại https://github.com/{repository}/releases/tag/{urllib.parse.quote(tag)}'
+		)
+		return 0
 	if not notes:
 		print(
 			f'{changelogPath.name} chưa có mục ## [{tag}] — hãy chuyển nội dung CHƯA PHÁT HÀNH thành '
