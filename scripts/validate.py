@@ -52,6 +52,10 @@ WORKFLOW_GENERAL_CATEGORIES = {
 }
 # Email liên hệ chung của công ty — mọi tài liệu phải dùng đúng địa chỉ này.
 COMPANY_EMAIL = 'toanquynhvn@gmail.com'
+# Tag phát hành: Stable.vYYYY.MM.DDXXXX, Beta.vYYYY.MM.DDXXXX (ADR 0014) và tag vYYYY.MM.Stable đã phát hành.
+RELEASE_TAG = re.compile(
+	r'(Stable|Beta)\.v[0-9]{4}\.(0[1-9]|1[0-2])\.[0-9]{6}|v[0-9]{4}\.(0[1-9]|1[0-2])\.Stable'
+)
 EMAIL = re.compile(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}')
 # Nhãn mặc định GitHub tạo cho repository mới — bộ nhãn chuẩn phải có đủ để không mất nhãn quen thuộc.
 GITHUB_DEFAULT_LABELS = (
@@ -1463,6 +1467,17 @@ def checkChangelog(path, text):
 		error(path, 'mục đầu tiên phải là "## [CHƯA PHÁT HÀNH]"')
 	if len(versions) != len(set(versions)):
 		error(path, 'có phiên bản bị lặp')
+	# Liên kết CHƯA PHÁT HÀNH so sánh từ tag phát hành gần nhất tới HEAD (release.py ghi như vậy khi chuẩn bị phát
+	# hành); gốc là tên branch (main…HEAD) thì trang so sánh luôn rỗng.
+	unreleased = re.search(
+		r'^## \[CHƯA PHÁT HÀNH\]\([^)]*/compare/([^)]+)\.\.\.HEAD\)', text, re.MULTILINE
+	)
+	if unreleased and not RELEASE_TAG.fullmatch(unreleased.group(1)):
+		error(
+			path,
+			f'liên kết CHƯA PHÁT HÀNH phải so sánh từ tag phát hành (Stable.v…, Beta.v…, v…) tới HEAD, '
+			f'không phải "{unreleased.group(1)}"',
+		)
 	checkAbsoluteLinks(path, text, 'mỗi mục thành nội dung GitHub Release')
 
 

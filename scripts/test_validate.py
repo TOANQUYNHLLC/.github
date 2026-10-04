@@ -260,6 +260,15 @@ class ValidateTest(unittest.TestCase):
 			code = cls.validator.main()
 		return code, output.getvalue()
 
+	def testChangelogUnreleasedComparesFromReleaseTag(self):
+		# So sánh từ tên branch (main...HEAD) luôn rỗng; phải từ tag phát hành gần nhất.
+		self.editRegex('CHANGELOG.md', r'compare/[^)]+\.\.\.HEAD\)', 'compare/main...HEAD)')
+		self.assertFails('liên kết CHƯA PHÁT HÀNH phải so sánh từ tag phát hành')
+		for tag in ('Stable.v2026.11.010001', 'Beta.v2026.11.150002', 'v2026.10.Stable'):
+			self.editRegex('CHANGELOG.md', r'compare/[^)]+\.\.\.HEAD\)', f'compare/{tag}...HEAD)')
+			code, output = self.runValidate()
+			self.assertEqual(code, 0, output)
+
 	def testEditedValidatorRecomputesCachedResults(self):
 		# runValidate chỉ giữ kết quả kiểm tra tên, đọc YAML qua lần nạp lại khi validate.py không đổi: sửa luật trong
 		# validate.py thì phải tính lại theo luật mới, không dùng kết quả của luật cũ.
