@@ -28,7 +28,8 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                # Sửa theo ngôn ngữ của dự án; giữ actions vì repository nào cũng có workflow.
+                # Sửa theo ngôn ngữ của dự án; giữ actions vì repository nào cũng có workflow. Bỏ ngôn ngữ dự án
+                # không có mã — CodeQL báo lỗi "not any written in …" khi push lên nhánh chính.
                 # build-mode "none" (không cần build): actions, ngôn ngữ thông dịch, c-cpp, csharp, java-kotlin
                 # (chỉ Java), rust; "autobuild": go, swift, java-kotlin có Kotlin.
                 include:
