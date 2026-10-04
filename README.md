@@ -125,7 +125,7 @@ Workflow gắn nhãn dùng `pull_request_target` theo [hướng dẫn của acti
 | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | [`docs/adr/`](docs/adr/)                                                                                                   | Bản ghi các quyết định kiến trúc đang có hiệu lực và lý do |
 | [`AGENTS.md`](AGENTS.md) · [`CLAUDE.md`](CLAUDE.md) · [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | Hướng dẫn cho AI coding agent và GitHub Copilot            |
-| [`CHANGELOG.md`](CHANGELOG.md)                                                                                             | Nhật ký thay đổi theo phiên bản                            |
+| [`CHANGELOG.md`](CHANGELOG.md)                                                                                             | Khung nội dung cho phiên bản chuẩn bị phát hành            |
 | [`LICENSE`](LICENSE)                                                                                                       | Giấy phép MIT cho nội dung của repository này              |
 
 ---
@@ -158,7 +158,7 @@ Chạy toàn bộ kiểm tra giống GitHub Actions trên Pull Request (trừ Co
 make check
 ```
 
-Nếu npm không cài được thư viện, lượt kiểm tra dừng và giữ thông báo lỗi npm để xử lý phiên bản Node.js hoặc kết nối mạng. `make audit` cần truy cập registry npm; mất kết nối thì chỉ cảnh báo, cần chạy lại khi có mạng để xác minh dependency.
+`make check` chạy validator, tests, Prettier, Ruff, ShellCheck, actionlint, quy ước branch/commit và kiểm tra dependency. Các nhóm dùng chung cấu hình với GitHub Actions; CodeQL chạy trên GitHub. Validator đối chiếu định dạng, biểu mẫu, nhãn, ruleset, ADR, tên trong mã nguồn và tài liệu. Workflow `.yml` và `.yaml` đều được kiểm tra.
 
 Chạy riêng các tệp test bằng tên có hoặc không có `.py`:
 
@@ -166,23 +166,9 @@ Chạy riêng các tệp test bằng tên có hoặc không có `.py`:
 python3 scripts/run-tests.py test_check test_check_markdown_links.py
 ```
 
-Chỉ các tệp test được chọn được nạp; tên sai hoặc tệp không có test làm lệnh thất bại trước khi chạy. Lỗi import hoặc cú pháp trong tệp được chọn sẽ chạy lại đúng danh sách đó bằng unittest để báo lỗi đầy đủ. Không truyền tên thì chạy toàn bộ test.
+Không truyền tên thì chạy toàn bộ test. Tên sai, tệp không có test, lỗi import hoặc cú pháp đều làm lệnh thất bại. Bộ kiểm tra liên kết Markdown hỗ trợ anchor của GitHub, tiêu đề trùng, khối mã và mã nội tuyến; tệp đích được đọc một lần trong lượt kiểm tra, lượt sau đọc lại.
 
-Bộ kiểm tra liên kết Markdown dùng anchor giống GitHub, kể cả tiêu đề trùng với hậu tố tự sinh; mỗi tệp đích được phân tích một lần trong một lượt kiểm tra và được đọc lại ở lượt sau. Tệp không đọc được hoặc sai UTF-8 làm kiểm tra thất bại và báo tên tệp; `validate.py` tiếp tục đối chiếu các nội dung còn đọc được để báo lỗi cùng lượt.
-
-Khối mã dùng backtick hoặc dấu ngã (`~~~`) không tạo liên kết, tiêu đề hay lỗi thụt lề. Dấu đóng phải cùng loại và dài ít nhất bằng dấu mở; khối chưa đóng kéo dài đến cuối tệp. Bộ kiểm tra liên kết bỏ qua mã nội tuyến có cụm backtick đóng dài đúng bằng cụm mở, không ghép qua dòng trống. Backtick được escape ngoài mã vẫn là văn bản; backslash bên trong mã không escape dấu đóng. Chỉ mục dấu đóng tránh quét lại phần văn bản phía sau cho từng cụm không có dấu đóng. URL có scheme viết hoa, dấu `+` hoặc dạng `//máy-chủ/đường-dẫn` không bị coi là tệp cục bộ.
-
-`make conventions` kiểm tra tiêu đề có mô tả không trống, chỉ một dòng, tối đa 72 ký tự và không kết thúc bằng dấu chấm theo `CONTRIBUTING.md`. Lỗi đọc trạng thái Git làm kiểm tra thất bại; thiếu `origin/main` hoặc không có commit để so được báo rõ là bỏ qua. Khi lệnh `git log` đã thành công, script không dò lại ref. Chú thích lỗi trên Actions mã hóa ký tự `%` và xuống dòng trước khi in.
-
-Validator kiểm tra cấu trúc workflow, action và lệnh theo giá trị YAML đã phân tích, gồm khóa có dấu nháy, dạng `{run: …}` và [anchor/alias](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations#yaml-anchors-and-aliases). Biểu thức trong chú thích không phải nội dung lệnh. YAML chỉ đọc dữ liệu thông thường; alias tạo vòng lặp được báo ở tệp gây lỗi. Cấu hình JSON phải là object; các trường lồng nhau của biểu mẫu, Dependabot, release, ruleset, formatter và editor được kiểm tra kiểu trước khi đối chiếu. Trường hoặc phần tử sai kiểu được báo tại tệp, các kiểm tra còn lại tiếp tục chạy. Kết quả đọc cấu hình chỉ dùng lại trong cùng lượt kiểm tra và được làm mới ở lượt sau.
-
-Workflow đuôi `.yml` và `.yaml` đều được actionlint kiểm tra, đối chiếu job với ruleset và yêu cầu liệt kê trong README.
-
-`make links` báo riêng tệp không đọc được, sai UTF-8 hoặc URL sai dạng và vẫn kiểm tra các liên kết còn lại. Mỗi tệp được đọc một lần trong lượt chạy; GET so nội dung `security.txt` tại URL Canonical đồng thời xác nhận liên kết hoạt động, không cần HEAD riêng. Canonical chỉ nhận HTTP(S); nội dung trên đĩa được đọc lại ở lượt sau.
-
-`make forms` báo lỗi từng biểu mẫu khi cấu trúc dữ liệu nhúng trên trang GitHub thay đổi hoặc GitHub đánh dấu biểu mẫu không hợp lệ; không có biểu mẫu để kiểm tra thì lệnh thất bại. `make versions` yêu cầu phiên bản số chính xác của các công cụ được theo dõi trong `mise.toml` trước khi gọi mạng; phản hồi thiếu hoặc sai dạng `tag_name` được báo cho công cụ đó. Script định dạng Go báo lỗi khi không chạy được `gofmt` hoặc công cụ thoát lỗi, kể cả không có nội dung stderr.
-
-Kiểm tra phiên bản dùng `GH_TOKEN`, rồi `GITHUB_TOKEN` nếu có; chỉ đọc token GitHub CLI khi môi trường chưa cung cấp. Token được đọc một lần và dùng chung cho các request trong lượt chạy, lượt sau đọc lại để nhận thay đổi đăng nhập.
+`make links` kiểm tra liên kết HTTP(S) và nội dung `security.txt` trên website; `make forms` xác minh biểu mẫu trên GitHub; `make versions` đối chiếu công cụ với phiên bản phát hành mới nhất. Kiểm tra phiên bản ưu tiên `GH_TOKEN`, rồi `GITHUB_TOKEN`, sau đó token GitHub CLI; thông tin đăng nhập được đọc mới mỗi lượt. `make audit` cần kết nối registry npm; khi mất mạng, chạy lại để xác minh dependency. Lỗi cài thư viện npm làm kiểm tra dừng.
 
 | Lệnh                       | Tác dụng                                                                                     |
 | -------------------------- | -------------------------------------------------------------------------------------------- |
@@ -207,23 +193,19 @@ Kiểm tra phiên bản dùng `GH_TOKEN`, rồi `GITHUB_TOKEN` nếu có; chỉ 
 | `make release-prepare`     | Chuyển mục CHƯA PHÁT HÀNH thành phiên bản của tháng nếu có thay đổi kể từ tag trước          |
 | `make release-pr`          | Chuẩn bị rồi mở Pull Request phát hành tại máy (cần GitHub CLI, đứng ở `main` sạch)          |
 
-`scripts/org-setup.py files` tìm tệp dùng chung còn thiếu bằng [Git Trees API](https://docs.github.com/en/rest/git/trees#get-a-tree) tại một commit cố định và tạo branch từ cùng commit đó. Mỗi lần chạy đọc lại trạng thái GitHub; nếu API cắt danh sách cây, script dò từng đường dẫn tại cùng commit. Khi áp dụng, toàn bộ tệp thiếu được gửi trong một commit qua [`createCommitOnBranch`](https://github.blog/changelog/2021-09-13-a-simpler-api-for-authoring-commits/) để GitHub ký; `expectedHeadOid` chặn ghi nếu branch đã đổi. Commit thất bại thì không mở Pull Request; branch đã tạo được giữ lại để người quản trị kiểm tra.
+---
 
-Nhánh mặc định, SHA, trạng thái cắt cây, đường dẫn và loại phần tử phải đọc được trước khi lập kế hoạch thêm tệp. Tệp khai báo phụ thuộc được nhận diện từ tệp ở thư mục gốc; thư mục trùng tên manifest không làm sinh cấu hình cho ngôn ngữ đó.
+## ⚙️ ĐỒNG BỘ CẤU HÌNH
 
-Các phép dò sự tồn tại chỉ coi HTTP 404 là chưa có; lỗi quyền, giới hạn API và lỗi mạng được báo để tránh ghi dựa trên dữ liệu chưa đọc được. Lệnh `team` dừng trước khi ghi nếu không đọc được trạng thái; `settings` cảnh báo và bỏ qua tính năng bảo mật không đọc được trạng thái.
+[`scripts/org-setup.py`](scripts/org-setup.py) dùng GitHub CLI để quản lý tệp chung, cài đặt, ruleset, team và nhãn. Đăng nhập bằng `gh auth login`; chạy `make org-preview` để xem trước. Các lệnh mặc định chỉ đọc, thêm `--apply` để áp dụng; `--repo <tên>` giới hạn repository. Quy trình thiết lập repository xem [`ROADMAP.md`](ROADMAP.md).
 
-Cài đặt repository và tổ chức thiếu trường hoặc sai kiểu dừng trước khi PATCH cài đặt đó. Topics được lấy từ giá trị YAML của `keywords` trong `CITATION.cff`, hỗ trợ dấu nháy, chú thích và anchor/alias; dữ liệu sai chặn việc cập nhật topics. Quyền Actions chỉ được so và ghi khi đọc được trạng thái bật/tắt và các trường quyền bắt buộc; dữ liệu sai được cảnh báo theo endpoint, không suy ra trạng thái còn thiếu. Trạng thái bảo mật phải là boolean hoặc `enabled`/`disabled` đúng định dạng API; dữ liệu chưa rõ không được coi là đang tắt hoặc đã bật. Push protection được bỏ qua khi chưa đọc được secret scanning. Dependabot security updates chỉ được bật sau khi xác minh Dependabot alerts đã bật hoặc bật thành công trong cùng lượt.
+- **Tệp chung:** lệnh `files` lập kế hoạch từ cây Git tại một commit cố định, thêm tệp thiếu bằng commit do GitHub ký và mở Pull Request. Branch đổi trong lúc ghi hoặc commit thất bại thì không mở Pull Request.
+- **Cài đặt:** lệnh `settings` quản lý phương thức hợp nhất, bảo mật và quyền Actions; topics lấy từ `CITATION.cff`. Tính năng bảo mật chỉ được bật khi đọc được trạng thái và các tính năng phụ thuộc đã sẵn sàng.
+- **Ruleset:** đọc hết danh sách, xác minh tên, ID và cấu trúc chi tiết trước khi ghi trong từng repository hoặc cấp tổ chức. Đọc song song, ghi tuần tự; gói Free dùng GraphQL để đối chiếu cấp tổ chức. Cấu hình và cách áp dụng xem [`rulesets/README.md`](rulesets/README.md).
+- **Team:** chỉ thành viên `active` được coi là đã tham gia; lời mời `pending`, quyền tùy chỉnh chưa xếp hạng được hoặc dữ liệu chưa rõ chặn đồng bộ team. Quyền chuẩn đã cao hơn được giữ nguyên.
+- **Nhãn:** nguồn là `labels.yml`; tên không trống, không trùng khi bỏ qua hoa/thường, màu hex 6 ký tự và mô tả tối đa 100 ký tự. Phản hồi sai chặn ghi lên repository đó; nhãn riêng được giữ nguyên.
 
-Lệnh `team` chỉ coi thành viên có trạng thái `active` là đã tham gia. Lời mời đang `pending`, phản hồi thiếu hoặc sai trường và tên quyền tùy chỉnh chưa xếp hạng được làm lượt đồng bộ team dừng trước mọi thay đổi để người quản trị kiểm tra. Sau khi gửi lời mời mới, script đọc phản hồi và báo đang chờ chấp nhận nếu GitHub trả `pending`; chỉ xác nhận đã thêm maintainer khi vai trò và trạng thái đều đúng. Các quyền chuẩn đã cao hơn được giữ nguyên.
-
-Danh sách ruleset và nhãn được đọc đầy đủ bằng [phân trang của GitHub CLI](https://cli.github.com/manual/gh_api), mỗi trang REST tối đa 100 phần tử; lần chạy sau đọc lại GitHub. Lỗi trang sau không trả danh sách dở dang để ghi.
-
-Đồng bộ ruleset kiểm tra tên và ID không trùng trong danh sách REST; phản hồi chi tiết phải khớp cả tên lẫn ID đó. Với từng repository hoặc cấp tổ chức, script đọc chi tiết song song rồi kiểm tra các trường bắt buộc, kiểu cấu trúc điều kiện, quy tắc và danh sách bỏ qua của toàn bộ ruleset cần so trước lần ghi đầu tiên. Lỗi đọc hoặc dữ liệu sai chặn ghi trong phạm vi đó. Những thay đổi hợp lệ được ghi tuần tự theo thứ tự tệp nguồn; lỗi ở một lần ghi vẫn được cảnh báo riêng, các lần ghi trước không được tự hoàn tác. Actor `DeployKey` có ID `null`; ID của `OrganizationAdmin` được chuẩn hóa vì API bỏ qua giá trị này.
-
-Phép đối chiếu ruleset tổ chức qua GraphQL kiểm tra dữ liệu và trạng thái phân trang, kể cả quy tắc và danh sách bỏ qua. Trang có lỗi, thiếu trường, dữ liệu bị cắt, tên trùng hoặc trạng thái phân trang mâu thuẫn đều được báo chưa đọc đầy đủ, không kết luận ruleset đã đúng hay chưa có từ phản hồi đó.
-
-Lệnh đồng bộ nhãn đọc `labels.yml` bằng chế độ YAML an toàn như validator, hỗ trợ anchor/alias không tạo vòng lặp. Hai lệnh dùng chung kiểm tra schema: tên là chuỗi không trống và không trùng khi bỏ qua hoa/thường; màu là chuỗi hex 6 ký tự; mô tả tùy chọn là chuỗi tối đa 100 ký tự. YAML hoặc schema sai chặn lệnh trước khi đọc hay ghi GitHub. Phản hồi nhãn thiếu trường, sai kiểu hoặc trùng tên chặn việc ghi lên repository đó; mô tả `null` của API được coi là chuỗi rỗng. Nhãn riêng được giữ nguyên.
+Lỗi quyền, giới hạn API hoặc lỗi mạng được báo để tránh ghi dựa trên dữ liệu chưa đọc được; chỉ HTTP 404 được coi là chưa có tài nguyên. Dữ liệu được đọc mới mỗi lượt. Các lần ghi đã thành công không được tự hoàn tác nếu một lần ghi sau thất bại.
 
 ---
 
@@ -238,30 +220,27 @@ Khi cập nhật nội dung, cần bảo đảm:
 - Không lưu trữ mật khẩu, mã truy cập, khóa API hoặc dữ liệu bảo mật.
 - Tài liệu khớp với code sau mỗi thay đổi ([ADR 0013](docs/adr/0013-docs-match-code.md)).
 - `make check` chạy thành công trước khi đưa lên nhánh chính.
-- Thay đổi đáng chú ý được ghi vào [`CHANGELOG.md`](CHANGELOG.md).
+- Nội dung dành cho người sử dụng được chuẩn bị trong [`CHANGELOG.md`](CHANGELOG.md) khi phát hành phiên bản.
 - Tuân thủ quy định pháp luật và các chính sách của GitHub.
 
 ---
 
 ## 🚀 PHÁT HÀNH
 
-Phát hành vào **ngày 1 hằng tháng**, chỉ khi có commit mới kể từ tag phát hành trước; phiên bản đặt theo tháng (`vYYYY.MM.Stable`).
+Phiên bản có dạng `vYYYY.MM.Stable`, phát hành ngày 1 hằng tháng khi có commit mới kể từ tag trước. [`CHANGELOG.md`](CHANGELOG.md) là khung chuẩn bị nội dung phiên bản; điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH** trước khi chuẩn bị phát hành. Mục này trống thì script báo lỗi. Tệp có thể chỉ chứa khung hiện tại; nội dung các phiên bản đã công bố xem trên [GitHub Releases](https://github.com/TOANQUYNHLLC/.github/releases).
 
-Lệnh `prepare` kiểm tra phiên bản có năm, tháng hợp lệ và ngày phát hành có thật theo dạng `YYYY-MM-DD` trước khi gọi Git hoặc sửa `CHANGELOG.md`; `open-pr` cũng kiểm tra phiên bản trước khi đọc hay ghi GitHub. Các lệnh `notes` và `create` nhận tag của nội dung phát hành cần đọc, kể cả khi dùng workflow mẫu cho repository khác. Phản hồi danh sách Pull Request thiếu hoặc sai kiểu được báo lỗi; chỉ xác nhận đang chờ khi đọc được URL không trống.
+1. Workflow [`monthly-release.yml`](.github/workflows/monthly-release.yml) chạy lúc 07:00 ngày 1 (giờ Việt Nam): chuyển nội dung đã chuẩn bị thành phiên bản của tháng và mở Pull Request `release/vYYYY.MM`. Có thể chạy tay tại **Actions → Chuẩn bị phát hành hằng tháng → Run workflow**.
+2. Xem trước bằng `make release-notes TAG=v2026.11.Stable`; đánh giá và hợp nhất Pull Request bằng **Squash** hoặc **Merge**.
+3. Người quản trị gắn tag trên `main`: `git tag v2026.11.Stable && git push origin v2026.11.Stable`. Workflow [`release.yml`](.github/workflows/release.yml) tạo GitHub Release. Với lần phát hành đầu tiên chưa có tag, thêm mục tiêu đề phiên bản tương ứng vào `CHANGELOG.md`, tạo commit có chữ ký và gắn tag bằng tay.
 
-1. Workflow [`monthly-release.yml`](.github/workflows/monthly-release.yml) chạy lúc 07:00 ngày 1 (giờ Việt Nam): chuyển mục **CHƯA PHÁT HÀNH** của [`CHANGELOG.md`](CHANGELOG.md) thành phiên bản của tháng (ví dụ `## [v2026.11.Stable] — 2026-11-01`) và mở Pull Request `release/v2026.11`. Có commit mà mục **CHƯA PHÁT HÀNH** trống thì báo lỗi — ghi `CHANGELOG.md` rồi chạy lại (**Actions → Chuẩn bị phát hành hằng tháng → Run workflow**).
-2. Xem trước nội dung: `make release-notes TAG=v2026.11.Stable`; hợp nhất Pull Request bằng **Squash** hoặc **Merge**.
-3. Người quản trị gắn và đẩy tag trên `main` (ruleset **Protect Release Tags** chỉ cho người quản trị tạo tag `v*`): `git tag v2026.11.Stable && git push origin v2026.11.Stable` — workflow [`release.yml`](.github/workflows/release.yml) tạo GitHub Release. Tổ chức bật **Immutable releases**: Release đã phát hành không dời được tag, không dùng lại được tên tag.
+[`scripts/release.py`](scripts/release.py) kiểm tra phiên bản, ngày, nội dung UTF-8 và trạng thái branch/PR trước khi tạo branch phát hành. Branch đã tồn tại phải có Pull Request đang mở. Lỗi commit được xử lý bằng cách thử xóa branch vừa tạo; lỗi mở Pull Request giữ branch để mở tay. Tổ chức dùng **Immutable releases**: bản đã phát hành không dời tag hoặc dùng lại tên tag.
 
-Chạy lại khi branch phát hành đã có: script xác minh và in URL của Pull Request đang mở. Nếu branch chưa có Pull Request đang mở, script báo lỗi kèm liên kết để kiểm tra và mở tay. Script đọc `CHANGELOG.md` và kiểm tra UTF-8 trước khi tạo branch mới; lỗi đọc trạng thái hoặc tệp không tạo branch mới. Lỗi commit sẽ thử xóa branch vừa tạo và báo rõ nếu chưa xóa được. Lỗi tạo Pull Request giữ branch để mở tay. Các lệnh phát hành báo lỗi đọc/ghi tệp và lỗi lệnh ngoài bằng thông báo vận hành, thoát mã 1. Khi chạy trên Actions, `%`, CR và LF trong thông báo được mã hóa để lỗi nhiều dòng vẫn thuộc cùng một chú thích.
+**Khi GitHub Actions tắt:**
 
-**Khi GitHub Actions tắt** (ví dụ để tiết kiệm chi phí), mọi việc định kỳ vẫn có người làm:
-
-- Kiểm tra: hook `pre-push` chạy `make check` trước mỗi lần đẩy.
-- Hợp nhất: kiểm tra bắt buộc của ruleset **Protect Main** không có lượt chạy để báo kết quả, nên chỉ người quản trị (danh sách bỏ qua của ruleset) hợp nhất được Pull Request — sau khi `make check` đã đạt tại máy.
-- Liên kết, phiên bản công cụ, cài đặt trên GitHub: hook sau `git pull` chạy `make links`, `make versions`, `make org-preview`.
-- Routine Claude Code (claude.ai/code/routines, người quản trị bật khi tắt Actions): **Nhắc phát hành hằng tháng** (08:00 ngày 1) báo có cần phát hành không; **Kiểm tra biểu mẫu hằng tháng** (09:00 ngày 1) chạy `check-github-forms.py`. Môi trường đám mây chặn mạng ra ngoài github.com và không có GitHub CLI đã đăng nhập, nên phần còn lại chạy tại máy.
-- Phát hành: `git switch main && git pull --ff-only && make release-pr` thay cho bước 1; sau bước 3 tạo Release bằng `python3 scripts/release.py create v2026.11.Stable`.
+- Hook `pre-push` chạy `make check`; người quản trị hợp nhất sau khi kiểm tra tại máy đạt, vì các kiểm tra bắt buộc chưa có lượt chạy trên GitHub.
+- Hook sau `git pull` chạy `make links`, `make versions`, `make org-preview`; kiểm tra biểu mẫu bằng `make forms`.
+- Chuẩn bị phát hành tại máy: `git switch main && git pull --ff-only && make release-pr`.
+- Sau khi hợp nhất và đẩy tag, tạo Release: `python3 scripts/release.py create v2026.11.Stable`.
 
 ---
 

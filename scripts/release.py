@@ -37,7 +37,8 @@ ROOT = Path(__file__).resolve().parents[1]
 TIMEZONE = ZoneInfo('Asia/Ho_Chi_Minh')
 DEFAULT_REPOSITORY = 'TOANQUYNHLLC/.github'
 UNRELEASED = re.compile(
-	r'^## \[CHƯA PHÁT HÀNH\]\((?P<base>[^)]+)/compare/[^)]+\.\.\.HEAD\)\n(?P<body>.*?)(?=^## \[)',
+	r'^## \[CHƯA PHÁT HÀNH\]\((?P<base>[^)]+)/compare/[^)]+\.\.\.HEAD\)\n'
+	r'(?P<body>.*?)(?=^## \[|^<p align="center">|\Z)',
 	re.MULTILINE | re.DOTALL,
 )
 VERSION_HEADING = re.compile(r'^## \[(?P<name>[^\]]+)\].*$', re.MULTILINE)
@@ -57,7 +58,10 @@ def releaseNotes(changelog, version):
 
 
 def unreleasedNotes(changelog):
-	"""Nội dung mục CHƯA PHÁT HÀNH (bỏ đường phân cách cuối), chuỗi rỗng nếu trống; None nếu sai dạng."""
+	"""Nội dung CHƯA PHÁT HÀNH, kể cả mục cuối tệp; bỏ đường phân cách.
+
+	Chuỗi rỗng nếu trống; None nếu sai dạng.
+	"""
 	match = UNRELEASED.search(changelog)
 	if not match:
 		return None

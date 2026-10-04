@@ -249,6 +249,25 @@ class ReleaseTest(unittest.TestCase):
 	def testMissingVersionReturnsNone(self):
 		self.assertIsNone(self.module.releaseNotes(RELEASE_FIXTURE, 'v1999.01.Stable'))
 
+	def testUnreleasedWorksWithoutPreviousVersionSections(self):
+		header = (
+			'# NỘI DUNG PHÁT HÀNH\n\n'
+			'## [CHƯA PHÁT HÀNH]'
+			'(https://github.com/TOANQUYNHLLC/.github/compare/v2099.01.Stable...HEAD)\n'
+		)
+		for footer in ('', '\n---\n\n<p align="center">© 2099</p>\n'):
+			with self.subTest(footer=footer):
+				self.assertEqual(self.module.unreleasedNotes(header + footer), '')
+				changelog = header + '\n- Nội dung phiên bản.\n' + footer
+				self.assertEqual(self.module.unreleasedNotes(changelog), '- Nội dung phiên bản.')
+				prepared = self.module.cutRelease(changelog, 'v2099.02.Stable', '2099-02-01')
+				self.assertEqual(self.module.unreleasedNotes(prepared), '')
+				self.assertEqual(
+					self.module.releaseNotes(prepared, 'v2099.02.Stable'), '- Nội dung phiên bản.'
+				)
+				if footer:
+					self.assertTrue(prepared.endswith('<p align="center">© 2099</p>\n'))
+
 	def testCutsUnreleasedIntoVersion(self):
 		# CHANGELOG mẫu cố định: mục CHƯA PHÁT HÀNH của tệp thật trống ngay sau mỗi lần phát hành.
 		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'v2099.02.Stable', '2099-02-01')

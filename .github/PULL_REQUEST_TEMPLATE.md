@@ -102,7 +102,7 @@ Không áp dụng.
 - [ ] Tôi đã chạy formatter và lint của dự án, không còn lỗi.
 - [ ] Tên branch, commit và tiêu đề Pull Request theo quy ước trong `CONTRIBUTING.md`.
 - [ ] Tôi đã bổ sung hoặc cập nhật kiểm thử khi cần thiết.
-- [ ] Tôi đã cập nhật tài liệu liên quan và `CHANGELOG.md` (nếu dự án có) khi cần thiết.
+- [ ] Tôi đã cập nhật tài liệu liên quan; nội dung phát hành trong `CHANGELOG.md` được cập nhật khi chuẩn bị phiên bản (nếu dự án có).
 - [ ] Mã nguồn, tests, ví dụ cấu hình và tài liệu liên quan đã thống nhất; nội dung lỗi thời đã được cập nhật hoặc xoá trong cùng thay đổi.
 - [ ] Tôi đã kiểm tra khả năng tương thích với chức năng hiện có.
 - [ ] Tôi không đưa mật khẩu, khóa API, token truy cập hoặc thông tin bảo mật vào mã nguồn.
