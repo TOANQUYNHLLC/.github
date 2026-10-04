@@ -330,6 +330,75 @@ class OrgSetupTest(unittest.TestCase):
 			],
 		)
 
+	def testSettingsReadActionsEarlyButPrintInOrder(self):
+		# Quyền Actions đọc song song với cài đặt repository (bắt đầu trước khi đọc xong repository); đầu ra vẫn
+		# theo thứ tự cài đặt → bảo mật → quyền Actions.
+		started = []
+		repository = 'repos/TOANQUYNHLLC/app'
+
+		def ghJson(*args):
+			path = args[-1]
+			started.append(path)
+			if path == repository:
+				time.sleep(0.2)
+				return dict(settings.repositorySettings('app'), private=True)
+			if path.endswith('/actions/permissions'):
+				return dict(settings.ACTIONS_PERMISSIONS, enabled=True)
+			if path.endswith('/actions/permissions/workflow'):
+				return dict(settings.WORKFLOW_PERMISSIONS)
+			return {'enabled': True}
+
+		github.ghJson = ghJson
+		github.ghExists = lambda endpoint: True
+		output = io.StringIO()
+		with contextlib.redirect_stdout(output):
+			settings.syncSettings(['app'], apply=False, discussions=False)
+		lines = output.getvalue().splitlines()
+		self.assertEqual(lines[0], '== TOANQUYNHLLC/app')
+		order = [
+			next(index for index, line in enumerate(lines) if text in line)
+			for text in (
+				'cài đặt repository đã đúng',
+				'bật secret_scanning',
+				'quyền GitHub Actions đã đúng',
+			)
+		]
+		self.assertEqual(order, sorted(order))
+		# Đọc quyền Actions bắt đầu trước khi đọc trạng thái bảo mật (việc chỉ làm sau khi có cài đặt repository).
+		security = next(
+			index
+			for index, path in enumerate(started)
+			if path != repository and '/actions/' not in path
+		)
+		self.assertLess(started.index(f'{repository}/actions/permissions'), security, started)
+
+	def testMissingTeamNeedsEveryMaintainerAndRepository(self):
+		# Chi tiết team, vai trò, quyền đọc cùng lúc: team chưa có (404) thì mọi người, mọi repository cần thêm.
+		def notFound(*args):
+			raise RuntimeError('HTTP 404')
+
+		teams.teamDetails = notFound
+		teams.teamRole = lambda team, user: None
+		teams.teamPermission = lambda team, repo: None
+		self.assertEqual(
+			teams.teamState('qa', ['.github', 'app']),
+			(False, {}, {}, list(teams.MAINTAINERS), ['.github', 'app']),
+		)
+
+	def testListReposReadsEveryPageWithoutArchived(self):
+		calls = []
+
+		def gh(*args, **kwargs):
+			calls.append(args)
+			return 'app\n.github\n'
+
+		github.gh = gh
+		self.assertEqual(github.listRepos(None), ['.github', 'app'])
+		self.assertIn('--paginate', calls[0])
+		self.assertIn('select(.archived | not)', calls[0][-1])
+		self.assertEqual(github.listRepos('app'), ['app'])
+		self.assertEqual(len(calls), 1)
+
 	def testTeamDescriptionDriftIsPatched(self):
 		calls = []
 		github.ghExists = lambda endpoint: True

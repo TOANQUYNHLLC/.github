@@ -8,6 +8,7 @@ Workflow links.yml chạy hằng tuần; khi GitHub Actions tắt, routine Claud
 thì đẩy branch rồi chạy make forms REF=<branch> trước khi hợp nhất.
 """
 
+import http.client
 import json
 import re
 import sys
@@ -82,7 +83,9 @@ def main():
 	def fetch(relative):
 		try:
 			return templateData(ref, relative)
-		except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+		# OSError gồm lỗi lúc gửi (URLError) lẫn lúc đọc phản hồi (máy chủ ngắt kết nối); HTTPException: phản hồi
+		# HTTP sai dạng, bị cắt ngang; ValueError: JSON nhúng sai, trang không phải UTF-8.
+		except (OSError, http.client.HTTPException, ValueError) as exc:
 			if isinstance(exc, urllib.error.HTTPError):
 				exc.close()  # chỉ cần mã lỗi, không cần nội dung phản hồi
 			return exc

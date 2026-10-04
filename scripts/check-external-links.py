@@ -125,6 +125,11 @@ def collectLinks():
 	return links
 
 
+def errorReason(exc):
+	"""Lý do lỗi kết nối gọn trên một dòng (dòng trạng thái sai có thể kèm xuống dòng, lỗi có thể rỗng)."""
+	return ' '.join(str(getattr(exc, 'reason', exc)).split()) or type(exc).__name__
+
+
 def requestStatus(url, method):
 	"""Mã HTTP của một lần gửi, hoặc thông báo khi không kết nối được."""
 	request = urllib.request.Request(url, method=method, headers=HEADERS)
@@ -134,8 +139,10 @@ def requestStatus(url, method):
 	except urllib.error.HTTPError as exc:
 		exc.close()  # lỗi HTTP giữ phản hồi đang mở — chỉ cần mã
 		return exc.code
-	except (urllib.error.URLError, TimeoutError) as exc:
-		return f'không kết nối được ({getattr(exc, "reason", exc)})'
+	# urllib chỉ gói lỗi lúc gửi thành URLError; lỗi lúc đọc phản hồi (máy chủ ngắt kết nối, dòng trạng thái
+	# sai) là OSError, HTTPException — bắt hết để một trang lỗi không làm dừng cả lượt kiểm tra.
+	except (OSError, http.client.HTTPException) as exc:
+		return f'không kết nối được ({errorReason(exc)})'
 
 
 def linkStatus(url):
@@ -168,8 +175,8 @@ def publishedCopyDiffers(path):
 	except urllib.error.HTTPError as exc:
 		exc.close()  # lỗi HTTP giữ phản hồi đang mở — chỉ cần mã
 		return f'không đọc được {url} (HTTP {exc.code})'
-	except (urllib.error.URLError, TimeoutError, UnicodeDecodeError) as exc:
-		return f'không đọc được {url} ({getattr(exc, "reason", exc)})'
+	except (OSError, http.client.HTTPException, UnicodeDecodeError) as exc:
+		return f'không đọc được {url} ({errorReason(exc)})'
 	if published.replace('\r\n', '\n') != path.read_text(encoding='utf-8'):
 		return f'{url} khác {path.relative_to(ROOT)} — đăng lại tệp lên website'
 	return None

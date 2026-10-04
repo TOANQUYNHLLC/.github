@@ -61,6 +61,26 @@ class CheckTest(unittest.TestCase):
 			module.ROOT = root
 			self.assertEqual(module.shellScripts(), ['công cụ/cài đặt.sh'])
 
+	def testGroupsAreListedOnce(self):
+		# main, ensureTools, runGroup cùng dùng danh sách nhóm: liệt kê script shell (gọi git) chỉ một lần mỗi lượt.
+		module = loadScript('check')
+		calls = []
+
+		def shellScripts():
+			calls.append(1)
+			return ['a.sh']
+
+		passed = subprocess.CompletedProcess([], 0, '', '')
+		with (
+			mock.patch.object(module, 'shellScripts', shellScripts),
+			mock.patch.object(module.subprocess, 'run', return_value=passed),
+			mock.patch.object(module.sys, 'argv', ['check.py']),
+			mock.patch.object(module.shutil, 'which', return_value='/bin/x'),
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			self.assertEqual(module.main(), 0)
+		self.assertEqual(len(calls), 1)
+
 	def testGroupsRunInParallelButPrintInOrder(self):
 		# Nhóm chậm (đầu) và nhóm nhanh chạy cùng lúc; đầu ra vẫn theo thứ tự nhóm, lệnh lỗi được liệt kê.
 		module = loadScript('check')

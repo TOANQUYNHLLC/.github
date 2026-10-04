@@ -181,6 +181,44 @@ class ReleaseTest(unittest.TestCase):
 			self.assertEqual(opened, [('v2099.02.Stable', 'v2099.01.Stable', 1, True)])
 			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
 
+	def testOpenPrDeletesBranchWhenCommitFails(self):
+		# GitHub từ chối commit (mất quyền, lỗi mạng): xóa branch vừa tạo để lần chạy sau không bỏ qua vì
+		# "branch đã có", không mở Pull Request.
+		calls = []
+
+		def fakeRun(args, **kwargs):
+			calls.append(args)
+			if args[:3] == ['git', 'rev-parse', 'HEAD']:
+				return subprocess.CompletedProcess(args, 0, 'abc123\n', '')
+			if args[:2] == ['gh', 'api'] and args[2].endswith('/branches/release/v2099.02'):
+				return subprocess.CompletedProcess(args, 1, b'', b'Not Found')
+			if args[:3] == ['gh', 'api', 'graphql']:
+				raise subprocess.CalledProcessError(1, args, '', 'Resource not accessible\n')
+			return subprocess.CompletedProcess(args, 0, '', '')
+
+		output = io.StringIO()
+		with (
+			mock.patch.object(self.module.subprocess, 'run', fakeRun),
+			# Biến rỗng (đặt mà không có giá trị) vẫn dùng repository mặc định.
+			mock.patch.dict(self.module.os.environ, {'GITHUB_REPOSITORY': ''}),
+			contextlib.redirect_stdout(output),
+		):
+			code = self.module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 3)
+		self.assertEqual(code, 1)
+		self.assertIn('Không commit được CHANGELOG.md lên release/v2099.02', output.getvalue())
+		self.assertIn(
+			[
+				'gh',
+				'api',
+				'-X',
+				'DELETE',
+				'repos/TOANQUYNHLLC/.github/git/refs/heads/release/v2099.02',
+				'--silent',
+			],
+			calls,
+		)
+		self.assertFalse([call for call in calls if call[:3] == ['gh', 'pr', 'create']])
+
 	def testEmptyUnreleasedSection(self):
 		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'v2099.02.Stable', '2099-02-01')
 		self.assertEqual(self.module.unreleasedNotes(changelog), '')
