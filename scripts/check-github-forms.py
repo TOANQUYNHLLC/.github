@@ -4,8 +4,8 @@ Chạy: python3 scripts/check-github-forms.py [ref]   (ref mặc định: main; 
 GitHub từ chối cả biểu mẫu khi gặp khóa lạ (ví dụ `type is not a permitted key`) mà không báo lúc commit
 hay trong API; lỗi chỉ hiện trên trang xem tệp. Script đọc dữ liệu JSON nhúng của trang đó — không phải
 API chính thức, nên khi GitHub đổi cấu trúc trang, script báo "không đọc được" thay vì báo đạt.
-Workflow links.yml chạy hằng tuần; khi GitHub Actions tắt, routine Claude Code chạy hằng tháng. Sửa biểu mẫu
-thì đẩy branch rồi chạy make forms REF=<branch> trước khi hợp nhất.
+Workflow links.yml chạy hằng tuần; khi GitHub Actions tắt, chạy make forms tại máy. Sửa biểu mẫu thì đẩy
+branch rồi chạy make forms REF=<branch> trước khi hợp nhất.
 """
 
 import http.client
@@ -81,6 +81,7 @@ def templateErrors(template):
 		not isinstance(template, dict)
 		or not isinstance(template.get('errors'), list)
 		or not isinstance(template.get('inputs'), list)
+		or ('valid' in template and type(template['valid']) is not bool)
 	):
 		raise TypeError('cấu trúc dữ liệu biểu mẫu đã đổi')
 	messages = []

@@ -19,6 +19,22 @@ except ModuleNotFoundError:
 
 
 class GithubFormsTest(unittest.TestCase):
+	def testMalformedValidFlagCannotReportSuccess(self):
+		module = loadScript('check-github-forms')
+		for value in (None, 0, 1, 'false', [], {}):
+			with self.subTest(valid=value):
+				with (
+					mock.patch.object(
+						module,
+						'templateData',
+						return_value={'errors': [], 'inputs': [], 'valid': value},
+					),
+					contextlib.redirect_stdout(io.StringIO()) as output,
+				):
+					self.assertEqual(module.main(), 1)
+				self.assertIn('không đọc được biểu mẫu', output.getvalue())
+				self.assertNotIn('✅', output.getvalue())
+
 	def testNoFormsCannotReportSuccess(self):
 		module = loadScript('check-github-forms')
 		with (
