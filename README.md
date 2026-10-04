@@ -1,7 +1,7 @@
 # 🏢 CÔNG TY TNHH TOÀN QUỲNH
 
-[![Checks](https://img.shields.io/github/actions/workflow/status/TOANQUYNHLLC/.github/validate.yml?branch=main&label=Checks&logo=githubactions&logoColor=white)](.github/workflows/validate.yml)
-[![CodeQL](https://img.shields.io/github/actions/workflow/status/TOANQUYNHLLC/.github/codeql.yml?branch=main&label=CodeQL&logo=github&logoColor=white)](.github/workflows/codeql.yml)
+[![Checks](https://img.shields.io/github/actions/workflow/status/TOANQUYNHLLC/.github/validate.yml?branch=main&label=Checks&logo=githubactions&logoColor=white)](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/workflows/validate.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/TOANQUYNHLLC/.github/codeql.yml?branch=main&label=CodeQL&logo=github&logoColor=white)](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/workflows/codeql.yml)
 [![Release](https://img.shields.io/github/v/release/TOANQUYNHLLC/.github?label=Release&logo=github)](https://github.com/TOANQUYNHLLC/.github/releases/latest)
 [![Last Commit](https://img.shields.io/github/last-commit/TOANQUYNHLLC/.github/main?label=Last%20Commit&logo=git&logoColor=white)](https://github.com/TOANQUYNHLLC/.github/commits/main)
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-fe5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org/en/v1.0.0/)
@@ -69,7 +69,7 @@ GitHub chỉ kế thừa `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`,
 | [`rulesets/`](rulesets/)                         | Ruleset **Protect Main**, **Protect Release Tags** (cấp repository) và bản cấp tổ chức, push ruleset **Protect Pushes** — xem [`rulesets/README.md`](rulesets/README.md)                                                                                                                    |
 | [`labels.yml`](labels.yml)                       | Bộ nhãn chuẩn: nhãn mặc định của GitHub, loại thay đổi (khớp tiền tố branch), phạm vi `area: …`, mức độ ưu tiên, trạng thái xử lý, nhãn Dependabot                                                                                                                                          |
 
-**Workflow của repository này** — huy hiệu **Checks**, **CodeQL** ở đầu trang là kết quả lượt chạy gần nhất của `validate.yml`, `codeql.yml` trên `main` (khi GitHub Actions tắt, huy hiệu giữ kết quả lượt cuối; bấm vào mở tệp workflow); cùng các kiểm tra đó chạy tại máy bằng `make check` (hook `pre-push`). Khi GitHub Actions tắt, việc thay thế xem mục **PHÁT HÀNH** → _Khi GitHub Actions tắt_
+**Workflow của repository này** — huy hiệu **Checks**, **CodeQL** ở đầu trang hiển thị kết quả lượt chạy gần nhất của `validate.yml`, `codeql.yml` trên `main`; bấm vào mở tệp workflow trên cùng nhánh. Khi GitHub Actions tắt, huy hiệu giữ kết quả lượt cuối và không xác nhận các commit mới. `make check` chạy các nhóm kiểm tra tại máy qua hook `pre-push`; CodeQL cần GitHub Actions. Quy trình khi Actions tắt xem mục **PHÁT HÀNH**.
 
 | Đường dẫn                                                                                                                                     | Chức năng                                                                                                                           |
 | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -154,6 +154,16 @@ Chạy toàn bộ kiểm tra giống GitHub Actions trên Pull Request (trừ Co
 ```bash
 make check
 ```
+
+Nếu npm không cài được thư viện, lượt kiểm tra dừng và giữ thông báo lỗi npm để xử lý phiên bản Node.js hoặc kết nối mạng. `make audit` cần truy cập registry npm; mất kết nối thì chỉ cảnh báo, cần chạy lại khi có mạng để xác minh dependency.
+
+Chạy riêng các tệp test bằng tên có hoặc không có `.py`:
+
+```sh
+python3 scripts/run-tests.py test_check test_check_markdown_links.py
+```
+
+Tên sai hoặc tệp không có test làm lệnh thất bại trước khi chạy. Bộ kiểm tra liên kết Markdown dùng anchor giống GitHub, kể cả tiêu đề trùng với hậu tố tự sinh; mỗi tệp đích được phân tích một lần trong một lượt kiểm tra và được đọc lại ở lượt sau.
 
 | Lệnh                       | Tác dụng                                                                                     |
 | -------------------------- | -------------------------------------------------------------------------------------------- |

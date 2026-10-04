@@ -4,10 +4,12 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 """
 
 import contextlib
+import io
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 # discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
 try:
@@ -17,6 +19,49 @@ except ModuleNotFoundError:
 
 
 class MarkdownLinksTest(unittest.TestCase):
+	def testMainSharesAnchorsAndRefreshesNextRun(self):
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			target = root / 'target.md'
+			target.write_text('## A\n', encoding='utf-8')
+			sources = [root / 'first.md', root / 'second.md']
+			for path in sources:
+				path.write_text('[x](target.md#a)\n', encoding='utf-8')
+			with (
+				mock.patch.object(module, 'markdownFiles', return_value=sources),
+				mock.patch.object(module, 'headingAnchors', wraps=module.headingAnchors) as anchors,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				self.assertEqual(module.main(), 0)
+				self.assertEqual(anchors.call_count, 1)
+				target.write_text('## B\n', encoding='utf-8')
+				self.assertEqual(module.main(), 1)
+				self.assertEqual(anchors.call_count, 2)
+
+	def testHeadingSuffixCollisionsMatchGithub(self):
+		# Kết quả từ API markdown của GitHub: hậu tố sinh tự động cũng có thể trùng tiêu đề tiếp theo.
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'README.md'
+			path.write_text('## A\n## A\n## A-1\n## A\n## A-1-1\n', encoding='utf-8')
+			self.assertEqual(module.headingAnchors(path), {'a', 'a-1', 'a-1-1', 'a-2', 'a-1-1-1'})
+			self.assertEqual(module.findBrokenLinks(path, '[x](#a-1-1-1)'), [])
+
+	def testAnchorsAreReusedOnlyWithinOneRun(self):
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'README.md'
+			path.write_text('## A\n', encoding='utf-8')
+			with mock.patch.object(
+				module, 'headingAnchors', wraps=module.headingAnchors
+			) as anchors:
+				self.assertEqual(module.findBrokenLinks(path, '[x](#a) [y](./README.md#a)'), [])
+				self.assertEqual(anchors.call_count, 1)
+				path.write_text('## B\n', encoding='utf-8')
+				self.assertTrue(module.findBrokenLinks(path, '[x](#a)'))
+				self.assertEqual(anchors.call_count, 2)
+
 	def testPercentEncodedLinks(self):
 		# Tên tệp có khoảng trắng (%20) và mục có chữ có dấu (%C3%AA…) vẫn tìm đúng tệp, đúng tiêu đề.
 		module = loadScript('check-markdown-links')

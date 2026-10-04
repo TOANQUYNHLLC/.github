@@ -83,7 +83,14 @@ def ensureTools(groups):
 		print(f'Thiếu công cụ: {", ".join(missing)} — chạy: mise install (https://mise.jdx.dev)')
 		return False
 	if needed & {'npx', 'npm'} and not (ROOT / 'node_modules').is_dir():
-		subprocess.run(['npm', 'install', '--no-audit', '--no-fund'], cwd=ROOT, check=True)
+		result = subprocess.run(
+			['npm', 'install', '--no-audit', '--no-fund'], cwd=ROOT, check=False
+		)
+		if result.returncode != 0:
+			print(
+				'❌ Không cài được thư viện Node.js — xem lỗi npm ở trên, kiểm tra .nvmrc và mạng rồi chạy lại.'
+			)
+			return False
 	return True
 
 
