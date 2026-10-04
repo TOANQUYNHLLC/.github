@@ -28,13 +28,18 @@ class PostCreateTest(unittest.TestCase):
 				fake = tools / name
 				fake.write_text('#!/bin/sh\nexit 0\n', encoding='utf-8')
 				fake.chmod(0o755)
-			environment = dict(os.environ, HOME=str(home), PATH=f'{tools}:/usr/bin:/bin')
+			# Chạy qua một liên kết tới repository: $PWD đi qua liên kết, khác đường dẫn thật mà git thấy.
+			link = Path(folder) / 'link'
+			link.symlink_to(ROOT.resolve())
+			environment = dict(
+				os.environ, HOME=str(home), PATH=f'{tools}:/usr/bin:/bin', PWD=str(link)
+			)
 			# git thật, cấu hình toàn cục nằm trong HOME tạm.
 			environment.pop('GIT_CONFIG_GLOBAL', None)
 			for _ in range(2):
 				subprocess.run(
-					['bash', str(ROOT / '.devcontainer' / 'post-create.sh')],
-					cwd=ROOT,
+					['bash', str(link / '.devcontainer' / 'post-create.sh')],
+					cwd=link,
 					env=environment,
 					capture_output=True,
 					check=True,
@@ -51,7 +56,7 @@ class PostCreateTest(unittest.TestCase):
 				text=True,
 				check=True,
 			).stdout.splitlines()
-			self.assertEqual(trusted, [str(ROOT)])
+			self.assertEqual(trusted, [str(ROOT.resolve())])
 
 
 if __name__ == '__main__':
