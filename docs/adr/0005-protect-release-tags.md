@@ -13,6 +13,12 @@ GitHub Release, nhật ký thay đổi và liên kết so sánh phiên bản đ�
 - Danh sách bỏ qua giống Protect Main: chỉ hai người quản trị tạo được tag phát hành.
 - Tổ chức bật **Immutable releases**: Release đã phát hành không dời được tag, không sửa được tệp đính kèm, không dùng lại được tên tag.
 
+## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
+
+- **Ruleset tag cấp tổ chức**: không được thực thi với gói Free; giữ bản cấp tổ chức sẵn sàng cho gói Team.
+- **Push ruleset**: chỉ áp dụng cho repository riêng tư hoặc internal, không bảo vệ được repository công khai như `.github`.
+- **Ruleset tag cấp repository** (chọn): dùng được với repository công khai trên gói Free.
+
 ## ⚖️ HỆ QUẢ
 
 - Người đóng góp không phải người quản trị không tạo được tag `v*`; phát hành do người quản trị thực hiện ([ADR 0012](0012-monthly-releases.md)).

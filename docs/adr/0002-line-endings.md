@@ -13,6 +13,12 @@ Người đóng góp dùng cả Windows và macOS; CI chạy trên Linux. Shell 
 - **CRLF** chỉ cho tệp bắt buộc: batch script (`.bat`, `.cmd`), Visual C++ 6 (`.dsp`, `.dsw`), chuẩn MIME/iCalendar/vCard/CSV, dự án Visual Studio (kèm BOM UTF-8), registry/INF (UTF-16 LE có BOM).
 - CSV và email giữ khoảng trắng cuối dòng vì đó là dữ liệu.
 
+## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
+
+- **Để git tự chuyển theo hệ điều hành** (`core.autocrlf`): kết quả phụ thuộc cấu hình từng máy, cùng một tệp có thể vào repository với hai kiểu xuống dòng.
+- **CRLF cho mọi tệp**: shell script không chạy được trên Linux (CI, Dev Container).
+- **LF cho mọi tệp, kể cả batch script, dự án Visual Studio**: các định dạng đó bắt buộc CRLF; không chọn.
+
 ## ⚖️ HỆ QUẢ
 
 - Danh sách đuôi tệp nằm ở `.editorconfig`, `.gitattributes` và `scripts/validate.py`; `validate.py` kiểm tra ba nơi khớp nhau.

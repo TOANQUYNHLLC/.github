@@ -17,6 +17,12 @@ Script do nhiều người và công cụ AI cùng viết; tên hàm, biến l�
     - Tên thuộc về thư viện hay dữ liệu bên ngoài: tham số từ khóa khi gọi hàm (`capture_output=True`), thuộc tính của đối tượng thư viện (`node.lineno`, `args.open_pr` do argparse sinh từ `--open-pr`), khóa của định dạng bên ngoài (`actor_id` của API GitHub, `timeout-minutes` của workflow), biến môi trường (`GH_TOKEN`).
 - `validate.py` đọc cây cú pháp (`ast`) của mọi tệp Python và chỉ xét tên tự đặt: định nghĩa hàm, tham số, biến được gán. Phương thức mang tên thư viện quy định được nhận ra bằng cách tra lớp cha thật (nạp module của thư viện) và mẫu tên thư viện gọi (`LIBRARY_NAME_PATTERNS`); tên tự đặt trong lớp con của thư viện vẫn bị kiểm tra.
 
+## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
+
+- **snake_case theo PEP 8**: không chọn — người quản trị quy định camelCase cho tên tự đặt để mọi script dùng một kiểu; ruff với cấu hình chuẩn không kiểm tra tên nên không xung đột.
+- **Áp camelCase cho mọi tên, kể cả tên thư viện quy định**: mã phải viết vòng để né quy tắc (gán phương thức qua `type()`, `SimpleNamespace`, gán hàm cho thuộc tính đối tượng) — khó đọc hơn cách viết thông thường; không chọn.
+- **Chỉ ghi quy ước, không kiểm tra**: tên lẫn nhiều kiểu trở lại; chọn kiểm tra bằng cây cú pháp trong `validate.py`.
+
 ## ⚖️ HỆ QUẢ
 
 - Khác PEP 8 (snake_case cho tên tự đặt); ruff với cấu hình chuẩn không kiểm tra tên nên không xung đột.

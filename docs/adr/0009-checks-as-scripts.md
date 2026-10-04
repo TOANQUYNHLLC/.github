@@ -14,6 +14,12 @@ Kiểm tra viết thẳng trong workflow (`run: |`, Python nhúng) không chạy
 - `scripts/check.py` là nơi duy nhất khai báo các nhóm kiểm tra (`content`, `format`, `lint`, `conventions`, `audit`): `make check` và từng job của `validate.yml` gọi cùng script.
 - Workflow mẫu checkout `TOANQUYNHLLC/.github` vào `.org/` rồi gọi script của tổ chức (`conventions.py`, `release.py`, `check-markdown-links.py`, `check-gofmt.py`).
 
+## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
+
+- **Viết kiểm tra trong workflow** (`run: |` bằng shell, Python nhúng): không chạy được tại máy khi GitHub Actions tắt, không có test, lặp lại ở `Makefile`, dễ lệch giữa các bản chép trong workflow mẫu.
+- **Chỉ cho phép Python, cấm mọi ngôn ngữ khác**: cứng nhắc với việc mà ngôn ngữ khác làm tốt hơn (script cài đặt Dev Container nối các lệnh cài đặt); chọn ưu tiên Python kèm dòng lý do bắt buộc.
+- **Mỗi workflow mẫu chép sẵn quy ước**: đổi quy ước phải sửa mọi repository; chọn gọi script của tổ chức từ `.org/`.
+
 ## ⚖️ HỆ QUẢ
 
 - Kiểm tra chạy y hệt tại máy và trên GitHub Actions (trừ CodeQL); mỗi script có test trong `scripts/test_*.py`.

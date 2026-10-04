@@ -46,12 +46,10 @@ class ValidateTest(unittest.TestCase):
 				target = cls.repo / name
 				target.parent.mkdir(parents=True, exist_ok=True)
 				shutil.copy2(source, target)
+		# Index giữ mốc (kèm thông tin stat) để tearDown biết đúng tệp nào bị đổi. validate.py liệt kê bằng git
+		# ls-files rồi bỏ tệp không còn trên đĩa, nên tệp test xóa vẫn biến mất như ở repository thật.
 		cls.git('init', '-q')
 		cls.git('add', '-A')
-		cls.baseline = cls.git('write-tree')
-		# Index rỗng như repository mới git init: mọi tệp là "chưa theo dõi", tệp test xóa thì biến mất khỏi
-		# git ls-files của validate.py.
-		cls.git('read-tree', '--empty')
 
 	@classmethod
 	def tearDownClass(cls):
@@ -64,12 +62,12 @@ class ValidateTest(unittest.TestCase):
 		).stdout.strip()
 
 	def tearDown(self):
-		# Trả bản chép về mốc (cây tệp đã lưu bằng write-tree): ghi lại tệp bị sửa, xóa, đổi tên; xóa tệp
-		# test tạo thêm.
-		self.git('read-tree', self.baseline)
-		self.git('checkout-index', '--all', '--force')
+		# Trả bản chép về mốc trong index: chỉ ghi lại tệp bị sửa, xóa (đổi tên là xóa cộng thêm) — không ghi
+		# lại mọi tệp; --index cập nhật thông tin stat để lần sau so nhanh; xóa tệp test tạo thêm.
+		changed = [name for name in self.git('diff-files', '--name-only', '-z').split('\0') if name]
+		if changed:
+			self.git('checkout-index', '--force', '--index', '--', *changed)
 		self.git('clean', '-qfdx')
-		self.git('read-tree', '--empty')
 
 	def runValidate(self):
 		# Chạy validate.py của bản chép trong tiến trình này — nhanh hơn nhiều so với chạy python3 riêng cho mỗi
@@ -629,6 +627,12 @@ class Holder:
 		self.assertIn('nhãn "release" phải tiếng Anh, hoa đầu mỗi từ', output)
 		self.assertIn('huy hiệu "Stars": đặt label=', output)
 		self.assertIn('huy hiệu "Build": huy hiệu của GitHub lấy chữ theo tên workflow', output)
+
+	def testAdrNeedsEverySection(self):
+		self.editRegex(
+			'docs/adr/0001-tab-indentation.md', r'^## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC\n\n(?:.+\n)+\n', ''
+		)
+		self.assertFails('0001-tab-indentation.md: ADR phải có đủ các mục theo thứ tự')
 
 	def testAdrIndexListsEveryAdr(self):
 		# Số 9999 không trùng ADR thật nào — test không phải sửa mỗi khi thêm ADR.

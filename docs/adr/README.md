@@ -21,6 +21,6 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 ## ✍️ CÁCH THÊM ADR
 
 1. Chép [`template.md`](template.md) thành `NNNN-short-title.md` (tiếng Anh, nối bằng dấu gạch ngang) với số kế tiếp.
-2. Điền bối cảnh, quyết định, hệ quả; trạng thái **Đề xuất**.
+2. Điền bối cảnh, quyết định, phương án đã cân nhắc, hệ quả — chỉ ghi điều kiểm chứng được; trạng thái **Đề xuất**.
 3. Tạo Pull Request; khi được hợp nhất, đổi trạng thái thành **Chấp nhận** và thêm vào bảng trên.
 4. Không sửa nội dung ADR đã chấp nhận — khi đổi quyết định, tạo ADR mới (ghi **Điều chỉnh:** ADR cũ) và chỉ đổi dòng trạng thái của ADR cũ thành **Bị thay thế bởi NNNN**, hoặc **Bị thay thế một phần bởi NNNN** kèm phần bị thay thế; cập nhật cột trạng thái trong bảng trên.

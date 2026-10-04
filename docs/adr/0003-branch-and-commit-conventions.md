@@ -13,6 +13,12 @@ Tên branch và tiêu đề commit là nơi đầu tiên người đọc lịch 
 - Tiêu đề commit và Pull Request dạng `<loại>(<phạm vi>): <mô tả>` theo [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/), với loại trong bảng của `CONTRIBUTING.md`; phạm vi tùy chọn.
 - `scripts/conventions.py` là nơi duy nhất khai báo danh sách loại commit và tiền tố branch; workflow `branch-name.yml`, `pr-title.yml` (của repository này và workflow mẫu) và `make check` cùng gọi script này.
 
+## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
+
+- **Tên branch tiếng Việt không dấu** (ví dụ `chore/thong-nhat-quy-tac-dinh-dang`): khó đọc, dễ nhầm nghĩa; công cụ và tài liệu kỹ thuật chủ yếu dùng tiếng Anh.
+- **Tiêu đề commit tự do**: không nhóm được thay đổi khi viết `CHANGELOG.md` và GitHub Release.
+- **Quy ước chỉ ghi trong tài liệu, không kiểm tra**: không bảo đảm được ở mọi repository; chọn kiểm tra bằng `scripts/conventions.py` trong workflow mẫu.
+
 ## ⚖️ HỆ QUẢ
 
 - `validate.py` kiểm tra danh sách trong `CONTRIBUTING.md`, `scripts/conventions.py` và mẫu commit `.gitmessage` khớp nhau; tiền tố branch mới cần thêm luật gắn nhãn trong `.github/labeler.yml`.
