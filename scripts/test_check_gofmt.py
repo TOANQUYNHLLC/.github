@@ -19,6 +19,28 @@ except ModuleNotFoundError:
 
 
 class GofmtTest(unittest.TestCase):
+	def testFailedToolWithoutDiagnosticsIsNotAccepted(self):
+		module = loadScript('check-gofmt')
+		with (
+			mock.patch.object(module, 'goFiles', return_value=['main.go']),
+			mock.patch.object(
+				module.subprocess, 'run', return_value=subprocess.CompletedProcess([], 2, '', '')
+			),
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			self.assertEqual(module.main(), 1)
+
+	def testMissingToolIsReported(self):
+		module = loadScript('check-gofmt')
+		output = io.StringIO()
+		with (
+			mock.patch.object(module, 'goFiles', return_value=['main.go']),
+			mock.patch.object(module.subprocess, 'run', side_effect=FileNotFoundError('gofmt')),
+			contextlib.redirect_stdout(output),
+		):
+			self.assertEqual(module.main(), 1)
+		self.assertIn('gofmt', output.getvalue())
+
 	def testVendorIsSkipped(self):
 		# Mã của bên thứ ba trong vendor/ không thuộc trách nhiệm định dạng của repository; tên tệp có dấu,
 		# khoảng trắng được liệt kê nguyên văn.

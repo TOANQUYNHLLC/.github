@@ -63,15 +63,47 @@ def templateData(ref, relative):
 	match = EMBEDDED.search(page)
 	if not match:
 		return None
-	route = json.loads(match.group(1)).get('payload', {}).get('codeViewBlobRoute') or {}
-	return route.get('issueTemplate') or route.get('discussionTemplate')
+	data = json.loads(match.group(1))
+	for key in ('payload', 'codeViewBlobRoute'):
+		if not isinstance(data, dict):
+			raise TypeError('cấu trúc dữ liệu trang đã đổi')
+		data = data.get(key)
+	if not isinstance(data, dict):
+		raise TypeError('cấu trúc dữ liệu trang đã đổi')
+	for key in ('issueTemplate', 'discussionTemplate'):
+		if key in data and data[key] is not None:
+			return data[key]
+	return None
 
 
 def templateErrors(template):
-	messages = [error.get('message', '') for error in template.get('errors') or []]
-	for item in template.get('inputs') or []:
-		for key, value in ((item.get('input') or {}).get('errors') or {}).items():
+	if (
+		not isinstance(template, dict)
+		or not isinstance(template.get('errors'), list)
+		or not isinstance(template.get('inputs'), list)
+	):
+		raise TypeError('cấu trúc dữ liệu biểu mẫu đã đổi')
+	messages = []
+	for error in template['errors']:
+		if not isinstance(error, dict) or not isinstance(error.get('message'), str):
+			raise TypeError('cấu trúc errors của biểu mẫu đã đổi')
+		messages.append(error['message'])
+	for item in template['inputs']:
+		if not isinstance(item, dict):
+			raise TypeError('cấu trúc inputs của biểu mẫu đã đổi')
+		inputData = item.get('input')
+		if inputData is None:
+			continue
+		if not isinstance(inputData, dict) or (
+			'errors' in inputData
+			and inputData['errors'] is not None
+			and not isinstance(inputData['errors'], dict)
+		):
+			raise TypeError('cấu trúc input.errors của biểu mẫu đã đổi')
+		for key, value in (inputData.get('errors') or {}).items():
 			messages.append(f'{key}: {value}')
+	if template.get('valid') is False and not messages:
+		messages.append('GitHub đánh dấu biểu mẫu không hợp lệ')
 	return [re.sub(r'<[^>]+>', '', str(message)) for message in messages]
 
 
@@ -79,13 +111,16 @@ def main():
 	ref = sys.argv[1] if len(sys.argv) > 1 else 'main'
 	failed = 0
 	relatives = [path.relative_to(ROOT).as_posix() for path in formPaths()]
+	if not relatives:
+		print('❌ Không tìm thấy biểu mẫu Issue hoặc Discussion để kiểm tra.')
+		return 1
 
 	def fetch(relative):
 		try:
 			return templateData(ref, relative)
 		# OSError gồm lỗi lúc gửi (URLError) lẫn lúc đọc phản hồi (máy chủ ngắt kết nối); HTTPException: phản hồi
 		# HTTP sai dạng, bị cắt ngang; ValueError: JSON nhúng sai, trang không phải UTF-8.
-		except (OSError, http.client.HTTPException, ValueError) as exc:
+		except (OSError, http.client.HTTPException, ValueError, TypeError) as exc:
 			if isinstance(exc, urllib.error.HTTPError):
 				exc.close()  # chỉ cần mã lỗi, không cần nội dung phản hồi
 			return exc
@@ -109,7 +144,12 @@ def main():
 			failed += 1
 			print(f'❌ {relative}: GitHub không nhận là biểu mẫu, hoặc cấu trúc trang đã đổi')
 			continue
-		errors = templateErrors(template)
+		try:
+			errors = templateErrors(template)
+		except TypeError as exc:
+			failed += 1
+			print(f'❌ {relative}: không đọc được biểu mẫu ({exc})')
+			continue
 		if errors:
 			failed += 1
 			print(f'❌ {relative}: ' + '; '.join(errors))

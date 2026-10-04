@@ -21,6 +21,35 @@ except ModuleNotFoundError:
 
 
 class GitHooksTest(unittest.TestCase):
+	@unittest.skipUnless(
+		(ROOT / 'node_modules/.bin/prettier').exists(), 'cần Prettier (make tools)'
+	)
+	def testPreCommitUsesIndexedConfigWhenWorkingCopyIsDeleted(self):
+		(self.repo / 'a.json').write_text('{\n\t"a": 1\n}\n', encoding='utf-8')
+		self.git('add', 'a.json')
+		for name in ('.prettierrc.json', '.editorconfig'):
+			(self.repo / name).unlink()
+		with silenced():
+			self.assertEqual(self.module.preCommit(self.repo, []), 0)
+
+	def testPreCommitStopsWhenIndexCannotBeExported(self):
+		(self.repo / 'a.md').write_text('# A\n', encoding='utf-8')
+		self.git('add', 'a.md')
+		originalRun = subprocess.run
+		formatterCalls = []
+
+		def run(command, **kwargs):
+			if command[:2] == ['git', 'checkout-index']:
+				return subprocess.CompletedProcess(command, 1, b'', b'index error')
+			if command[0] != 'git':
+				formatterCalls.append(command)
+				return subprocess.CompletedProcess(command, 0)
+			return originalRun(command, **kwargs)
+
+		with mock.patch.object(self.module.subprocess, 'run', run), silenced():
+			self.assertEqual(self.module.preCommit(self.repo, []), 1)
+		self.assertEqual(formatterCalls, [])
+
 	def setUp(self):
 		self.module = loadScript('git-hooks')
 		self.tmp = tempfile.TemporaryDirectory()

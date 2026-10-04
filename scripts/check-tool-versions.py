@@ -47,7 +47,13 @@ def latestRelease(repository):
 	if token:
 		request.add_header('Authorization', f'Bearer {token}')
 	with urllib.request.urlopen(request, timeout=30) as response:
-		return json.load(response)['tag_name'].removeprefix('v')
+		data = json.load(response)
+	if not isinstance(data, dict) or not isinstance(data.get('tag_name'), str):
+		raise TypeError('phản hồi bản phát hành thiếu tag_name dạng chuỗi')
+	version = data['tag_name'].removeprefix('v')
+	if not re.fullmatch(r'\d+(?:\.\d+)+', version):
+		raise ValueError(f'tag_name không phải phiên bản công cụ: {data["tag_name"]}')
+	return version
 
 
 def versionKey(version):
@@ -55,14 +61,25 @@ def versionKey(version):
 
 
 def main():
-	tools = tomllib.loads((ROOT / 'mise.toml').read_text(encoding='utf-8')).get('tools', {})
+	try:
+		tools = tomllib.loads((ROOT / 'mise.toml').read_text(encoding='utf-8')).get('tools', {})
+		if not isinstance(tools, dict):
+			raise TypeError('tools phải là bảng')
+		for tool in REPOSITORIES:
+			if not isinstance(tools.get(tool), str) or not re.fullmatch(
+				r'\d+(?:\.\d+)+', tools[tool]
+			):
+				raise ValueError(f'thiếu phiên bản chính xác của {tool}')
+	except (OSError, ValueError, TypeError) as exc:
+		print(f'❌ mise.toml: không đọc được phiên bản công cụ ({exc})')
+		return 1
 
 	def latest(repository):
 		try:
 			return latestRelease(repository)
 		# OSError gồm lỗi lúc gửi (URLError) lẫn lúc đọc phản hồi (máy chủ ngắt kết nối); HTTPException: phản hồi
 		# HTTP sai dạng, bị cắt ngang.
-		except (OSError, http.client.HTTPException, KeyError, ValueError) as exc:
+		except (OSError, http.client.HTTPException, KeyError, ValueError, TypeError) as exc:
 			if isinstance(exc, urllib.error.HTTPError):
 				exc.close()  # lỗi HTTP giữ phản hồi đang mở
 			return exc

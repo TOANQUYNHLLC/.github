@@ -6,6 +6,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 import contextlib
 import http.client
 import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,6 +22,46 @@ MISE = '[tools]\nruff = "0.16.10"\nshellcheck = "0.11.0"\nactionlint = "1.7.12"\
 
 
 class ToolVersionsTest(unittest.TestCase):
+	def testMalformedReleasesAreRejected(self):
+		module = loadScript('check-tool-versions')
+		for data in (
+			[],
+			{},
+			{'tag_name': None},
+			{'tag_name': 42},
+			{'tag_name': ''},
+			{'tag_name': 'garbage'},
+		):
+			with (
+				self.subTest(data=data),
+				mock.patch.object(module, 'cliToken', str),
+				mock.patch.object(
+					module.urllib.request,
+					'urlopen',
+					return_value=io.BytesIO(json.dumps(data).encode()),
+				),
+				self.assertRaises((ValueError, TypeError)),
+			):
+				module.latestRelease('example/tool')
+
+	def testInvalidLocalVersionsFailBeforeNetwork(self):
+		module = loadScript('check-tool-versions')
+		for content in (
+			'[tools\n',
+			'[tools]\nruff = "latest"\n',
+			'[tools]\nruff = "0.16.10"\n',
+			'tools = []\n',
+		):
+			with self.subTest(content=content), tempfile.TemporaryDirectory() as folder:
+				module.ROOT = Path(folder)
+				(module.ROOT / 'mise.toml').write_text(content, encoding='utf-8')
+				with (
+					mock.patch.object(module, 'latestRelease') as network,
+					contextlib.redirect_stdout(io.StringIO()),
+				):
+					self.assertEqual(module.main(), 1)
+					network.assert_not_called()
+
 	def runCheck(self, latestRelease):
 		"""Chạy main() với mise.toml mẫu và bản phát hành giả; trả (mã thoát, đầu ra)."""
 		module = loadScript('check-tool-versions')

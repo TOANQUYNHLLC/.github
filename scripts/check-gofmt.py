@@ -33,7 +33,10 @@ def runGofmt():
 	if not files:
 		return [], ''
 	result = subprocess.run(['gofmt', '-l', *files], capture_output=True, text=True, check=False)
-	return [name for name in result.stdout.split('\n') if name], result.stderr.strip()
+	problem = result.stderr.strip()
+	if result.returncode and not problem:
+		problem = f'gofmt thoát mã {result.returncode}'
+	return [name for name in result.stdout.split('\n') if name], problem
 
 
 def reportError(message):
@@ -45,7 +48,11 @@ def reportError(message):
 
 
 def main():
-	files, problems = runGofmt()
+	try:
+		files, problems = runGofmt()
+	except OSError as exc:
+		reportError(f'Không chạy được gofmt: {exc}')
+		return 1
 	if problems:
 		# Tệp Go không hợp lệ: gofmt không định dạng được — báo đúng lỗi thay vì traceback.
 		reportError(f'gofmt không đọc được tệp Go:\n{problems}')

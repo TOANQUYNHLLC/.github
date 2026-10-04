@@ -3,7 +3,9 @@
 Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
 """
 
+import contextlib
 import http.server
+import io
 import socket
 import socketserver
 import subprocess
@@ -55,6 +57,80 @@ QuietHandler = handlerClass(answerOk)
 
 
 class ExternalLinksTest(unittest.TestCase):
+	def testInvalidUrlsDoNotStopOtherLinks(self):
+		module = loadScript('check-external-links')
+		for url in ('http://[bad]/', 'https://example.test:wrong/', 'https://example.test/đường'):
+			with self.subTest(url=url):
+				self.assertIsInstance(module.linkStatus(url), str)
+
+	def testUnreadableFilesAreReportedAndOtherLinksAreChecked(self):
+		module = loadScript('check-external-links')
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			bad = module.ROOT / '.well-known/security.txt'
+			bad.parent.mkdir()
+			bad.write_bytes(b'\xff')
+			good = module.ROOT / 'README.md'
+			good.write_text('[a](https://example.test/)\n', encoding='utf-8')
+			output = io.StringIO()
+			with (
+				mock.patch.object(module, 'textFiles', return_value=[bad, good]),
+				mock.patch.object(module, 'linkStatus', return_value=200) as check,
+				contextlib.redirect_stdout(output),
+			):
+				self.assertEqual(module.main(), 1)
+			check.assert_called_once_with('https://example.test/')
+			self.assertIn('.well-known/security.txt: không đọc được', output.getvalue())
+			self.assertIn('✅ 200 https://example.test/', output.getvalue())
+
+	def testCanonicalNeedsOnlyOneRequestAndReadsFreshContents(self):
+		module = loadScript('check-external-links')
+		requests = []
+		served = []
+
+		def answer(handler):
+			requests.append(handler.command)
+			body = served[0].encode()
+			handler.send_response(200)
+			handler.end_headers()
+			handler.wfile.write(body)
+
+		server = socketserver.TCPServer(('127.0.0.1', 0), handlerClass(answer))
+		threading.Thread(
+			target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+		).start()
+		try:
+			with tempfile.TemporaryDirectory() as folder:
+				module.ROOT = Path(folder)
+				path = module.ROOT / '.well-known/security.txt'
+				path.parent.mkdir()
+				url = f'http://127.0.0.1:{server.server_address[1]}/security.txt'
+				original = f'Contact: mailto:a\nCanonical: {url}\n'
+				path.write_text(original, encoding='utf-8')
+				served.append(original)
+				with (
+					mock.patch.object(module, 'textFiles', return_value=[path]),
+					contextlib.redirect_stdout(io.StringIO()),
+				):
+					self.assertEqual(module.main(), 0)
+					self.assertEqual(requests, ['GET'])
+					path.write_text(original.replace('mailto:a', 'mailto:b'), encoding='utf-8')
+					self.assertEqual(module.main(), 1)
+					self.assertEqual(requests, ['GET', 'GET'])
+		finally:
+			server.shutdown()
+			server.server_close()
+
+	def testInvalidCanonicalIsReported(self):
+		module = loadScript('check-external-links')
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			path = module.ROOT / 'security.txt'
+			for url in ('http://[bad]/', 'file:///etc/passwd'):
+				with self.subTest(url=url):
+					path.write_text(f'Canonical: {url}\n', encoding='utf-8')
+					self.assertIn('không đọc được', module.publishedCopyDiffers(path))
+
 	def testUnreachableAddressIsSkippedAndRemembered(self):
 		# Địa chỉ đầu không kết nối được: linkStatus chuyển sang địa chỉ sau và nhớ địa chỉ hỏng — chứng minh
 		# opener thật sự kết nối qua connectQuickly. Cổng đóng trên 127.0.0.1 thay cho địa chỉ hỏng.

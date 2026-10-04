@@ -6,6 +6,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 import contextlib
 import http.client
 import io
+import json
 import unittest
 import urllib.error
 from unittest import mock
@@ -18,6 +19,79 @@ except ModuleNotFoundError:
 
 
 class GithubFormsTest(unittest.TestCase):
+	def testNoFormsCannotReportSuccess(self):
+		module = loadScript('check-github-forms')
+		with (
+			mock.patch.object(module, 'formPaths', return_value=[]),
+			mock.patch.object(module, 'fetchPage') as fetch,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			self.assertEqual(module.main(), 1)
+		fetch.assert_not_called()
+
+	def testInvalidFlagCannotReportSuccess(self):
+		module = loadScript('check-github-forms')
+		with (
+			mock.patch.object(
+				module, 'templateData', return_value={'errors': [], 'inputs': [], 'valid': False}
+			),
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			self.assertEqual(module.main(), 1)
+
+	def testMalformedPageDataFailsPerForm(self):
+		module = loadScript('check-github-forms')
+		forms = module.formPaths()
+		valid = {'payload': {'codeViewBlobRoute': {'issueTemplate': {'errors': [], 'inputs': []}}}}
+		for malformed in (
+			[],
+			{'payload': []},
+			{'payload': {'codeViewBlobRoute': []}},
+			{'payload': {'codeViewBlobRoute': {'issueTemplate': []}}},
+			{'payload': {'codeViewBlobRoute': {'issueTemplate': {'errors': [42]}}}},
+			{
+				'payload': {
+					'codeViewBlobRoute': {'issueTemplate': {'inputs': [{'input': {'errors': []}}]}}
+				}
+			},
+		):
+			with self.subTest(data=malformed):
+
+				def fetchPage(url, malformed=malformed):
+					data = (
+						malformed
+						if url.endswith(forms[0].relative_to(module.ROOT).as_posix())
+						else valid
+					)
+					return (
+						'<script type="application/json" data-target="react-app.embeddedData">'
+						+ json.dumps(data)
+						+ '</script>'
+					)
+
+				output = io.StringIO()
+				with (
+					mock.patch.object(module, 'fetchPage', fetchPage),
+					contextlib.redirect_stdout(output),
+				):
+					self.assertEqual(module.main(), 1)
+				self.assertIn(
+					'❌ ' + forms[0].relative_to(module.ROOT).as_posix(), output.getvalue()
+				)
+				self.assertIn(
+					'✅ ' + forms[1].relative_to(module.ROOT).as_posix(), output.getvalue()
+				)
+
+	def testEmptyTemplateIsNotAccepted(self):
+		module = loadScript('check-github-forms')
+		output = io.StringIO()
+		with (
+			mock.patch.object(module, 'templateData', return_value={}),
+			contextlib.redirect_stdout(output),
+		):
+			self.assertEqual(module.main(), 1)
+		self.assertNotIn('✅', output.getvalue())
+
 	def testTransientErrorIsRetried(self):
 		# GitHub trả 503 khi bị gọi dồn: thử lại rồi đọc được; lỗi 404 thì báo ngay, không thử lại.
 		module = loadScript('check-github-forms')

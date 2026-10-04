@@ -10,6 +10,10 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### 🐛 SỬA
 
+- Validator báo trường và phần tử YAML/JSON lồng nhau sai kiểu tại tệp, tiếp tục các luật còn lại; kiểm tra nguồn phiên bản công cụ cũng nhận workflow `.yaml`.
+- Kiểm tra liên kết bên ngoài báo tệp sai UTF-8 và URL sai dạng mà không dừng cả lượt; Canonical chỉ mở HTTP(S). Biểu mẫu GitHub có dữ liệu nhúng sai cấu trúc và phản hồi phiên bản công cụ sai dạng được báo theo từng mục; cấu hình phiên bản cục bộ sai chặn việc gọi mạng.
+- Hook commit lấy cấu hình định dạng từ Git index, dừng khi không xuất được nội dung đã stage; kiểm tra Go báo lỗi khi thiếu `gofmt` hoặc công cụ thoát lỗi không có stderr.
+- Phát hành đọc và kiểm tra UTF-8 của `CHANGELOG.md` trước khi tạo branch; CLI báo lỗi đọc/ghi tệp và lệnh ngoài thay vì traceback.
 - Workflow gắn nhãn (repository và mẫu) dùng `pull_request_target` để xử lý PR từ fork, chỉ đọc cấu hình nhánh đích và metadata qua API; concurrency theo số PR tránh hủy lượt chạy của PR khác.
 - Workflow đuôi `.yaml` được đưa vào actionlint, phép đối chiếu kiểm tra bắt buộc của ruleset và danh sách workflow trong tài liệu như `.yml`.
 - Đồng bộ ruleset và nhãn đọc hết các trang REST; phép đối chiếu ruleset tổ chức đọc hết trang GraphQL, báo dữ liệu quy tắc hoặc danh sách bỏ qua bị cắt thay vì dùng dữ liệu thiếu. Lỗi đọc trang sau chặn việc ghi dựa trên danh sách chưa đầy đủ.
@@ -28,6 +32,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ⚡ TỐI ƯU
 
+- Kiểm tra liên kết đọc mỗi tệp một lần trong lượt chạy; GET so bản `security.txt` trên website cũng kiểm tra URL Canonical, tránh request HEAD trùng và chạy song song với các liên kết khác.
 - Đối chiếu job và tài liệu dùng lại danh sách workflow từ các tệp đã kiểm kê trong lượt kiểm tra, tránh quét lại thư mục ở từng phép đối chiếu.
 - Tìm test được chọn không nạp các module test còn lại; cấu hình JSON được đọc một lần trong lượt đối chiếu, lượt mới đọc lại tệp.
 - Lệnh đồng bộ tệp dùng chung đọc một cây Git tại commit cố định thay vì dò riêng từng tệp; phản hồi bị cắt thì dò từng đường dẫn, lần chạy sau đọc lại GitHub.
