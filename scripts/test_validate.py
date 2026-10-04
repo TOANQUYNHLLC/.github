@@ -887,7 +887,8 @@ class Holder:
 	def testChangelogVersionsNotDuplicated(self):
 		path = self.repo / 'CHANGELOG.md'
 		path.write_text(
-			path.read_text(encoding='utf-8') + '\n## [v2026.09.Stable]\n', encoding='utf-8'
+			path.read_text(encoding='utf-8') + '\n## [v2099.01.Stable]\n\n## [v2099.01.Stable]\n',
+			encoding='utf-8',
 		)
 		self.assertFails('có phiên bản bị lặp')
 
@@ -933,8 +934,8 @@ class Holder:
 	def testChangelogLinksMustBeAbsolute(self):
 		self.edit(
 			'CHANGELOG.md',
-			'# 📝 NHẬT KÝ THAY ĐỔI\n',
-			'# 📝 NHẬT KÝ THAY ĐỔI\n\nXem [ADR](docs/adr/README.md).\n',
+			'# 📦 NỘI DUNG PHÁT HÀNH\n',
+			'# 📦 NỘI DUNG PHÁT HÀNH\n\nXem [ADR](docs/adr/README.md).\n',
 		)
 		self.assertFails('phải là URL tuyệt đối (mỗi mục thành nội dung GitHub Release)')
 

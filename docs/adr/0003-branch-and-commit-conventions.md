@@ -5,7 +5,7 @@
 
 ## 📌 BỐI CẢNH
 
-Tên branch và tiêu đề commit là nơi đầu tiên người đọc lịch sử nhìn vào. Tên branch tiếng Việt không dấu khó đọc và dễ nhầm nghĩa; tiêu đề commit tự do không gom nhóm được khi viết nhật ký thay đổi. Quy ước chỉ có tác dụng khi được kiểm tra tự động ở mọi repository.
+Tên branch và tiêu đề commit là nơi đầu tiên người đọc lịch sử nhìn vào. Tên branch tiếng Việt không dấu khó đọc và dễ nhầm nghĩa; tiêu đề commit tự do không gom nhóm được khi chuẩn bị nội dung phát hành. Quy ước chỉ có tác dụng khi được kiểm tra tự động ở mọi repository.
 
 ## ✅ QUYẾT ĐỊNH
 

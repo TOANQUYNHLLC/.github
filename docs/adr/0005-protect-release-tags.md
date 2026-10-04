@@ -5,7 +5,7 @@
 
 ## 📌 BỐI CẢNH
 
-GitHub Release, nhật ký thay đổi và liên kết so sánh phiên bản đều dựa vào tag `v*`. Protect Main chỉ bảo vệ nhánh: người có quyền ghi vẫn tạo, dời hoặc xóa được tag, khiến Release đã công bố trỏ tới mã khác lúc phát hành.
+GitHub Release, nội dung phát hành và liên kết so sánh phiên bản đều dựa vào tag `v*`. Protect Main chỉ bảo vệ nhánh: người có quyền ghi vẫn tạo, dời hoặc xóa được tag, khiến Release đã công bố trỏ tới mã khác lúc phát hành.
 
 ## ✅ QUYẾT ĐỊNH
 
