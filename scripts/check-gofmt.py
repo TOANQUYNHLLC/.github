@@ -27,25 +27,34 @@ def goFiles():
 	]
 
 
-def unformattedFiles():
-	"""Tệp Go mà gofmt sẽ đổi định dạng."""
+def runGofmt():
+	"""(tệp gofmt sẽ đổi định dạng, lỗi gofmt báo — ví dụ lỗi cú pháp kèm dòng, cột)."""
 	files = goFiles()
 	if not files:
-		return []
-	output = subprocess.run(
-		['gofmt', '-l', *files], capture_output=True, text=True, check=True
-	).stdout
-	return [name for name in output.split('\n') if name]
+		return [], ''
+	result = subprocess.run(['gofmt', '-l', *files], capture_output=True, text=True, check=False)
+	return [name for name in result.stdout.split('\n') if name], result.stderr.strip()
+
+
+def reportError(message):
+	"""Chú thích ::error:: trên GitHub Actions (xuống dòng mã hóa %0A để hiện đủ), dòng ❌ khi chạy tại máy."""
+	if os.environ.get('GITHUB_ACTIONS'):
+		print(f'::error::{message.replace(chr(10), "%0A")}')
+	else:
+		print(f'❌ {message}')
 
 
 def main():
-	files = unformattedFiles()
-	if not files:
-		print('✅ Mọi tệp Go đã chạy gofmt.')
-		return 0
-	prefix = '::error::' if os.environ.get('GITHUB_ACTIONS') else '❌ '
-	print(f'{prefix}Các tệp chưa chạy gofmt (sửa bằng: gofmt -w .): {", ".join(files)}')
-	return 1
+	files, problems = runGofmt()
+	if problems:
+		# Tệp Go không hợp lệ: gofmt không định dạng được — báo đúng lỗi thay vì traceback.
+		reportError(f'gofmt không đọc được tệp Go:\n{problems}')
+	if files:
+		reportError(f'Các tệp chưa chạy gofmt (sửa bằng: gofmt -w .): {", ".join(files)}')
+	if problems or files:
+		return 1
+	print('✅ Mọi tệp Go đã chạy gofmt.')
+	return 0
 
 
 if __name__ == '__main__':

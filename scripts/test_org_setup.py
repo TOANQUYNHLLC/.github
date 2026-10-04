@@ -82,6 +82,7 @@ class OrgSetupTest(unittest.TestCase):
 		planned = files.plannedFiles({'package.json', 'pyproject.toml', 'Cargo.toml', 'Dockerfile'})
 		for path in (
 			'.prettierrc.json',
+			'.nvmrc',
 			'ruff.toml',
 			'.python-version',
 			'rustfmt.toml',
@@ -91,6 +92,9 @@ class OrgSetupTest(unittest.TestCase):
 		self.assertNotIn('.clang-format', planned)
 		self.assertIn('indent-style = "tab"', planned['ruff.toml'])
 		self.assertIn('hard_tabs = true', planned['rustfmt.toml'])
+		# Workflow mẫu đọc phiên bản từ tệp này: Node.js CI (.nvmrc), Python CI (.python-version).
+		self.assertEqual(planned['.nvmrc'], (ROOT / '.nvmrc').read_text(encoding='utf-8'))
+		self.assertNotIn('.nvmrc', files.plannedFiles({'go.mod'}))
 
 	def testRulesetSummaryIgnoresGithubFields(self):
 		wanted = json.loads((ROOT / 'rulesets' / 'protect-main.json').read_text(encoding='utf-8'))

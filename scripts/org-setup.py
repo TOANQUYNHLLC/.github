@@ -7,7 +7,7 @@ Yêu cầu: gh đã đăng nhập bằng tài khoản có quyền quản trị t
 Lệnh (nên chạy theo thứ tự):
 	files: mở Pull Request thêm các tệp dùng chung còn thiếu — .editorconfig, .gitattributes,
 		workflow kiểm tra tiêu đề Pull Request, tên branch và gắn nhãn (labeler), CODEOWNERS, dependabot.yml, release.yml
-		và tệp định dạng theo ngôn ngữ repository dùng. Không ghi đè tệp đã có.
+		và tệp định dạng, phiên bản (.nvmrc, .python-version) theo ngôn ngữ repository dùng. Không ghi đè tệp đã có.
 	settings: cài đặt repository (REPOSITORY_SETTINGS: Merge và Squash, tắt Rebase — ADR 0006, auto-merge,
 		Update branch, sign-off khi commit trên web, tắt Wiki và Projects; phần riêng trong
 		REPOSITORY_OVERRIDES, topics của .github lấy từ CITATION.cff); bật Dependabot alerts, secret

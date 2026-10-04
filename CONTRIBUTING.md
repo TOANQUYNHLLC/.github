@@ -208,6 +208,7 @@ Dùng khi lỗi trên bản đang chạy thật cần sửa ngay:
 - Chỉ thêm thư viện khi thật sự cần; nêu lý do trong Pull Request và ưu tiên thư viện đang được duy trì, có giấy phép phù hợp.
 - Commit kèm lockfile (`package-lock.json`, `poetry.lock`, `go.sum`…); cài bằng lệnh tái lập được như `npm ci`. Repository chỉ dùng công cụ phát triển có thể ghi phiên bản chính xác trong `package.json` thay cho lockfile — nêu rõ trong `README.md` (ví dụ repository `.github`).
 - Action trong GitHub Actions ghim theo commit SHA đầy đủ, kèm chú thích phiên bản.
+- Trong workflow, không viết `${{ … }}` thẳng vào lệnh `run:`: truyền giá trị qua `env:` rồi dùng biến môi trường (`"$PR_TITLE"`) — tiêu đề Pull Request, tên branch có thể chứa lệnh shell.
 - Pull Request cập nhật phụ thuộc từ Dependabot được đánh giá như mọi Pull Request khác.
 
 ---

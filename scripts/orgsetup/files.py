@@ -22,6 +22,8 @@ ECOSYSTEM_MANIFESTS = {
 # Tệp cấu hình theo ngôn ngữ: tệp khai báo ở thư mục gốc → tệp thêm vào repository (nguồn trong repository này).
 LANGUAGE_FILES = (
 	(('package.json',), '.prettierrc.json', '.prettierrc.json'),
+	# Phiên bản Node.js cho workflow mẫu Node.js CI (setup-node đọc .nvmrc), cùng bản với repository này.
+	(('package.json',), '.nvmrc', '.nvmrc'),
 	(ECOSYSTEM_MANIFESTS['pip'], 'ruff.toml', 'ruff.toml'),
 	(ECOSYSTEM_MANIFESTS['pip'], '.python-version', 'repository-templates/.python-version'),
 	(('Cargo.toml',), 'rustfmt.toml', 'repository-templates/rustfmt.toml'),

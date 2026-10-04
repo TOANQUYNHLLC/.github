@@ -450,6 +450,13 @@ def checkWorkflow(path, text):
 				path,
 				f'dòng {number}: mã nhúng trong YAML — viết thành script trong scripts/ (ADR 0009)',
 			)
+		# GitHub thay ${{ … }} vào lệnh trước khi shell chạy: tiêu đề Pull Request, tên branch… chứa dấu nháy,
+		# $(…) sẽ thành lệnh (script injection). Truyền giá trị qua env: rồi dùng "$TÊN_BIẾN".
+		if re.match(r'^\s*(- )?run:.*\$\{\{', line):
+			error(
+				path,
+				f'dòng {number}: không viết ${{{{ … }}}} trong run: — truyền qua env: rồi dùng "$TÊN_BIẾN"',
+			)
 	if not re.search(r'^concurrency:', text, re.MULTILINE):
 		error(path, 'thiếu khai báo "concurrency" ở cấp workflow')
 	for number, line in enumerate(text.split('\n'), start=1):
