@@ -6,7 +6,6 @@ Chạy: python3 scripts/check-tool-versions.py
 Thoát mã 1 khi có công cụ cũ hơn bản mới nhất, để workflow hằng tuần báo cho người quản trị.
 """
 
-import functools
 import http.client
 import json
 import os
@@ -29,21 +28,26 @@ REPOSITORIES = {
 }
 
 
-@functools.cache
 def cliToken():
-	"""Token của GitHub CLI đã đăng nhập (đọc một lần); rỗng khi không có gh hoặc chưa đăng nhập."""
+	"""Token của GitHub CLI đã đăng nhập; rỗng khi không có gh hoặc chưa đăng nhập."""
 	if not shutil.which('gh'):
 		return ''
-	result = subprocess.run(['gh', 'auth', 'token'], capture_output=True, text=True, check=False)
+	try:
+		result = subprocess.run(
+			['gh', 'auth', 'token'], capture_output=True, text=True, check=False
+		)
+	except OSError:
+		return ''
 	return result.stdout.strip() if result.returncode == 0 else ''
 
 
-def latestRelease(repository):
+def latestRelease(repository, token=None):
 	request = urllib.request.Request(
 		f'https://api.github.com/repos/{repository}/releases/latest',
 		headers={'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'},
 	)
-	token = os.environ.get('GH_TOKEN') or os.environ.get('GITHUB_TOKEN') or cliToken()
+	if token is None:
+		token = os.environ.get('GH_TOKEN') or os.environ.get('GITHUB_TOKEN') or cliToken()
 	if token:
 		request.add_header('Authorization', f'Bearer {token}')
 	with urllib.request.urlopen(request, timeout=30) as response:
@@ -74,9 +78,12 @@ def main():
 		print(f'❌ mise.toml: không đọc được phiên bản công cụ ({exc})')
 		return 1
 
+	# Chốt token một lần cho lượt chạy; không gọi CLI khi workflow đã truyền token qua môi trường.
+	token = os.environ.get('GH_TOKEN') or os.environ.get('GITHUB_TOKEN') or cliToken()
+
 	def latest(repository):
 		try:
-			return latestRelease(repository)
+			return latestRelease(repository, token)
 		# OSError gồm lỗi lúc gửi (URLError) lẫn lúc đọc phản hồi (máy chủ ngắt kết nối); HTTPException: phản hồi
 		# HTTP sai dạng, bị cắt ngang.
 		except (OSError, http.client.HTTPException, KeyError, ValueError, TypeError) as exc:
@@ -84,7 +91,6 @@ def main():
 				exc.close()  # lỗi HTTP giữ phản hồi đang mở
 			return exc
 
-	cliToken()  # đọc token một lần trước khi các luồng cùng cần
 	# Hỏi GitHub song song — mỗi lần chờ mạng gần một giây.
 	with ThreadPoolExecutor(max_workers=len(REPOSITORIES)) as pool:
 		releases = list(pool.map(latest, REPOSITORIES.values()))

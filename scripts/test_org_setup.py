@@ -27,6 +27,361 @@ from orgsetup import files, github, labels, rulesets, settings, teams
 
 
 class OrgSetupTest(unittest.TestCase):
+	def testSettingsSchemaErrorsAreReportedByCli(self):
+		module = loadScript('org-setup')
+		output = io.StringIO()
+		with (
+			mock.patch.object(module.sys, 'argv', ['org-setup.py', 'settings', '--repo', 'app']),
+			mock.patch.object(module, 'signedIn', return_value=True),
+			mock.patch.object(
+				module, 'runCommand', side_effect=TypeError('không đọc được object cài đặt')
+			),
+			contextlib.redirect_stderr(output),
+		):
+			self.assertEqual(module.main(), 1)
+		self.assertIn('không đọc được object cài đặt', output.getvalue())
+		self.assertNotIn('Traceback', output.getvalue())
+
+	def testDisabledSecurityFeaturesAreEnabledInOrder(self):
+		current = {
+			'private': True,
+			'security_and_analysis': {
+				name: {'status': 'disabled'} for name in settings.SECURITY_FEATURES
+			},
+		}
+		with (
+			mock.patch.object(github, 'ghExists', return_value=False),
+			mock.patch.object(github, 'ghJson', return_value={'enabled': False}),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			settings.syncSecurity('app', current, apply=True)
+		self.assertEqual(
+			json.loads(write.call_args_list[0].kwargs['stdin']),
+			{
+				'security_and_analysis': {
+					name: {'status': 'enabled'} for name in settings.SECURITY_FEATURES
+				}
+			},
+		)
+		self.assertEqual(
+			[call.args[-1].rsplit('/', 1)[-1] for call in write.call_args_list[1:]],
+			['vulnerability-alerts', 'automated-security-fixes', 'immutable-releases'],
+		)
+
+	def testOrgActionsKeepSelectedRepositoryPolicy(self):
+		current = {
+			'enabled_repositories': 'selected',
+			'allowed_actions': 'all',
+			'sha_pinning_required': True,
+		}
+		with mock.patch.object(github, 'gh') as write, contextlib.redirect_stdout(io.StringIO()):
+			settings.syncActions(
+				'permissions',
+				settings.ORG_ACTIONS_PERMISSIONS,
+				'enabled_repositories',
+				True,
+				[current, dict(settings.WORKFLOW_PERMISSIONS)],
+			)
+		write.assert_called_once()
+		self.assertEqual(
+			json.loads(write.call_args.kwargs['stdin']),
+			{'sha_pinning_required': False, 'enabled_repositories': 'selected'},
+		)
+
+	def testDefaultBranchMustBeReadable(self):
+		for data in (None, [], {}, {'default_branch': None}, {'default_branch': ''}):
+			with (
+				self.subTest(data=data),
+				mock.patch.object(github, 'ghJson', return_value=data),
+				self.assertRaises(ValueError),
+			):
+				github.defaultBranch('app')
+
+	def testMalformedFileInventoryStopsBeforeWrites(self):
+		validRef = {'object': {'sha': 'abc123'}}
+		validTree = {'truncated': False, 'tree': []}
+		cases = [
+			(reference, validTree, [])
+			for reference in (None, [], {}, {'object': []}, {'object': {'sha': None}})
+		]
+		cases += [
+			(validRef, tree, [])
+			for tree in (
+				[],
+				{},
+				{'truncated': 'false', 'tree': []},
+				{'truncated': False, 'tree': None},
+				{'truncated': False, 'tree': [{'path': None, 'type': 'blob'}]},
+				{'truncated': False, 'tree': [{'path': '.nvmrc', 'type': 'unknown'}]},
+			)
+		]
+		cases += [
+			(validRef, {'truncated': True, 'tree': []}, contents)
+			for contents in (
+				{},
+				None,
+				[{'name': None}],
+				[{'name': 'package.json', 'type': 'unknown'}],
+			)
+		]
+		for reference, tree, contents in cases:
+
+			def read(*args, reference=reference, tree=tree, contents=contents):
+				path = args[-1]
+				return (
+					reference
+					if '/git/ref/' in path
+					else tree
+					if '/git/trees/' in path
+					else contents
+				)
+
+			with (
+				self.subTest(reference=reference, tree=tree, contents=contents),
+				mock.patch.object(github, 'defaultBranch', return_value='main'),
+				mock.patch.object(github, 'ghJson', read),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+				self.assertRaises(ValueError),
+			):
+				files.syncFiles(['app'], apply=True)
+			write.assert_not_called()
+
+	def testManifestDirectoriesAreNotDependencies(self):
+		for truncated in (False, True):
+
+			def read(*args, truncated=truncated):
+				path = args[-1]
+				if '/git/ref/' in path:
+					return {'object': {'sha': 'abc123'}}
+				if '/git/trees/' in path:
+					return {
+						'truncated': truncated,
+						'tree': [{'path': 'package.json', 'type': 'tree'}],
+					}
+				return [{'name': 'package.json', 'type': 'dir'}]
+
+			with (
+				self.subTest(truncated=truncated),
+				mock.patch.object(github, 'defaultBranch', return_value='main'),
+				mock.patch.object(github, 'ghJson', read),
+				mock.patch.object(github, 'ghExists', return_value=True),
+				mock.patch.object(files, 'plannedFiles', wraps=files.plannedFiles) as plan,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				files.syncFiles(['app'], apply=False)
+			plan.assert_called_once_with(set())
+
+	def testSecurityUpdatesWaitForReadableAlerts(self):
+		current = {
+			'private': True,
+			'security_and_analysis': {
+				name: {'status': 'enabled'} for name in settings.SECURITY_FEATURES
+			},
+		}
+		with (
+			mock.patch.object(github, 'ghExists', side_effect=RuntimeError('HTTP 403')),
+			mock.patch.object(github, 'ghJson', return_value={'enabled': False}),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			settings.syncSecurity('app', current, apply=True)
+		paths = [call.args[-1] for call in write.call_args_list]
+		self.assertFalse(any(path.endswith('/automated-security-fixes') for path in paths))
+		self.assertTrue(any(path.endswith('/immutable-releases') for path in paths))
+
+	def testSecurityUpdatesWaitForSuccessfulAlertsWrite(self):
+		current = {
+			'private': True,
+			'security_and_analysis': {
+				name: {'status': 'enabled'} for name in settings.SECURITY_FEATURES
+			},
+		}
+
+		def write(*args, **kwargs):
+			if args[-1].endswith('/vulnerability-alerts'):
+				raise RuntimeError('HTTP 403')
+
+		with (
+			mock.patch.object(github, 'ghExists', return_value=False),
+			mock.patch.object(github, 'ghJson', return_value={'enabled': False}),
+			mock.patch.object(github, 'gh', side_effect=write) as call,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			settings.syncSecurity('app', current, apply=True)
+		self.assertFalse(
+			any(args[-1].endswith('/automated-security-fixes') for args, _ in call.call_args_list)
+		)
+
+	def testUnknownActionsStateCannotBeWritten(self):
+		for enabledKey, wanted, states in (
+			(
+				'enabled',
+				settings.ACTIONS_PERMISSIONS,
+				({}, {'enabled': None}, {'enabled': 'false'}, {'enabled': 0}, []),
+			),
+			(
+				'enabled_repositories',
+				settings.ORG_ACTIONS_PERMISSIONS,
+				(
+					{},
+					{'enabled_repositories': None},
+					{'enabled_repositories': 'other'},
+					{'enabled_repositories': []},
+				),
+			),
+		):
+			for current in states:
+				output = io.StringIO()
+				with (
+					self.subTest(current=current),
+					mock.patch.object(github, 'gh') as write,
+					contextlib.redirect_stdout(output),
+				):
+					settings.syncActions(
+						'permissions',
+						wanted,
+						enabledKey,
+						True,
+						[current, dict(settings.WORKFLOW_PERMISSIONS)],
+					)
+				write.assert_not_called()
+				self.assertIn('không đọc được', output.getvalue())
+				self.assertNotIn('đã đúng', output.getvalue())
+
+	def testMalformedWorkflowPermissionsAreSkipped(self):
+		for current in (
+			{},
+			[],
+			{'default_workflow_permissions': 'read'},
+			{'default_workflow_permissions': 'unknown', 'can_approve_pull_request_reviews': True},
+			{'default_workflow_permissions': 'read', 'can_approve_pull_request_reviews': 'false'},
+		):
+			output = io.StringIO()
+			with (
+				self.subTest(current=current),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(output),
+			):
+				settings.syncActions(
+					'permissions',
+					settings.ACTIONS_PERMISSIONS,
+					'enabled',
+					True,
+					[{'enabled': False}, current],
+				)
+			write.assert_not_called()
+			self.assertIn('không đọc được', output.getvalue())
+			self.assertNotIn('đã đúng', output.getvalue())
+
+	def testActionsJsonErrorIsReportedPerEndpoint(self):
+		output = io.StringIO()
+		with (
+			mock.patch.object(github, 'ghJson', side_effect=ValueError('JSON không hợp lệ')),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(output),
+		):
+			settings.syncActions('permissions', settings.ACTIONS_PERMISSIONS, 'enabled', True)
+		write.assert_not_called()
+		self.assertIn('JSON không hợp lệ', output.getvalue())
+
+	def testMalformedSecurityStatusIsNotChanged(self):
+		current = {
+			'private': False,
+			'security_and_analysis': {
+				name: {'status': 'enabled'} for name in settings.SECURITY_FEATURES
+			},
+		}
+		for data in ({}, {'enabled': 'false'}, {'enabled': None}, [], {'enabled': 0}):
+			output = io.StringIO()
+			with (
+				self.subTest(data=data),
+				mock.patch.object(github, 'ghJson', return_value=data),
+				mock.patch.object(github, 'ghExists', return_value=True),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(output),
+			):
+				settings.syncSecurity('app', current, apply=True)
+			write.assert_not_called()
+			self.assertIn('không đọc được trạng thái', output.getvalue())
+			self.assertNotIn('tính năng bảo mật đã bật', output.getvalue())
+
+	def testMissingSecurityAnalysisIsNotPatched(self):
+		for analysis in (
+			None,
+			{},
+			[],
+			{'secret_scanning': {'status': 'unknown'}},
+			{'secret_scanning': []},
+			{
+				'secret_scanning': {'status': 'unknown'},
+				'secret_scanning_push_protection': {'status': 'disabled'},
+			},
+		):
+			output = io.StringIO()
+			with (
+				self.subTest(analysis=analysis),
+				mock.patch.object(github, 'ghJson', return_value={'enabled': True}),
+				mock.patch.object(github, 'ghExists', return_value=True),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(output),
+			):
+				settings.syncSecurity(
+					'app', {'private': True, 'security_and_analysis': analysis}, apply=True
+				)
+			write.assert_not_called()
+			self.assertIn('không đọc được trạng thái', output.getvalue())
+			self.assertNotIn('tính năng bảo mật đã bật', output.getvalue())
+
+	def testInvalidSettingsObjectStopsBeforePatch(self):
+		for current in ([], {}, {'has_issues': 'false'}, {'has_issues': 1}):
+			with (
+				self.subTest(current=current),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+				self.assertRaises((ValueError, TypeError)),
+			):
+				settings.updateSettings(
+					'repos/o/r', current, {'has_issues': True}, True, 'cài đặt repository'
+				)
+			write.assert_not_called()
+
+	def testCitationKeywordsUseYamlValues(self):
+		with (
+			tempfile.TemporaryDirectory() as folder,
+			mock.patch.object(github, 'ROOT', Path(folder)),
+		):
+			for text in (
+				'keywords: [github, rulesets]\n',
+				'keywords:\n    - "github"\n    - rulesets # ghi chú\n',
+				'values: &topics [github, rulesets]\nkeywords: *topics\n',
+			):
+				with self.subTest(text=text):
+					(Path(folder) / 'CITATION.cff').write_text(text, encoding='utf-8')
+					self.assertEqual(settings.citationKeywords(), ['github', 'rulesets'])
+
+	def testInvalidTopicsNeverClearExistingTopics(self):
+		with (
+			tempfile.TemporaryDirectory() as folder,
+			mock.patch.object(github, 'ROOT', Path(folder)),
+		):
+			for text in (
+				'keywords: [\n',
+				'title: example\n',
+				'keywords: false\n',
+				'keywords: [42]\n',
+			):
+				(Path(folder) / 'CITATION.cff').write_text(text, encoding='utf-8')
+				with (
+					self.subTest(text=text),
+					mock.patch.object(github, 'gh') as write,
+					contextlib.redirect_stdout(io.StringIO()),
+					self.assertRaises(ValueError),
+				):
+					settings.syncTopics('.github', {'topics': ['github']}, apply=True)
+				write.assert_not_called()
+
 	def testUnknownTeamPermissionsStopBeforeAnyWrite(self):
 		for value in (
 			{'role_name': 'release_manager', 'permissions': {'push': True}},
@@ -580,7 +935,13 @@ class OrgSetupTest(unittest.TestCase):
 			started.append(path)
 			if path == repository:
 				time.sleep(0.2)
-				return dict(settings.repositorySettings('app'), private=True)
+				return dict(
+					settings.repositorySettings('app'),
+					private=True,
+					security_and_analysis={
+						name: {'status': 'disabled'} for name in settings.SECURITY_FEATURES
+					},
+				)
 			if path.endswith('/actions/permissions'):
 				return dict(settings.ACTIONS_PERMISSIONS, enabled=True)
 			if path.endswith('/actions/permissions/workflow'):
@@ -756,7 +1117,7 @@ class OrgSetupTest(unittest.TestCase):
 			if '/git/trees/' in path:
 				return {'truncated': True, 'tree': []}
 			self.assertTrue(path.endswith('/contents?ref=abc123'), path)
-			return [{'name': 'package.json'}]
+			return [{'name': 'package.json', 'type': 'file'}]
 
 		with (
 			mock.patch.object(github, 'defaultBranch', return_value='main'),
