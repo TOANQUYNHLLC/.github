@@ -19,6 +19,7 @@ GitHub **không** kế thừa các tệp dưới đây từ repository `.github`
 | Tệp nguồn                                 | Khi có                                           | Nội dung                                              |
 | ----------------------------------------- | ------------------------------------------------ | ----------------------------------------------------- |
 | [`.prettierrc.json`](../.prettierrc.json) | `package.json`                                   | Prettier: tab độ rộng 4; Markdown, YAML dùng dấu cách |
+| [`.nvmrc`](../.nvmrc)                     | như trên                                         | Phiên bản Node.js cho workflow mẫu Node.js CI         |
 | [`ruff.toml`](../ruff.toml)               | `pyproject.toml`, `requirements.txt`, `setup.py` | ruff format: tab độ rộng 4, LF                        |
 | [`.python-version`](.python-version)      | như trên                                         | Phiên bản Python cho workflow mẫu Python CI           |
 | [`rustfmt.toml`](rustfmt.toml)            | `Cargo.toml`                                     | rustfmt: `hard_tabs = true`, độ rộng 4                |

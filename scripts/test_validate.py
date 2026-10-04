@@ -541,6 +541,15 @@ class Holder:
 		self.edit('.gitattributes', '*.zip binary\n', '')
 		self.assertFails('.gitattributes: thiếu .zip binary so với validate.py')
 
+	def testWorkflowRunMustNotUseExpressions(self):
+		# Tiêu đề Pull Request viết thẳng vào lệnh có thể chèn lệnh shell; phải đi qua env.
+		self.edit(
+			'workflow-templates/pr-title.yml',
+			'run: python3 .org/scripts/conventions.py title "$PR_TITLE"',
+			'run: python3 .org/scripts/conventions.py title "${{ github.event.pull_request.title }}"',
+		)
+		self.assertFails('không viết ${{ … }} trong run:')
+
 	def testWorkflowMustDeclarePermissions(self):
 		self.edit('.github/workflows/links.yml', 'permissions:\n    contents: read\n\n', '')
 		self.assertFails('thiếu khai báo "permissions" ở cấp workflow')
