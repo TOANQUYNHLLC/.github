@@ -24,6 +24,8 @@ import urllib.parse
 from datetime import UTC, datetime
 from pathlib import Path
 
+from markdown import withoutCodeBlocks
+
 ROOT = Path(__file__).resolve().parents[1]
 FORM_TYPES = {'markdown', 'textarea', 'input', 'dropdown', 'checkboxes'}
 # Khóa cấp cao nhất GitHub chấp nhận trong biểu mẫu Issue. `type` (Issue Type) có trong tài liệu nhưng GitHub
@@ -1269,12 +1271,10 @@ def checkSpaceOnly(path, text):
 	if '\t' not in text:
 		return
 	width = 2 if path.suffix in TWO_SPACE_SUFFIXES else 4
-	inFence = False
+	if path.suffix == '.md':
+		text = withoutCodeBlocks(text)
 	for number, line in enumerate(text.split('\n'), start=1):
-		if path.suffix == '.md' and line.lstrip().startswith('```'):
-			inFence = not inFence
-			continue
-		if not inFence and re.match(r'^ *\t', line):
+		if re.match(r'^ *\t', line):
 			error(
 				path,
 				f'dòng {number}: {path.suffix} phải thụt lề bằng {width} dấu cách, không dùng tab',
@@ -1336,13 +1336,10 @@ def checkBadges(path, text):
 
 def checkHeadings(path, text):
 	"""Phong cách thống nhất của repository: mọi tiêu đề Markdown viết hoa."""
-	inFence = False
-	for number, line in enumerate(text.split('\n'), start=1):
-		if line.lstrip().startswith('```'):
-			inFence = not inFence
+	for number, line in enumerate(withoutCodeBlocks(text).split('\n'), start=1):
 		heading = re.match(r'#{1,6} (.+)', line)
 		title = re.sub(r'`[^`]*`|\[[^\]]*\]\([^)]*\)', '', heading.group(1)) if heading else ''
-		if heading and not inFence and title != title.upper():
+		if heading and title != title.upper():
 			error(path, f'dòng {number}: tiêu đề phải viết hoa — "{heading.group(1)}"')
 
 

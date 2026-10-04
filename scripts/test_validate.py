@@ -27,6 +27,21 @@ except ModuleNotFoundError:
 
 
 class ValidateTest(unittest.TestCase):
+	def testCodeFencesDoNotCreateMarkdownErrors(self):
+		for fence in ('~~~', '````'):
+			with self.subTest(fence=fence):
+				path = self.repo / 'example.md'
+				path.write_text(
+					f'# VÍ DỤ\n\n{fence}md\n```\n# Tiêu đề mẫu\n\tvar = 1\n[x](missing.md)\n```\n{fence}\n\n[x](actually_missing.md)\n',
+					encoding='utf-8',
+				)
+				code, output = self.runValidate()
+				self.assertEqual(code, 1)
+				self.assertIn('actually_missing.md', output)
+				self.assertNotIn('liên kết hỏng: missing.md', output)
+				self.assertNotIn('tiêu đề phải viết hoa', output)
+				self.assertNotIn('phải thụt lề', output)
+
 	def testNestedYamlShapesAreReportedWithoutStoppingChecks(self):
 		cases = (
 			(

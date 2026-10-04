@@ -57,6 +57,32 @@ QuietHandler = handlerClass(answerOk)
 
 
 class ExternalLinksTest(unittest.TestCase):
+	def testUppercaseHttpSchemesAreCollected(self):
+		module = loadScript('check-external-links')
+		documents = {
+			module.ROOT / 'README.md': '[x](HTTPS://example.test/docs)',
+			module.ROOT / 'links.yaml': 'link: HTTP://example.test/api',
+		}
+		self.assertEqual(
+			module.collectLinks(documents),
+			{
+				'HTTPS://example.test/docs': {'README.md'},
+				'HTTP://example.test/api': {'links.yaml'},
+			},
+		)
+
+	def testMarkdownCodeExamplesAreNotRequested(self):
+		module = loadScript('check-external-links')
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			path = module.ROOT / 'README.md'
+			path.write_text(
+				'~~~md\n[x](https://fake.test/)\n~~~\n````\n```\n[x](https://fake.test/)\n```\n````\n`[x](https://fake.test/)`\n[x](https://real.test/)\n',
+				encoding='utf-8',
+			)
+			with mock.patch.object(module, 'textFiles', return_value=[path]):
+				self.assertEqual(module.collectLinks(), {'https://real.test/': {'README.md'}})
+
 	def testInvalidUrlsDoNotStopOtherLinks(self):
 		module = loadScript('check-external-links')
 		for url in ('http://[bad]/', 'https://example.test:wrong/', 'https://example.test/đường'):

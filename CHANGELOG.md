@@ -10,6 +10,9 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### 🐛 SỬA
 
+- Đồng bộ team xác minh vai trò và trạng thái thành viên; lời mời đang chờ, dữ liệu thiếu hoặc quyền tùy chỉnh không xếp hạng được dừng trước khi ghi. Phản hồi lời mời mới được kiểm tra, không báo đã thêm maintainer khi còn `pending`.
+- Quy ước tiêu đề áp dụng đủ giới hạn đã ghi trong hướng dẫn đóng góp; tiêu đề trống được kiểm tra đúng đầu vào, lỗi Git làm kiểm tra thất bại. Chú thích lỗi Actions mã hóa ký tự điều khiển theo định dạng workflow command.
+- Các kiểm tra Markdown dùng chung cách bỏ khối mã backtick và dấu ngã, xử lý đúng độ dài dấu đóng và khối chưa đóng; liên kết trong mã nội tuyến được bỏ qua. Scheme URL viết hoa hoặc có dấu `+` và URL dạng `//` không bị coi là đường dẫn cục bộ.
 - Validator báo trường và phần tử YAML/JSON lồng nhau sai kiểu tại tệp, tiếp tục các luật còn lại; kiểm tra nguồn phiên bản công cụ cũng nhận workflow `.yaml`.
 - Kiểm tra liên kết bên ngoài báo tệp sai UTF-8 và URL sai dạng mà không dừng cả lượt; Canonical chỉ mở HTTP(S). Biểu mẫu GitHub có dữ liệu nhúng sai cấu trúc và phản hồi phiên bản công cụ sai dạng được báo theo từng mục; cấu hình phiên bản cục bộ sai chặn việc gọi mạng.
 - Hook commit lấy cấu hình định dạng từ Git index, dừng khi không xuất được nội dung đã stage; kiểm tra Go báo lỗi khi thiếu `gofmt` hoặc công cụ thoát lỗi không có stderr.
@@ -32,6 +35,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ⚡ TỐI ƯU
 
+- Kiểm tra tiêu đề commit bỏ phép dò `origin/main` dư thừa sau khi `git log` thành công; chỉ dò ref để phân biệt lỗi Git với nhánh đích chưa có.
 - Kiểm tra liên kết đọc mỗi tệp một lần trong lượt chạy; GET so bản `security.txt` trên website cũng kiểm tra URL Canonical, tránh request HEAD trùng và chạy song song với các liên kết khác.
 - Đối chiếu job và tài liệu dùng lại danh sách workflow từ các tệp đã kiểm kê trong lượt kiểm tra, tránh quét lại thư mục ở từng phép đối chiếu.
 - Tìm test được chọn không nạp các module test còn lại; cấu hình JSON được đọc một lần trong lượt đối chiếu, lượt mới đọc lại tệp.

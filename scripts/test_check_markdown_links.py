@@ -19,6 +19,46 @@ except ModuleNotFoundError:
 
 
 class MarkdownLinksTest(unittest.TestCase):
+	def testCodeExamplesAreNotLinksOrHeadings(self):
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'README.md'
+			for text in (
+				'~~~md\n## FAKE\n[x](missing.md)\n~~~\n## REAL\n',
+				'````md\n```\n## FAKE\n[x](missing.md)\n```\n````\n## REAL\n',
+				'~~~\n[x](missing.md)\n',
+				'~~~\n## FAKE\n[x](missing.md)\n~~~still code\n[x](missing.md)\n~~~~\n## REAL\n',
+				'Inline `[x](missing.md)\n[x](missing.md)`\n## REAL\n',
+				'Inline `[x](missing.md)` and ``[x](missing.md) `tick` ``\n## REAL\n',
+			):
+				with self.subTest(text=text):
+					path.write_text(text, encoding='utf-8')
+					self.assertEqual(module.findBrokenLinks(path, text), [])
+					self.assertNotIn('fake', module.headingAnchors(path))
+
+	def testShortOrDifferentFenceDoesNotCloseCodeBlock(self):
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'README.md'
+			text = '````\n```\n~~~\n## FAKE\n[x](missing.md)\n````\n[x](actually_missing.md)\n'
+			path.write_text(text, encoding='utf-8')
+			self.assertEqual(
+				module.findBrokenLinks(path, text), ['liên kết hỏng: actually_missing.md']
+			)
+			self.assertEqual(module.headingAnchors(path), set())
+
+	def testExternalSchemesAreNotLocalPaths(self):
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'README.md'
+			self.assertEqual(
+				module.findBrokenLinks(
+					path,
+					'[x](HTTPS://example.test/a) [y](//example.test/a) [z](git+ssh://example.test/a)',
+				),
+				[],
+			)
+
 	def testUnreadableMarkdownReturnsFailure(self):
 		module = loadScript('check-markdown-links')
 		with tempfile.TemporaryDirectory() as folder:
