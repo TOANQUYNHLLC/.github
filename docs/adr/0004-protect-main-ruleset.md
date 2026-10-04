@@ -17,6 +17,12 @@ Quy ước chỉ có ý nghĩa khi nhánh chính chỉ nhận thay đổi đã �
 - Repository khác chỉ bắt buộc kiểm tra có job tương ứng (tiêu đề Pull Request, tên branch); `scripts/org-setup.py rulesets` áp dụng và so với ruleset trên GitHub.
 - Bản cấp tổ chức (`rulesets/org-*.json`) sinh từ bản cấp repository bằng `orgRulesets()` trong `scripts/orgsetup/rulesets.py`, dùng chủ tổ chức (`OrganizationAdmin`) làm danh sách bỏ qua và thêm code scanning; chỉ được thực thi khi tổ chức nâng lên gói Team.
 
+## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
+
+- **Chỉ ruleset cấp tổ chức**: gói GitHub Free không thực thi ruleset cấp tổ chức; giữ bản cấp tổ chức sẵn sàng cho khi nâng lên gói Team.
+- **Chỉ Squash and merge**: gộp mọi commit của Pull Request lớn thành một, mất các bước trung gian có ý nghĩa; cho phép thêm Merge.
+- **Bỏ qua chỉ cho vai trò Admin khi hợp nhất Pull Request**: hẹp hơn danh sách bỏ qua **always** hiện tại; chọn danh sách hai tài khoản quản trị để người quản trị xử lý được việc khẩn cấp, kèm quy định chỉ dùng khi thật cần (`GOVERNANCE.md`).
+
 ## ⚖️ HỆ QUẢ
 
 - Tên kiểm tra bắt buộc phải trùng tên job — `validate.py` kiểm tra với job của repository này.

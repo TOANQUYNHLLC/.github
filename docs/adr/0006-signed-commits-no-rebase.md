@@ -13,6 +13,12 @@ Commit có chữ ký đã xác minh cho biết ai thực sự tạo ra thay đ�
 - Ruleset và cài đặt repository chỉ cho phép **Merge** và **Squash** (`allowed_merge_methods`, `allow_rebase_merge: false`).
 - Người đóng góp ký commit bằng GPG hoặc SSH; rebase branch của mình lên nhánh chính tại máy vẫn được vì commit được ký lại bằng khóa của người viết.
 
+## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
+
+- **Cho phép cả Merge, Squash và Rebase**: Rebase and merge làm commit trên nhánh chính mất chữ ký — lịch sử `main` của repository này có các commit không chữ ký từ những Pull Request hợp nhất bằng Rebase, không ký lại được nếu không viết lại lịch sử.
+- **Chỉ Squash and merge**: luôn có chữ ký nhưng mất các commit riêng của Pull Request lớn; giữ thêm Merge.
+- **Không bắt buộc chữ ký**: không xác minh được ai tạo thay đổi trên nhánh chính và tag phát hành.
+
 ## ⚖️ HỆ QUẢ
 
 - Commit vào nhánh chính qua Pull Request và commit mà tag phát hành trỏ tới đều có chữ ký đã xác minh; người trong danh sách bỏ qua của ruleset không bị chặn nên vẫn phải tự ký commit.

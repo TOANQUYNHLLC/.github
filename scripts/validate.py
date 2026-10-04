@@ -61,6 +61,8 @@ GITHUB_DEFAULT_LABELS = (
 	'question',
 	'wontfix',
 )
+# Mục bắt buộc của mỗi ADR, theo thứ tự (docs/adr/template.md).
+ADR_SECTIONS = ('BỐI CẢNH', 'QUYẾT ĐỊNH', 'PHƯƠNG ÁN ĐÃ CÂN NHẮC', 'HỆ QUẢ')
 # Đường dẫn trong tài liệu bắt đầu bằng các thư mục này phải có thật trong repository.
 DOC_PATH = re.compile(
 	r'`((?:scripts|docs|rulesets|workflow-templates|repository-templates|\.github/workflows)/[^`\s*<>…]*)`'
@@ -113,6 +115,9 @@ YAML_BATCH = (
 	'rescue Exception => e; out[f] = {"error" => e.message}; end }; puts JSON.dump(out)'
 )
 yamlCache = {}
+# Danh sách tệp và nội dung tệp của lượt runChecks() đang chạy (xóa ở đầu mỗi lượt).
+trackedCache = []
+textCache = {}
 # Kết quả đọc theo nội dung tệp, giữ qua các lần runChecks() trong cùng tiến trình (bộ test chạy validate hàng
 # trăm lần): tệp không đổi thì không gọi lại Ruby.
 yamlResults = {}
@@ -154,17 +159,26 @@ def loadYaml(path):
 
 
 def trackedFiles():
-	"""File git quản lý hoặc sắp được thêm; bỏ qua mọi thứ nằm trong .gitignore."""
-	output = subprocess.run(
-		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'],
-		cwd=ROOT,
-		capture_output=True,
-		check=True,
-	).stdout.decode('utf-8')
-	for name in sorted(set(filter(None, output.split('\0')))):
-		path = ROOT / name
-		if path.is_file():
-			yield path
+	"""File git quản lý hoặc sắp được thêm (bỏ qua mọi thứ trong .gitignore, tệp đã xóa trên đĩa); đọc một lần
+	mỗi lượt runChecks()."""
+	if not trackedCache:
+		output = subprocess.run(
+			['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z'],
+			cwd=ROOT,
+			capture_output=True,
+			check=True,
+		).stdout.decode('utf-8')
+		names = sorted(set(filter(None, output.split('\0'))))
+		trackedCache.extend(ROOT / name for name in names if (ROOT / name).is_file())
+	return trackedCache
+
+
+def readText(path):
+	"""Nội dung tệp (UTF-8), đọc một lần mỗi lượt runChecks() — nhiều luật cùng đọc một tệp."""
+	key = str(path)
+	if key not in textCache:
+		textCache[key] = Path(path).read_text(encoding='utf-8')
+	return textCache[key]
 
 
 # Bắt buộc thụt lề bằng 4 dấu cách: YAML, Markdown (Prettier), F#, Elm, Nim, Zig.
@@ -268,6 +282,17 @@ BINARY_SUFFIXES = (
 )
 
 
+# Dòng có nội dung mà thụt lề chứa dấu cách; bỏ dòng tiếp nối chú thích khối (/** … */) do Prettier sinh ra:
+# tab rồi " *".
+MIXED_INDENT = re.compile(r'^(?!\t* \*)\t* [ \t]*\S', re.MULTILINE)
+# Khoảng trắng cuối dòng (trước \r của CRLF nếu có).
+TRAILING_SPACE = re.compile(r'[ \t]\r*$', re.MULTILINE)
+
+
+def lineNumber(text, offset):
+	return text.count('\n', 0, offset) + 1
+
+
 def checkText(path):
 	data = path.read_bytes()
 	name = path.name
@@ -303,10 +328,9 @@ def checkText(path):
 		error(path, 'phải xuống dòng bằng LF (theo .editorconfig và .gitattributes)')
 	if name.endswith(KEEP_TRAILING_SPACE_SUFFIXES):
 		return text
-	for number, line in enumerate(text.split('\n'), start=1):
-		if line.rstrip('\r') != line.rstrip('\r').rstrip(' \t'):
-			error(path, f'dòng {number}: có khoảng trắng cuối dòng')
-			break
+	match = TRAILING_SPACE.search(text)
+	if match:
+		error(path, f'dòng {lineNumber(text, match.start())}: có khoảng trắng cuối dòng')
 	return text
 
 
@@ -346,7 +370,7 @@ def checkForm(path, required=('name', 'description', 'body')):
 	for key in required:
 		if not form.get(key):
 			error(path, f'thiếu khóa bắt buộc "{key}"')
-	checkAbsoluteLinks(path, path.read_text(encoding='utf-8'))
+	checkAbsoluteLinks(path, readText(path))
 	if path.parent.name == 'DISCUSSION_TEMPLATE':
 		for key in sorted(set(form) - DISCUSSION_FORM_KEYS):
 			error(path, f'biểu mẫu Discussion không hỗ trợ khóa "{key}"')
@@ -431,7 +455,7 @@ def checkWorkflowTemplate(path):
 		error(path, f'thiếu tệp {properties.name}')
 		return
 	try:
-		meta = json.loads(properties.read_text(encoding='utf-8'))
+		meta = json.loads(readText(properties))
 	except json.JSONDecodeError as exc:
 		error(properties, f'JSON không hợp lệ: {exc}')
 		return
@@ -452,7 +476,7 @@ def checkWorkflowTemplate(path):
 def checkToolVersions():
 	"""Phiên bản công cụ chỉ ở mise.toml; Node.js chỉ ở .nvmrc (ADR 0008). Công cụ trong mise.toml (trừ Python, Node.js)
 	khớp danh sách check-tool-versions.py theo dõi bản mới."""
-	mise = (ROOT / 'mise.toml').read_text(encoding='utf-8') if (ROOT / 'mise.toml').exists() else ''
+	mise = readText(ROOT / 'mise.toml') if (ROOT / 'mise.toml').exists() else ''
 	tools = set(re.findall(r'^([a-z-]+) = "[^"]+"$', mise.split('[settings]')[0], re.MULTILINE))
 	for tool in sorted((tools - {'python', 'node'}) ^ set(toolVersions.REPOSITORIES)):
 		where = (
@@ -477,7 +501,7 @@ def checkToolVersions():
 		ROOT / 'Makefile',
 	]
 	for path in sorted(path for path in sources if path.exists()):
-		for number, line in enumerate(path.read_text(encoding='utf-8').split('\n'), start=1):
+		for number, line in enumerate(readText(path).split('\n'), start=1):
 			if pinned.search(line):
 				error(path, f'dòng {number}: phiên bản công cụ phải lấy từ mise.toml (ADR 0008)')
 
@@ -485,7 +509,7 @@ def checkToolVersions():
 def checkFormatConfig():
 	"""Cấu hình định dạng không được trái quy tắc: tab, độ rộng 4; dấu cách chỉ cho ngôn ngữ bắt buộc."""
 	try:
-		prettier = json.loads((ROOT / '.prettierrc.json').read_text(encoding='utf-8'))
+		prettier = json.loads(readText(ROOT / '.prettierrc.json'))
 	except (OSError, json.JSONDecodeError) as exc:
 		errors.append(f'.prettierrc.json: không đọc được ({exc})')
 		prettier = {}
@@ -498,7 +522,7 @@ def checkFormatConfig():
 			errors.append('.prettierrc.json: overrides không được đổi tabWidth khác 4')
 		if options.get('useTabs') is False and not files <= {'*.md', '*.yml', '*.yaml'}:
 			errors.append('.prettierrc.json: chỉ Markdown, YAML được dùng dấu cách')
-	editorconfig = (ROOT / '.editorconfig').read_text(encoding='utf-8')
+	editorconfig = readText(ROOT / '.editorconfig')
 	for setting in (
 		'indent_style = tab',
 		'indent_size = 4',
@@ -515,11 +539,11 @@ def checkFormatConfig():
 		if re.search(r'(indent_size|tab_width)\s*=\s*2\b', section):
 			errors.append('.editorconfig: không được dùng độ rộng 2')
 	for path in (ROOT / '.prettierrc.json', ROOT / 'ruff.toml'):
-		text = path.read_text(encoding='utf-8') if path.exists() else ''
+		text = readText(path) if path.exists() else ''
 		if re.search(r'(indent_size|tab_width|indent-width)\s*=\s*2\b|"tabWidth"\s*:\s*2\b', text):
 			errors.append(f'{path.name}: không được dùng độ rộng 2')
 	ruffPath = ROOT / 'ruff.toml'
-	ruff = ruffPath.read_text(encoding='utf-8') if ruffPath.exists() else ''
+	ruff = readText(ruffPath) if ruffPath.exists() else ''
 	if 'indent-width = 4' not in ruff or 'indent-style = "tab"' not in ruff:
 		errors.append('ruff.toml: bắt buộc indent-width = 4 và indent-style = "tab"')
 	# Đối chiếu đầy đủ với cấu hình chuẩn.
@@ -557,7 +581,7 @@ def checkLintIgnoreConfig():
 
 	def entries(name):
 		path = ROOT / name
-		text = path.read_text(encoding='utf-8') if path.exists() else ''
+		text = readText(path) if path.exists() else ''
 		return {
 			line.strip() for line in text.split('\n') if line.strip() and not line.startswith('#')
 		}
@@ -568,7 +592,7 @@ def checkLintIgnoreConfig():
 	eslintPath = ROOT / 'eslint.config.js'
 	if not eslintPath.exists():
 		return
-	eslint = eslintPath.read_text(encoding='utf-8')
+	eslint = readText(eslintPath)
 	if "from 'eslint-config-prettier'" not in eslint:
 		errors.append('eslint.config.js: phải dùng eslint-config-prettier để tắt quy tắc định dạng')
 	if re.search(r"""['"]?\bindent['"]?\s*:""", eslint):
@@ -578,10 +602,8 @@ def checkLintIgnoreConfig():
 def checkEditorExtensions():
 	"""Extension VS Code gợi ý tại máy (.vscode/extensions.json) và cài trong Dev Container phải giống nhau."""
 	try:
-		local = json.loads((ROOT / '.vscode' / 'extensions.json').read_text(encoding='utf-8'))
-		container = json.loads(
-			(ROOT / '.devcontainer' / 'devcontainer.json').read_text(encoding='utf-8')
-		)
+		local = json.loads(readText(ROOT / '.vscode' / 'extensions.json'))
+		container = json.loads(readText(ROOT / '.devcontainer' / 'devcontainer.json'))
 	except (OSError, json.JSONDecodeError):
 		return
 	wanted = set(local.get('recommendations') or [])
@@ -606,8 +628,8 @@ def editorconfigSuffixes(editorconfig, setting):
 
 def checkSuffixLists():
 	"""Danh sách đuôi file trong validate.py, .editorconfig và .gitattributes phải khớp nhau."""
-	editorconfig = (ROOT / '.editorconfig').read_text(encoding='utf-8')
-	attributes = (ROOT / '.gitattributes').read_text(encoding='utf-8')
+	editorconfig = readText(ROOT / '.editorconfig')
+	attributes = readText(ROOT / '.gitattributes')
 	for setting, expected in (
 		('end_of_line = crlf', CRLF_SUFFIXES),
 		('charset = utf-8-bom', UTF8_BOM_SUFFIXES),
@@ -654,7 +676,7 @@ def contributingSection(text, heading):
 def checkConventions():
 	"""Loại commit và tiền tố branch trong CONTRIBUTING.md phải khớp scripts/conventions.py — script mà
 	workflow branch-name.yml, pr-title.yml (của repository này và workflow mẫu) gọi."""
-	contributing = (ROOT / 'CONTRIBUTING.md').read_text(encoding='utf-8')
+	contributing = readText(ROOT / 'CONTRIBUTING.md')
 	types = set(
 		re.findall(
 			r'^\| `([a-z]+)` ', contributingSection(contributing, 'QUY ƯỚC COMMIT'), re.MULTILINE
@@ -675,7 +697,7 @@ def checkConventions():
 	):
 		if not labeler.exists():
 			continue
-		covered = set(re.findall(r"'\^([a-z]+)/'", labeler.read_text(encoding='utf-8')))
+		covered = set(re.findall(r"'\^([a-z]+)/'", readText(labeler)))
 		for prefix in sorted(prefixes - covered):
 			errors.append(
 				f'{labeler.relative_to(ROOT)}: thiếu luật head-branch cho tiền tố "{prefix}/" của CONTRIBUTING.md'
@@ -683,9 +705,7 @@ def checkConventions():
 	# Mẫu commit (.gitmessage, bật bằng make hooks) liệt kê đúng các loại commit.
 	message = ROOT / '.gitmessage'
 	listed = (
-		re.search(r'^# Loại: (.+)$', message.read_text(encoding='utf-8'), re.MULTILINE)
-		if message.exists()
-		else None
+		re.search(r'^# Loại: (.+)$', readText(message), re.MULTILINE) if message.exists() else None
 	)
 	for word in sorted(types ^ set(re.split(r',\s*', listed.group(1).strip()) if listed else ())):
 		where = 'thiếu' if word in types else 'thừa'
@@ -838,11 +858,9 @@ def checkMaintainers():
 	listing, source = ROOT / 'MAINTAINERS.md', ROOT / 'scripts' / 'orgsetup' / 'teams.py'
 	if not listing.exists() or not source.exists():
 		return
-	current = contributingSection(listing.read_text(encoding='utf-8'), 'NGƯỜI QUẢN TRỊ HIỆN TẠI')
+	current = contributingSection(readText(listing), 'NGƯỜI QUẢN TRỊ HIỆN TẠI')
 	documented = set(re.findall(r'\[@([A-Za-z0-9-]+)\]\(https://github\.com/\1\)', current))
-	match = re.search(
-		r'^MAINTAINERS = (\(.*?\))$', source.read_text(encoding='utf-8'), re.MULTILINE
-	)
+	match = re.search(r'^MAINTAINERS = (\(.*?\))$', readText(source), re.MULTILINE)
 	configured = set(ast.literal_eval(match.group(1))) if match else set()
 	for name in sorted(documented ^ configured):
 		where = listing if name in configured else source
@@ -859,7 +877,7 @@ def checkRulesets():
 		errors.append('thiếu tệp bắt buộc rulesets/protect-main.json')
 		return
 	try:
-		ruleset = json.loads(path.read_text(encoding='utf-8'))
+		ruleset = json.loads(readText(path))
 	except json.JSONDecodeError:
 		return
 	if ruleset.get('name') != 'Protect Main':
@@ -872,7 +890,7 @@ def checkRulesets():
 	# ruleset không nhận quy tắc này (ADR 0007).
 	for rulesetPath in sorted((ROOT / 'rulesets').glob('*.json')):
 		try:
-			data = json.loads(rulesetPath.read_text(encoding='utf-8'))
+			data = json.loads(readText(rulesetPath))
 		except json.JSONDecodeError:
 			continue
 		if data.get('target') == 'push':
@@ -886,7 +904,7 @@ def checkRulesets():
 		errors.append('thiếu tệp bắt buộc rulesets/protect-release-tags.json')
 	else:
 		try:
-			tags = json.loads(tagPath.read_text(encoding='utf-8'))
+			tags = json.loads(readText(tagPath))
 		except json.JSONDecodeError:
 			tags = {}
 		include = ((tags.get('conditions') or {}).get('ref_name') or {}).get('include') or []
@@ -903,7 +921,7 @@ def checkRulesets():
 		errors.append('thiếu tệp bắt buộc rulesets/org-protect-main.json')
 	else:
 		try:
-			org = json.loads(orgPath.read_text(encoding='utf-8'))
+			org = json.loads(readText(orgPath))
 		except json.JSONDecodeError:
 			org = {}
 		repositories = ((org.get('conditions') or {}).get('repository_name') or {}).get(
@@ -916,7 +934,7 @@ def checkRulesets():
 			)
 	# Import ruleset cấp tổ chức báo "contains an invalid actor" với actor loại User.
 	for orgFile in sorted((ROOT / 'rulesets').glob('org-*.json')):
-		if re.search(r'"(actor_type|type)":\s*"User"', orgFile.read_text(encoding='utf-8')):
+		if re.search(r'"(actor_type|type)":\s*"User"', readText(orgFile)):
 			error(
 				orgFile,
 				'ruleset cấp tổ chức không dùng actor loại User — GitHub từ chối khi import',
@@ -926,7 +944,7 @@ def checkRulesets():
 		errors.append('thiếu tệp bắt buộc rulesets/org-protect-release-tags.json')
 	else:
 		try:
-			orgTags = json.loads(orgTagPath.read_text(encoding='utf-8'))
+			orgTags = json.loads(readText(orgTagPath))
 		except json.JSONDecodeError:
 			orgTags = {}
 		conditions = orgTags.get('conditions') or {}
@@ -944,7 +962,7 @@ def checkRulesets():
 		errors.append('thiếu tệp bắt buộc rulesets/org-protect-pushes.json')
 	else:
 		try:
-			pushes = json.loads(pushPath.read_text(encoding='utf-8'))
+			pushes = json.loads(readText(pushPath))
 		except json.JSONDecodeError:
 			pushes = {}
 		conditions = pushes.get('conditions') or {}
@@ -971,7 +989,7 @@ def checkDocsMatchCode():
 	script và workflow của repository."""
 	makefile = ROOT / 'Makefile'
 	targets = (
-		set(re.findall(r'^([a-z-]+):.*## ', makefile.read_text(encoding='utf-8'), re.MULTILINE))
+		set(re.findall(r'^([a-z-]+):.*## ', readText(makefile), re.MULTILINE))
 		if makefile.exists()
 		else set()
 	)
@@ -983,10 +1001,10 @@ def checkDocsMatchCode():
 	functions = {
 		name
 		for path in scripts
-		for name in re.findall(r'^\s*def (\w+)\(', path.read_text(encoding='utf-8'), re.MULTILINE)
+		for name in re.findall(r'^\s*def (\w+)\(', readText(path), re.MULTILINE)
 	}
 	for path in (file for file in trackedFiles() if file.suffix == '.md'):
-		text = path.read_text(encoding='utf-8')
+		text = readText(path)
 		for target in sorted(set(re.findall(r'`make ([a-z][a-z-]*)', text))):
 			if targets and target not in targets:
 				error(path, f'nhắc "make {target}" nhưng Makefile không có lệnh này')
@@ -1002,7 +1020,7 @@ def checkDocsMatchCode():
 	readmePath = ROOT / 'README.md'
 	if not readmePath.exists():
 		return
-	readme = readmePath.read_text(encoding='utf-8')
+	readme = readText(readmePath)
 	# make help là lệnh mặc định — README ghi dạng `make`.
 	for target in sorted(targets - {'help'}):
 		if f'`make {target}' not in readme:
@@ -1027,18 +1045,21 @@ def checkAdrIndex():
 		number: (status.strip(), date.strip())
 		for number, status, date in re.findall(
 			r'^\| \[(\d{4})\]\([^)]+\) +\|[^|]+\|([^|]+)\|([^|]+)\|$',
-			indexPath.read_text(encoding='utf-8'),
+			readText(indexPath),
 			re.MULTILINE,
 		)
 	}
 	for path in sorted(folder.glob('[0-9][0-9][0-9][0-9]-*.md')):
 		number = path.name[:4]
-		text = path.read_text(encoding='utf-8')
+		text = readText(path)
 		status = re.search(r'^- \*\*Trạng thái:\*\* (.+)$', text, re.MULTILINE)
 		date = re.search(r'^- \*\*Ngày:\*\* (.+)$', text, re.MULTILINE)
 		if not status or not date:
 			error(path, 'thiếu dòng "Trạng thái" hoặc "Ngày"')
 			continue
+		headings = re.findall(r'^## \S+ (.+)$', text, re.MULTILINE)
+		if [heading for heading in headings if heading in ADR_SECTIONS] != list(ADR_SECTIONS):
+			error(path, f'ADR phải có đủ các mục theo thứ tự: {", ".join(ADR_SECTIONS)}')
 		if number not in rows:
 			error(indexPath, f'bảng thiếu ADR {number}')
 			continue
@@ -1075,14 +1096,12 @@ def checkSpaceOnly(path, text):
 
 def checkTabOnly(path, text):
 	"""Mọi tệp mặc định dùng tab (theo .editorconfig): thụt lề chỉ bằng tab, không trộn dấu cách."""
-	for number, line in enumerate(text.split('\n'), start=1):
-		indent = re.match(r'^[ \t]*', line).group(0)
-		# Dòng tiếp nối chú thích khối (/** … */) do Prettier sinh ra: tab rồi " *".
-		if re.match(r'^\t* \*', line):
-			continue
-		if ' ' in indent and line.strip():
-			error(path, f'dòng {number}: thụt lề phải dùng tab theo .editorconfig')
-			return
+	match = MIXED_INDENT.search(text)
+	if match:
+		error(
+			path,
+			f'dòng {lineNumber(text, match.start())}: thụt lề phải dùng tab theo .editorconfig',
+		)
 
 
 def titleCase(text):
@@ -1194,7 +1213,7 @@ def configLabels():
 	):
 		if not path.exists():
 			continue
-		text = path.read_text(encoding='utf-8')
+		text = readText(path)
 		for match in re.finditer(
 			r'^\s*(?:stale|exempt)-(?:issue|pr)-labels?:\s*(.+)$', text, re.MULTILINE
 		):
@@ -1290,9 +1309,9 @@ def checkFile(file):
 	if file.suffix == '.sh':
 		checkShell(file)
 	if file.suffix == '.py':
-		checkNames(file, file.read_text(encoding='utf-8'))
+		checkNames(file, readText(file))
 	if file.suffix in SPACE_SUFFIXES + TWO_SPACE_SUFFIXES:
-		checkSpaceOnly(file, file.read_text(encoding='utf-8'))
+		checkSpaceOnly(file, readText(file))
 	if file.suffix in BINARY_SUFFIXES:
 		return
 	content = checkText(file)
@@ -1377,6 +1396,8 @@ def runChecks():
 	errors.clear()
 	FORM_LABELS.clear()
 	yamlCache.clear()
+	trackedCache.clear()
+	textCache.clear()
 	for file in trackedFiles():
 		checkFile(file)
 	for check in (

@@ -14,6 +14,13 @@ GitHub Actions tắt để tiết kiệm chi phí nên kiểm tra phải chạy 
 - `pre-push`: chỉ đẩy tag hoặc xóa branch thì bỏ qua; còn thay đổi chưa commit hoặc đẩy branch khác HEAD thì chặn; còn lại chạy `make check`, lỗi thì chặn.
 - `post-merge` (sau `git pull`) và `post-rewrite` với tham số `rebase` (sau `git pull --rebase`): cài lại hook, rồi chạy song song `make org-preview` (khi GitHub CLI đã đăng nhập), `make links`, `make versions`; chỉ báo, không chặn.
 
+## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
+
+- **Chỉ dựa vào GitHub Actions**: Actions có thể tắt để tiết kiệm chi phí; khi đó không còn kiểm tra nào trước khi đẩy.
+- **Hook viết bằng shell**: git chạy được hook ở mọi ngôn ngữ có shebang, các hook chỉ gọi lệnh và lọc danh sách tệp — việc Python làm tốt; chọn Python theo ADR 0009.
+- **Hook kiểm tra tệp trên đĩa**: sai khi chỉ stage một phần tệp (`git add -p`) hoặc còn thay đổi chưa commit; chọn kiểm tra đúng nội dung được commit, được đẩy.
+- **Chỉ chạy `make org-preview` sau `post-merge`**: bỏ sót `git pull --rebase`; thêm `post-rewrite`.
+
 ## ⚖️ HỆ QUẢ
 
 - Kết quả hook khớp đúng nội dung được commit, được đẩy; phải commit hoặc `git stash -u` trước khi đẩy.

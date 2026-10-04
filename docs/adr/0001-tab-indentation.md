@@ -15,6 +15,11 @@ Các repository cần một quy ước thụt lề thống nhất. Tab cho phép
     - **2** cho Dart, Elixir, Terraform, Crystal, Gleam, Nix — formatter chính thức cố định độ rộng 2.
 - Quy tắc khai báo trong `.editorconfig`, `.prettierrc.json`, `ruff.toml` và được `scripts/validate.py` kiểm tra.
 
+## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
+
+- **Dấu cách cho mọi tệp** (mặc định của nhiều formatter, khuyến nghị của PEP 8): không cho người đọc chọn độ rộng hiển thị và làm tệp lớn hơn; không chọn.
+- **Tab cho mọi tệp, kể cả YAML, Markdown**: đặc tả YAML cấm tab và Prettier luôn thụt lề danh sách Markdown bằng dấu cách — không làm được; vì vậy chỉ ngôn ngữ bắt buộc dấu cách mới dùng dấu cách.
+
 ## ⚖️ HỆ QUẢ
 
 - Python dùng tab, khác khuyến nghị PEP 8; không bật lint `W191` của ruff.
