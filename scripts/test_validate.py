@@ -209,6 +209,34 @@ class ValidateTest(unittest.TestCase):
 		)
 		self.assertFails('Expires đã hết hạn')
 
+	def testSecurityTxtExpiresNeedsTimezone(self):
+		self.editRegex('.well-known/security.txt', r'^Expires: .+$', 'Expires: 2027-09-26T00:00:00')
+		self.assertFails('Expires phải có múi giờ')
+
+	def testInvalidPackageJsonIsReportedWithoutStopping(self):
+		(self.repo / 'package.json').write_text('{\n', encoding='utf-8')
+		self.assertFails('package.json: JSON không hợp lệ')
+
+	def testInvalidRulesetJsonIsReportedWithoutStopping(self):
+		(self.repo / 'rulesets/protect-main.json').write_text('{\n', encoding='utf-8')
+		self.assertFails('rulesets/protect-main.json: JSON không hợp lệ')
+
+	def testWorkflowInlineStepCannotEmbedCode(self):
+		self.edit(
+			'workflow-templates/docs-check.yml',
+			'- name: Kiểm tra liên kết nội bộ\n              run: python3 .org/scripts/check-markdown-links.py',
+			'- run: python3 -c "print(1)"',
+		)
+		self.assertFails('mã nhúng trong YAML')
+
+	def testWorkflowInlineStepCannotUseMultilineRun(self):
+		self.edit(
+			'workflow-templates/docs-check.yml',
+			'- name: Kiểm tra liên kết nội bộ\n              run: python3 .org/scripts/check-markdown-links.py',
+			'- run: |\n                  python3 .org/scripts/check-markdown-links.py',
+		)
+		self.assertFails('lệnh nhiều dòng')
+
 	def testShellMustIndentWithTabs(self):
 		path = self.repo / '.devcontainer' / 'post-create.sh'
 		path.write_text(

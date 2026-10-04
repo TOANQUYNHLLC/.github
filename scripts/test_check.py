@@ -22,6 +22,25 @@ except ModuleNotFoundError:
 
 
 class CheckTest(unittest.TestCase):
+	def testFailedDependencyInstallStopsChecksWithoutTraceback(self):
+		module = loadScript('check')
+		module.checkGroups()
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			output = io.StringIO()
+			with (
+				mock.patch.object(module.shutil, 'which', return_value='/bin/tool'),
+				mock.patch.object(
+					module.subprocess, 'run', return_value=subprocess.CompletedProcess([], 1)
+				),
+				mock.patch.object(module.sys, 'argv', ['check.py', 'format']),
+				mock.patch.object(module, 'runGroups') as run,
+				contextlib.redirect_stdout(output),
+			):
+				self.assertEqual(module.main(), 1)
+			self.assertIn('Không cài được thư viện Node.js', output.getvalue())
+			run.assert_not_called()
+
 	def testValidateWorkflowRunsCheckGroups(self):
 		# Mỗi job của validate.yml gọi đúng một nhóm của check.py — tại máy và trên GitHub chạy cùng lệnh.
 		groups = loadScript('check').checkGroups()

@@ -8,6 +8,13 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2026.10.Stable...HEAD)
 
+### 🐛 SỬA
+
+- Công cụ kiểm tra báo lỗi rõ khi npm không cài được thư viện hoặc tên tệp test được chọn không tồn tại; không chạy một phần danh sách test rồi báo đạt.
+- Anchor Markdown xử lý đúng tiêu đề trùng với hậu tố tự sinh của GitHub; kết quả phân tích tệp đích được dùng chung trong một lượt kiểm tra và làm mới ở lượt sau.
+- Validator báo lỗi JSON của manifest, ruleset và ngày hết hạn thiếu múi giờ; quy tắc không viết mã nhúng hoặc lệnh nhiều dòng trong workflow cũng áp dụng cho bước bắt đầu bằng `- run:`.
+- Liên kết huy hiệu workflow mở đúng tệp trên `main`; README nêu rõ kết quả huy hiệu khi Actions tắt, phạm vi kiểm tra tại máy và cách chọn tệp test.
+
 ### ✨ THÊM
 
 - Bản ghi quyết định kiến trúc trong `docs/adr/` (mỗi ADR gồm bối cảnh, quyết định, phương án đã cân nhắc, hệ quả): định dạng, quy ước branch và commit, ruleset, commit có chữ ký, nguồn phiên bản công cụ, kiểm tra là script, quy tắc đặt tên, git hook, phát hành hằng tháng, tài liệu khớp code.

@@ -120,6 +120,7 @@ yamlCache = {}
 trackedCache = []
 bytesCache = {}
 textCache = {}
+anchorsCache = {}
 # Kết quả đọc theo nội dung tệp, giữ qua các lần runChecks() trong cùng tiến trình (bộ test chạy validate hàng
 # trăm lần): tệp không đổi thì không gọi lại Ruby.
 yamlResults = {}
@@ -350,7 +351,7 @@ def checkText(path):
 
 
 def checkLinks(path, text):
-	for message in markdownLinks.findBrokenLinks(path, text):
+	for message in markdownLinks.findBrokenLinks(path, text, anchorsCache):
 		error(path, message)
 
 
@@ -438,13 +439,13 @@ def checkWorkflow(path, text):
 	# lệnh. Workflow của repository này gọi scripts/ để chạy được y hệt tại máy (make check); workflow mẫu gọi
 	# script của tổ chức (checkout vào .org/).
 	for number, line in enumerate(text.split('\n'), start=1):
-		if re.match(r'^\s*run:\s*[|>]', line):
+		if re.match(r'^\s*(?:-\s+)?run:\s*[|>]', line):
 			error(
 				path,
 				f'dòng {number}: lệnh nhiều dòng — tách thành script trong scripts/, mỗi bước gọi một lệnh (ADR 0009)',
 			)
-		if re.match(r'^\s*shell:\s*(python|node|pwsh|ruby|perl)', line) or re.search(
-			r'^\s*run:.*\b(python3?|node|ruby|perl|bash|sh)\s+-(c|e)\b', line
+		if re.match(r'^\s*(?:-\s+)?shell:\s*(python|node|pwsh|ruby|perl)', line) or re.search(
+			r'^\s*(?:-\s+)?run:.*\b(python3?|node|ruby|perl|bash|sh)\s+-(c|e)\b', line
 		):
 			error(
 				path,
@@ -514,8 +515,13 @@ def checkToolVersions():
 	nvmrc, package = ROOT / '.nvmrc', ROOT / 'package.json'
 	if nvmrc.exists() and package.exists():
 		wanted = readText(nvmrc).strip()
-		runtime = (json.loads(readText(package)).get('devEngines') or {}).get('runtime') or {}
-		if runtime.get('version') != wanted:
+		try:
+			runtime = (json.loads(readText(package)).get('devEngines') or {}).get('runtime') or {}
+		except json.JSONDecodeError:
+			runtime = (
+				None  # checkFile đã báo lỗi cú pháp; tiếp tục kiểm tra các nguồn phiên bản khác.
+			)
+		if runtime is not None and runtime.get('version') != wanted:
 			errors.append(
 				f'package.json: devEngines.runtime.version là "{runtime.get("version")}", phải là "{wanted}" '
 				'theo .nvmrc'
@@ -907,7 +913,10 @@ def checkMaintainers():
 	# Danh sách bỏ qua của ruleset cấp repository ghi actor_id của từng người quản trị (tra id cần API nên chỉ so
 	# số lượng): thêm, bớt người quản trị thì sửa cả ruleset.
 	for path in sorted((ROOT / 'rulesets').glob('protect-*.json')):
-		ruleset = json.loads(readText(path))
+		try:
+			ruleset = json.loads(readText(path))
+		except json.JSONDecodeError:
+			continue  # checkFile đã báo lỗi cú pháp của tệp này.
 		users = [
 			actor for actor in ruleset.get('bypass_actors', []) if actor.get('actor_type') == 'User'
 		]
@@ -1298,6 +1307,9 @@ def checkSecurityTxt(path, text):
 	except ValueError:
 		error(path, f'Expires không đúng định dạng ISO 8601: {expires}')
 		return
+	if moment.tzinfo is None:
+		error(path, 'Expires phải có múi giờ (Z hoặc độ lệch UTC)')
+		return
 	remaining = (moment - datetime.now(UTC)).days
 	if remaining < 0:
 		error(path, 'Expires đã hết hạn — gia hạn tối đa 1 năm')
@@ -1452,6 +1464,7 @@ def runChecks():
 	trackedCache.clear()
 	bytesCache.clear()
 	textCache.clear()
+	anchorsCache.clear()
 	for file in trackedFiles():
 		checkFile(file)
 	for check in (

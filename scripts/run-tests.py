@@ -1,6 +1,7 @@
 """Chạy test của scripts/ song song trên nhiều tiến trình (make test, nhóm content của make check).
 
 Chạy: python3 scripts/run-tests.py [tên tệp test …]   (ví dụ: python3 scripts/run-tests.py test_release)
+Tên tệp được chọn phải có test; tên sai thì báo lỗi trước khi chạy, không bỏ qua một phần yêu cầu.
 Test được chia đều theo vòng tròn cho các tiến trình — mỗi tiến trình nhận một phần của test_validate.py (nhóm
 chậm nhất), nên cả bộ xong nhanh gần bằng số lõi CPU. Mỗi test tự dùng thư mục tạm riêng nên chạy song song an
 toàn. Lỗi nạp tệp test (cú pháp, import) thì chạy lại tuần tự để unittest báo lỗi đầy đủ.
@@ -74,6 +75,10 @@ def main():
 		return subprocess.run(command, check=False).returncode
 	if not ids:
 		print(f'Không có test nào khớp: {", ".join(names)}')
+		return 1
+	unknown = sorted(set(names) - {test.split('.')[0] for test in ids})
+	if unknown:
+		print(f'Không có test nào khớp: {", ".join(unknown)}')
 		return 1
 	workers = max(1, min(MAX_WORKERS, os.cpu_count() or 1, len(ids)))
 	shards = [ids[index::workers] for index in range(workers)]

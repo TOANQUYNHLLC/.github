@@ -30,15 +30,21 @@ def headingAnchors(path):
 	text = CODE_FENCE.sub('', path.read_text(encoding='utf-8'))
 	seen, anchors = {}, set()
 	for match in re.finditer(r'^#{1,6} (.+)$', text, re.MULTILINE):
-		slug = headingSlug(match.group(1))
-		count = seen.get(slug, 0)
-		seen[slug] = count + 1
-		anchors.add(slug if count == 0 else f'{slug}-{count}')
+		original = slug = headingSlug(match.group(1))
+		# Hậu tố sinh cho tiêu đề trước cũng giữ chỗ: A, A, A-1 → a, a-1, a-1-1.
+		while slug in seen:
+			seen[original] += 1
+			slug = f'{original}-{seen[original]}'
+		seen[slug] = 0
+		anchors.add(slug)
 	return anchors
 
 
-def findBrokenLinks(path, text):
-	"""Thông báo cho từng liên kết nội bộ hỏng trong nội dung Markdown của path."""
+def findBrokenLinks(path, text, anchorsCache=None):
+	"""Thông báo cho từng liên kết nội bộ hỏng trong nội dung Markdown của path. anchorsCache chỉ dùng trong
+	một lượt kiểm tra; lượt mới tạo bộ đệm mới để nhận thay đổi trên đĩa."""
+	if anchorsCache is None:
+		anchorsCache = {}
 	messages = []
 	for match in LINK.finditer(CODE_FENCE.sub('', text)):
 		target, fragment = match.group(1), match.group(2)
@@ -50,10 +56,12 @@ def findBrokenLinks(path, text):
 		destination = path.parent / target if target else path
 		if not destination.exists():
 			messages.append(f'liên kết hỏng: {target}')
-		elif (
-			fragment and destination.suffix == '.md' and fragment not in headingAnchors(destination)
-		):
-			messages.append(f'liên kết hỏng: {target}#{fragment} — không có tiêu đề tương ứng')
+		elif fragment and destination.suffix == '.md':
+			key = destination.resolve()
+			if key not in anchorsCache:
+				anchorsCache[key] = headingAnchors(destination)
+			if fragment not in anchorsCache[key]:
+				messages.append(f'liên kết hỏng: {target}#{fragment} — không có tiêu đề tương ứng')
 	return messages
 
 
@@ -78,8 +86,9 @@ def markdownFiles():
 
 def main():
 	broken = 0
+	anchorsCache = {}
 	for path in sorted(markdownFiles()):
-		for message in findBrokenLinks(path, path.read_text(encoding='utf-8')):
+		for message in findBrokenLinks(path, path.read_text(encoding='utf-8'), anchorsCache):
 			broken += 1
 			print(f'❌ {path}: {message}')
 	print(f'{"✅ Không có liên kết hỏng" if not broken else f"❌ {broken} liên kết hỏng"}.')
