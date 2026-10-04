@@ -1,7 +1,7 @@
 """Chạy test của scripts/ song song trên nhiều tiến trình (make test, nhóm content của make check).
 
 Chạy: python3 scripts/run-tests.py [tên tệp test …]   (ví dụ: python3 scripts/run-tests.py test_release)
-Tên tệp được chọn phải có test; tên sai thì báo lỗi trước khi chạy, không bỏ qua một phần yêu cầu.
+Chỉ nạp các tệp được chọn; tên sai thì báo lỗi trước khi chạy, không bỏ qua một phần yêu cầu.
 Test được chia đều theo vòng tròn cho các tiến trình — mỗi tiến trình nhận một phần của test_validate.py (nhóm
 chậm nhất), nên cả bộ xong nhanh gần bằng số lõi CPU. Mỗi test tự dùng thư mục tạm riêng nên chạy song song an
 toàn. Lỗi nạp tệp test (cú pháp, import) thì chạy lại tuần tự để unittest báo lỗi đầy đủ.
@@ -34,8 +34,14 @@ def testIds(suite):
 def discoverTests(names):
 	"""Mã test của các tệp test được chọn (mặc định mọi tệp test_*.py); lỗi nạp tệp thì trả None."""
 	loader = unittest.TestLoader()
-	suite = loader.discover(str(SCRIPTS), pattern='test_*.py', top_level_dir=str(SCRIPTS))
-	ids = list(testIds(suite))
+	patterns = [f'{name}.py' for name in dict.fromkeys(names)] if names else ['test_*.py']
+	ids = []
+	for pattern in patterns:
+		suite = loader.discover(str(SCRIPTS), pattern=pattern, top_level_dir=str(SCRIPTS))
+		found = list(testIds(suite))
+		if names and not found:
+			return []
+		ids.extend(found)
 	if loader.errors or any(test.startswith('unittest.loader.') for test in ids):
 		return None
 	if names:
@@ -61,18 +67,10 @@ def main():
 	names = [name.removesuffix('.py') for name in sys.argv[1:]]
 	ids = discoverTests(names)
 	if ids is None:
-		# Báo lỗi nạp tệp test đúng như unittest.
-		command = [
-			sys.executable,
-			'-m',
-			'unittest',
-			'discover',
-			'-s',
-			str(SCRIPTS),
-			'-p',
-			'test_*.py',
-		]
-		return subprocess.run(command, check=False).returncode
+		# Báo lỗi nạp đúng phạm vi đã chọn; chạy mọi tệp chỉ khi không truyền tên.
+		command = [sys.executable, '-m', 'unittest']
+		command += names if names else ['discover', '-s', str(SCRIPTS), '-p', 'test_*.py']
+		return subprocess.run(command, cwd=SCRIPTS, check=False).returncode
 	if not ids:
 		print(f'Không có test nào khớp: {", ".join(names)}')
 		return 1

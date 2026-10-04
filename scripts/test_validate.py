@@ -249,6 +249,117 @@ class ValidateTest(unittest.TestCase):
 		)
 		self.assertFails('lệnh nhiều dòng')
 
+	def testWorkflowQuotedAndFlowRunCannotEmbedCode(self):
+		path = self.repo / 'workflow-templates/docs-check.yml'
+		original = path.read_text(encoding='utf-8')
+		old = '- name: Kiểm tra liên kết nội bộ\n              run: python3 .org/scripts/check-markdown-links.py'
+		for step in ('- "run": python3 -c "print(1)"', '- {run: \'python3 -c "print(1)"\'}'):
+			with self.subTest(step=step):
+				path.write_text(original.replace(old, step), encoding='utf-8')
+				self.assertFails('mã nhúng trong YAML')
+
+	def testWorkflowQuotedRunCannotUseExpressions(self):
+		self.edit(
+			'workflow-templates/docs-check.yml',
+			'run: python3 .org/scripts/check-markdown-links.py',
+			'"run": echo "${{ github.event.pull_request.title }}"',
+		)
+		self.assertFails('không viết ${{ … }} trong run:')
+
+	def testQuotedPinnedActionIsValid(self):
+		self.editRegex(
+			'.github/workflows/validate.yml',
+			r'uses: (actions/checkout@[0-9a-f]{40})',
+			r'"uses": "\1"',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
+
+	def testQuotedUnpinnedActionIsRejected(self):
+		self.editRegex(
+			'.github/workflows/validate.yml',
+			r'uses: actions/checkout@[0-9a-f]{40}',
+			'"uses": actions/checkout@v4',
+		)
+		self.assertFails('phải ghim theo commit SHA đầy đủ')
+
+	def testRunCommentDoesNotCountAsExpression(self):
+		self.edit(
+			'workflow-templates/docs-check.yml',
+			'run: python3 .org/scripts/check-markdown-links.py',
+			'run: python3 .org/scripts/check-markdown-links.py # ${{ nằm trong chú thích }}',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
+
+	def testWorkflowAnchorsAreResolvedAndChecked(self):
+		path = self.repo / 'workflow-templates/docs-check.yml'
+		original = path.read_text(encoding='utf-8')
+		# GitHub hỗ trợ anchor/alias; run vẫn được kiểm tra theo giá trị ở nơi khai báo.
+		for command, expected in (
+			('python3 .org/scripts/check-markdown-links.py', 0),
+			('python3 -c "print(1)"', 1),
+		):
+			with self.subTest(command=command):
+				text = original.replace(
+					'concurrency:', f"env:\n    COMMAND: &command '{command}'\n\nconcurrency:"
+				)
+				text = text.replace(
+					'run: python3 .org/scripts/check-markdown-links.py', 'run: *command'
+				)
+				path.write_text(text, encoding='utf-8')
+				code, output = self.runValidate()
+				self.assertEqual(code, expected, output)
+				if expected:
+					self.assertIn('mã nhúng trong YAML', output)
+
+	def testCyclicYamlReportsOnlyBrokenFile(self):
+		(self.repo / '.github/labeler.yml').write_text(
+			'cycle: &cycle\n    self: *cycle\n', encoding='utf-8'
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 1)
+		self.assertIn('.github/labeler.yml: YAML không hợp lệ', output)
+		self.assertNotIn('labels.yml: YAML không hợp lệ', output)
+
+	def testJsonObjectCacheRefreshesNextRun(self):
+		self.runValidate()
+		path = self.validator.ROOT / 'package.json'
+		first = self.validator.readJsonObject(path)
+		(self.repo / 'package.json').write_text('[]\n', encoding='utf-8')
+		self.assertFails('package.json: cấu trúc JSON phải là object')
+		self.assertIsNot(first, self.validator.readJsonObject(path))
+
+	def testInvalidWorkflowStructureReportsPath(self):
+		path = self.repo / '.github/workflows/links.yml'
+		for text in (
+			'[]\n',
+			'jobs: []\n',
+			'jobs:\n    links: []\n',
+			'jobs:\n    links:\n        steps: [42]\n',
+			'jobs:\n    links:\n        steps: {}\n',
+		):
+			with self.subTest(text=text):
+				path.write_text(text, encoding='utf-8')
+				self.assertFails('links.yml: cấu trúc')
+
+	def testJsonConfigMustBeObject(self):
+		for name in (
+			'package.json',
+			'.prettierrc.json',
+			'rulesets/protect-main.json',
+			'.vscode/extensions.json',
+			'workflow-templates/docs-check.properties.json',
+		):
+			with self.subTest(path=name):
+				path = self.repo / name
+				original = path.read_bytes()
+				path.write_text('[]\n', encoding='utf-8')
+				try:
+					self.assertFails(f'{name}: cấu trúc JSON phải là object')
+				finally:
+					path.write_bytes(original)
+
 	def testShellMustIndentWithTabs(self):
 		path = self.repo / '.devcontainer' / 'post-create.sh'
 		path.write_text(
