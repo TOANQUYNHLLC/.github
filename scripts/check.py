@@ -8,6 +8,7 @@ Mỗi nhóm khớp một job của workflow validate.yml (content, format, lint)
 (conventions: branch-name.yml, pr-title.yml; audit: dependency-review.yml). CodeQL không chạy tại máy.
 """
 
+import functools
 import re
 import shutil
 import subprocess
@@ -45,8 +46,10 @@ def workflowFiles():
 	)
 
 
+@functools.cache
 def checkGroups():
-	"""Nhóm kiểm tra → danh sách lệnh; tên nhóm khớp job hoặc workflow trên GitHub Actions."""
+	"""Nhóm kiểm tra → danh sách lệnh; tên nhóm khớp job hoặc workflow trên GitHub Actions. Tính một lần mỗi tiến
+	trình (liệt kê script shell bằng git) — main, ensureTools, runGroup cùng dùng."""
 	return {
 		'content': [
 			['python3', 'scripts/validate.py'],

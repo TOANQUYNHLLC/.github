@@ -7,6 +7,7 @@ Thoát mã 1 khi có công cụ cũ hơn bản mới nhất, để workflow hằ
 """
 
 import functools
+import http.client
 import json
 import os
 import re
@@ -59,7 +60,9 @@ def main():
 	def latest(repository):
 		try:
 			return latestRelease(repository)
-		except (urllib.error.URLError, TimeoutError, KeyError, json.JSONDecodeError) as exc:
+		# OSError gồm lỗi lúc gửi (URLError) lẫn lúc đọc phản hồi (máy chủ ngắt kết nối); HTTPException: phản hồi
+		# HTTP sai dạng, bị cắt ngang.
+		except (OSError, http.client.HTTPException, KeyError, ValueError) as exc:
 			if isinstance(exc, urllib.error.HTTPError):
 				exc.close()  # lỗi HTTP giữ phản hồi đang mở
 			return exc

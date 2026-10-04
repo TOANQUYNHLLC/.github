@@ -32,8 +32,15 @@ def ghExists(endpoint):
 def listRepos(only):
 	if only:
 		return [only]
-	output = gh('repo', 'list', ORG, '--limit', '500', '--no-archived', '--json', 'name')
-	return sorted(item['name'] for item in json.loads(output))
+	# REST nhanh hơn gh repo list (GraphQL) gần một nửa; --paginate đọc đủ khi có hơn 100 repository.
+	output = gh(
+		'api',
+		'--paginate',
+		f'orgs/{ORG}/repos?per_page=100&type=all',
+		'--jq',
+		'.[] | select(.archived | not) | .name',
+	)
+	return sorted(output.split())
 
 
 def defaultBranch(repo):

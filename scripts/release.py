@@ -11,7 +11,8 @@ không có commit kể từ tag trước; báo lỗi khi có commit mà mục CH
 $GITHUB_OUTPUT cho workflow monthly-release.yml. --open-pr (make release-pr, khi GitHub Actions tắt): làm tiếp
 open-pr tại máy rồi trả CHANGELOG.md về như cũ — chỉ chạy trên main sạch, trùng origin/main.
 open-pr: tạo branch release/vYYYY.MM, commit CHANGELOG.md qua GraphQL createCommitOnBranch (GitHub ký, thỏa
-quy tắc commit có chữ ký) rồi mở Pull Request; branch đã có thì bỏ qua.
+quy tắc commit có chữ ký) rồi mở Pull Request; branch đã có thì bỏ qua; commit lỗi thì xóa branch vừa tạo để
+lần chạy sau làm lại.
 create: workflow release.yml (và workflow mẫu release.yml của repository khác, với --changelog CHANGELOG.md
 --allow-generated-notes) gọi khi đẩy tag v*; khi GitHub Actions tắt, người quản trị chạy tại máy.
 """
@@ -162,7 +163,7 @@ def prepareRelease(version, date, openPullRequest=False):
 
 
 def openReleasePullRequest(version, previous, commits):
-	repository = os.environ.get('GITHUB_REPOSITORY', DEFAULT_REPOSITORY)
+	repository = os.environ.get('GITHUB_REPOSITORY') or DEFAULT_REPOSITORY
 	base = runCommand('git', 'rev-parse', 'HEAD')
 	branch = f'release/{version.removesuffix(".Stable")}'
 	title = f'chore(release): phát hành {version}'
@@ -174,16 +175,20 @@ def openReleasePullRequest(version, previous, commits):
 	if exists.returncode == 0:
 		reportMessage('notice', f'Branch {branch} đã có — Pull Request phát hành đang chờ, bỏ qua.')
 		return 0
-	runCommand(
-		'gh',
-		'api',
-		f'repos/{repository}/git/refs',
-		'-f',
-		f'ref=refs/heads/{branch}',
-		'-f',
-		f'sha={base}',
-		'--silent',
-	)
+	try:
+		runCommand(
+			'gh',
+			'api',
+			f'repos/{repository}/git/refs',
+			'-f',
+			f'ref=refs/heads/{branch}',
+			'-f',
+			f'sha={base}',
+			'--silent',
+		)
+	except subprocess.CalledProcessError as exc:
+		reportMessage('error', f'Không tạo được branch {branch}: {exc.stderr.strip()}')
+		return 1
 	contents = base64.b64encode((ROOT / 'CHANGELOG.md').read_bytes()).decode('ascii')
 	body = {
 		'query': COMMIT_MUTATION,
@@ -196,7 +201,28 @@ def openReleasePullRequest(version, previous, commits):
 			}
 		},
 	}
-	runCommand('gh', 'api', 'graphql', '--input', '-', '--silent', stdin=json.dumps(body))
+	try:
+		runCommand('gh', 'api', 'graphql', '--input', '-', '--silent', stdin=json.dumps(body))
+	except subprocess.CalledProcessError as exc:
+		# Branch còn lại mà không có commit phát hành thì lần chạy sau bỏ qua vì "branch đã có" — xóa đi.
+		subprocess.run(
+			[
+				'gh',
+				'api',
+				'-X',
+				'DELETE',
+				f'repos/{repository}/git/refs/heads/{branch}',
+				'--silent',
+			],
+			capture_output=True,
+			check=False,
+		)
+		reportMessage(
+			'error',
+			f'Không commit được CHANGELOG.md lên {branch}: {exc.stderr.strip()} — đã xóa branch, '
+			'sửa lỗi rồi chạy lại.',
+		)
+		return 1
 	description = (
 		f'Phát hành hằng tháng **{version}**: {commits} commit kể từ `{previous}`. Mục **CHƯA PHÁT '
 		'HÀNH** của `CHANGELOG.md` đã chuyển thành phiên bản này.\n\n'

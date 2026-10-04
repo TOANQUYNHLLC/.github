@@ -152,6 +152,42 @@ class ExternalLinksTest(unittest.TestCase):
 			server.shutdown()
 			server.server_close()
 
+	def testBrokenResponseIsReportedNotRaised(self):
+		# Máy chủ ngắt kết nối không trả lời, trả dòng trạng thái rác hoặc thân ngắn hơn Content-Length: báo liên
+		# kết lỗi thay vì văng lỗi làm dừng cả lượt kiểm tra.
+		module = loadScript('check-external-links')
+
+		def hangUp(handler):
+			handler.close_connection = True
+
+		def garbage(handler):
+			handler.wfile.write(b'KHONG PHAI HTTP\r\n\r\n')
+
+		def truncated(handler):
+			handler.send_response(200)
+			handler.send_header('Content-Length', '100')
+			handler.end_headers()
+			handler.wfile.write(b'Contact: mailto:a\n')
+
+		for answer in (hangUp, garbage, truncated):
+			server = socketserver.TCPServer(('127.0.0.1', 0), handlerClass(answer))
+			threading.Thread(
+				target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+			).start()
+			url = f'http://127.0.0.1:{server.server_address[1]}/security.txt'
+			try:
+				if answer is not truncated:
+					self.assertIn('không kết nối được', module.linkStatus(url), answer.__name__)
+					continue
+				with tempfile.TemporaryDirectory() as folder:
+					module.ROOT = Path(folder)
+					path = Path(folder) / 'security.txt'
+					path.write_text(f'Contact: mailto:a\nCanonical: {url}\n', encoding='utf-8')
+					self.assertIn('không đọc được', module.publishedCopyDiffers(path))
+			finally:
+				server.shutdown()
+				server.server_close()
+
 	def testCollectsLinksFromFilesWithSpaces(self):
 		# Tên tệp có khoảng trắng vẫn được đọc; tệp đã xóa trên đĩa (còn trong index) bị bỏ qua.
 		module = loadScript('check-external-links')

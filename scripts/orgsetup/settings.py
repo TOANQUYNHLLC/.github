@@ -135,19 +135,21 @@ def updateSettings(endpoint, current, wanted, apply, what):
 def syncSettings(repos, apply, discussions):
 	for repo in repos:
 		print(f'== {github.ORG}/{repo}')
-		current = github.ghJson('api', f'repos/{github.ORG}/{repo}')
-		updateSettings(
-			f'repos/{github.ORG}/{repo}',
-			current,
-			repositorySettings(repo, discussions),
-			apply,
-			'cài đặt repository',
-		)
-		syncTopics(repo, current, apply)
-		syncSecurity(repo, current, apply)
-		syncActions(
-			f'repos/{github.ORG}/{repo}/actions/permissions', ACTIONS_PERMISSIONS, 'enabled', apply
-		)
+		endpoint = f'repos/{github.ORG}/{repo}/actions/permissions'
+		# Quyền Actions không phụ thuộc cài đặt repository: đọc song song từ đầu, so và in sau cùng như cũ.
+		with ThreadPoolExecutor(max_workers=1) as pool:
+			actions = pool.submit(readActions, endpoint)
+			current = github.ghJson('api', f'repos/{github.ORG}/{repo}')
+			updateSettings(
+				f'repos/{github.ORG}/{repo}',
+				current,
+				repositorySettings(repo, discussions),
+				apply,
+				'cài đặt repository',
+			)
+			syncTopics(repo, current, apply)
+			syncSecurity(repo, current, apply)
+			syncActions(endpoint, ACTIONS_PERMISSIONS, 'enabled', apply, actions.result())
 
 
 def syncTopics(repo, current, apply):
@@ -166,14 +168,9 @@ def syncTopics(repo, current, apply):
 		)
 
 
-def syncActions(endpoint, wanted, enabledKey, apply):
-	"""Quyền GitHub Actions tại endpoint (repository hoặc tổ chức) và quyền mặc định của GITHUB_TOKEN;
-	gửi lại enabledKey đang có — API bắt buộc trường này nhưng script không bật, tắt Actions."""
-	changed = skipped = unread = False
-	targets = (
-		(endpoint, wanted, enabledKey),
-		(f'{endpoint}/workflow', WORKFLOW_PERMISSIONS, None),
-	)
+def readActions(endpoint):
+	"""Đọc cùng lúc quyền GitHub Actions tại endpoint và quyền mặc định của GITHUB_TOKEN; lỗi đọc thì trả lỗi
+	để syncActions báo theo thứ tự."""
 
 	def read(path):
 		try:
@@ -181,9 +178,21 @@ def syncActions(endpoint, wanted, enabledKey, apply):
 		except RuntimeError as exc:
 			return exc
 
-	# Đọc hai nhóm quyền cùng lúc; so và ghi vẫn lần lượt.
-	with ThreadPoolExecutor(max_workers=len(targets)) as pool:
-		readings = list(pool.map(read, [path for path, _, _ in targets]))
+	with ThreadPoolExecutor(max_workers=2) as pool:
+		return list(pool.map(read, (endpoint, f'{endpoint}/workflow')))
+
+
+def syncActions(endpoint, wanted, enabledKey, apply, readings=None):
+	"""Quyền GitHub Actions tại endpoint (repository hoặc tổ chức) và quyền mặc định của GITHUB_TOKEN;
+	gửi lại enabledKey đang có — API bắt buộc trường này nhưng script không bật, tắt Actions. readings: kết quả
+	readActions(endpoint) đã đọc trước (không có thì đọc lúc này); so và ghi vẫn lần lượt."""
+	changed = skipped = unread = False
+	targets = (
+		(endpoint, wanted, enabledKey),
+		(f'{endpoint}/workflow', WORKFLOW_PERMISSIONS, None),
+	)
+	if readings is None:
+		readings = readActions(endpoint)
 	for (path, target, keep), current in zip(targets, readings, strict=True):
 		if isinstance(current, Exception):
 			print(f'   ⚠ không đọc được {path}: {current}')
@@ -215,19 +224,20 @@ def syncActions(endpoint, wanted, enabledKey, apply):
 def syncOrgSettings(apply):
 	"""Cài đặt tổ chức và quyền GitHub Actions cấp tổ chức."""
 	print(f'== cài đặt tổ chức {github.ORG}')
-	current = github.ghJson('api', f'orgs/{github.ORG}')
-	updateSettings(f'orgs/{github.ORG}', current, ORG_SETTINGS, apply, 'cài đặt tổ chức')
-	for key, value in ORG_WEB_ONLY_SETTINGS.items():
-		if current.get(key) != value:
-			print(
-				f'   ✘ {key}: {current.get(key)} ≠ {value} — sửa tại Organization settings trên web'
-			)
-	syncActions(
-		f'orgs/{github.ORG}/actions/permissions',
-		ORG_ACTIONS_PERMISSIONS,
-		'enabled_repositories',
-		apply,
-	)
+	endpoint = f'orgs/{github.ORG}/actions/permissions'
+	# Như syncSettings: đọc quyền Actions song song với cài đặt tổ chức.
+	with ThreadPoolExecutor(max_workers=1) as pool:
+		actions = pool.submit(readActions, endpoint)
+		current = github.ghJson('api', f'orgs/{github.ORG}')
+		updateSettings(f'orgs/{github.ORG}', current, ORG_SETTINGS, apply, 'cài đặt tổ chức')
+		for key, value in ORG_WEB_ONLY_SETTINGS.items():
+			if current.get(key) != value:
+				print(
+					f'   ✘ {key}: {current.get(key)} ≠ {value} — sửa tại Organization settings trên web'
+				)
+		syncActions(
+			endpoint, ORG_ACTIONS_PERMISSIONS, 'enabled_repositories', apply, actions.result()
+		)
 
 
 def securityEndpoints(private):

@@ -4,6 +4,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 """
 
 import contextlib
+import http.client
 import io
 import unittest
 import urllib.error
@@ -40,6 +41,34 @@ class GithubFormsTest(unittest.TestCase):
 				module.fetchPage('https://github.com')
 			raised.exception.close()
 			self.assertEqual(len(responses), 1)
+
+	def testBrokenResponseIsReportedPerForm(self):
+		# Máy chủ ngắt kết nối hoặc trả trang không phải UTF-8 (lỗi lúc đọc, urllib không gói thành URLError): báo
+		# biểu mẫu đó lỗi, các biểu mẫu khác vẫn được kiểm tra.
+		module = loadScript('check-github-forms')
+		forms = [path.relative_to(module.ROOT).as_posix() for path in module.formPaths()]
+		failures = {
+			forms[0]: http.client.RemoteDisconnected('đóng kết nối'),
+			forms[1]: UnicodeDecodeError('utf-8', b'', 0, 1, 'x'),
+		}
+
+		def fetchPage(url):
+			failure = next((exc for form, exc in failures.items() if url.endswith(form)), None)
+			if failure:
+				raise failure
+			return '<html></html>'
+
+		output = io.StringIO()
+		with (
+			mock.patch.object(module, 'fetchPage', fetchPage),
+			contextlib.redirect_stdout(output),
+		):
+			self.assertEqual(module.main(), 1)
+		lines = output.getvalue().splitlines()
+		self.assertIn(f'❌ {forms[0]}: không đọc được trang (đóng kết nối)', lines)
+		self.assertTrue(lines[1].startswith(f'❌ {forms[1]}: không đọc được trang'))
+		# Biểu mẫu còn lại vẫn được kiểm tra (trang giả không có dữ liệu biểu mẫu).
+		self.assertEqual(len(lines), len(forms) + 1)
 
 	def testMissingRefIsReportedOnce(self):
 		# Branch chưa đẩy lên GitHub: mọi trang 404 — báo một dòng, không báo từng biểu mẫu lỗi.
