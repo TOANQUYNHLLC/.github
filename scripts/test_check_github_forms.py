@@ -108,6 +108,27 @@ class GithubFormsTest(unittest.TestCase):
 			self.assertEqual(module.main(), 1)
 		self.assertNotIn('✅', output.getvalue())
 
+	def testRefAndPathAreUrlEncoded(self):
+		# Tên branch có # hay % (git cho phép) không được cắt URL hay đổi nghĩa: mỗi ký tự được mã hoá, giữ dấu /.
+		module = loadScript('check-github-forms')
+		urls = []
+
+		def fetchPage(url):
+			urls.append(url)
+			return ''
+
+		with mock.patch.object(module, 'fetchPage', fetchPage):
+			module.templateData('fix/#12_50%', '.github/ISSUE_TEMPLATE/bug report.yml')
+		self.assertEqual(
+			urls,
+			[
+				(
+					'https://github.com/TOANQUYNHLLC/.github/blob/fix/%2312_50%25/'
+					'.github/ISSUE_TEMPLATE/bug%20report.yml'
+				)
+			],
+		)
+
 	def testTransientErrorIsRetried(self):
 		# GitHub trả 503 khi bị gọi dồn: thử lại rồi đọc được; lỗi 404 thì báo ngay, không thử lại.
 		module = loadScript('check-github-forms')
