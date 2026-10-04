@@ -11,7 +11,7 @@ MAINTAINERS = ('nguyentrongtoandl', 'trongtoandl81')
 TEAM = 'maintainers'
 
 # Team của tổ chức: slug → (tên, quyền trên mọi repository, hiển thị, mô tả
-# khi tạo). Mọi team gồm hai người quản trị với vai trò maintainer.
+# khi tạo). Mọi team gồm mọi người trong MAINTAINERS với vai trò maintainer.
 TEAMS = {
 	'admins': (
 		'Admins',

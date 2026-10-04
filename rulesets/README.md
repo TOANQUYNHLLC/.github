@@ -11,14 +11,14 @@ Ruleset đặt ở **cấp repository**: tổ chức dùng gói GitHub Free nên
 - Kiểm tra tự động bắt buộc thành công trên branch đã cập nhật với nhánh chính; code quality.
 - Commit phải có chữ ký (GPG hoặc SSH).
 - Cấm force push, cấm xóa; chặn tạo và cập nhật nhánh chính ngoài danh sách bỏ qua.
-- Danh sách bỏ qua: hai tài khoản quản trị, chế độ **always** ([ADR 0004](../docs/adr/0004-protect-main-ruleset.md)).
+- Danh sách bỏ qua: tài khoản của người quản trị ([`MAINTAINERS.md`](../MAINTAINERS.md)), chế độ **always** ([ADR 0004](../docs/adr/0004-protect-main-ruleset.md)).
 
 Mọi ruleset nhánh và tag — cấp repository và cấp tổ chức — có quy tắc **Require signed commits** (`required_signatures`, [ADR 0006](../docs/adr/0006-signed-commits-no-rebase.md)); `scripts/validate.py` báo lỗi khi thiếu. Push ruleset không nhận quy tắc này ([ADR 0007](../docs/adr/0007-org-push-ruleset.md)).
 
 ## 🏷️ PROTECT RELEASE TAGS
 
 - Áp dụng cho `refs/tags/v*`: chặn tạo, cập nhật (dời sang commit khác), xóa tag và force push; tag chỉ trỏ tới commit có chữ ký.
-- Danh sách bỏ qua giống Protect Main — chỉ hai tài khoản quản trị tạo được tag phát hành, nên GitHub Release luôn trỏ đúng mã đã phát hành.
+- Danh sách bỏ qua giống Protect Main — chỉ người quản trị tạo được tag phát hành, nên GitHub Release luôn trỏ đúng mã đã phát hành.
 - Bổ sung cho ruleset: tổ chức bắt buộc **Immutable releases** cho mọi repository — khi Release đã phát hành, không ai (kể cả người trong danh sách bỏ qua) dời được tag, sửa được tệp đính kèm, hay xóa được tag khi Release còn đó; xóa Release rồi cũng không dùng lại được tên tag.
 
 ## 🏢 RULESET CẤP TỔ CHỨC
@@ -32,7 +32,7 @@ Ba ruleset cho mọi repository (`~ALL`), cả ba đã có trên web (**Active**
 Khác với bản cấp repository:
 
 - Chỉ giữ các kiểm tra bắt buộc có ở mọi repository (tiêu đề Pull Request, tên branch) — như Protect Main của repository khác; vẫn có `code_quality`.
-- Không dùng actor loại `User` (import báo "contains an invalid actor"): danh sách bỏ qua là **chủ tổ chức** (`OrganizationAdmin`) — cùng hai người quản trị như bản cấp repository; không giới hạn người hủy phê duyệt.
+- Không dùng actor loại `User` (import báo "contains an invalid actor"): danh sách bỏ qua là **chủ tổ chức** (`OrganizationAdmin`) — cùng người quản trị như bản cấp repository; không giới hạn người hủy phê duyệt.
 - Protect Release Tags (Organization) có thêm quy tắc kiểm tra bắt buộc với danh sách rỗng như trên web — quy tắc này không chặn gì, có thể xóa trên web rồi bỏ trong `orgTagRuleset()`.
 - Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `orgRulesets()` trong `scripts/orgsetup/rulesets.py` và khớp ruleset đang cài trên web; test bảo đảm tệp khớp `orgRulesets()` — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức.
 - Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json` và `org-protect-pushes.json`. Ở gói Free, ghi ruleset cấp tổ chức qua REST (HTTP 403, dù token có quyền `admin:org`) lẫn GraphQL (`updateRepositoryRuleset`, `createRepositoryRuleset`) đều bị chặn, nên `python3 scripts/org-setup.py org-rulesets` chỉ so tệp với ruleset trên web (đọc qua GraphQL); `--apply` chỉ tạo, cập nhật được khi tổ chức dùng gói Team.

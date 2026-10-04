@@ -13,7 +13,7 @@ Danh sách người quản trị các repository của **CÔNG TY TNHH TOÀN QU�
 
 ## 👪 TEAM CỦA TỔ CHỨC
 
-Cả hai người quản trị thuộc mọi team (vai trò maintainer). `python3 scripts/org-setup.py team` cấp quyền của từng team trên mọi repository và không hạ quyền đã cao hơn (danh sách trong `TEAMS` của `scripts/orgsetup/teams.py`).
+Mọi người quản trị ở bảng trên thuộc mọi team (vai trò maintainer). `python3 scripts/org-setup.py team` cấp quyền của từng team trên mọi repository và không hạ quyền đã cao hơn (danh sách trong `TEAMS` của `scripts/orgsetup/teams.py`).
 
 | Team                                                                                  | Quyền trên repository | Phụ trách                                                                       |
 | ------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------- |

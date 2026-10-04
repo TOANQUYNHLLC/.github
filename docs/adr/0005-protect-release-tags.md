@@ -10,7 +10,7 @@ GitHub Release, nhật ký thay đổi và liên kết so sánh phiên bản đ�
 ## ✅ QUYẾT ĐỊNH
 
 - Mỗi repository có ruleset **Protect Release Tags** trong `rulesets/protect-release-tags.json`: áp dụng cho `refs/tags/v*`, chặn tạo, cập nhật (dời), xóa tag và force push; tag chỉ trỏ tới commit có chữ ký.
-- Danh sách bỏ qua giống Protect Main: chỉ hai người quản trị tạo được tag phát hành.
+- Danh sách bỏ qua giống Protect Main: chỉ người quản trị tạo được tag phát hành.
 - Tổ chức bật **Immutable releases**: Release đã phát hành không dời được tag, không sửa được tệp đính kèm, không dùng lại được tên tag.
 
 ## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC

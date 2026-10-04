@@ -25,15 +25,15 @@ Tài liệu này mô tả ai ra quyết định và cách thay đổi được c
 ## 🔀 ĐÁNH GIÁ VÀ HỢP NHẤT
 
 - Nhánh chính được bảo vệ bằng ruleset trong [`rulesets/`](rulesets/): bắt buộc Pull Request, phê duyệt, kiểm tra tự động, cho phép Merge và Squash (ưu tiên Squash; không Rebase — ADR 0006), commit có chữ ký.
-- Người quản trị được bỏ qua yêu cầu phê duyệt khi không có người quản trị khác để duyệt. Với repository `.github`, hai tài khoản quản trị nằm trong danh sách bỏ qua của ruleset (xem [ADR 0004](docs/adr/0004-protect-main-ruleset.md)) nhưng chỉ dùng khi thật cần: thay đổi thông thường vẫn qua Pull Request và kiểm tra tự động, không đẩy thẳng lên nhánh chính.
+- Người quản trị được bỏ qua yêu cầu phê duyệt khi không có người quản trị khác để duyệt. Với repository `.github`, tài khoản của người quản trị ([`MAINTAINERS.md`](MAINTAINERS.md)) nằm trong danh sách bỏ qua của ruleset (xem [ADR 0004](docs/adr/0004-protect-main-ruleset.md)) nhưng chỉ dùng khi thật cần: thay đổi thông thường vẫn qua Pull Request và kiểm tra tự động, không đẩy thẳng lên nhánh chính.
 - Sửa lỗi khẩn cấp theo quy trình **Sửa lỗi khẩn cấp** trong [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ---
 
 ## ➕ THAY ĐỔI NGƯỜI QUẢN TRỊ
 
-- Thêm người quản trị: người quản trị hiện tại đề xuất qua Pull Request cập nhật [`MAINTAINERS.md`](MAINTAINERS.md) và `CODEOWNERS`, kèm lý do.
-- Người quản trị nghỉ hoặc không còn tham gia: chuyển sang mục cựu người quản trị trong `MAINTAINERS.md` và thu hồi quyền truy cập ngay.
+- Thêm người quản trị: người quản trị hiện tại đề xuất qua Pull Request kèm lý do, sửa cùng lúc [`MAINTAINERS.md`](MAINTAINERS.md), `MAINTAINERS` trong [`scripts/orgsetup/teams.py`](scripts/orgsetup/teams.py) và `actor_id` trong danh sách bỏ qua của [`rulesets/protect-*.json`](rulesets/) (`validate.py` báo lỗi khi lệch). Sau khi hợp nhất, chạy `python3 scripts/org-setup.py team --apply` và `rulesets --apply`. `CODEOWNERS` dùng team `@TOANQUYNHLLC/maintainers` nên không cần sửa.
+- Người quản trị nghỉ hoặc không còn tham gia: chuyển sang mục cựu người quản trị trong `MAINTAINERS.md`, bỏ khỏi `teams.py` và danh sách bỏ qua của ruleset như trên rồi chạy `rulesets --apply`; gỡ khỏi các team và thu hồi quyền truy cập ngay trên web (`org-setup.py team` chỉ thêm người, không gỡ).
 - Quyền truy cập GitHub cấp theo nguyên tắc tối thiểu: chỉ cấp quyền cần cho công việc.
 
 ---

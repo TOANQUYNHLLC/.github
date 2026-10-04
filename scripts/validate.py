@@ -893,6 +893,19 @@ def checkMaintainers():
 			where,
 			f'người quản trị "{name}" chỉ có ở một trong MAINTAINERS.md và MAINTAINERS của teams.py',
 		)
+	# Danh sách bỏ qua của ruleset cấp repository ghi actor_id của từng người quản trị (tra id cần API nên chỉ so
+	# số lượng): thêm, bớt người quản trị thì sửa cả ruleset.
+	for path in sorted((ROOT / 'rulesets').glob('protect-*.json')):
+		ruleset = json.loads(readText(path))
+		users = [
+			actor for actor in ruleset.get('bypass_actors', []) if actor.get('actor_type') == 'User'
+		]
+		if len(users) != len(configured):
+			error(
+				path,
+				f'danh sách bỏ qua có {len(users)} tài khoản, MAINTAINERS có {len(configured)} người — '
+				'thêm, bớt actor_id cho khớp người quản trị',
+			)
 
 
 def checkRulesets():
