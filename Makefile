@@ -64,7 +64,7 @@ release-pr: ## Chuẩn bị rồi mở Pull Request phát hành tại máy (khi 
 labels-preview: ## Xem trước việc đồng bộ nhãn lên các repository
 	python3 scripts/org-setup.py labels
 
-labels-apply: ## Đồng bộ nhãn lên các repository (cần GitHub CLI và quyền quản trị)
+labels-apply: ## Đồng bộ nhãn lên các repository đã có (cần GitHub CLI, quyền quản trị; không gồm nhãn mặc định cấp tổ chức)
 	python3 scripts/org-setup.py labels --apply
 
 org-preview: ## Xem trước việc áp dụng tệp, cài đặt, ruleset, team, nhãn lên mọi repository và cài đặt tổ chức (cần gh)
