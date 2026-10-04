@@ -118,3 +118,9 @@ def syncLabels(repos, apply):
 				'--force',
 			)
 			print(f'   ✔ {action} nhãn "{label["name"]}"')
+	# Nhãn mặc định cho repository tạo mới (Organization settings) không có API: lệnh này chỉ đồng bộ repository đã
+	# có — nhắc để người quản trị không tưởng trang đó cũng đã đồng bộ.
+	print(
+		'– Nhãn mặc định cho repository mới (Organization settings → Repository labels) không đồng bộ được '
+		'qua API: nhập trên web theo labels.yml (xem ROADMAP.md).'
+	)

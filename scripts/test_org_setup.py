@@ -1598,6 +1598,18 @@ class OrgSetupTest(unittest.TestCase):
 		# Một nhãn thiếu (tạo) và một nhãn sai màu (cập nhật); nhãn đúng không ghi lại.
 		self.assertEqual([args[2] for args in calls], [wanted[0]['name'], wanted[1]['name']])
 
+	def testLabelsRemindOrganizationDefaultsOnce(self):
+		# Lệnh chỉ đồng bộ repository đã có; nhắc một lần rằng nhãn mặc định cấp tổ chức (không có API) phải làm trên
+		# web — dù đồng bộ nhiều repository và không có gì để ghi.
+		live = [dict(label) for label in labels.loadLabels()]
+		github.ghJson = lambda *args: [live]
+		github.gh = lambda *args, **kwargs: self.fail(f'không được ghi: {args}')
+		output = io.StringIO()
+		with contextlib.redirect_stdout(output):
+			labels.syncLabels(['app', 'web'], apply=True)
+		self.assertEqual(output.getvalue().count('Nhãn mặc định cho repository mới'), 1)
+		self.assertIn('nhập trên web theo labels.yml', output.getvalue())
+
 	def testProtectMainPerRepository(self):
 		def checks(ruleset):
 			return [
