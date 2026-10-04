@@ -94,6 +94,10 @@ class OrgSetupTest(unittest.TestCase):
 		self.assertIn('hard_tabs = true', planned['rustfmt.toml'])
 		# Workflow mẫu đọc phiên bản từ tệp này: Node.js CI (.nvmrc), Python CI (.python-version).
 		self.assertEqual(planned['.nvmrc'], (ROOT / '.nvmrc').read_text(encoding='utf-8'))
+		# .python-version sinh từ mise.toml (nguồn phiên bản duy nhất, ADR 0008).
+		mise = (ROOT / 'mise.toml').read_text(encoding='utf-8')
+		python = re.search(r'^python = "(.+)"$', mise, re.MULTILINE).group(1)
+		self.assertEqual(planned['.python-version'], f'{python}\n')
 		self.assertNotIn('.nvmrc', files.plannedFiles({'go.mod'}))
 
 	def testRulesetSummaryIgnoresGithubFields(self):

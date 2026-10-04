@@ -16,15 +16,15 @@ GitHub **không** kế thừa các tệp dưới đây từ repository `.github`
 
 **Theo ngôn ngữ** (org-setup.py thêm khi thấy tệp khai báo ở thư mục gốc)
 
-| Tệp nguồn                                 | Khi có                                           | Nội dung                                              |
-| ----------------------------------------- | ------------------------------------------------ | ----------------------------------------------------- |
-| [`.prettierrc.json`](../.prettierrc.json) | `package.json`                                   | Prettier: tab độ rộng 4; Markdown, YAML dùng dấu cách |
-| [`.nvmrc`](../.nvmrc)                     | như trên                                         | Phiên bản Node.js cho workflow mẫu Node.js CI         |
-| [`ruff.toml`](../ruff.toml)               | `pyproject.toml`, `requirements.txt`, `setup.py` | ruff format: tab độ rộng 4, LF                        |
-| [`.python-version`](.python-version)      | như trên                                         | Phiên bản Python cho workflow mẫu Python CI           |
-| [`rustfmt.toml`](rustfmt.toml)            | `Cargo.toml`                                     | rustfmt: `hard_tabs = true`, độ rộng 4                |
-| [`.clang-format`](.clang-format)          | `CMakeLists.txt`, `meson.build`                  | clang-format: `UseTab: Always`, độ rộng 4, LF         |
-| [`.dockerignore`](.dockerignore)          | `Dockerfile`, `compose.yaml`                     | Không đưa `.git`, bí mật, tệp phát triển vào image    |
+| Tệp nguồn                                  | Khi có                                           | Nội dung                                                               |
+| ------------------------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------- |
+| [`.prettierrc.json`](../.prettierrc.json)  | `package.json`                                   | Prettier: tab độ rộng 4; Markdown, YAML dùng dấu cách                  |
+| [`.nvmrc`](../.nvmrc)                      | như trên                                         | Phiên bản Node.js cho workflow mẫu Node.js CI                          |
+| [`ruff.toml`](../ruff.toml)                | `pyproject.toml`, `requirements.txt`, `setup.py` | ruff format: tab độ rộng 4, LF                                         |
+| `python` trong [`mise.toml`](../mise.toml) | như trên                                         | Ghi vào `.python-version`: phiên bản Python cho workflow mẫu Python CI |
+| [`rustfmt.toml`](rustfmt.toml)             | `Cargo.toml`                                     | rustfmt: `hard_tabs = true`, độ rộng 4                                 |
+| [`.clang-format`](.clang-format)           | `CMakeLists.txt`, `meson.build`                  | clang-format: `UseTab: Always`, độ rộng 4, LF                          |
+| [`.dockerignore`](.dockerignore)           | `Dockerfile`, `compose.yaml`                     | Không đưa `.git`, bí mật, tệp phát triển vào image                     |
 
 **Chép tay khi cần** (nội dung phụ thuộc từng dự án)
 

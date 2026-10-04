@@ -2,6 +2,7 @@
 
 import base64
 import re
+import tomllib
 from pathlib import Path
 
 from orgsetup import github
@@ -25,7 +26,6 @@ LANGUAGE_FILES = (
 	# Phiên bản Node.js cho workflow mẫu Node.js CI (setup-node đọc .nvmrc), cùng bản với repository này.
 	(('package.json',), '.nvmrc', '.nvmrc'),
 	(ECOSYSTEM_MANIFESTS['pip'], 'ruff.toml', 'ruff.toml'),
-	(ECOSYSTEM_MANIFESTS['pip'], '.python-version', 'repository-templates/.python-version'),
 	(('Cargo.toml',), 'rustfmt.toml', 'repository-templates/rustfmt.toml'),
 	(('CMakeLists.txt', 'meson.build'), '.clang-format', 'repository-templates/.clang-format'),
 	(('Dockerfile', 'compose.yaml'), '.dockerignore', 'repository-templates/.dockerignore'),
@@ -52,6 +52,13 @@ def filterDependabot(template, rootNames):
 	return header + '\n\n'.join(blocks) + '\n'
 
 
+def pythonVersion():
+	"""Phiên bản Python trong mise.toml — nguồn duy nhất (ADR 0008), cũng là .python-version cấp cho repository
+	khác (workflow mẫu Python CI đọc tệp này)."""
+	text = (github.ROOT / 'mise.toml').read_text(encoding='utf-8')
+	return str(tomllib.loads(text)['tools']['python'])
+
+
 def plannedFiles(rootNames):
 	"""Đường dẫn trong repository đích → nội dung tệp dùng chung."""
 
@@ -74,6 +81,8 @@ def plannedFiles(rootNames):
 	for manifests, target, source in LANGUAGE_FILES:
 		if any(name in rootNames for name in manifests):
 			files[target] = read(source)
+	if any(name in rootNames for name in ECOSYSTEM_MANIFESTS['pip']):
+		files['.python-version'] = f'{pythonVersion()}\n'
 	return files
 
 
