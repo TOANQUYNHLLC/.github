@@ -163,7 +163,11 @@ Chạy riêng các tệp test bằng tên có hoặc không có `.py`:
 python3 scripts/run-tests.py test_check test_check_markdown_links.py
 ```
 
-Tên sai hoặc tệp không có test làm lệnh thất bại trước khi chạy. Bộ kiểm tra liên kết Markdown dùng anchor giống GitHub, kể cả tiêu đề trùng với hậu tố tự sinh; mỗi tệp đích được phân tích một lần trong một lượt kiểm tra và được đọc lại ở lượt sau. Tệp không đọc được hoặc sai UTF-8 làm kiểm tra thất bại và báo tên tệp; `validate.py` tiếp tục đối chiếu các nội dung còn đọc được để báo lỗi cùng lượt.
+Chỉ các tệp test được chọn được nạp; tên sai hoặc tệp không có test làm lệnh thất bại trước khi chạy. Lỗi import hoặc cú pháp trong tệp được chọn sẽ chạy lại đúng danh sách đó bằng unittest để báo lỗi đầy đủ. Không truyền tên thì chạy toàn bộ test.
+
+Bộ kiểm tra liên kết Markdown dùng anchor giống GitHub, kể cả tiêu đề trùng với hậu tố tự sinh; mỗi tệp đích được phân tích một lần trong một lượt kiểm tra và được đọc lại ở lượt sau. Tệp không đọc được hoặc sai UTF-8 làm kiểm tra thất bại và báo tên tệp; `validate.py` tiếp tục đối chiếu các nội dung còn đọc được để báo lỗi cùng lượt.
+
+Validator kiểm tra cấu trúc workflow, action và lệnh theo giá trị YAML đã phân tích, gồm khóa có dấu nháy, dạng `{run: …}` và [anchor/alias](https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations#yaml-anchors-and-aliases). Biểu thức trong chú thích không phải nội dung lệnh. YAML chỉ đọc dữ liệu thông thường; alias tạo vòng lặp được báo ở tệp gây lỗi. Cấu hình JSON phải là object; kết quả đọc cấu hình chỉ dùng lại trong cùng lượt kiểm tra và được làm mới ở lượt sau.
 
 | Lệnh                       | Tác dụng                                                                                     |
 | -------------------------- | -------------------------------------------------------------------------------------------- |

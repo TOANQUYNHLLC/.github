@@ -112,10 +112,12 @@ def error(path, message):
 # Ruby đọc YAML (Python không có sẵn thư viện YAML). Một lần gọi cho mọi tệp: mỗi lần khởi động Ruby mất
 # khoảng 0,07 giây và một tệp có thể được nhiều kiểm tra đọc lại.
 YAML_BATCH = (
-	'out = {}; ARGV.each { |f| begin; out[f] = {"data" => YAML.load_file(f)}; '
-	'rescue Exception => e; out[f] = {"error" => e.message}; end }; puts JSON.dump(out)'
+	'out = {}; ARGV.each { |f| begin; data = YAML.safe_load(File.read(f), aliases: true, filename: f); '
+	'JSON.dump(data); out[f] = {"data" => data}; '
+	'rescue StandardError, SystemStackError => e; out[f] = {"error" => e.message}; end }; puts JSON.dump(out)'
 )
 yamlCache = {}
+jsonCache = {}
 # Danh sách tệp và nội dung tệp của lượt runChecks() đang chạy (xóa ở đầu mỗi lượt).
 trackedCache = []
 bytesCache = {}
@@ -145,8 +147,8 @@ def readYamlFiles(paths):
 	return {str(path): dict(yamlResults[keys[str(path)]]) for path in paths}
 
 
-def loadYaml(path):
-	"""Nội dung YAML của tệp (đọc mọi tệp YAML được git quản lý ở lần gọi đầu); lỗi chỉ báo một lần."""
+def loadYaml(path, expectedType=None):
+	"""Đọc YAML theo lô, lỗi phân tích chỉ báo một lần; kiểm tra kiểu gốc nếu người gọi yêu cầu."""
 	if not yamlCache:
 		files = [file for file in trackedFiles() if file.suffix in ('.yml', '.yaml')]
 		yamlCache.update(readYamlFiles(files))
@@ -158,7 +160,11 @@ def loadYaml(path):
 			error(path, f'YAML không hợp lệ: {entry["error"]}')
 			entry['reported'] = True
 		return None
-	return entry['data']
+	data = entry['data']
+	if expectedType is not None and not isinstance(data, expectedType):
+		error(path, f'cấu trúc YAML phải là {"object" if expectedType is dict else "danh sách"}')
+		return None
+	return data
 
 
 def trackedFiles():
@@ -195,6 +201,18 @@ def readText(path):
 	if key not in textCache:
 		textCache[key] = decodeText(readBytes(path), errors='replace')
 	return textCache[key]
+
+
+def readJsonObject(path):
+	"""Cấu hình JSON phải là object; đọc một lần mỗi lượt và vẫn báo lỗi cú pháp cho người gọi."""
+	key = str(path)
+	if key not in jsonCache:
+		data = json.loads(readText(path))
+		if not isinstance(data, dict):
+			error(path, 'cấu trúc JSON phải là object')
+			data = {}
+		jsonCache[key] = data
+	return jsonCache[key]
 
 
 # Bắt buộc thụt lề bằng 4 dấu cách: YAML, Markdown (Prettier), F#, Elm, Nim, Zig.
@@ -380,7 +398,7 @@ def checkSecurityMailto(path, text):
 
 
 def checkForm(path, required=('name', 'description', 'body')):
-	form = loadYaml(path)
+	form = loadYaml(path, dict)
 	if form is None:
 		return
 	for key in required:
@@ -417,59 +435,104 @@ def checkForm(path, required=('name', 'description', 'body')):
 			error(path, f'phần tử {index}: {kind} thiếu options')
 
 
+def workflowJobs(path):
+	"""Các job có cấu trúc hợp lệ; dùng chung khi kiểm tra workflow và đối chiếu ruleset."""
+	workflow = loadYaml(path, dict)
+	if workflow is None:
+		return {}
+	jobs = workflow.get('jobs')
+	if not isinstance(jobs, dict):
+		error(path, 'cấu trúc jobs phải là object')
+		return {}
+	valid = {}
+	for name, job in jobs.items():
+		if not isinstance(job, dict):
+			error(path, f'cấu trúc job "{name}" phải là object')
+		else:
+			valid[name] = job
+	return valid
+
+
+def checkActionRef(path, action, location):
+	"""Action bên ngoài phải ghim SHA đầy đủ; kiểm tra giá trị YAML, kể cả khóa và giá trị có dấu nháy."""
+	if not isinstance(action, str):
+		error(path, f'cấu trúc {location}.uses phải là chuỗi')
+		return
+	if action.startswith(('./', 'docker://')):
+		return
+	ref = action.rsplit('@', 1)
+	if len(ref) != 2 or not re.fullmatch(r'[0-9a-f]{40}', ref[1]):
+		error(path, f'{location}: action "{action}" phải ghim theo commit SHA đầy đủ')
+
+
+def checkWorkflowStep(path, step, location):
+	"""Các quy tắc lệnh áp dụng cho giá trị YAML thực tế, không tính nội dung chú thích."""
+	if not isinstance(step, dict):
+		error(path, f'cấu trúc {location} phải là object')
+		return
+	if 'uses' in step:
+		checkActionRef(path, step['uses'], location)
+	if 'run' not in step:
+		return
+	run = step['run']
+	if not isinstance(run, str):
+		error(path, f'cấu trúc {location}.run phải là chuỗi')
+		return
+	if '\n' in run.strip():
+		error(path, f'{location}: lệnh nhiều dòng — tách thành script trong scripts/ (ADR 0009)')
+	if '${{' in run:
+		error(
+			path,
+			f'{location}: không viết ${{{{ … }}}} trong run: — truyền qua env: rồi dùng "$TÊN_BIẾN"',
+		)
+	shell = step.get('shell', '')
+	if not isinstance(shell, str):
+		error(path, f'cấu trúc {location}.shell phải là chuỗi')
+		return
+	if re.match(r'(python|node|pwsh|ruby|perl)', shell) or re.search(
+		r'\b(python3?|node|ruby|perl|bash|sh)\s+-(c|e)\b', run
+	):
+		error(
+			path, f'{location}: mã nhúng trong YAML — viết thành script trong scripts/ (ADR 0009)'
+		)
+
+
 def checkWorkflow(path, text):
-	"""Mọi action bên ngoài ghim theo commit SHA đầy đủ và workflow khai báo quyền tối thiểu."""
-	for number, line in enumerate(text.split('\n'), start=1):
-		match = re.search(r'^\s*-?\s*uses:\s*([^\s#]+)', line)
-		if not match or match.group(1).startswith(('./', 'docker://')):
-			continue
-		ref = match.group(1).rsplit('@', 1)
-		if len(ref) != 2 or not re.fullmatch(r'[0-9a-f]{40}', ref[1]):
-			error(
-				path, f'dòng {number}: action "{match.group(1)}" phải ghim theo commit SHA đầy đủ'
-			)
-	if not re.search(r'^permissions:', text, re.MULTILINE):
+	"""Đọc cấu trúc YAML để kiểm tra action, lệnh, quyền và job; giữ kiểm tra cú pháp khối và chú thích."""
+	workflow = loadYaml(path, dict)
+	if workflow is None:
+		return
+	if 'permissions' not in workflow:
 		error(path, 'thiếu khai báo "permissions" ở cấp workflow')
-	# GitHub chỉ thay $default-branch khi tạo workflow từ mẫu; trong workflow thật nó là chuỗi nguyên văn.
 	if path.parent.parts[-2:] == ('.github', 'workflows') and '$default-branch' in text:
 		error(
 			path, '$default-branch chỉ dùng trong workflow-templates/ — ghi tên nhánh thật (main)'
 		)
-	# Kiểm tra luôn là tệp riêng trong scripts/, không viết trực tiếp trong YAML (ADR 0009): mỗi bước gọi một
-	# lệnh. Workflow của repository này gọi scripts/ để chạy được y hệt tại máy (make check); workflow mẫu gọi
-	# script của tổ chức (checkout vào .org/).
+	# Cú pháp khối bị cấm dù chỉ chứa một lệnh; giữ số dòng. Giá trị đã giải mã do checkWorkflowStep kiểm tra.
 	for number, line in enumerate(text.split('\n'), start=1):
-		if re.match(r'^\s*(?:-\s+)?run:\s*[|>]', line):
+		if re.match(r"^\s*(?:-\s+)?[\"']?run[\"']?:\s*[|>]", line):
 			error(
 				path,
 				f'dòng {number}: lệnh nhiều dòng — tách thành script trong scripts/, mỗi bước gọi một lệnh (ADR 0009)',
 			)
-		if re.match(r'^\s*(?:-\s+)?shell:\s*(python|node|pwsh|ruby|perl)', line) or re.search(
-			r'^\s*(?:-\s+)?run:.*\b(python3?|node|ruby|perl|bash|sh)\s+-(c|e)\b', line
-		):
-			error(
-				path,
-				f'dòng {number}: mã nhúng trong YAML — viết thành script trong scripts/ (ADR 0009)',
-			)
-		# GitHub thay ${{ … }} vào lệnh trước khi shell chạy: tiêu đề Pull Request, tên branch… chứa dấu nháy,
-		# $(…) sẽ thành lệnh (script injection). Truyền giá trị qua env: rồi dùng "$TÊN_BIẾN".
-		if re.match(r'^\s*(- )?run:.*\$\{\{', line):
-			error(
-				path,
-				f'dòng {number}: không viết ${{{{ … }}}} trong run: — truyền qua env: rồi dùng "$TÊN_BIẾN"',
-			)
-	if not re.search(r'^concurrency:', text, re.MULTILINE):
-		error(path, 'thiếu khai báo "concurrency" ở cấp workflow')
-	for number, line in enumerate(text.split('\n'), start=1):
 		if re.match(r'^\s+[a-z-]+: write\s*$', line):
 			error(path, f'dòng {number}: quyền ghi cần chú thích lý do (# …)')
-	workflow = loadYaml(path)
-	top = (workflow or {}).get('permissions')
+	if 'concurrency' not in workflow:
+		error(path, 'thiếu khai báo "concurrency" ở cấp workflow')
+	top = workflow.get('permissions')
 	if top == 'write-all' or (isinstance(top, dict) and 'write' in top.values()):
 		error(path, 'quyền ghi chỉ cấp ở job cần dùng, không cấp ở cấp workflow')
-	for name, job in ((workflow or {}).get('jobs') or {}).items():
+	for name, job in workflowJobs(path).items():
 		if 'timeout-minutes' not in job:
 			error(path, f'job "{name}" thiếu timeout-minutes')
+		if 'uses' in job:
+			checkActionRef(path, job['uses'], f'job "{name}"')
+		steps = job.get('steps', [])
+		if not isinstance(steps, list):
+			error(path, f'cấu trúc job "{name}".steps phải là danh sách')
+			continue
+		for index, step in enumerate(steps, start=1):
+			checkWorkflowStep(path, step, f'job "{name}", bước {index}')
 
 
 def checkWorkflowTemplate(path):
@@ -478,7 +541,7 @@ def checkWorkflowTemplate(path):
 		error(path, f'thiếu tệp {properties.name}')
 		return
 	try:
-		meta = json.loads(readText(properties))
+		meta = readJsonObject(properties)
 	except json.JSONDecodeError as exc:
 		error(properties, f'JSON không hợp lệ: {exc}')
 		return
@@ -516,7 +579,7 @@ def checkToolVersions():
 	if nvmrc.exists() and package.exists():
 		wanted = readText(nvmrc).strip()
 		try:
-			runtime = (json.loads(readText(package)).get('devEngines') or {}).get('runtime') or {}
+			runtime = (readJsonObject(package).get('devEngines') or {}).get('runtime') or {}
 		except json.JSONDecodeError:
 			runtime = (
 				None  # checkFile đã báo lỗi cú pháp; tiếp tục kiểm tra các nguồn phiên bản khác.
@@ -548,7 +611,7 @@ def checkToolVersions():
 def checkFormatConfig():
 	"""Cấu hình định dạng không được trái quy tắc: tab, độ rộng 4; dấu cách chỉ cho ngôn ngữ bắt buộc."""
 	try:
-		prettier = json.loads(readText(ROOT / '.prettierrc.json'))
+		prettier = readJsonObject(ROOT / '.prettierrc.json')
 	except (OSError, json.JSONDecodeError) as exc:
 		errors.append(f'.prettierrc.json: không đọc được ({exc})')
 		prettier = {}
@@ -641,8 +704,8 @@ def checkLintIgnoreConfig():
 def checkEditorExtensions():
 	"""Extension VS Code gợi ý tại máy (.vscode/extensions.json) và cài trong Dev Container phải giống nhau."""
 	try:
-		local = json.loads(readText(ROOT / '.vscode' / 'extensions.json'))
-		container = json.loads(readText(ROOT / '.devcontainer' / 'devcontainer.json'))
+		local = readJsonObject(ROOT / '.vscode' / 'extensions.json')
+		container = readJsonObject(ROOT / '.devcontainer' / 'devcontainer.json')
 	except (OSError, json.JSONDecodeError):
 		return
 	wanted = set(local.get('recommendations') or [])
@@ -914,7 +977,7 @@ def checkMaintainers():
 	# số lượng): thêm, bớt người quản trị thì sửa cả ruleset.
 	for path in sorted((ROOT / 'rulesets').glob('protect-*.json')):
 		try:
-			ruleset = json.loads(readText(path))
+			ruleset = readJsonObject(path)
 		except json.JSONDecodeError:
 			continue  # checkFile đã báo lỗi cú pháp của tệp này.
 		users = [
@@ -935,20 +998,22 @@ def checkRulesets():
 		errors.append('thiếu tệp bắt buộc rulesets/protect-main.json')
 		return
 	try:
-		ruleset = json.loads(readText(path))
+		ruleset = readJsonObject(path)
 	except json.JSONDecodeError:
 		return
 	if ruleset.get('name') != 'Protect Main':
 		error(path, 'ruleset phải tên "Protect Main"')
 	jobs = set()
 	for workflow in sorted((ROOT / '.github' / 'workflows').glob('*.yml')):
-		for job in ((loadYaml(workflow) or {}).get('jobs') or {}).values():
-			jobs.add(job.get('name'))
+		for job in workflowJobs(workflow).values():
+			name = job.get('name')
+			if isinstance(name, str):
+				jobs.add(name)
 	# Mọi ruleset nhánh, tag (cấp repository, cấp tổ chức) bắt buộc commit có chữ ký (ADR 0006); push
 	# ruleset không nhận quy tắc này (ADR 0007).
 	for rulesetPath in sorted((ROOT / 'rulesets').glob('*.json')):
 		try:
-			data = json.loads(readText(rulesetPath))
+			data = readJsonObject(rulesetPath)
 		except json.JSONDecodeError:
 			continue
 		if data.get('target') == 'push':
@@ -962,7 +1027,7 @@ def checkRulesets():
 		errors.append('thiếu tệp bắt buộc rulesets/protect-release-tags.json')
 	else:
 		try:
-			tags = json.loads(readText(tagPath))
+			tags = readJsonObject(tagPath)
 		except json.JSONDecodeError:
 			tags = {}
 		include = ((tags.get('conditions') or {}).get('ref_name') or {}).get('include') or []
@@ -979,7 +1044,7 @@ def checkRulesets():
 		errors.append('thiếu tệp bắt buộc rulesets/org-protect-main.json')
 	else:
 		try:
-			org = json.loads(readText(orgPath))
+			org = readJsonObject(orgPath)
 		except json.JSONDecodeError:
 			org = {}
 		repositories = ((org.get('conditions') or {}).get('repository_name') or {}).get(
@@ -1002,7 +1067,7 @@ def checkRulesets():
 		errors.append('thiếu tệp bắt buộc rulesets/org-protect-release-tags.json')
 	else:
 		try:
-			orgTags = json.loads(readText(orgTagPath))
+			orgTags = readJsonObject(orgTagPath)
 		except json.JSONDecodeError:
 			orgTags = {}
 		conditions = orgTags.get('conditions') or {}
@@ -1020,7 +1085,7 @@ def checkRulesets():
 		errors.append('thiếu tệp bắt buộc rulesets/org-protect-pushes.json')
 	else:
 		try:
-			pushes = json.loads(readText(pushPath))
+			pushes = readJsonObject(pushPath)
 		except json.JSONDecodeError:
 			pushes = {}
 		conditions = pushes.get('conditions') or {}
@@ -1245,7 +1310,9 @@ def checkDependabotCooldown():
 		ROOT / '.github' / 'dependabot.yml',
 		ROOT / 'repository-templates' / 'dependabot.yml',
 	):
-		for update in ((loadYaml(path) if path.exists() else None) or {}).get('updates') or []:
+		for update in ((loadYaml(path, dict) if path.exists() else None) or {}).get(
+			'updates'
+		) or []:
 			days = (update.get('cooldown') or {}).get('default-days')
 			if not isinstance(days, int) or days < 7:
 				error(path, f'{update.get("package-ecosystem")}: cần cooldown.default-days ≥ 7')
@@ -1258,15 +1325,19 @@ def configLabels():
 		ROOT / '.github' / 'dependabot.yml',
 		ROOT / 'repository-templates' / 'dependabot.yml',
 	):
-		for update in ((loadYaml(path) if path.exists() else None) or {}).get('updates') or []:
+		for update in ((loadYaml(path, dict) if path.exists() else None) or {}).get(
+			'updates'
+		) or []:
 			found += [(path, label) for label in update.get('labels') or []]
 	for path in (ROOT / 'repository-templates' / 'release.yml',):
-		changelog = ((loadYaml(path) if path.exists() else None) or {}).get('changelog') or {}
+		changelog = ((loadYaml(path, dict) if path.exists() else None) or {}).get('changelog') or {}
 		found += [(path, label) for label in (changelog.get('exclude') or {}).get('labels') or []]
 		for category in changelog.get('categories') or []:
 			found += [(path, label) for label in category.get('labels') or [] if label != '*']
 	for path in (ROOT / '.github' / 'labeler.yml', ROOT / 'repository-templates' / 'labeler.yml'):
-		found += [(path, label) for label in ((loadYaml(path) if path.exists() else None) or {})]
+		found += [
+			(path, label) for label in ((loadYaml(path, dict) if path.exists() else None) or {})
+		]
 	for path in (
 		ROOT / '.github' / 'workflows' / 'stale.yml',
 		ROOT / 'workflow-templates' / 'stale.yml',
@@ -1351,7 +1422,7 @@ def checkShell(path):
 
 
 def checkIssueConfig(path):
-	config = loadYaml(path)
+	config = loadYaml(path, dict)
 	if config is None:
 		return
 	for link in config.get('contact_links') or []:
@@ -1461,6 +1532,7 @@ def runChecks():
 	errors.clear()
 	FORM_LABELS.clear()
 	yamlCache.clear()
+	jsonCache.clear()
 	trackedCache.clear()
 	bytesCache.clear()
 	textCache.clear()

@@ -10,6 +10,9 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### 🐛 SỬA
 
+- Validator kiểm tra action, mã nhúng và biểu thức trong lệnh theo giá trị YAML: khóa có dấu nháy, dạng `{run: …}` và anchor/alias đều được kiểm tra; chú thích không bị coi là nội dung lệnh. Cấu trúc workflow, job, bước và kiểu gốc của cấu hình JSON sai được báo rõ thay vì gây traceback.
+- YAML hỗ trợ anchor/alias, chỉ đọc dữ liệu thông thường và báo alias vòng lặp ở đúng tệp; lỗi một tệp không làm cả lô tệp hợp lệ bị báo lỗi.
+- Khi chọn tệp test, chỉ nạp các tệp đó; lỗi import hoặc cú pháp chỉ chạy lại đúng phạm vi đã chọn để báo lỗi đầy đủ.
 - Phép dò tài nguyên GitHub chỉ coi HTTP 404 là chưa có; lỗi quyền, giới hạn API hoặc mạng chặn việc đồng bộ team, tệp và ruleset dựa trên dữ liệu chưa đọc được. Tính năng bảo mật không đọc được trạng thái được cảnh báo và bỏ qua.
 - Tệp dùng chung được thêm bằng một commit do GitHub ký qua `createCommitOnBranch`, kiểm tra HEAD trước khi ghi và không mở Pull Request khi commit thất bại.
 - Phát hành kiểm tra Pull Request đang mở khi branch đã tồn tại, báo lỗi khi chưa có; chỉ báo đã xóa branch sau lỗi commit nếu GitHub xác nhận xóa thành công.
@@ -21,6 +24,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ⚡ TỐI ƯU
 
+- Tìm test được chọn không nạp các module test còn lại; cấu hình JSON được đọc một lần trong lượt đối chiếu, lượt mới đọc lại tệp.
 - Lệnh đồng bộ tệp dùng chung đọc một cây Git tại commit cố định thay vì dò riêng từng tệp; phản hồi bị cắt thì dò từng đường dẫn, lần chạy sau đọc lại GitHub.
 
 ### ✨ THÊM
