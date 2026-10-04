@@ -1,7 +1,8 @@
 name: Gắn nhãn Pull Request
 
 on:
-    pull_request:
+    # Workflow của nhánh đích có quyền gắn nhãn cho Pull Request từ fork.
+    pull_request_target:
         types:
             - opened
             - reopened
@@ -12,7 +13,7 @@ permissions:
 
 concurrency:
     # Push mới trên cùng Pull Request hủy lượt chạy cũ.
-    group: ${{ github.workflow }}-${{ github.ref }}
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
     cancel-in-progress: true
 
 jobs:
@@ -24,6 +25,6 @@ jobs:
             contents: read
             pull-requests: write # gắn nhãn theo .github/labeler.yml
         steps:
-            # Đọc .github/labeler.yml qua API; không checkout mã của Pull Request.
+            # Đọc .github/labeler.yml của nhánh đích qua API; không checkout hay chạy mã của Pull Request.
             - name: Gắn nhãn
               uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0

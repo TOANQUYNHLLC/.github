@@ -34,3 +34,5 @@ GitHub **không** kế thừa các tệp dưới đây từ repository `.github`
 | [`PRIVACY.md`](PRIVACY.md)     | Khung chính sách quyền riêng tư cho ứng dụng xử lý dữ liệu cá nhân, sức khỏe — cần pháp lý rà soát |
 
 Kết hợp với [ruleset Protect Main](../rulesets/README.md) để bắt buộc người trong `CODEOWNERS` phê duyệt. Dự án có `Dockerfile`, `compose.yaml` hoặc lockfile riêng theo công nghệ — không có mẫu chung.
+
+Workflow gắn nhãn dùng `pull_request_target` để có quyền gắn nhãn cho Pull Request từ fork. Workflow chỉ đọc cấu hình của nhánh đích và metadata qua API, không checkout hay chạy mã Pull Request; concurrency tách riêng theo số PR.

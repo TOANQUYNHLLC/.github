@@ -10,6 +10,10 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### 🐛 SỬA
 
+- Workflow gắn nhãn (repository và mẫu) dùng `pull_request_target` để xử lý PR từ fork, chỉ đọc cấu hình nhánh đích và metadata qua API; concurrency theo số PR tránh hủy lượt chạy của PR khác.
+- Workflow đuôi `.yaml` được đưa vào actionlint, phép đối chiếu kiểm tra bắt buộc của ruleset và danh sách workflow trong tài liệu như `.yml`.
+- Đồng bộ ruleset và nhãn đọc hết các trang REST; phép đối chiếu ruleset tổ chức đọc hết trang GraphQL, báo dữ liệu quy tắc hoặc danh sách bỏ qua bị cắt thay vì dùng dữ liệu thiếu. Lỗi đọc trang sau chặn việc ghi dựa trên danh sách chưa đầy đủ.
+- Đồng bộ nhãn hỗ trợ YAML anchor/alias như validator; YAML sai hoặc cấu trúc nhãn không hợp lệ dừng trước khi gọi GitHub và được CLI báo lỗi thay vì traceback.
 - Validator kiểm tra action, mã nhúng và biểu thức trong lệnh theo giá trị YAML: khóa có dấu nháy, dạng `{run: …}` và anchor/alias đều được kiểm tra; chú thích không bị coi là nội dung lệnh. Cấu trúc workflow, job, bước và kiểu gốc của cấu hình JSON sai được báo rõ thay vì gây traceback.
 - YAML hỗ trợ anchor/alias, chỉ đọc dữ liệu thông thường và báo alias vòng lặp ở đúng tệp; lỗi một tệp không làm cả lô tệp hợp lệ bị báo lỗi.
 - Khi chọn tệp test, chỉ nạp các tệp đó; lỗi import hoặc cú pháp chỉ chạy lại đúng phạm vi đã chọn để báo lỗi đầy đủ.
@@ -24,6 +28,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ⚡ TỐI ƯU
 
+- Đối chiếu job và tài liệu dùng lại danh sách workflow từ các tệp đã kiểm kê trong lượt kiểm tra, tránh quét lại thư mục ở từng phép đối chiếu.
 - Tìm test được chọn không nạp các module test còn lại; cấu hình JSON được đọc một lần trong lượt đối chiếu, lượt mới đọc lại tệp.
 - Lệnh đồng bộ tệp dùng chung đọc một cây Git tại commit cố định thay vì dò riêng từng tệp; phản hồi bị cắt thì dò từng đường dẫn, lần chạy sau đọc lại GitHub.
 

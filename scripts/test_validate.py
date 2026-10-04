@@ -26,6 +26,30 @@ except ModuleNotFoundError:
 
 
 class ValidateTest(unittest.TestCase):
+	def testLabelItemsMustBeObjects(self):
+		(self.repo / 'labels.yml').write_text('- 42\n', encoding='utf-8')
+		self.assertFails('nhãn 1: phải là object')
+
+	def testYamlWorkflowKeepsRequiredJobs(self):
+		path = self.repo / '.github/workflows/validate.yml'
+		path.rename(path.with_suffix('.yaml'))
+		readme = self.repo / 'README.md'
+		readme.write_text(
+			readme.read_text(encoding='utf-8').replace(
+				'.github/workflows/validate.yml', '.github/workflows/validate.yaml'
+			),
+			encoding='utf-8',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
+
+	def testYamlWorkflowMustBeDocumented(self):
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
+		path = self.repo / '.github/workflows/extra.yaml'
+		path.write_bytes((self.repo / '.github/workflows/links.yml').read_bytes())
+		self.assertFails('mục cấu trúc thiếu .github/workflows/extra.yaml')
+
 	@classmethod
 	def setUpClass(cls):
 		# Chép repository một lần cho cả lớp và lưu bản chép làm mốc; tearDown trả về đúng mốc này.

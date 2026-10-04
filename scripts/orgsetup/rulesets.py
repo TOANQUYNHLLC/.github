@@ -84,14 +84,15 @@ def rulesetSummary(ruleset):
 # GraphQL đọc được ruleset cấp tổ chức ở gói Free; không có update_allows_fetch_and_merge (bỏ fragment
 # UpdateParameters) và require_extra_approval_for_unattributed_changes — bỏ hai trường này khi so.
 ORG_RULESETS_QUERY = """
-query($org: String!) { organization(login: $org) { rulesets(first: 50) { nodes {
+query($org: String!, $endCursor: String) { organization(login: $org) {
+rulesets(first: 100, after: $endCursor) { pageInfo { hasNextPage endCursor } nodes {
 	name target enforcement
 	conditions { refName { include exclude } repositoryName { include exclude protected } }
-	bypassActors(first: 50) { nodes {
+	bypassActors(first: 100) { pageInfo { hasNextPage } nodes {
 		bypassMode organizationAdmin repositoryRoleDatabaseId
 		actor { __typename ... on Team { databaseId } ... on App { databaseId } }
 	} }
-	rules(first: 50) { nodes { type parameters { __typename
+	rules(first: 100) { pageInfo { hasNextPage } nodes { type parameters { __typename
 		... on PullRequestParameters {
 			allowedMergeMethods dismissStaleReviewsOnPush dismissalRestriction { enabled allowedActors }
 			requireCodeOwnerReview requireLastPushApproval requiredApprovingReviewCount
@@ -136,6 +137,9 @@ def snakeKeys(value):
 
 def graphqlRuleset(node):
 	"""Ruleset đọc qua GraphQL, đổi sang dạng REST của tệp ruleset."""
+	for collection in ('bypassActors', 'rules'):
+		if node[collection].get('pageInfo', {}).get('hasNextPage'):
+			raise ValueError(f'ruleset "{node["name"]}": {collection} chưa được đọc đầy đủ')
 	actors = []
 	for actor in node['bypassActors']['nodes']:
 		if actor['organizationAdmin']:
@@ -273,10 +277,7 @@ def syncRulesets(repos, apply):
 		existing = {
 			item['name']: item['id']
 			# Chỉ ruleset của repository: mặc định GitHub trả cả ruleset cấp tổ chức áp dụng cho nó.
-			for item in github.ghJson(
-				'api', f'repos/{github.ORG}/{repo}/rulesets?includes_parents=false'
-			)
-			or []
+			for item in github.ghList(f'repos/{github.ORG}/{repo}/rulesets?includes_parents=false')
 		}
 		wanted = rulesetsFor(repo)
 		# Đọc mọi ruleset đang có cùng lúc; so và ghi vẫn lần lượt.
@@ -339,18 +340,26 @@ def compareOrgRulesets():
 	how = 'Organization settings → Repository → Rulesets → New ruleset → Import a ruleset'
 	try:
 		data = github.ghJson(
-			'api', 'graphql', '-f', f'query={ORG_RULESETS_QUERY}', '-f', f'org={github.ORG}'
+			'api',
+			'graphql',
+			'--paginate',
+			'--slurp',
+			'-f',
+			f'query={ORG_RULESETS_QUERY}',
+			'-f',
+			f'org={github.ORG}',
 		)
-	except RuntimeError as exc:
+		live = {
+			node['name']: graphqlRuleset(node)
+			for page in data
+			for node in page['data']['organization']['rulesets']['nodes']
+		}
+	except (RuntimeError, KeyError, ValueError, TypeError) as exc:
 		print(f'   ⚠ không đọc được qua GraphQL: {exc}')
 		print(
 			f'   Cấp quyền: gh auth refresh -h github.com -s admin:org — hoặc import tệp tại {how}.'
 		)
 		return
-	live = {
-		node['name']: graphqlRuleset(node)
-		for node in data['data']['organization']['rulesets']['nodes']
-	}
 	for source, ruleset in orgRulesets():
 		name, path = ruleset['name'], source.relative_to(github.ROOT)
 		if name not in live:
@@ -366,8 +375,7 @@ def syncOrgRulesets(apply):
 	print(f'== ruleset cấp tổ chức {github.ORG} (chỉ thực thi với gói GitHub Team trở lên)')
 	try:
 		existing = {
-			item['name']: item['id']
-			for item in github.ghJson('api', f'orgs/{github.ORG}/rulesets') or []
+			item['name']: item['id'] for item in github.ghList(f'orgs/{github.ORG}/rulesets')
 		}
 	except RuntimeError as exc:
 		print(f'   ⚠ REST API ruleset cấp tổ chức: {exc}')

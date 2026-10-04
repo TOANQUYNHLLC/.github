@@ -10,8 +10,10 @@ import io
 import json
 import re
 import subprocess
+import tempfile
 import time
 import unittest
+from pathlib import Path
 from unittest import mock
 
 # discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
@@ -25,6 +27,138 @@ from orgsetup import files, github, labels, rulesets, settings, teams
 
 
 class OrgSetupTest(unittest.TestCase):
+	def testLabelsSupportYamlAliases(self):
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'labels.yml'
+			path.write_text(
+				'- name: first\n  color: &color "ffffff"\n- name: second\n  color: *color\n',
+				encoding='utf-8',
+			)
+			with mock.patch.object(labels, 'LABELS_FILE', path):
+				self.assertEqual(
+					labels.loadLabels(),
+					[{'name': 'first', 'color': 'ffffff'}, {'name': 'second', 'color': 'ffffff'}],
+				)
+
+	def testInvalidLabelsStopBeforeGithubRead(self):
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'labels.yml'
+			for content in ('- name: [\n', 'cycle: &cycle\n  self: *cycle\n', '{}\n', '- 42\n'):
+				path.write_text(content, encoding='utf-8')
+				with (
+					self.subTest(content=content),
+					mock.patch.object(labels, 'LABELS_FILE', path),
+					mock.patch.object(github, 'gh') as call,
+					contextlib.redirect_stdout(io.StringIO()),
+					self.assertRaisesRegex(ValueError, 'labels.yml'),
+				):
+					labels.syncLabels(['app'], apply=True)
+				call.assert_not_called()
+
+	def testPaginatedListsRefreshNextCall(self):
+		with mock.patch.object(
+			github, 'ghJson', side_effect=[[[{'name': 'cũ'}]], [[{'name': 'mới'}]]]
+		) as read:
+			self.assertEqual(github.ghList('repos/o/r/labels'), [{'name': 'cũ'}])
+			self.assertEqual(github.ghList('repos/o/r/labels'), [{'name': 'mới'}])
+		self.assertEqual(read.call_count, 2)
+		self.assertEqual(read.call_args.args[-1], 'repos/o/r/labels?per_page=100')
+
+	def testMalformedPaginatedLabelsPreventWrites(self):
+		with (
+			mock.patch.object(github, 'ghJson', return_value={'unexpected': []}),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+			self.assertRaisesRegex(ValueError, 'phản hồi phân trang'),
+		):
+			labels.syncLabels(['app'], apply=True)
+		write.assert_not_called()
+
+	def testTruncatedGraphqlCollectionsAreNotCompared(self):
+		for collection in ('rules', 'bypassActors'):
+			node = {'name': 'x', 'rules': {'nodes': []}, 'bypassActors': {'nodes': []}}
+			node[collection]['pageInfo'] = {'hasNextPage': True}
+			with (
+				self.subTest(collection=collection),
+				self.assertRaisesRegex(ValueError, 'chưa được đọc đầy đủ'),
+			):
+				rulesets.graphqlRuleset(node)
+
+	def testRulesetsOnLaterRestPageAreNotCreatedAgain(self):
+		for organization in (False, True):
+			wanted = rulesets.orgRulesets() if organization else rulesets.rulesetsFor('.github')
+			listing = [
+				{'name': item['name'], 'id': index + 1} for index, (_, item) in enumerate(wanted)
+			]
+			current = {
+				str(item['id']): value for item, (_, value) in zip(listing, wanted, strict=True)
+			}
+			reads = []
+
+			def read(*args, reads=reads, current=current, listing=listing):
+				reads.append(args)
+				path = next(arg for arg in args if arg.startswith(('orgs/', 'repos/')))
+				if '/rulesets/' in path:
+					return current[path.rsplit('/', 1)[-1]]
+				return [[], listing] if '--paginate' in args and '--slurp' in args else []
+
+			with (
+				self.subTest(organization=organization),
+				mock.patch.object(github, 'ghJson', read),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				if organization:
+					rulesets.syncOrgRulesets(apply=True)
+				else:
+					rulesets.syncRulesets(['.github'], apply=True)
+				write.assert_not_called()
+			self.assertEqual(len(reads), len(wanted) + 1)
+
+	def testPaginatedReadErrorPreventsRulesetWrites(self):
+		with (
+			mock.patch.object(github, 'ghJson', side_effect=RuntimeError('HTTP 429 ở trang sau')),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+			self.assertRaisesRegex(RuntimeError, 'HTTP 429'),
+		):
+			rulesets.syncRulesets(['.github'], apply=True)
+		write.assert_not_called()
+
+	def testLabelsOnLaterPageAreNotWrittenAgain(self):
+		wanted = labels.loadLabels()
+
+		def read(*args):
+			return [[], wanted] if '--paginate' in args and '--slurp' in args else []
+
+		with (
+			mock.patch.object(github, 'ghJson', read),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			labels.syncLabels(['app'], apply=True)
+		write.assert_not_called()
+
+	def testGraphqlRulesetsOnLaterPageAreCompared(self):
+		wanted = [item for _, item in rulesets.orgRulesets()]
+		pages = [
+			{'data': {'organization': {'rulesets': {'nodes': wanted[:1]}}}},
+			{'data': {'organization': {'rulesets': {'nodes': wanted[1:]}}}},
+		]
+		output = io.StringIO()
+		with (
+			mock.patch.object(github, 'ghJson', return_value=pages) as read,
+			mock.patch.object(rulesets, 'graphqlRuleset', rulesets.graphqlVisible),
+			contextlib.redirect_stdout(output),
+		):
+			rulesets.compareOrgRulesets()
+		self.assertEqual(output.getvalue().count('đã đúng'), len(wanted))
+		self.assertNotIn('chưa có', output.getvalue())
+		self.assertIn('--paginate', read.call_args.args)
+		self.assertIn('--slurp', read.call_args.args)
+		self.assertIn('$endCursor', rulesets.ORG_RULESETS_QUERY)
+		self.assertIn('pageInfo', rulesets.ORG_RULESETS_QUERY)
+
 	def setUp(self):
 		# Nạp lại từng module trước và sau mỗi test: test thay hàm gọi GitHub bằng hàm giả, không để lọt sang
 		# test khác hay tệp test khác.
@@ -604,7 +738,7 @@ class OrgSetupTest(unittest.TestCase):
 		wanted = labels.loadLabels()
 		live = [dict(label) for label in wanted[1:]]
 		live[0]['color'] = '000000'
-		github.ghJson = lambda *args: live
+		github.ghJson = lambda *args: [live]
 		github.gh = lambda *args, **kwargs: calls.append(args)
 		with contextlib.redirect_stdout(io.StringIO()):
 			labels.syncLabels(['app'], apply=True)

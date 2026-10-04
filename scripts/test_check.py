@@ -22,6 +22,43 @@ except ModuleNotFoundError:
 
 
 class CheckTest(unittest.TestCase):
+	def testLabelerSupportsForksWithoutRunningPrCode(self):
+		validator = loadScript('validate')
+		for name in ('.github/workflows/labeler.yml', 'workflow-templates/labeler.yml'):
+			with self.subTest(path=name):
+				workflow = validator.loadYaml(ROOT / name, dict)
+				# Psych đọc khóa YAML 1.1 "on" thành true; JSON chuyển khóa đó thành chuỗi "true".
+				events = workflow.get('on', workflow.get('true', {}))
+				self.assertIn('pull_request_target', events)
+				self.assertNotIn('pull_request', events)
+				self.assertIn('github.event.pull_request.number', workflow['concurrency']['group'])
+				job = workflow['jobs']['label']
+				self.assertEqual(job['permissions'], {'contents': 'read', 'pull-requests': 'write'})
+				self.assertEqual(len(job['steps']), 1)
+				self.assertTrue(job['steps'][0]['uses'].startswith('actions/labeler@'))
+				self.assertNotIn('run', job['steps'][0])
+
+	def testWorkflowLintIncludesBothYamlExtensions(self):
+		module = loadScript('check')
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			for name in (
+				'.github/workflows/check.yml',
+				'.github/workflows/build.yaml',
+				'workflow-templates/example.yaml',
+			):
+				path = module.ROOT / name
+				path.parent.mkdir(parents=True, exist_ok=True)
+				path.write_text('name: kiểm tra\n', encoding='utf-8')
+			self.assertEqual(
+				module.workflowFiles(),
+				[
+					'.github/workflows/build.yaml',
+					'.github/workflows/check.yml',
+					'workflow-templates/example.yaml',
+				],
+			)
+
 	def testFailedDependencyInstallStopsChecksWithoutTraceback(self):
 		module = loadScript('check')
 		module.checkGroups()
