@@ -1,6 +1,6 @@
 # 🤖 HƯỚNG DẪN CHO AI AGENT
 
-Hướng dẫn cho AI coding agent (Claude Code, GitHub Copilot, Codex, Cursor…) khi làm việc trong repository `.github` của **CÔNG TY TNHH TOÀN QUỲNH**. Người đóng góp xem [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Hướng dẫn cho AI coding agent (Claude Code, GitHub Copilot, Codex, Cursor…) khi làm việc trong repository `.github` của **CÔNG TY TNHH TOÀN QUỲNH**. Người đóng góp xem [`CONTRIBUTING.md`](CONTRIBUTING.md). Khi được giao rà soát, sửa và đồng bộ toàn dự án, làm theo [`JobsGuideLine.md`](JobsGuideLine.md).
 
 ---
 

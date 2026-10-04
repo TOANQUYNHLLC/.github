@@ -78,14 +78,18 @@ def unreleasedNotes(changelog):
 
 
 def cutRelease(changelog, version, date):
-	"""CHANGELOG mới: mục CHƯA PHÁT HÀNH trống so sánh từ version, nội dung cũ chuyển sang ## [version]."""
+	"""CHANGELOG mới: mục CHƯA PHÁT HÀNH trống so sánh từ version, nội dung chuyển sang ## [version] để
+	release.yml đọc khi gắn tag. Mục của các phiên bản trước bị bỏ: lịch sử phát hành nằm ở GitHub Release,
+	CHANGELOG.md không tích luỹ nhật ký thay đổi; chân trang giữ nguyên."""
 	match = UNRELEASED.search(changelog)
 	base, notes = match.group('base'), unreleasedNotes(changelog)
 	section = (
 		f'## [CHƯA PHÁT HÀNH]({base}/compare/{version}...HEAD)\n\n---\n\n'
 		f'## [{version}]({base}/releases/tag/{version}) — {date}\n\n{notes}\n\n---\n\n'
 	)
-	return changelog[: match.start()] + section + changelog[match.end() :]
+	rest = changelog[match.end() :]
+	footer = re.search(r'^<p align="center">', rest, re.MULTILINE)
+	return changelog[: match.start()] + section + (rest[footer.start() :] if footer else '')
 
 
 def runCommand(*args, stdin=None):
