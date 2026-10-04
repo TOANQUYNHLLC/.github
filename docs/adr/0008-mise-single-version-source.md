@@ -22,4 +22,5 @@ Phiên bản công cụ ghi ở nhiều nơi (CI, Dev Container, máy cục bộ
 ## ⚖️ HỆ QUẢ
 
 - Nâng phiên bản: sửa một dòng trong `mise.toml` (hoặc `.nvmrc`).
+- Tệp phiên bản mà `org-setup.py files` cấp cho repository khác lấy từ cùng nguồn: `.python-version` sinh từ `python` trong `mise.toml`, `.nvmrc` chép từ `.nvmrc`.
 - Dependabot chưa cập nhật `mise.toml`: `scripts/check-tool-versions.py` (`make versions`) báo khi có bản mới — workflow `links.yml` chạy hằng tuần, hook sau `git pull` chạy tại máy.
