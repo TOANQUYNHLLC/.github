@@ -28,12 +28,10 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                # javascript-typescript: giữ cấu hình code scanning đã có trên main (thiếu thì Pull Request báo
-                # "configuration not found") và quét JavaScript, TypeScript khi repository có.
+                # Chỉ ngôn ngữ repository có mã: CodeQL báo lỗi khi không có mã nguồn của ngôn ngữ được quét
+                # (repository không có JavaScript, TypeScript). Thêm ngôn ngữ khi có mã của ngôn ngữ đó.
                 include:
                     - language: actions
-                      build-mode: none
-                    - language: javascript-typescript
                       build-mode: none
                     - language: python
                       build-mode: none
