@@ -163,7 +163,7 @@ Chạy riêng các tệp test bằng tên có hoặc không có `.py`:
 python3 scripts/run-tests.py test_check test_check_markdown_links.py
 ```
 
-Tên sai hoặc tệp không có test làm lệnh thất bại trước khi chạy. Bộ kiểm tra liên kết Markdown dùng anchor giống GitHub, kể cả tiêu đề trùng với hậu tố tự sinh; mỗi tệp đích được phân tích một lần trong một lượt kiểm tra và được đọc lại ở lượt sau.
+Tên sai hoặc tệp không có test làm lệnh thất bại trước khi chạy. Bộ kiểm tra liên kết Markdown dùng anchor giống GitHub, kể cả tiêu đề trùng với hậu tố tự sinh; mỗi tệp đích được phân tích một lần trong một lượt kiểm tra và được đọc lại ở lượt sau. Tệp không đọc được hoặc sai UTF-8 làm kiểm tra thất bại và báo tên tệp; `validate.py` tiếp tục đối chiếu các nội dung còn đọc được để báo lỗi cùng lượt.
 
 | Lệnh                       | Tác dụng                                                                                     |
 | -------------------------- | -------------------------------------------------------------------------------------------- |
@@ -187,6 +187,10 @@ Tên sai hoặc tệp không có test làm lệnh thất bại trước khi ch�
 | `make release-notes TAG=…` | Xem trước nội dung GitHub Release của một tag                                                |
 | `make release-prepare`     | Chuyển mục CHƯA PHÁT HÀNH thành phiên bản của tháng nếu có thay đổi kể từ tag trước          |
 | `make release-pr`          | Chuẩn bị rồi mở Pull Request phát hành tại máy (cần GitHub CLI, đứng ở `main` sạch)          |
+
+`scripts/org-setup.py files` tìm tệp dùng chung còn thiếu bằng [Git Trees API](https://docs.github.com/en/rest/git/trees#get-a-tree) tại một commit cố định và tạo branch từ cùng commit đó. Mỗi lần chạy đọc lại trạng thái GitHub; nếu API cắt danh sách cây, script dò từng đường dẫn tại cùng commit. Khi áp dụng, toàn bộ tệp thiếu được gửi trong một commit qua [`createCommitOnBranch`](https://github.blog/changelog/2021-09-13-a-simpler-api-for-authoring-commits/) để GitHub ký; `expectedHeadOid` chặn ghi nếu branch đã đổi. Commit thất bại thì không mở Pull Request; branch đã tạo được giữ lại để người quản trị kiểm tra.
+
+Các phép dò sự tồn tại chỉ coi HTTP 404 là chưa có; lỗi quyền, giới hạn API và lỗi mạng được báo để tránh ghi dựa trên dữ liệu chưa đọc được. Lệnh `team` dừng trước khi ghi nếu không đọc được trạng thái; `settings` cảnh báo và bỏ qua tính năng bảo mật không đọc được trạng thái.
 
 ---
 
@@ -213,6 +217,8 @@ Phát hành vào **ngày 1 hằng tháng**, chỉ khi có commit mới kể từ
 1. Workflow [`monthly-release.yml`](.github/workflows/monthly-release.yml) chạy lúc 07:00 ngày 1 (giờ Việt Nam): chuyển mục **CHƯA PHÁT HÀNH** của [`CHANGELOG.md`](CHANGELOG.md) thành phiên bản của tháng (ví dụ `## [v2026.11.Stable] — 2026-11-01`) và mở Pull Request `release/v2026.11`. Có commit mà mục **CHƯA PHÁT HÀNH** trống thì báo lỗi — ghi `CHANGELOG.md` rồi chạy lại (**Actions → Chuẩn bị phát hành hằng tháng → Run workflow**).
 2. Xem trước nội dung: `make release-notes TAG=v2026.11.Stable`; hợp nhất Pull Request bằng **Squash** hoặc **Merge**.
 3. Người quản trị gắn và đẩy tag trên `main` (ruleset **Protect Release Tags** chỉ cho người quản trị tạo tag `v*`): `git tag v2026.11.Stable && git push origin v2026.11.Stable` — workflow [`release.yml`](.github/workflows/release.yml) tạo GitHub Release. Tổ chức bật **Immutable releases**: Release đã phát hành không dời được tag, không dùng lại được tên tag.
+
+Chạy lại khi branch phát hành đã có: script xác minh và in URL của Pull Request đang mở. Nếu branch chưa có Pull Request đang mở, script báo lỗi kèm liên kết để kiểm tra và mở tay. Lỗi đọc trạng thái không tạo branch mới; lỗi commit sẽ thử xóa branch vừa tạo và báo rõ nếu chưa xóa được. Lỗi tạo Pull Request giữ branch để mở tay.
 
 **Khi GitHub Actions tắt** (ví dụ để tiết kiệm chi phí), mọi việc định kỳ vẫn có người làm:
 

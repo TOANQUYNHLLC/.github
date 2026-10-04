@@ -5,6 +5,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 
 import contextlib
 import io
+import json
 import re
 import subprocess
 import tempfile
@@ -191,7 +192,7 @@ class ReleaseTest(unittest.TestCase):
 			if args[:3] == ['git', 'rev-parse', 'HEAD']:
 				return subprocess.CompletedProcess(args, 0, 'abc123\n', '')
 			if args[:2] == ['gh', 'api'] and args[2].endswith('/branches/release/v2099.02'):
-				return subprocess.CompletedProcess(args, 1, b'', b'Not Found')
+				return subprocess.CompletedProcess(args, 1, '', 'Not Found (HTTP 404)')
 			if args[:3] == ['gh', 'api', 'graphql']:
 				raise subprocess.CalledProcessError(1, args, '', 'Resource not accessible\n')
 			return subprocess.CompletedProcess(args, 0, '', '')
@@ -218,6 +219,84 @@ class ReleaseTest(unittest.TestCase):
 			calls,
 		)
 		self.assertFalse([call for call in calls if call[:3] == ['gh', 'pr', 'create']])
+
+	def testOpenPrReadFailureDoesNotCreateBranch(self):
+		def run(args, **kwargs):
+			if args[0] == 'git':
+				return subprocess.CompletedProcess(args, 0, 'abc123', '')
+			self.assertTrue('/branches/' in args[2], args)
+			return subprocess.CompletedProcess(args, 1, '', 'Forbidden (HTTP 403)')
+
+		output = io.StringIO()
+		with (
+			mock.patch.object(self.module.subprocess, 'run', run),
+			contextlib.redirect_stdout(output),
+		):
+			code = self.module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 3)
+		self.assertEqual(code, 1)
+		self.assertIn('HTTP 403', output.getvalue())
+
+	def testExistingReleaseBranchWithoutPrReportsFailure(self):
+		def run(args, **kwargs):
+			if args[0] == 'git':
+				return subprocess.CompletedProcess(args, 0, 'abc123', '')
+			if args[:3] == ['gh', 'pr', 'list']:
+				return subprocess.CompletedProcess(args, 0, '[]', '')
+			self.assertTrue('/branches/' in args[2], args)
+			return subprocess.CompletedProcess(args, 0, '', '')
+
+		output = io.StringIO()
+		with (
+			mock.patch.object(self.module.subprocess, 'run', run),
+			contextlib.redirect_stdout(output),
+		):
+			code = self.module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 3)
+		self.assertEqual(code, 1)
+		self.assertIn('chưa có Pull Request đang mở', output.getvalue())
+		self.assertIn('compare/main...release/v2099.02', output.getvalue())
+
+	def testExistingReleasePrIsReportedWithUrl(self):
+		url = 'https://github.com/TOANQUYNHLLC/.github/pull/123'
+
+		def run(args, **kwargs):
+			if args[0] == 'git':
+				return subprocess.CompletedProcess(args, 0, 'abc123', '')
+			if args[:3] == ['gh', 'pr', 'list']:
+				return subprocess.CompletedProcess(args, 0, json.dumps([{'url': url}]), '')
+			self.assertTrue('/branches/' in args[2], args)
+			return subprocess.CompletedProcess(args, 0, '', '')
+
+		output = io.StringIO()
+		with (
+			mock.patch.object(self.module.subprocess, 'run', run),
+			contextlib.redirect_stdout(output),
+		):
+			code = self.module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 3)
+		self.assertEqual(code, 0)
+		self.assertIn(url, output.getvalue())
+
+	def testCommitAndCleanupFailureDoesNotClaimBranchDeleted(self):
+		def run(args, **kwargs):
+			if args[0] == 'git':
+				return subprocess.CompletedProcess(args, 0, 'abc123', '')
+			if '/branches/' in args[2]:
+				return subprocess.CompletedProcess(args, 1, '', 'Not Found (HTTP 404)')
+			if args[:3] == ['gh', 'api', 'graphql']:
+				raise subprocess.CalledProcessError(1, args, '', 'lỗi commit')
+			if 'DELETE' in args:
+				return subprocess.CompletedProcess(args, 1, '', 'lỗi xóa (HTTP 403)')
+			return subprocess.CompletedProcess(args, 0, '', '')
+
+		output = io.StringIO()
+		with (
+			mock.patch.object(self.module.subprocess, 'run', run),
+			contextlib.redirect_stdout(output),
+		):
+			code = self.module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 3)
+		self.assertEqual(code, 1)
+		self.assertNotIn('đã xóa branch', output.getvalue())
+		self.assertIn('chưa xóa được branch', output.getvalue())
+		self.assertIn('HTTP 403', output.getvalue())
 
 	def testEmptyUnreleasedSection(self):
 		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'v2099.02.Stable', '2099-02-01')
