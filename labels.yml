@@ -67,6 +67,17 @@
   color: '1d76db'
   description: Chuẩn bị phát hành — CHANGELOG, số phiên bản
 
+# Kênh và giai đoạn phát hành
+- name: Stable
+  color: '0e8a16'
+  description: Phiên bản Ổn Định
+- name: Beta
+  color: 'fbca04'
+  description: Phiên bản Thử Nghiệm
+- name: Pre-Release
+  color: 'a2eeef'
+  description: Phiên bản Chuẩn Bị Release
+
 # Phạm vi ảnh hưởng — khớp mục "Phạm vi ảnh hưởng" trong biểu mẫu Issue
 - name: 'area: frontend'
   color: 'c2e0f4'

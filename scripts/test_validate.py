@@ -1106,6 +1106,18 @@ class Holder:
 		self.edit('rulesets/protect-release-tags.json', '"refs/tags/v*"', '"refs/tags/release-*"')
 		self.assertFails('ruleset phải áp dụng cho refs/tags/v*')
 
+	def testTagRulesetsMustProtectStableAndBeta(self):
+		for name in ('protect-release-tags.json', 'org-protect-release-tags.json'):
+			for channel in ('Stable', 'Beta'):
+				with self.subTest(name=name, channel=channel):
+					path = self.repo / 'rulesets' / name
+					original = path.read_text(encoding='utf-8')
+					self.edit(
+						f'rulesets/{name}', f'refs/tags/{channel}.v*', 'refs/tags/unrelated-*'
+					)
+					self.assertFails(f'refs/tags/{channel}.v*')
+					path.write_text(original, encoding='utf-8')
+
 	def testTagRulesetMustBlockDeletion(self):
 		# Thiếu deletion nhưng vẫn còn quy tắc khác — luật phải bắt được.
 		self.edit('rulesets/protect-release-tags.json', '\t\t{ "type": "deletion" },\n', '')

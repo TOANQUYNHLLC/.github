@@ -42,6 +42,156 @@ RELEASE_FIXTURE = """# NHẬT KÝ THAY ĐỔI
 
 
 class ReleaseTest(unittest.TestCase):
+	def testDefaultPreparationStartsAtOneAndPreservesLegacyHistory(self):
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			outputs = Path(folder) / 'outputs'
+			with (
+				mock.patch.object(
+					self.module.sys, 'argv', ['release.py', 'prepare', '--date', '2099-02-01']
+				),
+				mock.patch.dict(self.module.os.environ, {'GITHUB_OUTPUT': str(outputs)}),
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				self.assertEqual(self.module.main(), 0)
+			changelog = (clone / 'CHANGELOG.md').read_text(encoding='utf-8')
+			self.assertEqual(
+				self.module.releaseNotes(changelog, 'Stable.v2099.02.010001'),
+				'### ✨ THÊM\n\n- Mục mới.',
+			)
+			self.assertTrue(
+				changelog.endswith(RELEASE_FIXTURE[RELEASE_FIXTURE.index('## [v2099') :])
+			)
+			self.assertEqual(
+				outputs.read_text(encoding='utf-8'),
+				'version=Stable.v2099.02.010001\nprevious=v2099.01.Stable\ncommits=1\n',
+			)
+
+	def testDefaultVersionIncrementsHighestSequenceWithinMonth(self):
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			for tag in (
+				'Stable.v2099.01.019999',
+				'Beta.v2099.02.010010',
+				'Stable.v2099.02.030002',
+				'Stable.v2099.03.010050',
+				'Stable.v2099.02.010000',
+				'Stable.v2099.02.019999extra',
+				'Stable.v2099.02.01999',
+				'Stable.v2099.02.0110000',
+				'Beta.v2099.02.309999',
+				'Gamma.v2099.02.019999',
+				'Stable.v2099.05.019998',
+			):
+				subprocess.run(
+					['git', '-c', 'tag.gpgsign=false', 'tag', tag], cwd=clone, check=True
+				)
+			self.assertEqual(self.module.nextReleaseVersion('2099-02-01'), 'Stable.v2099.02.010011')
+			self.assertEqual(self.module.nextReleaseVersion('2099-02-04'), 'Stable.v2099.02.040011')
+			self.assertEqual(
+				self.module.nextReleaseVersion('2099-02-04', 'Beta'), 'Beta.v2099.02.040011'
+			)
+			self.assertEqual(self.module.nextReleaseVersion('2099-04-01'), 'Stable.v2099.04.010001')
+			self.assertEqual(
+				self.module.nextReleaseVersion('2099-04-01', 'Beta'), 'Beta.v2099.04.010001'
+			)
+			self.assertEqual(self.module.nextReleaseVersion('2099-05-01'), 'Stable.v2099.05.019999')
+
+	def testInvalidDefaultDateDoesNotCallGitOrChangeChangelog(self):
+		with tempfile.TemporaryDirectory() as folder:
+			self.module.ROOT = Path(folder)
+			path = self.module.ROOT / 'CHANGELOG.md'
+			path.write_text(RELEASE_FIXTURE, encoding='utf-8')
+			for date in ('2099-02-29', '2099-1-01', '20990101', '0000-01-01'):
+				with self.subTest(date=date):
+					with (
+						mock.patch.object(
+							self.module.sys,
+							'argv',
+							['release.py', 'prepare', '--date', date, '--open-pr'],
+						),
+						mock.patch.object(self.module, 'runCommand') as run,
+						mock.patch.object(self.module, 'onCleanMain') as clean,
+						contextlib.redirect_stdout(io.StringIO()) as output,
+					):
+						self.assertEqual(self.module.main(), 1)
+					self.assertIn('Ngày phát hành', output.getvalue())
+					run.assert_not_called()
+					clean.assert_not_called()
+					self.assertEqual(path.read_text(encoding='utf-8'), RELEASE_FIXTURE)
+
+	def testDefaultSequenceOverflowDoesNotChangeChangelog(self):
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			subprocess.run(
+				['git', '-c', 'tag.gpgsign=false', 'tag', 'Stable.v2099.02.019999'],
+				cwd=clone,
+				check=True,
+			)
+			with (
+				mock.patch.object(
+					self.module.sys, 'argv', ['release.py', 'prepare', '--date', '2099-02-01']
+				),
+				contextlib.redirect_stdout(io.StringIO()) as output,
+			):
+				self.assertEqual(self.module.main(), 1)
+			self.assertIn('đã đạt 9999', output.getvalue())
+			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
+			self.assertEqual(
+				subprocess.check_output(['git', 'status', '--porcelain'], cwd=clone), b''
+			)
+
+	def testDefaultOpenPrSelectsSequenceAfterFetchingTags(self):
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			origin = Path(folder) / 'origin.git'
+			subprocess.run(
+				[
+					'git',
+					'-c',
+					'user.name=test',
+					'-c',
+					'user.email=',
+					'-c',
+					'commit.gpgsign=false',
+					'commit',
+					'-q',
+					'--allow-empty',
+					'-m',
+					'chuẩn bị',
+				],
+				cwd=clone,
+				check=True,
+			)
+			subprocess.run(['git', 'push', '-q', 'origin', 'main'], cwd=clone, check=True)
+			subprocess.run(
+				['git', '-c', 'tag.gpgsign=false', 'tag', 'Beta.v2099.02.010003', 'main~1'],
+				cwd=origin,
+				check=True,
+			)
+			with (
+				mock.patch.object(self.module, 'openReleasePullRequest', return_value=0) as openPr,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				self.assertEqual(self.module.prepareRelease(None, '2099-02-01', True), 0)
+			openPr.assert_called_once_with('Stable.v2099.02.010004', 'Beta.v2099.02.010003', 1)
+			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
+
+	def testExistingNewFormatTagSkipsPreparation(self):
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			subprocess.run(
+				['git', '-c', 'tag.gpgsign=false', 'tag', 'Stable.v2099.02.010001'],
+				cwd=clone,
+				check=True,
+			)
+			with contextlib.redirect_stdout(io.StringIO()) as output:
+				self.assertEqual(
+					self.module.prepareRelease('Stable.v2099.02.010001', '2099-02-01'), 0
+				)
+			self.assertIn('Đã có tag', output.getvalue())
+			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
+
 	def testValidLeapDatePreparesRealRepositoryRelease(self):
 		with tempfile.TemporaryDirectory() as folder:
 			clone = self.releaseClone(folder)
@@ -53,7 +203,7 @@ class ReleaseTest(unittest.TestCase):
 						'release.py',
 						'prepare',
 						'--version',
-						'v2104.02.Stable',
+						'Stable.v2104.02.290001',
 						'--date',
 						'2104-02-29',
 					],
@@ -65,7 +215,8 @@ class ReleaseTest(unittest.TestCase):
 			self.assertIn('— 2104-02-29', changelog)
 			self.assertEqual(self.module.unreleasedNotes(changelog), '')
 			self.assertEqual(
-				self.module.releaseNotes(changelog, 'v2104.02.Stable'), '### ✨ THÊM\n\n- Mục mới.'
+				self.module.releaseNotes(changelog, 'Stable.v2104.02.290001'),
+				'### ✨ THÊM\n\n- Mục mới.',
 			)
 
 	def testInvalidDateLeavesRealRepositoryChangelogUntouched(self):
@@ -79,7 +230,7 @@ class ReleaseTest(unittest.TestCase):
 						'release.py',
 						'prepare',
 						'--version',
-						'v2099.02.Stable',
+						'Stable.v2099.02.010001',
 						'--date',
 						'2099-02-29',
 					],
@@ -96,14 +247,28 @@ class ReleaseTest(unittest.TestCase):
 	def testInvalidPreparationInputsDoNotTouchFilesOrRunCommands(self):
 		module = loadScript('release')
 		cases = (
-			('v2099.13.Stable', '2099-01-01'),
-			('v2099.00.Stable', '2099-01-01'),
-			('v0000.01.Stable', '2099-01-01'),
-			('v2099.1.Stable', '2099-01-01'),
-			('v2099.01.Stable\n## BROKEN', '2099-01-01'),
-			('v2099.01.Stable', '2099-02-29'),
-			('v2099.01.Stable', '2099-1-01'),
-			('v2099.01.Stable', '2099-01-01\n## BROKEN'),
+			('v2099.01.Stable', '2099-01-01'),
+			('v2099.01.Stable.000001', '2099-01-01'),
+			('Gamma.v2099.01.010001', '2099-01-01'),
+			('stable.v2099.01.010001', '2099-01-01'),
+			('Stable.v2099.02.290001', '2099-02-28'),
+			('Beta.v2099.04.310001', '2099-04-30'),
+			('Stable.v2099.01.000001', '2099-01-01'),
+			('Stable.v2099.01.320001', '2099-01-01'),
+			('Stable.v2099.01.020001', '2099-01-01'),
+			('Stable.v2099.01.010000', '2099-01-01'),
+			('Stable.v2099.01.01001', '2099-01-01'),
+			('Stable.v2099.01.0110000', '2099-01-01'),
+			('Stable.v2099.01.01abcd', '2099-01-01'),
+			('Stable.v2099.01.01０００１', '2099-01-01'),
+			('Stable.v2099.13.010001', '2099-01-01'),
+			('Stable.v2099.00.010001', '2099-01-01'),
+			('Stable.v0000.01.010001', '2099-01-01'),
+			('Stable.v2099.1.010001', '2099-01-01'),
+			('Stable.v2099.01.010001\n## BROKEN', '2099-01-01'),
+			('Stable.v2099.01.010001', '2099-02-29'),
+			('Stable.v2099.01.010001', '2099-1-01'),
+			('Stable.v2099.01.010001', '2099-01-01\n## BROKEN'),
 		)
 		with tempfile.TemporaryDirectory() as folder:
 			module.ROOT = Path(folder)
@@ -141,7 +306,7 @@ class ReleaseTest(unittest.TestCase):
 			mock.patch.object(
 				module.sys,
 				'argv',
-				['release.py', 'open-pr', 'v2099.13.Stable', 'v2099.01.Stable', '1'],
+				['release.py', 'open-pr', 'Stable.v2099.13.010001', 'v2099.01.Stable', '1'],
 			),
 			mock.patch.object(module, 'runCommand') as run,
 			mock.patch.object(module.github, 'ghExists') as read,
@@ -163,7 +328,10 @@ class ReleaseTest(unittest.TestCase):
 					contextlib.redirect_stdout(io.StringIO()) as output,
 				):
 					self.assertEqual(
-						module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 1), 1
+						module.openReleasePullRequest(
+							'Stable.v2099.02.010001', 'v2099.01.Stable', 1
+						),
+						1,
 					)
 				self.assertIn('Không đọc được trạng thái', output.getvalue())
 				self.assertNotIn('đang chờ:', output.getvalue())
@@ -206,7 +374,9 @@ class ReleaseTest(unittest.TestCase):
 						contextlib.redirect_stdout(output),
 					):
 						self.assertEqual(
-							module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 3),
+							module.openReleasePullRequest(
+								'Stable.v2099.02.010001', 'v2099.01.Stable', 3
+							),
 							1,
 						)
 					self.assertIn('CHANGELOG.md', output.getvalue())
@@ -225,7 +395,13 @@ class ReleaseTest(unittest.TestCase):
 						mock.patch.object(
 							module.sys,
 							'argv',
-							['release.py', 'notes', 'v2099.02.Stable', '--changelog', str(path)],
+							[
+								'release.py',
+								'notes',
+								'Stable.v2099.02.010001',
+								'--changelog',
+								str(path),
+							],
 						),
 						contextlib.redirect_stdout(output),
 					):
@@ -235,6 +411,80 @@ class ReleaseTest(unittest.TestCase):
 	def setUp(self):
 		self.module = loadScript('release')
 
+	def testBetaChannelPreparesCorrectDate(self):
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			with (
+				mock.patch.object(
+					self.module.sys,
+					'argv',
+					['release.py', 'prepare', '--date', '2099-02-04', '--channel', 'Beta'],
+				),
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				self.assertEqual(self.module.main(), 0)
+			changelog = (clone / 'CHANGELOG.md').read_text(encoding='utf-8')
+			self.assertIn('## [Beta.v2099.02.040001]', changelog)
+			self.assertIn('— 2099-02-04', changelog)
+			self.assertEqual(
+				self.module.releaseNotes(changelog, 'Beta.v2099.02.040001'),
+				'### ✨ THÊM\n\n- Mục mới.',
+			)
+
+	def testCreateReleaseMarksOnlyBetaAsPrerelease(self):
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'CHANGELOG.md'
+			for version in ('Stable.v2099.02.040001', 'Beta.v2099.02.040002', 'v2099.01.Stable'):
+				for generated in (False, True):
+					with self.subTest(version=version, generated=generated):
+						path.write_text(
+							'' if generated else f'## [{version}]\n\n- Nội dung phát hành.\n',
+							encoding='utf-8',
+						)
+						with (
+							mock.patch.object(self.module.subprocess, 'run') as run,
+							contextlib.redirect_stdout(io.StringIO()),
+						):
+							self.assertEqual(self.module.createRelease(version, path, generated), 0)
+						run.assert_called_once()
+						command = run.call_args.args[0]
+						self.assertEqual(command[:4], ['gh', 'release', 'create', version])
+						self.assertEqual('--prerelease' in command, version.startswith('Beta.'))
+						self.assertIn('--generate-notes' if generated else '--notes-file', command)
+
+	def testReleasePullRequestHasPreparationAndChannelLabels(self):
+		with tempfile.TemporaryDirectory() as folder:
+			self.module.ROOT = Path(folder)
+			(self.module.ROOT / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
+			for channel in ('Stable', 'Beta'):
+				with self.subTest(channel=channel):
+					with (
+						mock.patch.object(self.module, 'runCommand', return_value='abc123'),
+						mock.patch.object(self.module.github, 'ghExists', return_value=False),
+						mock.patch.object(
+							self.module.subprocess,
+							'run',
+							return_value=subprocess.CompletedProcess(
+								[], 0, 'https://github.com/x/y/pull/1', ''
+							),
+						) as run,
+						contextlib.redirect_stdout(io.StringIO()),
+					):
+						self.assertEqual(
+							self.module.openReleasePullRequest(
+								f'{channel}.v2099.02.040001', 'v2099.01.Stable', 1
+							),
+							0,
+						)
+					command = run.call_args.args[0]
+					self.assertEqual(command[:3], ['gh', 'pr', 'create'])
+					labels = [
+						command[index + 1]
+						for index, value in enumerate(command)
+						if value == '--label'
+					]
+					self.assertEqual(labels, ['release', 'Pre-Release', channel])
+
 	def testExtractsVersionNotes(self):
 		# Dữ liệu mẫu cố định: nội dung CHANGELOG.md thật thay đổi theo từng lần phát hành.
 		notes = self.module.releaseNotes(RELEASE_FIXTURE, 'v2099.01.Stable')
@@ -243,7 +493,9 @@ class ReleaseTest(unittest.TestCase):
 		self.assertNotIn('CHƯA PHÁT HÀNH', notes)
 		# CHANGELOG.md thật đọc được mục của mọi phiên bản đã phát hành.
 		changelog = (ROOT / 'CHANGELOG.md').read_text(encoding='utf-8')
-		for version in re.findall(r'^## \[(v[^\]]+)\]', changelog, re.MULTILINE):
+		for version in re.findall(
+			r'^## \[((?:v|Stable\.v|Beta\.v)[^\]]+)\]', changelog, re.MULTILINE
+		):
 			self.assertTrue(self.module.releaseNotes(changelog, version), version)
 
 	def testMissingVersionReturnsNone(self):
@@ -260,36 +512,38 @@ class ReleaseTest(unittest.TestCase):
 				self.assertEqual(self.module.unreleasedNotes(header + footer), '')
 				changelog = header + '\n- Nội dung phiên bản.\n' + footer
 				self.assertEqual(self.module.unreleasedNotes(changelog), '- Nội dung phiên bản.')
-				prepared = self.module.cutRelease(changelog, 'v2099.02.Stable', '2099-02-01')
+				prepared = self.module.cutRelease(changelog, 'Stable.v2099.02.010001', '2099-02-01')
 				self.assertEqual(self.module.unreleasedNotes(prepared), '')
 				self.assertEqual(
-					self.module.releaseNotes(prepared, 'v2099.02.Stable'), '- Nội dung phiên bản.'
+					self.module.releaseNotes(prepared, 'Stable.v2099.02.010001'),
+					'- Nội dung phiên bản.',
 				)
 				if footer:
 					self.assertTrue(prepared.endswith('<p align="center">© 2099</p>\n'))
 
 	def testCutsUnreleasedIntoVersion(self):
 		# CHANGELOG mẫu cố định: mục CHƯA PHÁT HÀNH của tệp thật trống ngay sau mỗi lần phát hành.
-		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'v2099.02.Stable', '2099-02-01')
+		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'Stable.v2099.02.010001', '2099-02-01')
 		self.assertIn(
-			'## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2099.02.Stable...HEAD)',
+			'## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/Stable.v2099.02.010001...HEAD)',
 			changelog,
 		)
 		self.assertIn(
-			'## [v2099.02.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2099.02.Stable)'
+			'## [Stable.v2099.02.010001](https://github.com/TOANQUYNHLLC/.github/releases/tag/Stable.v2099.02.010001)'
 			' — 2099-02-01',
 			changelog,
 		)
 		# Mục mới trống; nội dung cũ thành nội dung Release của phiên bản mới; phiên bản cũ giữ nguyên.
 		self.assertEqual(self.module.unreleasedNotes(changelog), '')
 		self.assertEqual(
-			self.module.releaseNotes(changelog, 'v2099.02.Stable'), '### ✨ THÊM\n\n- Mục mới.'
+			self.module.releaseNotes(changelog, 'Stable.v2099.02.010001'),
+			'### ✨ THÊM\n\n- Mục mới.',
 		)
 		self.assertEqual(
 			self.module.releaseNotes(changelog, 'v2099.01.Stable'), '### ✨ THÊM\n\n- Mục cũ.'
 		)
 		self.assertLess(
-			changelog.index('## [v2099.02.Stable]'), changelog.index('## [v2099.01.Stable]')
+			changelog.index('## [Stable.v2099.02.010001]'), changelog.index('## [v2099.01.Stable]')
 		)
 
 	def testPrepareWithoutTagReportsClearly(self):
@@ -317,9 +571,9 @@ class ReleaseTest(unittest.TestCase):
 			self.module.ROOT = Path(folder)
 			output = io.StringIO()
 			with contextlib.redirect_stdout(output):
-				code = self.module.prepareRelease('v2099.01.Stable', '2099-01-01')
+				code = self.module.prepareRelease('Stable.v2099.01.010001', '2099-01-01')
 		self.assertEqual(code, 1)
-		self.assertIn('Chưa có tag v* nào', output.getvalue())
+		self.assertIn('Chưa có tag phát hành nào', output.getvalue())
 
 	def releaseClone(self, folder):
 		"""Repository có origin, tag v2099.01.Stable và một commit sau tag, đang ở main trùng origin/main."""
@@ -351,7 +605,7 @@ class ReleaseTest(unittest.TestCase):
 			subprocess.run(['git', 'switch', '-q', '-c', 'feature'], cwd=clone, check=True)
 			output = io.StringIO()
 			with contextlib.redirect_stdout(output):
-				code = self.module.prepareRelease('v2099.02.Stable', '2099-02-01', True)
+				code = self.module.prepareRelease('Stable.v2099.02.010001', '2099-02-01', True)
 			self.assertEqual(code, 1)
 			self.assertIn('Cần đứng ở main sạch', output.getvalue())
 			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
@@ -367,7 +621,7 @@ class ReleaseTest(unittest.TestCase):
 			)
 			output = io.StringIO()
 			with contextlib.redirect_stdout(output):
-				code = self.module.prepareRelease('v2099.02.Stable', '2099-02-01', True)
+				code = self.module.prepareRelease('Stable.v2099.02.010001', '2099-02-01', True)
 			self.assertEqual(code, 1)
 			self.assertIn('Không tải được origin/main', output.getvalue())
 
@@ -379,16 +633,18 @@ class ReleaseTest(unittest.TestCase):
 
 			def openPullRequest(version, previous, commits):
 				changelog = (clone / 'CHANGELOG.md').read_text(encoding='utf-8')
-				opened.append((version, previous, commits, '## [v2099.02.Stable]' in changelog))
+				opened.append(
+					(version, previous, commits, '## [Stable.v2099.02.010001]' in changelog)
+				)
 				return 0
 
 			with (
 				mock.patch.object(self.module, 'openReleasePullRequest', openPullRequest),
 				contextlib.redirect_stdout(io.StringIO()),
 			):
-				code = self.module.prepareRelease('v2099.02.Stable', '2099-02-01', True)
+				code = self.module.prepareRelease('Stable.v2099.02.010001', '2099-02-01', True)
 			self.assertEqual(code, 0)
-			self.assertEqual(opened, [('v2099.02.Stable', 'v2099.01.Stable', 1, True)])
+			self.assertEqual(opened, [('Stable.v2099.02.010001', 'v2099.01.Stable', 1, True)])
 			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
 
 	def testOpenPrDeletesBranchWhenCommitFails(self):
@@ -400,7 +656,9 @@ class ReleaseTest(unittest.TestCase):
 			calls.append(args)
 			if args[:3] == ['git', 'rev-parse', 'HEAD']:
 				return subprocess.CompletedProcess(args, 0, 'abc123\n', '')
-			if args[:2] == ['gh', 'api'] and args[2].endswith('/branches/release/v2099.02'):
+			if args[:2] == ['gh', 'api'] and args[2].endswith(
+				'/branches/release/stable.v2099.02.010001'
+			):
 				return subprocess.CompletedProcess(args, 1, '', 'Not Found (HTTP 404)')
 			if args[:3] == ['gh', 'api', 'graphql']:
 				raise subprocess.CalledProcessError(1, args, '', 'Resource not accessible\n')
@@ -413,16 +671,20 @@ class ReleaseTest(unittest.TestCase):
 			mock.patch.dict(self.module.os.environ, {'GITHUB_REPOSITORY': ''}),
 			contextlib.redirect_stdout(output),
 		):
-			code = self.module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 3)
+			code = self.module.openReleasePullRequest(
+				'Stable.v2099.02.010001', 'v2099.01.Stable', 3
+			)
 		self.assertEqual(code, 1)
-		self.assertIn('Không commit được CHANGELOG.md lên release/v2099.02', output.getvalue())
+		self.assertIn(
+			'Không commit được CHANGELOG.md lên release/stable.v2099.02.010001', output.getvalue()
+		)
 		self.assertIn(
 			[
 				'gh',
 				'api',
 				'-X',
 				'DELETE',
-				'repos/TOANQUYNHLLC/.github/git/refs/heads/release/v2099.02',
+				'repos/TOANQUYNHLLC/.github/git/refs/heads/release/stable.v2099.02.010001',
 				'--silent',
 			],
 			calls,
@@ -441,7 +703,9 @@ class ReleaseTest(unittest.TestCase):
 			mock.patch.object(self.module.subprocess, 'run', run),
 			contextlib.redirect_stdout(output),
 		):
-			code = self.module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 3)
+			code = self.module.openReleasePullRequest(
+				'Stable.v2099.02.010001', 'v2099.01.Stable', 3
+			)
 		self.assertEqual(code, 1)
 		self.assertIn('HTTP 403', output.getvalue())
 
@@ -459,10 +723,12 @@ class ReleaseTest(unittest.TestCase):
 			mock.patch.object(self.module.subprocess, 'run', run),
 			contextlib.redirect_stdout(output),
 		):
-			code = self.module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 3)
+			code = self.module.openReleasePullRequest(
+				'Stable.v2099.02.010001', 'v2099.01.Stable', 3
+			)
 		self.assertEqual(code, 1)
 		self.assertIn('chưa có Pull Request đang mở', output.getvalue())
-		self.assertIn('compare/main...release/v2099.02', output.getvalue())
+		self.assertIn('compare/main...release/stable.v2099.02.010001', output.getvalue())
 
 	def testExistingReleasePrIsReportedWithUrl(self):
 		url = 'https://github.com/TOANQUYNHLLC/.github/pull/123'
@@ -480,7 +746,9 @@ class ReleaseTest(unittest.TestCase):
 			mock.patch.object(self.module.subprocess, 'run', run),
 			contextlib.redirect_stdout(output),
 		):
-			code = self.module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 3)
+			code = self.module.openReleasePullRequest(
+				'Stable.v2099.02.010001', 'v2099.01.Stable', 3
+			)
 		self.assertEqual(code, 0)
 		self.assertIn(url, output.getvalue())
 
@@ -501,14 +769,16 @@ class ReleaseTest(unittest.TestCase):
 			mock.patch.object(self.module.subprocess, 'run', run),
 			contextlib.redirect_stdout(output),
 		):
-			code = self.module.openReleasePullRequest('v2099.02.Stable', 'v2099.01.Stable', 3)
+			code = self.module.openReleasePullRequest(
+				'Stable.v2099.02.010001', 'v2099.01.Stable', 3
+			)
 		self.assertEqual(code, 1)
 		self.assertNotIn('đã xóa branch', output.getvalue())
 		self.assertIn('chưa xóa được branch', output.getvalue())
 		self.assertIn('HTTP 403', output.getvalue())
 
 	def testEmptyUnreleasedSection(self):
-		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'v2099.02.Stable', '2099-02-01')
+		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'Stable.v2099.02.010001', '2099-02-01')
 		self.assertEqual(self.module.unreleasedNotes(changelog), '')
 		self.assertIsNone(self.module.releaseNotes(changelog, 'CHƯA PHÁT HÀNH'))
 		self.assertIsNone(self.module.unreleasedNotes('# NHẬT KÝ\n'))

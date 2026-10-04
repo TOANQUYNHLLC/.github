@@ -29,3 +29,9 @@ chore:
     - head-branch: ['^chore/']
 release:
     - head-branch: ['^release/']
+Stable:
+    - head-branch: ['^release/stable\.v']
+Beta:
+    - head-branch: ['^release/beta\.v']
+Pre-Release:
+    - head-branch: ['^release/']

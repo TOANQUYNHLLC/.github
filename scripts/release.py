@@ -2,20 +2,24 @@
 
 Chạy:
 	python3 scripts/release.py notes <tag>                    # in nội dung mục ## [<tag>] (make release-notes)
-	python3 scripts/release.py prepare [--version] [--date] [--open-pr]   # CHƯA PHÁT HÀNH → phiên bản của tháng
+	python3 scripts/release.py prepare [--version] [--date] [--channel] [--open-pr] # chuẩn bị phiên bản
 	python3 scripts/release.py open-pr <phiên bản> <tag trước> <số commit>   # Pull Request phát hành
 	python3 scripts/release.py create <tag> [--allow-generated-notes]       # tạo GitHub Release
 
-prepare: phiên bản mặc định là vYYYY.MM.Stable theo ngày ở Việt Nam; bỏ qua (mã thoát 0) khi tag đã có hoặc
-không có commit kể từ tag trước; báo lỗi khi có commit mà mục CHƯA PHÁT HÀNH trống; ghi kết quả vào
+prepare: phiên bản có dạng Stable.vYYYY.MM.DDXXXX hoặc Beta.vYYYY.MM.DDXXXX theo ngày ở Việt Nam;
+mặc định Stable, chọn Beta bằng --channel Beta. Số thứ tự có bốn chữ số, dùng chung cho hai kênh,
+bắt đầu lại từ 0001 mỗi tháng; bỏ qua (mã thoát 0) khi tag đã có hoặc không có commit kể từ tag trước;
+báo lỗi khi có commit mà mục CHƯA PHÁT HÀNH trống; ghi kết quả vào
 $GITHUB_OUTPUT cho workflow monthly-release.yml. --open-pr (make release-pr, khi GitHub Actions tắt): làm tiếp
 open-pr tại máy rồi trả CHANGELOG.md về như cũ — chỉ chạy trên main sạch, trùng origin/main.
-open-pr: tạo branch release/vYYYY.MM, commit CHANGELOG.md qua GraphQL createCommitOnBranch (GitHub ký, thỏa
+open-pr: tạo branch release/stable.vYYYY.MM.DDXXXX hoặc release/beta.vYYYY.MM.DDXXXX,
+commit CHANGELOG.md qua GraphQL createCommitOnBranch (GitHub ký, thỏa
 quy tắc commit có chữ ký) rồi mở Pull Request; đọc và kiểm tra UTF-8 của CHANGELOG.md trước khi tạo branch;
 branch đã có thì chỉ bỏ qua khi có Pull Request đang mở;
 commit lỗi thì thử xóa branch vừa tạo và báo kết quả để lần chạy sau làm lại.
 create: workflow release.yml (và workflow mẫu release.yml của repository khác, với --changelog CHANGELOG.md
---allow-generated-notes) gọi khi đẩy tag v*; khi GitHub Actions tắt, người quản trị chạy tại máy.
+--allow-generated-notes) gọi khi đẩy tag Stable.v*, Beta.v* hoặc v* cũ; Beta là bản phát hành thử nghiệm.
+Khi GitHub Actions tắt, người quản trị chạy tại máy.
 """
 
 import argparse
@@ -42,6 +46,11 @@ UNRELEASED = re.compile(
 	re.MULTILINE | re.DOTALL,
 )
 VERSION_HEADING = re.compile(r'^## \[(?P<name>[^\]]+)\].*$', re.MULTILINE)
+RELEASE_CHANNELS = ('Stable', 'Beta')
+RELEASE_VERSION = re.compile(
+	r'(?P<channel>Stable|Beta)\.v(?P<year>[0-9]{4})\.(?P<month>0[1-9]|1[0-2])\.'
+	r'(?P<day>[0-9]{2})(?P<sequence>(?!0000)[0-9]{4})'
+)
 
 
 def releaseNotes(changelog, version):
@@ -126,32 +135,81 @@ def onCleanMain():
 
 
 def validateReleaseInputs(version, date=None):
-	"""Phiên bản theo tháng và ngày ISO có thật; kiểm tra trước khi gọi Git hoặc thay đổi CHANGELOG."""
-	if (
-		not isinstance(version, str)
-		or not re.fullmatch(r'v[0-9]{4}\.(?:0[1-9]|1[0-2])\.Stable', version)
-		or version[1:5] == '0000'
-	):
-		raise ValueError('Phiên bản phát hành phải là vYYYY.MM.Stable với năm và tháng hợp lệ.')
-	if date is not None:
-		if not isinstance(date, str) or not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', date):
-			raise ValueError('Ngày phát hành phải có dạng YYYY-MM-DD.')
+	"""Phiên bản chứa ngày có thật, trùng ngày chuẩn bị; kiểm tra trước khi gọi Git hoặc sửa CHANGELOG."""
+	match = RELEASE_VERSION.fullmatch(version) if isinstance(version, str) else None
+	if not match:
+		raise ValueError(
+			'Phiên bản phát hành phải là Stable.vYYYY.MM.DDXXXX hoặc Beta.vYYYY.MM.DDXXXX '
+			'với ngày hợp lệ và số thứ tự từ 0001 đến 9999.'
+		)
+	versionDate = validateReleaseDate(f'{match["year"]}-{match["month"]}-{match["day"]}')
+	if date is not None and validateReleaseDate(date) != versionDate:
+		raise ValueError('Ngày trong phiên bản phải trùng ngày chuẩn bị phát hành.')
+
+
+def validateReleaseDate(date):
+	"""Kiểm tra ngày ISO có thật và trả về ngày để chọn tháng phát hành."""
+	if not isinstance(date, str) or not re.fullmatch(r'[0-9]{4}-[0-9]{2}-[0-9]{2}', date):
+		raise ValueError('Ngày phát hành phải có dạng YYYY-MM-DD.')
+	try:
+		return CalendarDate.fromisoformat(date)
+	except ValueError as exc:
+		raise ValueError(f'Ngày phát hành không có thật: {date}') from exc
+
+
+def nextReleaseVersion(date, channel='Stable'):
+	"""Tăng số thứ tự chung của Stable và Beta trong tháng; tháng mới bắt đầu từ 0001."""
+	month = validateReleaseDate(date)
+	if channel not in RELEASE_CHANNELS:
+		raise ValueError('Kênh phát hành phải là Stable hoặc Beta.')
+	tags = runCommand(
+		'git', 'tag', '--list', f'*.v{month.year:04d}.{month.month:02d}.*'
+	).splitlines()
+	maxSequence = 0
+	for tag in tags:
 		try:
-			CalendarDate.fromisoformat(date)
-		except ValueError as exc:
-			raise ValueError(f'Ngày phát hành không có thật: {date}') from exc
+			validateReleaseInputs(tag)
+		except ValueError:
+			continue
+		match = RELEASE_VERSION.fullmatch(tag)
+		if int(match['year']) == month.year and int(match['month']) == month.month:
+			maxSequence = max(maxSequence, int(match['sequence']))
+	sequence = maxSequence + 1
+	if sequence > 9999:
+		raise ValueError(
+			'Số thứ tự phát hành trong tháng đã đạt 9999 — không thể tạo phiên bản tiếp theo.'
+		)
+	return f'{channel}.v{month.year:04d}.{month.month:02d}.{month.day:02d}{sequence:04d}'
 
 
-def prepareRelease(version, date, openPullRequest=False):
-	validateReleaseInputs(version, date)
+def prepareRelease(version, date, openPullRequest=False, channel='Stable'):
+	if version is None:
+		validateReleaseDate(date)
+		if channel not in RELEASE_CHANNELS:
+			raise ValueError('Kênh phát hành phải là Stable hoặc Beta.')
+	else:
+		validateReleaseInputs(version, date)
 	changelogPath = ROOT / 'CHANGELOG.md'
 	if openPullRequest and not onCleanMain():
 		return 1
+	if version is None:
+		version = nextReleaseVersion(date, channel)
 	if runCommand('git', 'tag', '--list', version):
 		print(f'Đã có tag {version} — bỏ qua.')
 		return 0
 	described = subprocess.run(
-		['git', 'describe', '--tags', '--abbrev=0', '--match', 'v*'],
+		[
+			'git',
+			'describe',
+			'--tags',
+			'--abbrev=0',
+			'--match',
+			'Stable.v*',
+			'--match',
+			'Beta.v*',
+			'--match',
+			'v*',
+		],
 		cwd=ROOT,
 		capture_output=True,
 		text=True,
@@ -160,7 +218,7 @@ def prepareRelease(version, date, openPullRequest=False):
 	if described.returncode != 0:
 		reportMessage(
 			'error',
-			'Chưa có tag v* nào — gắn tag phát hành đầu tiên bằng tay (README → PHÁT HÀNH) rồi chạy lại.',
+			'Chưa có tag phát hành nào — gắn tag phát hành đầu tiên bằng tay (README → PHÁT HÀNH) rồi chạy lại.',
 		)
 		return 1
 	previous = described.stdout.strip()
@@ -190,9 +248,10 @@ def prepareRelease(version, date, openPullRequest=False):
 
 def openReleasePullRequest(version, previous, commits):
 	validateReleaseInputs(version)
+	channel = RELEASE_VERSION.fullmatch(version)['channel']
 	repository = os.environ.get('GITHUB_REPOSITORY') or DEFAULT_REPOSITORY
 	base = runCommand('git', 'rev-parse', 'HEAD')
-	branch = f'release/{version.removesuffix(".Stable")}'
+	branch = f'release/{version.lower()}'
 	title = f'chore(release): phát hành {version}'
 	try:
 		exists = github.ghExists(f'repos/{repository}/branches/{branch}')
@@ -316,6 +375,10 @@ def openReleasePullRequest(version, previous, commits):
 			description,
 			'--label',
 			'release',
+			'--label',
+			'Pre-Release',
+			'--label',
+			channel,
 		],
 		capture_output=True,
 		text=True,
@@ -341,6 +404,10 @@ def createRelease(tag, changelogPath, allowGeneratedNotes):
 	changelog = changelogPath.read_text(encoding='utf-8') if changelogPath.exists() else ''
 	notes = releaseNotes(changelog, tag)
 	command = ['gh', 'release', 'create', tag, '--title', tag, '--verify-tag']
+	if tag.startswith(('Stable.v', 'Beta.v')):
+		validateReleaseInputs(tag)
+	if tag.startswith('Beta.v'):
+		command.append('--prerelease')
 	if os.environ.get('GITHUB_REPOSITORY'):
 		command += ['--repo', os.environ['GITHUB_REPOSITORY']]
 	if notes:
@@ -386,7 +453,15 @@ def main():
 	notes.add_argument('tag')
 	notes.add_argument('--changelog', type=Path, default=ROOT / 'CHANGELOG.md')
 	prepare = commands.add_parser('prepare', help='chuyển CHƯA PHÁT HÀNH thành phiên bản của tháng')
-	prepare.add_argument('--version', default=f'v{today:%Y.%m}.Stable')
+	prepare.add_argument(
+		'--version', help='phiên bản Stable.vYYYY.MM.DDXXXX hoặc Beta.vYYYY.MM.DDXXXX'
+	)
+	prepare.add_argument(
+		'--channel',
+		choices=RELEASE_CHANNELS,
+		default='Stable',
+		help='kênh phát hành khi không truyền --version (mặc định Stable)',
+	)
 	prepare.add_argument('--date', default=today.isoformat())
 	prepare.add_argument(
 		'--open-pr', action='store_true', help='mở luôn Pull Request phát hành (chạy tại máy)'
@@ -408,7 +483,7 @@ def main():
 		if args.command == 'notes':
 			return printNotes(args.tag, args.changelog)
 		if args.command == 'prepare':
-			return prepareRelease(args.version, args.date, args.open_pr)
+			return prepareRelease(args.version, args.date, args.open_pr, args.channel)
 		if args.command == 'open-pr':
 			return openReleasePullRequest(args.version, args.previous, args.commits)
 		return createRelease(args.tag, args.changelog, args.allow_generated_notes)

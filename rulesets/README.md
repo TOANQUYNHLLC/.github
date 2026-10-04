@@ -1,6 +1,6 @@
 # 🛡️ RULESET BẢO VỆ NHÁNH CHÍNH VÀ TAG PHÁT HÀNH
 
-Mỗi repository của tổ chức có hai [ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets): **Protect Main** cho nhánh chính ([`protect-main.json`](protect-main.json)) và **Protect Release Tags** cho tag phát hành `v*` ([`protect-release-tags.json`](protect-release-tags.json), [ADR 0005](../docs/adr/0005-protect-release-tags.md)), để các quy tắc trong [`CONTRIBUTING.md`](../CONTRIBUTING.md) được GitHub thực thi. Ruleset **không** tự áp dụng từ repository này — người quản trị import trên web hoặc chạy `python3 scripts/org-setup.py rulesets --apply`.
+Mỗi repository của tổ chức có hai [ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets): **Protect Main** cho nhánh chính ([`protect-main.json`](protect-main.json)) và **Protect Release Tags** cho tag phát hành `Stable.v*`, `Beta.v*` và `v*` cũ ([`protect-release-tags.json`](protect-release-tags.json), [ADR 0005](../docs/adr/0005-protect-release-tags.md), [ADR 0014](../docs/adr/0014-release-sequence.md)), để các quy tắc trong [`CONTRIBUTING.md`](../CONTRIBUTING.md) được GitHub thực thi. Ruleset **không** tự áp dụng từ repository này — người quản trị import trên web hoặc chạy `python3 scripts/org-setup.py rulesets --apply`.
 
 Ruleset đặt ở **cấp repository**: tổ chức dùng gói GitHub Free nên ruleset cấp tổ chức (**Organization settings → Repository → Rulesets**) không được thực thi; **push ruleset** (chặn tệp theo đường dẫn, đuôi, kích thước) chỉ dùng được cho repository riêng tư hoặc internal. Gói Free cũng không thực thi ruleset trên repository **riêng tư** — `org-setup.py` cảnh báo và bỏ qua thay vì dừng.
 
@@ -17,7 +17,7 @@ Mọi ruleset nhánh và tag — cấp repository và cấp tổ chức — có 
 
 ## 🏷️ PROTECT RELEASE TAGS
 
-- Áp dụng cho `refs/tags/v*`: chặn tạo, cập nhật (dời sang commit khác), xóa tag và force push; tag chỉ trỏ tới commit có chữ ký.
+- Áp dụng cho `refs/tags/Stable.v*`, `refs/tags/Beta.v*` và `refs/tags/v*`: chặn tạo, cập nhật (dời sang commit khác), xóa tag và force push; tag chỉ trỏ tới commit có chữ ký.
 - Danh sách bỏ qua giống Protect Main — chỉ người quản trị tạo được tag phát hành, nên GitHub Release luôn trỏ đúng mã đã phát hành.
 - Bổ sung cho ruleset: tổ chức bắt buộc **Immutable releases** cho mọi repository — khi Release đã phát hành, không ai (kể cả người trong danh sách bỏ qua) dời được tag, sửa được tệp đính kèm, hay xóa được tag khi Release còn đó; xóa Release rồi cũng không dùng lại được tên tag.
 
@@ -26,7 +26,7 @@ Mọi ruleset nhánh và tag — cấp repository và cấp tổ chức — có 
 Ba ruleset cho mọi repository (`~ALL`), cả ba đã có trên web (**Active**) và khớp tệp (`make org-preview` đối chiếu) nhưng chỉ được thực thi khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức):
 
 - [`org-protect-main.json`](org-protect-main.json) — **Protect Main (Organization)**: cùng quy tắc với Protect Main trên nhánh mặc định, thêm **code scanning** như trên web: kết quả CodeQL của Pull Request không có cảnh báo mức `errors` hay cảnh báo bảo mật từ `high_or_higher` (`ORG_CODE_SCANNING_RULE` trong `scripts/orgsetup/rulesets.py`). Repository cần workflow CodeQL ([`workflow-templates/codeql.yml`](../workflow-templates/codeql.yml)) để có kết quả, nếu không Pull Request bị chặn khi gói Team thực thi ruleset.
-- [`org-protect-release-tags.json`](org-protect-release-tags.json) — **Protect Release Tags (Organization)**: cùng quy tắc với Protect Release Tags trên tag `v*`.
+- [`org-protect-release-tags.json`](org-protect-release-tags.json) — **Protect Release Tags (Organization)**: cùng quy tắc với Protect Release Tags trên tag `Stable.v*`, `Beta.v*` và `v*` cũ.
 - [`org-protect-pushes.json`](org-protect-pushes.json) — **Protect Pushes (Organization)**: push ruleset, xem [mục dưới](#-protect-pushes-cấp-tổ-chức).
 
 Khác với bản cấp repository:
@@ -34,7 +34,7 @@ Khác với bản cấp repository:
 - Chỉ giữ các kiểm tra bắt buộc có ở mọi repository (tiêu đề Pull Request, tên branch) — như Protect Main của repository khác; vẫn có `code_quality`.
 - Không dùng actor loại `User` (import báo "contains an invalid actor"): danh sách bỏ qua là **chủ tổ chức** (`OrganizationAdmin`) — cùng người quản trị như bản cấp repository; không giới hạn người hủy phê duyệt.
 - Protect Release Tags (Organization) có thêm quy tắc kiểm tra bắt buộc với danh sách rỗng như trên web — quy tắc này không chặn gì, có thể xóa trên web rồi bỏ trong `orgTagRuleset()`.
-- Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `orgRulesets()` trong `scripts/orgsetup/rulesets.py` và khớp ruleset đang cài trên web; test bảo đảm tệp khớp `orgRulesets()` — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức.
+- Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `orgRulesets()` trong `scripts/orgsetup/rulesets.py` để đối chiếu với ruleset đang cài trên web; test bảo đảm tệp khớp `orgRulesets()` — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức.
 - Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json` và `org-protect-pushes.json`. Ở gói Free, ghi ruleset cấp tổ chức qua REST (HTTP 403, dù token có quyền `admin:org`) lẫn GraphQL (`updateRepositoryRuleset`, `createRepositoryRuleset`) đều bị chặn, nên `python3 scripts/org-setup.py org-rulesets` chỉ so tệp với ruleset trên web (đọc qua GraphQL); `--apply` chỉ tạo, cập nhật được khi tổ chức dùng gói Team.
 - Danh sách ruleset được đọc hết các trang REST hoặc GraphQL trước khi đối chiếu. GraphQL kiểm tra trường và kiểu dữ liệu, lỗi từng trang, tên không trùng và `pageInfo` của ruleset, quy tắc, danh sách bỏ qua. Phản hồi thiếu, bị cắt hoặc có trạng thái phân trang mâu thuẫn được báo lỗi đọc; không kết luận ruleset đã đúng hay chưa có từ dữ liệu đó. Actor `DeployKey` được đối chiếu với ID `null` như REST; ID của `OrganizationAdmin` được chuẩn hóa vì API bỏ qua giá trị này.
 

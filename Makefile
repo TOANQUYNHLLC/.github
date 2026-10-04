@@ -52,7 +52,7 @@ versions: ## Báo công cụ trong mise.toml có bản phát hành mới hơn (D
 forms: ## Kiểm tra GitHub chấp nhận biểu mẫu Issue, Discussion: make forms REF=<branch> (mặc định main)
 	python3 scripts/check-github-forms.py $(or $(REF),main)
 
-release-notes: ## Xem trước nội dung Release của một tag: make release-notes TAG=v2026.09.Stable
+release-notes: ## Xem trước nội dung Release của một tag: make release-notes TAG=Stable.v2026.11.010001
 	python3 scripts/release.py notes $(TAG)
 
 release-prepare: ## Chuyển CHƯA PHÁT HÀNH của CHANGELOG.md thành phiên bản của tháng nếu có thay đổi từ tag trước
