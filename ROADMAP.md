@@ -34,7 +34,7 @@ GitHub không có API cho các mục này — người quản trị làm trên w
 - [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`.github/DISCUSSION_TEMPLATE/`](.github/DISCUSSION_TEMPLATE/).
 - [ ] Khi nâng lên gói **Team**: ruleset cấp tổ chức được thực thi — cân nhắc ADR mới để bỏ ruleset cấp repository trùng lặp.
 - [ ] Xóa quy tắc kiểm tra bắt buộc rỗng (không chặn gì) của **Protect Release Tags (Organization)** trên web, rồi bỏ khỏi `orgTagRuleset()` trong [`scripts/orgsetup/rulesets.py`](scripts/orgsetup/rulesets.py) và sinh lại tệp.
-- [ ] Code security configuration **GitHub recommended** (**Organization settings → Advanced Security → Configurations**): đã có nhưng chưa gắn repository nào và chưa là mặc định cho repository mới — đây là cách GitHub khuyên dùng thay cho bật từng tính năng (`org-setup.py settings`). Lưu ý cấu hình này bật code scanning default setup: cần GitHub Actions (đang tắt) và không dùng chung với workflow CodeQL (advanced setup) của repository.
+- [ ] Code security configuration **GitHub recommended** (**Organization settings → Advanced Security → Configurations**): đã có nhưng chưa gắn repository nào và chưa là mặc định cho repository mới — đây là cách GitHub khuyên dùng thay cho bật từng tính năng (`org-setup.py settings`). Lưu ý cấu hình này bật code scanning default setup: cần bật GitHub Actions và không dùng chung với workflow CodeQL (advanced setup) của repository.
 - [ ] Quét bí mật theo mẫu tùy chỉnh (non-provider patterns) và kiểm tra bí mật còn hiệu lực (validity checks): cần gói **GitHub Secret Protection**.
 
 ---
