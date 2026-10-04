@@ -106,9 +106,15 @@ def syncFiles(repos, apply):
 			continue
 		base = github.defaultBranch(repo)
 		try:
-			sha = github.ghJson('api', f'repos/{github.ORG}/{repo}/git/ref/heads/{base}')['object'][
-				'sha'
-			]
+			reference = github.ghJson('api', f'repos/{github.ORG}/{repo}/git/ref/heads/{base}')
+			commit = reference.get('object') if isinstance(reference, dict) else None
+			if (
+				not isinstance(commit, dict)
+				or not isinstance(commit.get('sha'), str)
+				or not commit['sha']
+			):
+				raise ValueError(f'{repo}: không đọc được SHA của nhánh {base}')
+			sha = commit['sha']
 		except RuntimeError as exc:
 			if not github.isNotFound(exc):
 				raise
@@ -117,13 +123,37 @@ def syncFiles(repos, apply):
 		# Đọc một cây tại SHA cố định: mọi phép so và branch mới dùng cùng một trạng thái, không giữ cache
 		# qua lần chạy sau. API có thể cắt cây lớn; khi đó dò từng đường dẫn thay vì coi phần bị cắt là thiếu.
 		tree = github.ghJson('api', f'repos/{github.ORG}/{repo}/git/trees/{sha}?recursive=1')
+		if (
+			not isinstance(tree, dict)
+			or type(tree.get('truncated')) is not bool
+			or not isinstance(tree.get('tree'), list)
+		):
+			raise ValueError(f'{repo}: không đọc được cây Git hoặc trạng thái truncated')
+		for item in tree['tree']:
+			if (
+				not isinstance(item, dict)
+				or not isinstance(item.get('path'), str)
+				or not item['path']
+				or item.get('type') not in ('blob', 'tree', 'commit')
+			):
+				raise ValueError(f'{repo}: phần tử cây Git thiếu đường dẫn hoặc sai loại')
 		if tree['truncated']:
-			root = {
-				item['name']
-				for item in github.ghJson('api', f'repos/{github.ORG}/{repo}/contents?ref={sha}')
-			}
+			contents = github.ghJson('api', f'repos/{github.ORG}/{repo}/contents?ref={sha}')
+			if not isinstance(contents, list) or any(
+				not isinstance(item, dict)
+				or not isinstance(item.get('name'), str)
+				or not item['name']
+				or item.get('type') not in ('file', 'dir', 'symlink', 'submodule')
+				for item in contents
+			):
+				raise ValueError(f'{repo}: không đọc được danh sách tệp gốc tại {sha}')
+			root = {item['name'] for item in contents if item['type'] in ('file', 'symlink')}
 		else:
-			root = {item['path'] for item in tree['tree'] if '/' not in item['path']}
+			root = {
+				item['path']
+				for item in tree['tree']
+				if '/' not in item['path'] and item['type'] == 'blob'
+			}
 		files = plannedFiles(root)
 		if tree['truncated']:
 			missing = {

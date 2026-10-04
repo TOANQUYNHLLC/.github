@@ -8,12 +8,15 @@ Lệnh (nên chạy theo thứ tự):
 	files: mở Pull Request thêm các tệp dùng chung còn thiếu — .editorconfig, .gitattributes,
 		workflow kiểm tra tiêu đề Pull Request, tên branch và gắn nhãn (labeler), CODEOWNERS, dependabot.yml, release.yml
 		và tệp định dạng, phiên bản (.nvmrc, .python-version) theo ngôn ngữ repository dùng. Không ghi đè tệp đã có.
+		Dữ liệu nhánh hoặc cây Git sai dừng trước khi ghi; thư mục trùng tên manifest không chọn ngôn ngữ.
 	settings: cài đặt repository (REPOSITORY_SETTINGS: Merge và Squash, tắt Rebase — ADR 0006, auto-merge,
 		Update branch, sign-off khi commit trên web, tắt Wiki và Projects; phần riêng trong
 		REPOSITORY_OVERRIDES, topics của .github lấy từ CITATION.cff); bật Dependabot alerts, secret
 		scanning, push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư, Release bất
 		biến (immutable releases); quyền GitHub Actions (giữ nguyên trạng thái bật/tắt);
 		--discussions bật thêm GitHub Discussions.
+		Cài đặt thiếu trường/sai kiểu không được PATCH; quyền Actions và trạng thái bảo mật chưa đọc
+		được được cảnh báo và bỏ qua. Topics lấy từ keywords YAML hợp lệ của CITATION.cff.
 	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json) và Protect Release
 		Tags (rulesets/protect-release-tags.json, ADR 0005); Protect Main của repository khác chỉ giữ
 		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
@@ -93,7 +96,7 @@ def previewAll(repos):
 		try:
 			runCommand(command, [] if command.startswith('org-') else repos, apply=False)
 			return True, buffer.getvalue()
-		except (RuntimeError, OSError, KeyError, ValueError) as exc:
+		except (RuntimeError, OSError, KeyError, ValueError, TypeError) as exc:
 			print(f'❌ {exc}')
 			return False, buffer.getvalue()
 		finally:
@@ -162,7 +165,7 @@ def main():
 		if args.command == 'preview':
 			return previewAll(repos)
 		runCommand(args.command, repos, args.apply, args.discussions)
-	except (RuntimeError, OSError, KeyError, ValueError) as exc:
+	except (RuntimeError, OSError, KeyError, ValueError, TypeError) as exc:
 		print(f'❌ {exc}', file=sys.stderr)
 		return 1
 	if not args.apply:

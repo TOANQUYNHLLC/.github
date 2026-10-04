@@ -7,6 +7,7 @@ import contextlib
 import http.client
 import io
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -22,6 +23,77 @@ MISE = '[tools]\nruff = "0.16.10"\nshellcheck = "0.11.0"\nactionlint = "1.7.12"\
 
 
 class ToolVersionsTest(unittest.TestCase):
+	def testMissingCliExecutableReturnsAnonymousToken(self):
+		module = loadScript('check-tool-versions')
+		with (
+			mock.patch.object(module.shutil, 'which', return_value='gh'),
+			mock.patch.object(module.subprocess, 'run', side_effect=FileNotFoundError('gh')),
+		):
+			self.assertEqual(module.cliToken(), '')
+
+	def testEnvironmentTokenAvoidsCliLookup(self):
+		module = loadScript('check-tool-versions')
+		releases = {
+			'astral-sh/ruff': '0.16.10',
+			'koalaman/shellcheck': '0.11.0',
+			'rhysd/actionlint': '1.7.12',
+		}
+		for key in ('GH_TOKEN', 'GITHUB_TOKEN'):
+			with (
+				self.subTest(key=key),
+				mock.patch.dict(module.os.environ, {key: 'provided_token'}, clear=True),
+				mock.patch.object(module, 'cliToken') as cli,
+				mock.patch.object(
+					module, 'latestRelease', side_effect=lambda repo, *args: releases[repo]
+				) as latest,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				self.assertEqual(module.main(), 0)
+			cli.assert_not_called()
+			self.assertEqual(
+				[call.args[1] for call in latest.call_args_list], ['provided_token'] * 3
+			)
+
+	def testCliTokenIsRefreshedForEachRun(self):
+		module = loadScript('check-tool-versions')
+		releases = {
+			'astral-sh/ruff': '0.16.10',
+			'koalaman/shellcheck': '0.11.0',
+			'rhysd/actionlint': '1.7.12',
+		}
+		responses = [
+			subprocess.CompletedProcess([], 0, 'first_token\n', ''),
+			subprocess.CompletedProcess([], 0, 'second_token\n', ''),
+		]
+		with (
+			mock.patch.dict(module.os.environ, {}, clear=True),
+			mock.patch.object(module.shutil, 'which', return_value='gh'),
+			mock.patch.object(module.subprocess, 'run', side_effect=responses) as read,
+			mock.patch.object(
+				module, 'latestRelease', side_effect=lambda repo, *args: releases[repo]
+			) as latest,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			self.assertEqual(module.main(), 0)
+			self.assertEqual(module.main(), 0)
+		self.assertEqual(read.call_count, 2)
+		self.assertEqual(
+			[call.args[1] for call in latest.call_args_list],
+			['first_token'] * 3 + ['second_token'] * 3,
+		)
+
+	def testExplicitAnonymousTokenDoesNotReadCli(self):
+		module = loadScript('check-tool-versions')
+		with (
+			mock.patch.object(module, 'cliToken') as cli,
+			mock.patch.object(
+				module.urllib.request, 'urlopen', return_value=io.BytesIO(b'{"tag_name":"v1.2.3"}')
+			) as read,
+		):
+			self.assertEqual(module.latestRelease('example/tool', token=''), '1.2.3')
+		cli.assert_not_called()
+		self.assertNotIn('Authorization', read.call_args.args[0].headers)
+
 	def testMalformedReleasesAreRejected(self):
 		module = loadScript('check-tool-versions')
 		for data in (
@@ -70,7 +142,9 @@ class ToolVersionsTest(unittest.TestCase):
 			(Path(folder) / 'mise.toml').write_text(MISE, encoding='utf-8')
 			module.ROOT = Path(folder)
 			with (
-				mock.patch.object(module, 'latestRelease', latestRelease),
+				mock.patch.object(
+					module, 'latestRelease', lambda repository, token: latestRelease(repository)
+				),
 				mock.patch.object(module, 'cliToken', str),
 				contextlib.redirect_stdout(output),
 			):

@@ -10,6 +10,9 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### 🐛 SỬA
 
+- Đồng bộ cài đặt kiểm tra trường và kiểu phản hồi trước khi PATCH; quyền Actions thiếu trạng thái bật/tắt và tính năng bảo mật có dữ liệu sai được cảnh báo và bỏ qua, không ghi theo giá trị suy đoán. Dependabot security updates chờ đọc được hoặc bật thành công Dependabot alerts.
+- Topics đọc `keywords` theo YAML thay vì biểu thức văn bản; hỗ trợ dấu nháy, chú thích và anchor/alias, dữ liệu lỗi không xóa topics đang có.
+- Đồng bộ tệp xác minh nhánh mặc định, SHA và cấu trúc cây Git trước khi tạo branch; chỉ nhận diện manifest từ tệp, không từ thư mục trùng tên.
 - Đồng bộ team xác minh vai trò và trạng thái thành viên; lời mời đang chờ, dữ liệu thiếu hoặc quyền tùy chỉnh không xếp hạng được dừng trước khi ghi. Phản hồi lời mời mới được kiểm tra, không báo đã thêm maintainer khi còn `pending`.
 - Quy ước tiêu đề áp dụng đủ giới hạn đã ghi trong hướng dẫn đóng góp; tiêu đề trống được kiểm tra đúng đầu vào, lỗi Git làm kiểm tra thất bại. Chú thích lỗi Actions mã hóa ký tự điều khiển theo định dạng workflow command.
 - Các kiểm tra Markdown dùng chung cách bỏ khối mã backtick và dấu ngã, xử lý đúng độ dài dấu đóng và khối chưa đóng; liên kết trong mã nội tuyến được bỏ qua. Scheme URL viết hoa hoặc có dấu `+` và URL dạng `//` không bị coi là đường dẫn cục bộ.
@@ -35,6 +38,7 @@ Mọi thay đổi đáng chú ý của repository `.github` thuộc **CÔNG TY T
 
 ### ⚡ TỐI ƯU
 
+- Kiểm tra phiên bản không gọi GitHub CLI lấy token khi môi trường đã cung cấp; token được dùng chung trong lượt kiểm tra và đọc lại ở lượt sau, không giữ token đăng nhập cũ trong cache.
 - Kiểm tra tiêu đề commit bỏ phép dò `origin/main` dư thừa sau khi `git log` thành công; chỉ dò ref để phân biệt lỗi Git với nhánh đích chưa có.
 - Kiểm tra liên kết đọc mỗi tệp một lần trong lượt chạy; GET so bản `security.txt` trên website cũng kiểm tra URL Canonical, tránh request HEAD trùng và chạy song song với các liên kết khác.
 - Đối chiếu job và tài liệu dùng lại danh sách workflow từ các tệp đã kiểm kê trong lượt kiểm tra, tránh quét lại thư mục ở từng phép đối chiếu.

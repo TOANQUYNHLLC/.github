@@ -182,6 +182,8 @@ Workflow đuôi `.yml` và `.yaml` đều được actionlint kiểm tra, đối
 
 `make forms` báo lỗi từng biểu mẫu khi cấu trúc dữ liệu nhúng trên trang GitHub thay đổi hoặc GitHub đánh dấu biểu mẫu không hợp lệ; không có biểu mẫu để kiểm tra thì lệnh thất bại. `make versions` yêu cầu phiên bản số chính xác của các công cụ được theo dõi trong `mise.toml` trước khi gọi mạng; phản hồi thiếu hoặc sai dạng `tag_name` được báo cho công cụ đó. Script định dạng Go báo lỗi khi không chạy được `gofmt` hoặc công cụ thoát lỗi, kể cả không có nội dung stderr.
 
+Kiểm tra phiên bản dùng `GH_TOKEN`, rồi `GITHUB_TOKEN` nếu có; chỉ đọc token GitHub CLI khi môi trường chưa cung cấp. Token được đọc một lần và dùng chung cho các request trong lượt chạy, lượt sau đọc lại để nhận thay đổi đăng nhập.
+
 | Lệnh                       | Tác dụng                                                                                     |
 | -------------------------- | -------------------------------------------------------------------------------------------- |
 | `make`                     | Xem danh sách lệnh                                                                           |
@@ -207,7 +209,11 @@ Workflow đuôi `.yml` và `.yaml` đều được actionlint kiểm tra, đối
 
 `scripts/org-setup.py files` tìm tệp dùng chung còn thiếu bằng [Git Trees API](https://docs.github.com/en/rest/git/trees#get-a-tree) tại một commit cố định và tạo branch từ cùng commit đó. Mỗi lần chạy đọc lại trạng thái GitHub; nếu API cắt danh sách cây, script dò từng đường dẫn tại cùng commit. Khi áp dụng, toàn bộ tệp thiếu được gửi trong một commit qua [`createCommitOnBranch`](https://github.blog/changelog/2021-09-13-a-simpler-api-for-authoring-commits/) để GitHub ký; `expectedHeadOid` chặn ghi nếu branch đã đổi. Commit thất bại thì không mở Pull Request; branch đã tạo được giữ lại để người quản trị kiểm tra.
 
+Nhánh mặc định, SHA, trạng thái cắt cây, đường dẫn và loại phần tử phải đọc được trước khi lập kế hoạch thêm tệp. Tệp khai báo phụ thuộc được nhận diện từ tệp ở thư mục gốc; thư mục trùng tên manifest không làm sinh cấu hình cho ngôn ngữ đó.
+
 Các phép dò sự tồn tại chỉ coi HTTP 404 là chưa có; lỗi quyền, giới hạn API và lỗi mạng được báo để tránh ghi dựa trên dữ liệu chưa đọc được. Lệnh `team` dừng trước khi ghi nếu không đọc được trạng thái; `settings` cảnh báo và bỏ qua tính năng bảo mật không đọc được trạng thái.
+
+Cài đặt repository và tổ chức thiếu trường hoặc sai kiểu dừng trước khi PATCH cài đặt đó. Topics được lấy từ giá trị YAML của `keywords` trong `CITATION.cff`, hỗ trợ dấu nháy, chú thích và anchor/alias; dữ liệu sai chặn việc cập nhật topics. Quyền Actions chỉ được so và ghi khi đọc được trạng thái bật/tắt và các trường quyền bắt buộc; dữ liệu sai được cảnh báo theo endpoint, không suy ra trạng thái còn thiếu. Trạng thái bảo mật phải là boolean hoặc `enabled`/`disabled` đúng định dạng API; dữ liệu chưa rõ không được coi là đang tắt hoặc đã bật. Push protection được bỏ qua khi chưa đọc được secret scanning. Dependabot security updates chỉ được bật sau khi xác minh Dependabot alerts đã bật hoặc bật thành công trong cùng lượt.
 
 Lệnh `team` chỉ coi thành viên có trạng thái `active` là đã tham gia. Lời mời đang `pending`, phản hồi thiếu hoặc sai trường và tên quyền tùy chỉnh chưa xếp hạng được làm lượt đồng bộ team dừng trước mọi thay đổi để người quản trị kiểm tra. Sau khi gửi lời mời mới, script đọc phản hồi và báo đang chờ chấp nhận nếu GitHub trả `pending`; chỉ xác nhận đã thêm maintainer khi vai trò và trạng thái đều đúng. Các quyền chuẩn đã cao hơn được giữ nguyên.
 

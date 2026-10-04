@@ -1,7 +1,7 @@
 """Lệnh settings, org-settings: cài đặt repository, tính năng bảo mật, quyền GitHub Actions, cài đặt tổ chức."""
 
 import json
-import re
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
 
 from orgsetup import github
@@ -105,10 +105,35 @@ ORG_WEB_ONLY_SETTINGS = {
 
 
 def citationKeywords():
-	"""Từ khóa trong CITATION.cff — topics của repository .github."""
-	text = (github.ROOT / 'CITATION.cff').read_text(encoding='utf-8')
-	block = re.search(r'^keywords:\n((?:[ \t]+- .+\n)+)', text, re.MULTILINE)
-	return re.findall(r'- (.+)', block.group(1)) if block else []
+	"""Từ khóa YAML trong CITATION.cff — topics của repository .github; dữ liệu sai không xóa topics."""
+	path = github.ROOT / 'CITATION.cff'
+	result = subprocess.run(
+		[
+			'ruby',
+			'-ryaml',
+			'-rjson',
+			'-rdate',
+			'-e',
+			'data = YAML.safe_load(File.read(ARGV[0]), permitted_classes: [Date], aliases: true, filename: ARGV[0]); puts JSON.dump(data.is_a?(Hash) ? data["keywords"] : nil)',
+			str(path),
+		],
+		capture_output=True,
+		text=True,
+		check=False,
+	)
+	if result.returncode:
+		detail = (
+			result.stderr.strip().splitlines()[0]
+			if result.stderr.strip()
+			else 'Ruby không đọc được tệp'
+		)
+		raise ValueError(f'CITATION.cff: không đọc được keywords ({detail})')
+	keywords = json.loads(result.stdout)
+	if not isinstance(keywords, list) or any(
+		not isinstance(word, str) or not word.strip() for word in keywords
+	):
+		raise ValueError('CITATION.cff: keywords phải là danh sách các chuỗi không trống')
+	return keywords
 
 
 def repositorySettings(repo, discussions=False):
@@ -121,6 +146,14 @@ def repositorySettings(repo, discussions=False):
 
 def updateSettings(endpoint, current, wanted, apply, what):
 	"""So cài đặt đang có với cài đặt mong muốn; --apply thì PATCH phần khác."""
+	if not isinstance(current, dict):
+		raise TypeError(f'{endpoint}: không đọc được object cài đặt')
+	for key, value in wanted.items():
+		if key not in current or (
+			type(current[key]) is not type(value)
+			and not (isinstance(value, str) and current[key] is None)
+		):
+			raise ValueError(f'{endpoint}: không đọc được cài đặt {key}')
 	changes = {key: value for key, value in wanted.items() if current.get(key) != value}
 	if not changes:
 		print(f'   ✔ {what} đã đúng')
@@ -156,6 +189,12 @@ def syncTopics(repo, current, apply):
 	"""Topics của .github khớp keywords trong CITATION.cff; repository khác không quản lý."""
 	if repo != '.github':
 		return
+	if (
+		not isinstance(current, dict)
+		or not isinstance(current.get('topics'), list)
+		or any(not isinstance(topic, str) for topic in current['topics'])
+	):
+		raise ValueError('không đọc được topics hiện tại của repository .github')
 	wanted = citationKeywords()
 	if sorted(current.get('topics') or []) == sorted(wanted):
 		print('   ✔ topics khớp CITATION.cff')
@@ -174,12 +213,34 @@ def readActions(endpoint):
 
 	def read(path):
 		try:
-			return github.ghJson('api', path) or {}
-		except RuntimeError as exc:
+			return github.ghJson('api', path)
+		except (RuntimeError, ValueError) as exc:
 			return exc
 
 	with ThreadPoolExecutor(max_workers=2) as pool:
 		return list(pool.map(read, (endpoint, f'{endpoint}/workflow')))
+
+
+def validateActions(current, keep):
+	"""Chỉ so quyền khi đọc được trạng thái bật/tắt và các trường bắt buộc của endpoint."""
+	if not isinstance(current, dict):
+		raise TypeError('phản hồi quyền phải là object')
+	if keep:
+		if (keep == 'enabled' and type(current.get(keep)) is not bool) or (
+			keep == 'enabled_repositories' and current.get(keep) not in ('all', 'none', 'selected')
+		):
+			raise ValueError(f'thiếu hoặc sai trạng thái {keep}')
+		if current[keep] in (False, 'none'):
+			return
+		if current.get('allowed_actions') not in ('all', 'local_only', 'selected'):
+			raise ValueError('thiếu hoặc sai allowed_actions')
+		if 'sha_pinning_required' in current and type(current['sha_pinning_required']) is not bool:
+			raise ValueError('sha_pinning_required phải là boolean')
+	elif (
+		current.get('default_workflow_permissions') not in ('read', 'write')
+		or type(current.get('can_approve_pull_request_reviews')) is not bool
+	):
+		raise ValueError('thiếu hoặc sai quyền mặc định GITHUB_TOKEN')
 
 
 def syncActions(endpoint, wanted, enabledKey, apply, readings=None):
@@ -194,6 +255,11 @@ def syncActions(endpoint, wanted, enabledKey, apply, readings=None):
 	if readings is None:
 		readings = readActions(endpoint)
 	for (path, target, keep), current in zip(targets, readings, strict=True):
+		if not isinstance(current, Exception):
+			try:
+				validateActions(current, keep)
+			except (ValueError, TypeError) as exc:
+				current = exc
 		if isinstance(current, Exception):
 			print(f'   ⚠ không đọc được {path}: {current}')
 			unread = True
@@ -251,11 +317,28 @@ def securityEndpoints(private):
 
 def syncSecurity(repo, current, apply):
 	"""Bật tính năng bảo mật còn tắt; GitHub từ chối (gói trả phí, repository riêng tư) thì cảnh báo, không dừng."""
-	analysis = current.get('security_and_analysis') or {}
-	off = [
-		name for name in SECURITY_FEATURES if (analysis.get(name) or {}).get('status') != 'enabled'
-	]
-	private = bool(current.get('private'))
+	if not isinstance(current, dict) or type(current.get('private')) is not bool:
+		raise ValueError(f'{repo}: không đọc được chế độ công khai/riêng tư của repository')
+	analysis = current.get('security_and_analysis')
+	off, unread, featureStatuses = [], False, {}
+	for name in SECURITY_FEATURES:
+		feature = analysis.get(name) if isinstance(analysis, dict) else None
+		status = feature.get('status') if isinstance(feature, dict) else None
+		featureStatuses[name] = status
+		if status not in ('enabled', 'disabled'):
+			print(f'   ⚠ không đọc được trạng thái {name} — bỏ qua tính năng này')
+			unread = True
+		elif status == 'disabled':
+			off.append(name)
+	if 'secret_scanning_push_protection' in off and featureStatuses['secret_scanning'] not in (
+		'enabled',
+		'disabled',
+	):
+		print(
+			'   ⚠ bỏ qua secret_scanning_push_protection: chưa đọc được trạng thái secret_scanning'
+		)
+		off.remove('secret_scanning_push_protection')
+	private = current['private']
 	for label in sorted(set(SECURITY_ENDPOINTS) - set(securityEndpoints(private))):
 		print(f'   – bỏ qua {label}: chỉ dành cho repository công khai')
 
@@ -264,23 +347,29 @@ def syncSecurity(repo, current, apply):
 		try:
 			if endpoint in STATUS_ONLY_ENDPOINTS:
 				return github.ghExists(f'repos/{github.ORG}/{repo}/{endpoint}')
-			return bool(
-				(github.ghJson('api', f'repos/{github.ORG}/{repo}/{endpoint}') or {}).get('enabled')
-			)
-		except RuntimeError as exc:
+			data = github.ghJson('api', f'repos/{github.ORG}/{repo}/{endpoint}')
+			if not isinstance(data, dict) or type(data.get('enabled')) is not bool:
+				raise ValueError('phản hồi trạng thái thiếu enabled dạng boolean')
+			return data['enabled']
+		except (RuntimeError, ValueError) as exc:
 			return exc
 
 	# Đọc mọi trạng thái cùng lúc — mỗi lần chờ GitHub gần một giây.
 	wanted = securityEndpoints(private)
 	with ThreadPoolExecutor(max_workers=max(1, len(wanted))) as pool:
 		statuses = list(pool.map(securityStatus, wanted.values()))
-	endpoints, unread = {}, False
+	endpoints, alertsUnread = {}, False
 	for (label, endpoint), status in zip(wanted.items(), statuses, strict=True):
 		if isinstance(status, Exception):
 			print(f'   ⚠ không đọc được trạng thái {label}: {status}')
 			unread = True
+			if endpoint == 'vulnerability-alerts':
+				alertsUnread = True
 		elif not status:
 			endpoints[label] = endpoint
+	if alertsUnread and 'Dependabot security updates' in endpoints:
+		print('   ⚠ bỏ qua Dependabot security updates: chưa đọc được trạng thái Dependabot alerts')
+		del endpoints['Dependabot security updates']
 	if not off and not endpoints and not unread:
 		print('   ✔ tính năng bảo mật đã bật')
 	for name in off + list(endpoints):
@@ -296,8 +385,13 @@ def syncSecurity(repo, current, apply):
 		except RuntimeError as exc:
 			print(f'   ⚠ không bật được {", ".join(off)}: {exc}')
 	for label, endpoint in endpoints.items():
+		if endpoint == 'automated-security-fixes' and alertsUnread:
+			print('   ⚠ bỏ qua Dependabot security updates: chưa bật được Dependabot alerts')
+			continue
 		try:
 			github.gh('api', '-X', 'PUT', f'repos/{github.ORG}/{repo}/{endpoint}')
 			print(f'   ✔ đã bật {label}')
 		except RuntimeError as exc:
 			print(f'   ⚠ không bật được {label}: {exc}')
+			if endpoint == 'vulnerability-alerts':
+				alertsUnread = True

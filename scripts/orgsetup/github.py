@@ -66,4 +66,11 @@ def listRepos(only):
 
 
 def defaultBranch(repo):
-	return ghJson('api', f'repos/{ORG}/{repo}')['default_branch']
+	data = ghJson('api', f'repos/{ORG}/{repo}')
+	if (
+		not isinstance(data, dict)
+		or not isinstance(data.get('default_branch'), str)
+		or not data['default_branch']
+	):
+		raise ValueError(f'{repo}: không đọc được nhánh mặc định')
+	return data['default_branch']
