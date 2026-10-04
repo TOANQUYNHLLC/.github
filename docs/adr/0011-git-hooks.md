@@ -5,7 +5,7 @@
 
 ## 📌 BỐI CẢNH
 
-GitHub Actions tắt để tiết kiệm chi phí nên kiểm tra phải chạy tại máy trước khi đẩy. Cài đặt trên web có thể bị sửa tay, lệch với code. Hook kiểm tra tệp trên đĩa thay vì nội dung thật sự được commit, được đẩy sẽ cho kết quả sai.
+Kiểm tra trên GitHub Actions chỉ chạy sau khi đẩy, và không chạy khi Actions tắt để tiết kiệm chi phí — nên kiểm tra phải chạy tại máy trước khi đẩy. Cài đặt trên web có thể bị sửa tay, lệch với code. Hook kiểm tra tệp trên đĩa thay vì nội dung thật sự được commit, được đẩy sẽ cho kết quả sai.
 
 ## ✅ QUYẾT ĐỊNH
 

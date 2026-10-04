@@ -8,6 +8,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 import contextlib
 import importlib.util
 import io
+import os
 import re
 import shutil
 import subprocess
@@ -40,16 +41,19 @@ class ValidateTest(unittest.TestCase):
 			.stdout.decode('utf-8')
 			.split('\0')
 		)
+		# Mốc (nội dung, quyền) của từng tệp giữ trong bộ nhớ: tearDown so với mốc, không phải gọi git.
+		cls.baseline = {}
 		for name in filter(None, names):
 			source = ROOT / name
 			if source.is_file():
 				target = cls.repo / name
 				target.parent.mkdir(parents=True, exist_ok=True)
 				shutil.copy2(source, target)
-		# Index giữ mốc (kèm thông tin stat) để tearDown biết đúng tệp nào bị đổi. validate.py liệt kê bằng git
-		# ls-files rồi bỏ tệp không còn trên đĩa, nên tệp test xóa vẫn biến mất như ở repository thật.
+				cls.baseline[name] = (target.read_bytes(), target.stat().st_mode)
+		cls.folders = {str(folder) for name in cls.baseline for folder in Path(name).parents}
+		# validate.py liệt kê bằng git ls-files --others --exclude-standard: bản chép chỉ cần là repository git (để
+		# áp .gitignore), không cần index — mọi tệp chép sang, kể cả tệp test thêm, đều được liệt kê.
 		cls.git('init', '-q')
-		cls.git('add', '-A')
 
 	@classmethod
 	def tearDownClass(cls):
@@ -62,12 +66,33 @@ class ValidateTest(unittest.TestCase):
 		).stdout.strip()
 
 	def tearDown(self):
-		# Trả bản chép về mốc trong index: chỉ ghi lại tệp bị sửa, xóa (đổi tên là xóa cộng thêm) — không ghi
-		# lại mọi tệp; --index cập nhật thông tin stat để lần sau so nhanh; xóa tệp test tạo thêm.
-		changed = [name for name in self.git('diff-files', '--name-only', '-z').split('\0') if name]
-		if changed:
-			self.git('checkout-index', '--force', '--index', '--', *changed)
-		self.git('clean', '-qfdx')
+		# Trả bản chép về mốc: ghi lại tệp bị sửa, xóa (đổi tên là xóa cộng thêm); xóa tệp, thư mục test tạo
+		# thêm (kể cả tệp bị .gitignore bỏ qua như __pycache__).
+		found, visited = set(), []
+		for folder, subfolders, files in os.walk(self.repo):
+			base = Path(folder)
+			relative = base.relative_to(self.repo)
+			if base == self.repo:
+				subfolders.remove('.git')
+			visited.append((base, relative))
+			for file in files:
+				name = (relative / file).as_posix()
+				path = base / file
+				if name not in self.baseline:
+					path.unlink()
+					continue
+				found.add(name)
+				if path.read_bytes() != self.baseline[name][0]:
+					path.write_bytes(self.baseline[name][0])
+		# Thư mục test tạo thêm: xóa từ trong ra ngoài khi đã trống.
+		for base, relative in reversed(visited):
+			if str(relative) not in self.folders and not any(base.iterdir()):
+				base.rmdir()
+		for name in self.baseline.keys() - found:
+			path = self.repo / name
+			path.parent.mkdir(parents=True, exist_ok=True)
+			path.write_bytes(self.baseline[name][0])
+			path.chmod(self.baseline[name][1])
 
 	def runValidate(self):
 		# Chạy validate.py của bản chép trong tiến trình này — nhanh hơn nhiều so với chạy python3 riêng cho mỗi
@@ -147,6 +172,33 @@ class ValidateTest(unittest.TestCase):
 		self.edit('SUPPORT.md', 'toanquynhvn@gmail.com', 'lienhe' + '@' + 'example.com')
 		self.assertFails('khác email chung của công ty')
 
+	def testEmailFoundOnLaterLine(self):
+		# Email sai ở dòng cuối, sau các dòng có email đúng.
+		path = self.repo / 'SUPPORT.md'
+		path.write_text(
+			path.read_text(encoding='utf-8') + '\nLiên hệ: ' + 'hotro' + '@' + 'example.com\n',
+			encoding='utf-8',
+		)
+		self.assertFails('email "hotro' + '@' + 'example.com" khác email chung')
+
+	def testEmailFoundAfterCompanyEmailOnSameLine(self):
+		self.edit(
+			'SUPPORT.md',
+			'toanquynhvn@gmail.com',
+			'toanquynhvn@gmail.com, ' + 'banhang' + '@' + 'example.com',
+		)
+		self.assertFails('email "banhang' + '@' + 'example.com" khác email chung')
+
+	def testReadTextMatchesPathReadText(self):
+		# readText() giải mã từ byte đã đọc; phải ra đúng như Path.read_text() (đổi mọi kiểu xuống dòng thành \n).
+		self.runValidate()
+		path = self.repo / 'newlines.txt'
+		for data in (b'a\r\nb\rc\nd', b'\r\r\n\n', 'Toàn Quỳnh\r\n'.encode(), b''):
+			path.write_bytes(data)
+			self.validator.bytesCache.clear()
+			self.validator.textCache.clear()
+			self.assertEqual(self.validator.readText(path), path.read_text(encoding='utf-8'))
+
 	def testSecurityTxtNeedsCompanyEmail(self):
 		self.edit('.well-known/security.txt', 'Contact: mailto:toanquynhvn@gmail.com\n', '')
 		self.assertFails('Contact phải có mailto:toanquynhvn@gmail.com')
@@ -175,6 +227,15 @@ class ValidateTest(unittest.TestCase):
 	def testMarkdownMustNotIndentWithTabs(self):
 		self.edit('SUPPORT.md', '- Đọc `README.md`', '\t- Đọc `README.md`')
 		self.assertFails('phải thụt lề bằng 4 dấu cách')
+
+	def testMarkdownTabInsideCodeFenceIsValid(self):
+		path = self.repo / 'SUPPORT.md'
+		path.write_text(
+			path.read_text(encoding='utf-8') + '\n```makefile\nall:\n\techo x\n```\n',
+			encoding='utf-8',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
 
 	def testInvalidYaml(self):
 		self.edit('labels.yml', '  color: ', '\tcolor: ')
