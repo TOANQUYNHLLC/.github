@@ -844,6 +844,13 @@ def checkConventions():
 		if not labeler.exists():
 			continue
 		covered = set(re.findall(r"'\^([a-z]+)/'", readText(labeler)))
+		# Nhãn giai đoạn Pre-Release không thay cho nhãn loại release.
+		data = loadYaml(labeler, dict) or {}
+		if not any(
+			'^release/' in configItems(labeler, rule, 'head-branch', str)
+			for rule in configItems(labeler, data, 'release')
+		):
+			covered.discard('release')
 		for prefix in sorted(prefixes - covered):
 			errors.append(
 				f'{labeler.relative_to(ROOT)}: thiếu luật head-branch cho tiền tố "{prefix}/" của CONTRIBUTING.md'
@@ -1094,8 +1101,9 @@ def checkRulesets():
 		include = configItems(tagPath, refName, 'include', str)
 		if tags.get('name') != 'Protect Release Tags' or tags.get('target') != 'tag':
 			error(tagPath, 'ruleset phải tên "Protect Release Tags", target "tag" (ADR 0005)')
-		if 'refs/tags/v*' not in include:
-			error(tagPath, 'ruleset phải áp dụng cho refs/tags/v* (tag phát hành)')
+		for pattern in ('refs/tags/v*', 'refs/tags/Stable.v*', 'refs/tags/Beta.v*'):
+			if pattern not in include:
+				error(tagPath, f'ruleset phải áp dụng cho {pattern} (tag phát hành)')
 		if not {'creation', 'update', 'deletion'} <= {
 			configField(tagPath, rule, 'type', str) for rule in configItems(tagPath, tags, 'rules')
 		}:
@@ -1137,11 +1145,13 @@ def checkRulesets():
 		if (
 			orgTags.get('name') != 'Protect Release Tags (Organization)'
 			or '~ALL' not in configItems(orgTagPath, repositoryName, 'include', str)
-			or 'refs/tags/v*' not in configItems(orgTagPath, refName, 'include', str)
+			or not {'refs/tags/v*', 'refs/tags/Stable.v*', 'refs/tags/Beta.v*'}
+			<= set(configItems(orgTagPath, refName, 'include', str))
 		):
 			error(
 				orgTagPath,
-				'ruleset phải tên "Protect Release Tags (Organization)", nhắm ~ALL repository và refs/tags/v*',
+				'ruleset phải tên "Protect Release Tags (Organization)", nhắm ~ALL repository và refs/tags/v*, '
+				'refs/tags/Stable.v*, refs/tags/Beta.v*',
 			)
 	pushPath = ROOT / 'rulesets' / 'org-protect-pushes.json'
 	if not pushPath.exists():

@@ -1,22 +1,8 @@
 # 📦 NỘI DUNG PHÁT HÀNH
 
-Nội dung dùng để chuẩn bị GitHub Release của repository `.github`. Khi chuẩn bị phiên bản, điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH**. Phiên bản có dạng `vYYYY.MM.Stable`.
+Nội dung dùng để chuẩn bị GitHub Release của repository `.github`. Khi chuẩn bị phiên bản, điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH**. Phiên bản có dạng `Stable.vYYYY.MM.DDXXXX` / `Beta.vYYYY.MM.DDXXXX`; `DD` là ngày chuẩn bị phát hành, số thứ tự `XXXX` gồm 4 chữ số, dùng chung cho hai kênh và bắt đầu lại từ `0001` mỗi tháng.
 
-Lịch sử dưới đây ghi các phiên bản đã công bố; ngày là ngày phát hành trên GitHub theo giờ Việt Nam. Nội dung chi tiết được liên kết tới từng GitHub Release.
-
-## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2026.10.Stable...HEAD)
-
----
-
-## [v2026.10.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2026.10.Stable) — 2026-10-03
-
-Nội dung phát hành xem tại [GitHub Release v2026.10.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2026.10.Stable).
-
----
-
-## [v2026.09.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2026.09.Stable) — 2026-09-27
-
-Nội dung phát hành xem tại [GitHub Release v2026.09.Stable](https://github.com/TOANQUYNHLLC/.github/releases/tag/v2026.09.Stable).
+## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/main...HEAD)
 
 ---
 

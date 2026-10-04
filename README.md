@@ -81,7 +81,7 @@ Workflow gắn nhãn dùng `pull_request_target` theo [hướng dẫn của acti
 | [`.github/workflows/dependency-review.yml`](.github/workflows/dependency-review.yml)                                                          | Chặn Pull Request thêm dependency có lỗ hổng mức cao trở lên                                                                        |
 | [`.github/workflows/codeql.yml`](.github/workflows/codeql.yml)                                                                                | Quét bảo mật CodeQL cho workflow và Python khi push, mở Pull Request và hằng tuần                                                   |
 | [`.github/workflows/monthly-release.yml`](.github/workflows/monthly-release.yml)                                                              | Ngày 1 hằng tháng: mở Pull Request phát hành nếu có commit mới (mục [PHÁT HÀNH](#-phát-hành))                                       |
-| [`.github/workflows/release.yml`](.github/workflows/release.yml)                                                                              | Gắn tag `v*` thì tạo GitHub Release từ `CHANGELOG.md`                                                                               |
+| [`.github/workflows/release.yml`](.github/workflows/release.yml)                                                                              | Gắn tag `Stable.v*`, `Beta.v*` hoặc `v*` cũ thì tạo GitHub Release từ `CHANGELOG.md`                                                |
 | [`.github/workflows/links.yml`](.github/workflows/links.yml)                                                                                  | Hằng tuần: liên kết bên ngoài, GitHub chấp nhận biểu mẫu, công cụ trong `mise.toml` có bản mới                                      |
 | [`.github/workflows/stale.yml`](.github/workflows/stale.yml)                                                                                  | Hằng tuần đánh dấu và đóng Issue, Pull Request không hoạt động                                                                      |
 | [`.github/dependabot.yml`](.github/dependabot.yml)                                                                                            | Đề xuất cập nhật GitHub Action (ghim theo commit SHA) và Prettier, chờ 7 ngày sau khi phát hành (`cooldown`)                        |
@@ -125,7 +125,7 @@ Workflow gắn nhãn dùng `pull_request_target` theo [hướng dẫn của acti
 | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | [`docs/adr/`](docs/adr/)                                                                                                   | Bản ghi các quyết định kiến trúc đang có hiệu lực và lý do |
 | [`AGENTS.md`](AGENTS.md) · [`CLAUDE.md`](CLAUDE.md) · [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | Hướng dẫn cho AI coding agent và GitHub Copilot            |
-| [`CHANGELOG.md`](CHANGELOG.md)                                                                                             | Nội dung phiên bản chuẩn bị phát hành và lịch sử release   |
+| [`CHANGELOG.md`](CHANGELOG.md)                                                                                             | Khung nội dung chuẩn bị phát hành                          |
 | [`LICENSE`](LICENSE)                                                                                                       | Giấy phép MIT cho nội dung của repository này              |
 
 ---
@@ -227,11 +227,15 @@ Khi cập nhật nội dung, cần bảo đảm:
 
 ## 🚀 PHÁT HÀNH
 
-Phiên bản có dạng `vYYYY.MM.Stable`, phát hành ngày 1 hằng tháng khi có commit mới kể từ tag trước. [`CHANGELOG.md`](CHANGELOG.md) là khung chuẩn bị nội dung phiên bản; điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH** trước khi chuẩn bị phát hành. Mục này trống thì script báo lỗi. Lịch sử phiên bản trong tệp ghi tag, ngày công bố theo giờ Việt Nam và liên kết tới nội dung trên [GitHub Releases](https://github.com/TOANQUYNHLLC/.github/releases).
+Phiên bản có dạng `Stable.vYYYY.MM.DDXXXX` / `Beta.vYYYY.MM.DDXXXX`. `YYYY.MM.DD` là ngày chuẩn bị phát hành theo giờ Việt Nam; `XXXX` là số thứ tự gồm 4 chữ số, từ `0001` đến `9999`, dùng chung cho Stable và Beta, bắt đầu lại từ `0001` mỗi tháng. Script chọn số lớn nhất trong các tag đúng định dạng của tháng rồi tăng một, kể cả khi đổi ngày hoặc đổi kênh. Workflow hằng tháng chuẩn bị bản Stable ngày 1 khi có commit mới kể từ tag trước. [`CHANGELOG.md`](CHANGELOG.md) là khung chuẩn bị nội dung phiên bản; điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH** trước khi chuẩn bị phát hành. Mục này trống thì script báo lỗi. Tệp dùng để chuẩn bị nội dung dành cho người sử dụng; tài liệu dự án không ghi nhật ký phát triển hay báo cáo kiểm tra.
 
-1. Workflow [`monthly-release.yml`](.github/workflows/monthly-release.yml) chạy lúc 07:00 ngày 1 (giờ Việt Nam): chuyển nội dung đã chuẩn bị thành phiên bản của tháng và mở Pull Request `release/vYYYY.MM`. Có thể chạy tay tại **Actions → Chuẩn bị phát hành hằng tháng → Run workflow**.
-2. Xem trước bằng `make release-notes TAG=v2026.11.Stable`; đánh giá và hợp nhất Pull Request bằng **Squash** hoặc **Merge**.
-3. Người quản trị gắn tag trên `main`: `git tag v2026.11.Stable && git push origin v2026.11.Stable`. Workflow [`release.yml`](.github/workflows/release.yml) tạo GitHub Release. Với lần phát hành đầu tiên chưa có tag, thêm mục tiêu đề phiên bản tương ứng vào `CHANGELOG.md`, tạo commit có chữ ký và gắn tag bằng tay.
+1. Workflow [`monthly-release.yml`](.github/workflows/monthly-release.yml) chạy lúc 07:00 ngày 1 (giờ Việt Nam): chuyển nội dung đã chuẩn bị thành phiên bản của tháng và mở Pull Request `release/stable.vYYYY.MM.DDXXXX`. Có thể chạy tay tại **Actions → Chuẩn bị phát hành hằng tháng → Run workflow**.
+2. Xem trước bằng `make release-notes TAG=Stable.v2026.11.010001`; đánh giá và hợp nhất Pull Request bằng **Squash** hoặc **Merge**.
+3. Người quản trị gắn tag trên `main`: `git tag Stable.v2026.11.010001 && git push origin Stable.v2026.11.010001`. Workflow [`release.yml`](.github/workflows/release.yml) tạo GitHub Release. Với lần phát hành đầu tiên chưa có tag, thêm mục tiêu đề phiên bản tương ứng vào `CHANGELOG.md`, tạo commit có chữ ký và gắn tag bằng tay.
+
+Chuẩn bị bản Beta bằng `python3 scripts/release.py prepare --channel Beta`; thêm `--open-pr` để mở Pull Request phát hành tại máy. Có thể truyền `--date YYYY-MM-DD`; ngày trong `--version` phải trùng ngày chuẩn bị. Branch của Beta có dạng `release/beta.vYYYY.MM.DDXXXX`. GitHub Release của tag `Beta.v*` được đánh dấu là bản thử nghiệm.
+
+Nhãn phát hành trong [`labels.yml`](labels.yml): `Stable` — Phiên bản Ổn Định; `Beta` — Phiên bản Thử Nghiệm; `Pre-Release` — Phiên bản Chuẩn Bị Release. Pull Request phát hành tự nhận nhãn `release`, `Pre-Release` và nhãn kênh tương ứng. Cấu hình gắn nhãn trong repository và bản mẫu áp dụng cùng quy tắc.
 
 [`scripts/release.py`](scripts/release.py) kiểm tra phiên bản, ngày, nội dung UTF-8 và trạng thái branch/PR trước khi tạo branch phát hành. Branch đã tồn tại phải có Pull Request đang mở. Lỗi commit được xử lý bằng cách thử xóa branch vừa tạo; lỗi mở Pull Request giữ branch để mở tay. Tổ chức dùng **Immutable releases**: bản đã phát hành không dời tag hoặc dùng lại tên tag.
 
@@ -240,7 +244,7 @@ Phiên bản có dạng `vYYYY.MM.Stable`, phát hành ngày 1 hằng tháng khi
 - Hook `pre-push` chạy `make check`; người quản trị hợp nhất sau khi kiểm tra tại máy đạt, vì các kiểm tra bắt buộc chưa có lượt chạy trên GitHub.
 - Hook sau `git pull` chạy `make links`, `make versions`, `make org-preview`; kiểm tra biểu mẫu bằng `make forms`.
 - Chuẩn bị phát hành tại máy: `git switch main && git pull --ff-only && make release-pr`.
-- Sau khi hợp nhất và đẩy tag, tạo Release: `python3 scripts/release.py create v2026.11.Stable`.
+- Sau khi hợp nhất và đẩy tag, tạo Release: `python3 scripts/release.py create Stable.v2026.11.010001`.
 
 ---
 

@@ -17,6 +17,7 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0011](0011-git-hooks.md)                     | Git hook kiểm tra đúng nội dung được commit, được đẩy; đối chiếu sau khi kéo | Chấp nhận  | 2026-10-03 |
 | [0012](0012-monthly-releases.md)              | Phát hành hằng tháng từ `CHANGELOG.md`                                       | Chấp nhận  | 2026-10-03 |
 | [0013](0013-docs-match-code.md)               | Tài liệu luôn khớp với code                                                  | Chấp nhận  | 2026-10-03 |
+| [0014](0014-release-sequence.md)              | Số thứ tự phát hành bắt đầu lại mỗi tháng                                    | Đề xuất    | 2026-10-04 |
 
 ## ✍️ CÁCH THÊM ADR
 

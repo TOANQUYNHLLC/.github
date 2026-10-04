@@ -4,6 +4,8 @@ on:
     push:
         tags:
             - 'v*'
+            - 'Stable.v*'
+            - 'Beta.v*'
 
 permissions:
     contents: read

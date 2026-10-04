@@ -6,6 +6,8 @@ on:
             - $default-branch
         tags:
             - 'v*'
+            - 'Stable.v*'
+            - 'Beta.v*'
     pull_request:
 
 permissions:

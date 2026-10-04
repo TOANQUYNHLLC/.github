@@ -1176,7 +1176,10 @@ class OrgSetupTest(unittest.TestCase):
 			'target': 'TAG',
 			'enforcement': 'ACTIVE',
 			'conditions': {
-				'refName': {'include': ['refs/tags/v*'], 'exclude': []},
+				'refName': {
+					'include': ['refs/tags/v*', 'refs/tags/Stable.v*', 'refs/tags/Beta.v*'],
+					'exclude': [],
+				},
 				'repositoryName': {'include': ['~ALL'], 'exclude': [], 'protected': False},
 			},
 			'bypassActors': {
@@ -1214,6 +1217,13 @@ class OrgSetupTest(unittest.TestCase):
 		wanted = rulesets.graphqlVisible(rulesets.orgTagRuleset())
 		live = rulesets.graphqlRuleset(node)
 		self.assertEqual(rulesets.rulesetSummary(live), rulesets.rulesetSummary(wanted))
+		includes = node['conditions']['refName']['include']
+		node['conditions']['refName']['include'] = ['refs/tags/v*']
+		self.assertNotEqual(
+			rulesets.rulesetSummary(rulesets.graphqlRuleset(node)),
+			rulesets.rulesetSummary(wanted),
+		)
+		node['conditions']['refName']['include'] = includes
 		node['rules']['nodes'].pop()
 		self.assertNotEqual(
 			rulesets.rulesetSummary(rulesets.graphqlRuleset(node)),

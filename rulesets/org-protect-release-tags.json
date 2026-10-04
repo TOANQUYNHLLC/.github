@@ -5,7 +5,7 @@
 	"conditions": {
 		"ref_name": {
 			"exclude": [],
-			"include": ["refs/tags/v*"]
+			"include": ["refs/tags/v*", "refs/tags/Stable.v*", "refs/tags/Beta.v*"]
 		},
 		"repository_name": {
 			"exclude": [],

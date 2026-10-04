@@ -1,6 +1,6 @@
 {
 	"name": "Tạo GitHub Release — TOÀN QUỲNH",
-	"description": "Khi gắn tag v*, tạo GitHub Release với nội dung lấy từ mục tương ứng trong CHANGELOG.md; nếu không có, GitHub tự tạo từ các Pull Request.",
+	"description": "Khi gắn tag Stable.v*, Beta.v* hoặc v* cũ, tạo GitHub Release với nội dung lấy từ mục tương ứng trong CHANGELOG.md; nếu không có, GitHub tự tạo từ các Pull Request.",
 	"iconName": "release",
 	"categories": ["Automation", "Deployment"]
 }
