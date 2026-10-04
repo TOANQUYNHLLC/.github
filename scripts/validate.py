@@ -509,6 +509,16 @@ def checkToolVersions():
 		errors.append(f'{where} {tool}')
 	if re.search(r'^node = ', mise, re.MULTILINE):
 		errors.append('mise.toml: Node.js khai báo trong .nvmrc, không lặp trong mise.toml')
+	# devEngines của package.json chặn Node.js cũ hơn bản trong .nvmrc — phải đúng ">=<bản trong .nvmrc>".
+	nvmrc, package = ROOT / '.nvmrc', ROOT / 'package.json'
+	if nvmrc.exists() and package.exists():
+		wanted = f'>={readText(nvmrc).strip()}'
+		runtime = (json.loads(readText(package)).get('devEngines') or {}).get('runtime') or {}
+		if runtime.get('version') != wanted:
+			errors.append(
+				f'package.json: devEngines.runtime.version là "{runtime.get("version")}", phải là "{wanted}" '
+				'theo .nvmrc'
+			)
 	pinned = re.compile(r'ruff==|pipx install ruff|actionlint@v|download-actionlint|shellcheck-v\d')
 	# Không quét validate.py và test_*.py: các tệp này chứa chính các mẫu để so khớp.
 	sources = [

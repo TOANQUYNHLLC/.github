@@ -129,7 +129,7 @@ GitHub chỉ kế thừa `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`,
 
 ## 🛠️ PHÁT TRIỂN CỤC BỘ
 
-Cài công cụ đúng phiên bản trong [`mise.toml`](mise.toml) và [`.nvmrc`](.nvmrc) — cùng phiên bản với CI — rồi cài git hook:
+Cài công cụ đúng phiên bản trong [`mise.toml`](mise.toml) và [`.nvmrc`](.nvmrc) — ruff, ShellCheck, actionlint, Node.js cùng phiên bản với CI (CI dùng Python có sẵn của runner, script cần ≥ 3.11) — rồi cài git hook:
 
 ```bash
 mise install

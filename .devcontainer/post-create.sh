@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Cài công cụ cho Dev Container / Codespaces từ mise.toml và .nvmrc — cùng phiên bản với CI.
+# Cài công cụ cho Dev Container / Codespaces từ mise.toml và .nvmrc — ruff, ShellCheck, actionlint, Node.js cùng
+# phiên bản với CI.
 # Python lấy từ image (devcontainer.json đặt MISE_DISABLE_TOOLS=python), mise không cài lại.
 # Không viết bằng Python vì: script chỉ nối các lệnh cài đặt (curl | sh, mise, npm, make) và chạy trước khi
 # có công cụ — shell xử lý chuỗi lệnh cài đặt gọn và tự nhiên hơn.
