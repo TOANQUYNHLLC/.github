@@ -176,7 +176,7 @@ class GitHooksTest(unittest.TestCase):
 
 	def testOldPythonIsReportedBeforeRunningHooks(self):
 		# Ứng dụng giao diện trên macOS gọi hook bằng Python 3.9 của hệ thống: báo rõ phiên bản cần, thoát mã 1,
-		# không chạy hook nào (post-merge trên 3.9 từng dừng bằng traceback của zip strict).
+		# không chạy hook nào (post-merge dùng zip strict, cần ≥ 3.10).
 		output = io.StringIO()
 		with (
 			mock.patch.object(self.module.sys, 'version_info', (3, 9, 25)),

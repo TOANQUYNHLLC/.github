@@ -1,4 +1,4 @@
-"""Test tự động cho shell/sync.sh (chuyển branch, git pull) và shell/cleanup-main.sh (xóa branch đã hợp nhất mà
+"""Test tự động cho shell/sync.sh (chuyển branch, git pull) và shell/prune-branches.sh (xóa branch đã hợp nhất mà
 remote đã xóa).
 
 Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
@@ -17,10 +17,10 @@ except ModuleNotFoundError:
 	from scripts.testsupport import ROOT
 
 SCRIPT = ROOT / 'shell' / 'sync.sh'
-CLEANUP = ROOT / 'shell' / 'cleanup-main.sh'
+PRUNE = ROOT / 'shell' / 'prune-branches.sh'
 
 
-class SyncMainTest(unittest.TestCase):
+class SyncTest(unittest.TestCase):
 	def setUp(self):
 		self.tmp = tempfile.TemporaryDirectory()
 		folder = Path(self.tmp.name)
@@ -194,8 +194,8 @@ class SyncMainTest(unittest.TestCase):
 		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'feat/squashed')
 		self.assertEqual(self.localBranches(), ['feat/squashed', 'main'])
 
-	def testCleanupStaysOnCurrentBranchAndUsesOriginMain(self):
-		# cleanup-main.sh không đổi branch, không kéo code: branch hiện tại được giữ (không xóa được), branch khác đã
+	def testPruneStaysOnCurrentBranchAndUsesOriginMain(self):
+		# prune-branches.sh không đổi branch, không kéo code: branch hiện tại được giữ (không xóa được), branch khác đã
 		# squash vẫn bị xóa dù main cục bộ chưa có commit hợp nhất — so với origin/main vừa tải về.
 		self.branch('feat/current', 'a.txt')
 		self.branch('fix/squashed', 'b.txt')
@@ -203,20 +203,20 @@ class SyncMainTest(unittest.TestCase):
 		self.mergeOnRemote('fix/squashed', squash=True)
 		self.git(self.clone, 'switch', '-q', 'feat/current')
 		localMain = self.git(self.clone, 'rev-parse', 'main')
-		result = self.runScript(CLEANUP)
+		result = self.runScript(PRUNE)
 		self.assertEqual(self.localBranches(), ['feat/current', 'main'])
 		self.assertIn('Giữ lại feat/current: đang là branch hiện tại', result.stdout)
 		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'feat/current')
 		self.assertEqual(self.git(self.clone, 'rev-parse', 'main'), localMain)
 
-	def testCleanupKeepsUncommittedWorkInPlace(self):
-		# Khác sync.sh, cleanup-main.sh chạy được khi còn thay đổi chưa commit: không đổi branch nên không mang
+	def testPruneKeepsUncommittedWorkInPlace(self):
+		# Khác sync.sh, prune-branches.sh chạy được khi còn thay đổi chưa commit: không đổi branch nên không mang
 		# thay đổi đi đâu.
 		self.branch('fix/squashed', 'b.txt')
 		self.mergeOnRemote('fix/squashed', squash=True)
 		self.git(self.clone, 'switch', '-q', '-c', 'feature/wip')
 		(self.clone / 'draft.txt').write_text('đang sửa\n', encoding='utf-8')
-		self.runScript(CLEANUP)
+		self.runScript(PRUNE)
 		self.assertEqual(self.localBranches(), ['feature/wip', 'main'])
 		self.assertTrue((self.clone / 'draft.txt').exists())
 
