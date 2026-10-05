@@ -32,14 +32,15 @@ import sys
 import tempfile
 import urllib.parse
 from datetime import date as CalendarDate
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 from orgsetup import github
 
 ROOT = Path(__file__).resolve().parents[1]
-TIMEZONE = ZoneInfo('Asia/Ho_Chi_Minh')
+# Giờ Việt Nam: UTC+7 cố định, không có giờ mùa hè từ 1975 — không cần dữ liệu múi giờ (ZoneInfo lỗi khi máy
+# thiếu tzdata: Windows, image Docker tối giản).
+TIMEZONE = timezone(timedelta(hours=7), 'Asia/Ho_Chi_Minh')
 DEFAULT_REPOSITORY = 'TOANQUYNHLLC/.github'
 UNRELEASED = re.compile(
 	r'^## \[CHƯA PHÁT HÀNH\]\((?P<base>[^)]+)/compare/[^)]+\.\.\.HEAD\)\n'
@@ -131,7 +132,7 @@ def onCleanMain():
 		return False
 	if (
 		runCommand('git', 'branch', '--show-current') == 'main'
-		and not runCommand('git', 'status', '--porcelain')
+		and not runCommand('git', 'status', '--porcelain', '--untracked-files=normal')
 		and runCommand('git', 'rev-parse', 'HEAD') == runCommand('git', 'rev-parse', 'origin/main')
 	):
 		return True

@@ -30,12 +30,21 @@ for marker in rebase-merge rebase-apply MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD 
 done
 
 # git switch mang thay đổi chưa commit sang branch đích — commit sau đó rơi nhầm vào branch khác branch đang làm.
-status=$(git status --porcelain) || fail "Không đọc được trạng thái git."
+# --untracked-files=normal: status.showUntrackedFiles=no của người dùng làm git ẩn tệp mới.
+status=$(git status --porcelain --untracked-files=normal) || fail "Không đọc được trạng thái git."
 [[ -z $status ]] || fail "Còn thay đổi chưa commit — commit hoặc git stash -u rồi chạy lại."
 
-# Tải trước: branch mới tạo trên GitHub chưa có origin/<branch> ở máy thì git switch không tạo được branch theo dõi.
+# Tải trước: branch mới tạo trên GitHub chưa có origin/<branch> ở máy thì không tạo được branch theo dõi.
 git fetch --prune --quiet origin || fail "Không tải được từ origin — kiểm tra mạng, quyền truy cập rồi chạy lại."
-git switch "$branch"
+# Branch chưa có ở máy: theo dõi đúng origin/<branch> — để git switch tự đoán thì báo "matched multiple remote
+# tracking branches" khi remote khác (upstream của fork…) cũng có branch cùng tên.
+if git show-ref --verify --quiet "refs/heads/$branch"; then
+	git switch "$branch"
+elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+	git switch --create "$branch" --track "origin/$branch"
+else
+	fail "Không có branch $branch ở máy lẫn trên origin."
+fi
 
 # Không có upstream (branch chỉ có ở máy) hoặc upstream đã bị xóa trên GitHub: không có gì để kéo.
 if upstream=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null); then

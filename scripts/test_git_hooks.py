@@ -124,6 +124,23 @@ class GitHooksTest(unittest.TestCase):
 		self.assertEqual(self.prePush([line]), (0, True))
 		self.assertEqual(self.prePush([line], makeCode=2), (1, True))
 
+	def testPrePushSeesNewFilesDespiteUserConfig(self):
+		# status.showUntrackedFiles=no làm git status ẩn tệp mới: make check sẽ kiểm tra cả tệp không được đẩy.
+		head = self.git('rev-parse', 'HEAD')
+		(self.repo / 'new.txt').write_text('chưa add\n', encoding='utf-8')
+		with mock.patch.dict(
+			'os.environ',
+			{
+				'GIT_CONFIG_COUNT': '1',
+				'GIT_CONFIG_KEY_0': 'status.showUntrackedFiles',
+				'GIT_CONFIG_VALUE_0': 'no',
+			},
+		):
+			result = self.prePush(
+				[f'refs/heads/main {head} refs/heads/main {self.module.ZERO_SHA}']
+			)
+		self.assertEqual(result, (1, False))
+
 	def testPrePushBlocksWhatMakeCheckCannotSee(self):
 		# make check kiểm tra thư mục làm việc: còn thay đổi chưa commit, hoặc đẩy branch khác HEAD thì chặn mà
 		# không chạy make check; chỉ đẩy tag hoặc xóa branch thì bỏ qua.
