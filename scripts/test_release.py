@@ -700,7 +700,7 @@ class ReleaseTest(unittest.TestCase):
 
 	def testPrepareFetchesTagsBeforeChoosingSequence(self):
 		# Tag mới chỉ có trên origin (người khác vừa phát hành) vẫn được tính: make release-prepare không chọn trùng
-		# số thứ tự đã dùng. Không tải được origin thì cảnh báo và chọn theo tag tại máy.
+		# số thứ tự đã dùng. Không tải được origin thì dừng, giữ nguyên CHANGELOG.md.
 		with tempfile.TemporaryDirectory() as folder:
 			clone = self.releaseClone(folder)
 			origin = Path(folder) / 'origin.git'
@@ -723,10 +723,10 @@ class ReleaseTest(unittest.TestCase):
 			)
 			output = io.StringIO()
 			with contextlib.redirect_stdout(output):
-				self.assertEqual(self.module.prepareRelease(None, '2099-02-01'), 0)
+				self.assertEqual(self.module.prepareRelease(None, '2099-02-01'), 1)
 			self.assertIn('Không tải được tag từ origin', output.getvalue())
 			changelog = (clone / 'CHANGELOG.md').read_text(encoding='utf-8')
-			self.assertIn('## [Stable.v2099.02.010001]', changelog)
+			self.assertEqual(changelog, RELEASE_FIXTURE)
 
 	def testOpenPrRequiresCleanMain(self):
 		# make release-pr lấy HEAD làm gốc branch phát hành: đứng ở branch khác main thì dừng trước khi sửa

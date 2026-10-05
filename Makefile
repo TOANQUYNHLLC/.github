@@ -5,13 +5,16 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help check validate test format format-check lint conventions audit tools links versions forms release-notes release-prepare release-pr labels-preview labels-apply hooks org-preview
+.PHONY: help check quick validate test format format-check lint conventions audit tools links versions forms release-notes release-prepare release-pr labels-preview labels-apply hooks org-preview
 
 help: ## Hiển thị danh sách lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-15s %s\n", $$1, $$2}'
 
 check: ## Mọi kiểm tra GitHub Actions chạy trên Pull Request (trừ CodeQL) — chạy trước khi đẩy
 	python3 scripts/check.py
+
+quick: ## Kiểm tra nhanh khi đang sửa; phạm vi không chắc thì chạy đầy đủ
+	python3 scripts/check.py quick
 
 validate: ## Kiểm tra nội dung bằng scripts/validate.py
 	python3 scripts/validate.py
