@@ -769,6 +769,22 @@ def checkEditorExtensions():
 		errors.append(f'{where}: thiếu extension "{name}" — hai danh sách phải giống nhau')
 
 
+def checkDevcontainerPins():
+	"""Image và feature của Dev Container ghim theo phiên bản chính (không dùng latest hay bỏ trống tag) để
+	container dựng lại giống nhau; Dependabot (devcontainers) đề xuất bản chính mới."""
+	path = ROOT / '.devcontainer' / 'devcontainer.json'
+	try:
+		container = readJsonObject(path)
+	except (OSError, json.JSONDecodeError):
+		return
+	image = configField(path, container, 'image', str) if 'image' in container else None
+	references = [*([image] if image else []), *configField(path, container, 'features', dict)]
+	for reference in references:
+		tag = reference.rsplit('/', 1)[-1].partition(':')[2]
+		if not tag or tag == 'latest':
+			error(path, f'"{reference}" phải ghim phiên bản chính (ví dụ :1), không dùng latest')
+
+
 def editorconfigSuffixes(editorconfig, setting):
 	"""Đuôi file của mọi mục .editorconfig dạng [*.x] hoặc [*.{x,y}] có chứa `setting`."""
 	suffixes = set()
@@ -1633,6 +1649,7 @@ def runChecks():
 		checkToolVersions,
 		checkSuffixLists,
 		checkEditorExtensions,
+		checkDevcontainerPins,
 		checkConventions,
 		checkRulesets,
 		checkMaintainers,

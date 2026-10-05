@@ -1087,6 +1087,22 @@ class Holder:
 		self.edit('.vscode/extensions.json', '\t\t"charliermarsh.ruff",\n', '')
 		self.assertFails('.vscode/extensions.json: thiếu extension "charliermarsh.ruff"')
 
+	def testDevcontainerMustPinVersions(self):
+		# Image, feature dùng latest hoặc không có tag thì mỗi lần dựng lại container có thể khác nhau.
+		self.editRegex(
+			'.devcontainer/devcontainer.json',
+			r'devcontainers/python:[^"]+',
+			'devcontainers/python:latest',
+		)
+		self.editRegex('.devcontainer/devcontainer.json', r'features/ruby:[^"]+', 'features/ruby')
+		code, output = self.runValidate()
+		self.assertEqual(code, 1, output)
+		for reference in (
+			'mcr.microsoft.com/devcontainers/python:latest',
+			'ghcr.io/devcontainers/features/ruby',
+		):
+			self.assertIn(f'"{reference}" phải ghim phiên bản chính', output)
+
 	def testEslintMustNotEnableIndent(self):
 		# Repository dùng ESLint: phải có eslint-config-prettier và không bật indent.
 		(self.repo / 'eslint.config.js').write_text(
