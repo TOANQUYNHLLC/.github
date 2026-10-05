@@ -3,12 +3,13 @@
 Chạy:
 	python3 scripts/check.py              # mọi nhóm, chạy song song, in kết quả theo thứ tự bên dưới
 	python3 scripts/check.py format lint  # một vài nhóm
-	python3 scripts/check.py tools        # chỉ kiểm tra đã cài đủ công cụ (cài thư viện Node.js nếu thiếu)
+	python3 scripts/check.py tools        # chỉ kiểm tra đã cài đủ công cụ (cài thư viện Node.js nếu thiếu, sai phiên bản)
 Mỗi nhóm khớp một job của workflow validate.yml (content, format, lint) hoặc một workflow Pull Request
 (conventions: branch-name.yml, pr-title.yml; audit: dependency-review.yml). CodeQL không chạy tại máy.
 """
 
 import functools
+import json
 import re
 import shutil
 import subprocess
@@ -17,6 +18,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# Cài cả devDependencies: môi trường đặt NODE_ENV=production thì npm install mặc định bỏ qua chúng.
+NPM_INSTALL = ('npm', 'install', '--include=dev', '--no-audit', '--no-fund')
 # Công cụ nhóm cần mà không đứng đầu lệnh: validate.py đọc YAML bằng Ruby và liệt kê tệp bằng git.
 INDIRECT_TOOLS = {'content': ('ruby', 'git'), 'conventions': ('git',)}
 # Lỗi kết nối mạng của npm: audit không chạy được thì chỉ cảnh báo, không chặn (lỗ hổng thật vẫn chặn).
@@ -59,7 +62,8 @@ def checkGroups():
 			['python3', 'scripts/run-tests.py'],
 		],
 		'format': [
-			['npx', 'prettier', '--check', '.'],
+			# --no: chỉ dùng Prettier đã cài theo package.json, không tự tải bản mới nhất.
+			['npx', '--no', '--', 'prettier', '--check', '.'],
 			['ruff', 'format', '--check', '.'],
 			# Python ≥ 3.11 (tomllib, datetime.UTC); ruff.toml giữ đúng cấu hình chuẩn nên khai báo ở đây.
 			['ruff', 'check', '--target-version', 'py311', '.'],
@@ -77,18 +81,34 @@ def checkGroups():
 	}
 
 
+def nodeModulesCurrent():
+	"""Mọi thư viện trong package.json đã cài đúng phiên bản ghi trong đó (phiên bản chính xác — .npmrc)."""
+	try:
+		manifest = json.loads((ROOT / 'package.json').read_text(encoding='utf-8'))
+	except (OSError, json.JSONDecodeError):
+		return False  # npm install báo lỗi rõ ràng
+	for section in ('dependencies', 'devDependencies'):
+		for name, version in manifest.get(section, {}).items():
+			installed = ROOT / 'node_modules' / name / 'package.json'
+			try:
+				if json.loads(installed.read_text(encoding='utf-8')).get('version') != version:
+					return False
+			except (OSError, json.JSONDecodeError):
+				return False
+	return True
+
+
 def ensureTools(groups):
-	"""Báo công cụ còn thiếu (cài bằng mise install); cài thư viện Node.js khi chưa có node_modules."""
+	"""Báo công cụ còn thiếu (cài bằng mise install); cài thư viện Node.js khi chưa có hoặc khác phiên bản trong
+	package.json."""
 	needed = {command[0] for name in groups for command in checkGroups()[name]}
 	needed.update(tool for name in groups for tool in INDIRECT_TOOLS.get(name, ()))
 	missing = sorted(tool for tool in needed if not shutil.which(tool))
 	if missing:
 		print(f'Thiếu công cụ: {", ".join(missing)} — chạy: mise install (https://mise.jdx.dev)')
 		return False
-	if needed & {'npx', 'npm'} and not (ROOT / 'node_modules').is_dir():
-		result = subprocess.run(
-			['npm', 'install', '--no-audit', '--no-fund'], cwd=ROOT, check=False
-		)
+	if needed & {'npx', 'npm'} and not nodeModulesCurrent():
+		result = subprocess.run(NPM_INSTALL, cwd=ROOT, check=False)
 		if result.returncode != 0:
 			print(
 				'❌ Không cài được thư viện Node.js — xem lỗi npm ở trên, kiểm tra .nvmrc và mạng rồi chạy lại.'

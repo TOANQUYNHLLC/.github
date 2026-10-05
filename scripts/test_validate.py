@@ -791,7 +791,7 @@ class Holder:
 	def testToolVersionsOnlyInMise(self):
 		self.edit(
 			'.github/workflows/validate.yml',
-			'run: npm install --no-audit --no-fund',
+			'run: npm install --include=dev --no-audit --no-fund',
 			'run: pip install ruff==0.1.0',
 		)
 		self.assertFails('validate.yml: dòng 49: phiên bản công cụ phải lấy từ mise.toml')

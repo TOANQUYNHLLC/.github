@@ -183,7 +183,7 @@ Không truyền tên thì chạy toàn bộ test. Tên sai, tệp không có tes
 | `make lint`                | shellcheck, actionlint — job "Shell script và workflow"                                      |
 | `make conventions`         | Tên branch và tiêu đề commit theo quy ước                                                    |
 | `make audit`               | Dependency có lỗ hổng mức high trở lên                                                       |
-| `make tools`               | Kiểm tra đã cài đủ công cụ; cài thư viện Node.js nếu thiếu                                   |
+| `make tools`               | Kiểm tra đã cài đủ công cụ; cài thư viện Node.js nếu thiếu hoặc sai phiên bản                |
 | `make hooks`               | Cài git hook, mẫu commit `.gitmessage`, cấu hình `git blame` bỏ qua commit chỉ đổi định dạng |
 | `make links`               | Liên kết bên ngoài còn hoạt động; bản `security.txt` trên website khớp repository            |
 | `make versions`            | Công cụ trong `mise.toml` có bản phát hành mới hơn                                           |

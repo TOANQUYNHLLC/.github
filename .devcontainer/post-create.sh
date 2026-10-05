@@ -17,7 +17,7 @@ done
 mise trust --yes
 mise install
 
-npm install --no-audit --no-fund
+npm install --include=dev --no-audit --no-fund
 # Thư mục làm việc gắn vào container có thể thuộc người dùng khác (root): git báo "dubious ownership" và từ chối
 # chạy. Tin cậy đúng repository này như tiện ích Dev Containers của VS Code — công cụ khác không tự làm.
 # Ghi đường dẫn thật (pwd -P) như git rev-parse --show-toplevel trả về; $PWD kế thừa có thể đi qua liên kết

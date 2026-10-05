@@ -19,11 +19,11 @@ validate: ## Kiểm tra nội dung bằng scripts/validate.py
 test: ## Chạy test tự động của các script (song song trên nhiều tiến trình)
 	python3 scripts/run-tests.py
 
-tools: ## Kiểm tra đã cài đủ công cụ, cài thư viện Node.js nếu thiếu
+tools: ## Kiểm tra đã cài đủ công cụ, cài thư viện Node.js nếu thiếu hoặc sai phiên bản
 	python3 scripts/check.py tools
 
 format: tools ## Định dạng lại toàn bộ bằng Prettier và ruff
-	npx prettier --write .
+	npx --no -- prettier --write .
 	ruff format .
 
 format-check: ## Prettier, ruff format, ruff check (job "Định dạng (Prettier, ruff)")

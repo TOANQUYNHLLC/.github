@@ -156,6 +156,47 @@ class CheckTest(unittest.TestCase):
 		self.assertLess(text.index('chậm'), text.index('nhanh'))
 		self.assertIn('❌ fast:', text)
 
+	def testPrettierUsesInstalledVersion(self):
+		# --no: không tự tải Prettier mới nhất; thiếu "--" thì npm coi --check là cấu hình của npm, in tệp rồi
+		# thoát 0 mà Prettier không chạy.
+		module = loadScript('check')
+		with mock.patch.object(module, 'shellScripts', return_value=[]):
+			command = module.checkGroups()['format'][0]
+		self.assertEqual(command[:4], ['npx', '--no', '--', 'prettier'])
+		makefile = (ROOT / 'Makefile').read_text(encoding='utf-8')
+		self.assertIn('\tnpx --no -- prettier --write .\n', makefile)
+
+	def testNodeModulesReinstalledWhenMissingOrOutdated(self):
+		# Thiếu thư viện (NODE_ENV=production làm npm bỏ devDependencies) hoặc khác phiên bản package.json (sau khi
+		# Dependabot nâng) thì cài lại, kèm devDependencies; đúng phiên bản thì không gọi npm.
+		module = loadScript('check')
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			(root / 'package.json').write_text(
+				'{"devDependencies": {"prettier": "3.9.9"}}', encoding='utf-8'
+			)
+			installed = root / 'node_modules' / 'prettier' / 'package.json'
+			module.ROOT = root
+			for case, version, expected in (
+				('missing', None, True),
+				('outdated', '3.9.8', True),
+				('current', '3.9.9', False),
+			):
+				if version:
+					installed.parent.mkdir(parents=True, exist_ok=True)
+					installed.write_text(f'{{"version": "{version}"}}', encoding='utf-8')
+				passed = subprocess.CompletedProcess([], 0, '', '')
+				with (
+					mock.patch.object(module, 'checkGroups', return_value={'audit': [['npm']]}),
+					mock.patch.object(module.shutil, 'which', return_value='/bin/x'),
+					mock.patch.object(module.subprocess, 'run', return_value=passed) as run,
+				):
+					self.assertTrue(module.ensureTools(['audit']), case)
+				calls = [call.args[0] for call in run.call_args_list]
+				self.assertEqual(calls, [module.NPM_INSTALL] if expected else [], case)
+				if expected:
+					self.assertIn('--include=dev', module.NPM_INSTALL)
+
 
 if __name__ == '__main__':
 	unittest.main()
