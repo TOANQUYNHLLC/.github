@@ -1,7 +1,7 @@
 """Kiểm tra liên kết nội bộ trong tài liệu Markdown: tệp đích phải tồn tại, mục #… phải có tiêu đề tương ứng.
 
 Chạy: python3 scripts/check-markdown-links.py   (kiểm tra mọi tệp .md của thư mục hiện tại)
-Workflow mẫu docs-check.yml của repository khác gọi script này; validate.py dùng chung hàm findBrokenLinks().
+Workflow mẫu docs-check.yml của repository khác gọi script này; validate.py (scripts/validation/docs.py) dùng chung hàm findBrokenLinks().
 """
 
 import re

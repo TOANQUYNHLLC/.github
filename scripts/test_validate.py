@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unicodedata
 import unittest
@@ -230,35 +231,63 @@ class ValidateTest(unittest.TestCase):
 
 	def runValidate(self):
 		# Chạy validate.py của bản chép trong tiến trình này — nhanh hơn nhiều so với chạy python3 riêng cho mỗi
-		# test. Module chỉ được nạp lại khi script trong scripts/ của bản chép đổi (test có thể sửa chính
-		# validate.py hoặc script nó nạp như conventions.py).
-		sources = b''.join(
-			path.read_bytes() for path in sorted((self.repo / 'scripts').glob('*.py'))
-		)
+		# test. Chỉ nạp lại khi script trong scripts/ hoặc gói scripts/validation/ của bản chép đổi (test có thể sửa
+		# chính luật kiểm tra hoặc script được nạp như conventions.py).
+		scripts = self.repo / 'scripts'
+		package = sorted((scripts / 'validation').glob('*.py'))
+		sources = b''.join(path.read_bytes() for path in [*sorted(scripts.glob('*.py')), *package])
 		cls = type(self)
 		if getattr(cls, 'validatorSources', None) != sources:
-			previous = getattr(cls, 'validator', None)
-			spec = importlib.util.spec_from_file_location(
-				'validate_copy', self.repo / 'scripts' / 'validate.py'
-			)
-			cls.validator = importlib.util.module_from_spec(spec)
-			with (
-				contextlib.redirect_stdout(io.StringIO()),
-				contextlib.redirect_stderr(io.StringIO()),
-			):
-				spec.loader.exec_module(cls.validator)
+			previous = getattr(cls, 'modules', None)
+			cls.validator, cls.modules = self.loadValidator(scripts)
 			cls.validatorSources = sources
-			# Kết quả đọc YAML (Ruby) và kiểm tra tên theo nội dung tệp chỉ phụ thuộc chính validate.py: test sửa
-			# script khác thì giữ lại, không gọi lại Ruby và phân tích lại mọi tệp Python sau mỗi lần nạp lại.
-			validateSource = (self.repo / 'scripts' / 'validate.py').read_bytes()
-			if previous is not None and getattr(cls, 'validateSource', None) == validateSource:
-				cls.validator.yamlResults.update(previous.yamlResults)
-				cls.validator.nameResults.update(previous.nameResults)
-			cls.validateSource = validateSource
+			# Kết quả đọc YAML (Ruby) và kiểm tra tên theo nội dung tệp chỉ phụ thuộc chính bộ luật (validate.py và
+			# gói validation/): test sửa script khác thì giữ lại, không gọi lại Ruby và phân tích lại mọi tệp Python
+			# sau mỗi lần nạp lại.
+			rules = b''.join(path.read_bytes() for path in [scripts / 'validate.py', *package])
+			if previous is not None and getattr(cls, 'rulesSource', None) == rules:
+				cls.modules['common'].yamlResults.update(previous['common'].yamlResults)
+				cls.modules['sources'].nameResults.update(previous['sources'].nameResults)
+			cls.rulesSource = rules
 		output = io.StringIO()
 		with contextlib.redirect_stdout(output), contextlib.redirect_stderr(io.StringIO()):
 			code = cls.validator.main()
 		return code, output.getvalue()
+
+	@staticmethod
+	def loadValidator(scripts):
+		"""Nạp validate.py và gói validation/ của bản chép; trả (module validate, {tên module: module}). Gói của
+		bản chép chỉ nằm trong sys.modules lúc nạp — test khác trong cùng tiến trình vẫn dùng gói của repository."""
+
+		def packageModules():
+			return {
+				name: module
+				for name, module in sys.modules.items()
+				if name == 'validation' or name.startswith('validation.')
+			}
+
+		saved = packageModules()
+		for name in saved:
+			del sys.modules[name]
+		sys.path.insert(0, str(scripts))
+		try:
+			spec = importlib.util.spec_from_file_location('validate_copy', scripts / 'validate.py')
+			validator = importlib.util.module_from_spec(spec)
+			with (
+				contextlib.redirect_stdout(io.StringIO()),
+				contextlib.redirect_stderr(io.StringIO()),
+			):
+				spec.loader.exec_module(validator)
+			modules = {
+				name.removeprefix('validation.'): module
+				for name, module in packageModules().items()
+			}
+		finally:
+			sys.path.remove(str(scripts))
+			for name in packageModules():
+				del sys.modules[name]
+			sys.modules.update(saved)
+		return validator, modules
 
 	def testChangelogUnreleasedComparesFromReleaseTag(self):
 		# So sánh từ tên branch (main...HEAD) luôn rỗng; phải từ tag phát hành gần nhất.
@@ -270,16 +299,16 @@ class ValidateTest(unittest.TestCase):
 			self.assertEqual(code, 0, output)
 
 	def testEditedValidatorRecomputesCachedResults(self):
-		# runValidate chỉ giữ kết quả kiểm tra tên, đọc YAML qua lần nạp lại khi validate.py không đổi: sửa luật trong
-		# validate.py thì phải tính lại theo luật mới, không dùng kết quả của luật cũ.
+		# runValidate chỉ giữ kết quả kiểm tra tên, đọc YAML qua lần nạp lại khi bộ luật (validate.py, gói validation/)
+		# không đổi: sửa luật thì phải tính lại theo luật mới, không dùng kết quả của luật cũ.
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
 		self.edit(
-			'scripts/validate.py',
+			'scripts/validation/sources.py',
 			"FUNCTION_NAME = re.compile(r'_?[a-z][a-zA-Z0-9]*')",
 			"FUNCTION_NAME = re.compile(r'khongkhop')",
 		)
-		# Tệp không đổi (release.py) cũng phải được kiểm tra lại theo luật mới — chính validate.py đã đổi nội dung
+		# Tệp không đổi (release.py) cũng phải được kiểm tra lại theo luật mới — chính sources.py đã đổi nội dung
 		# nên luôn được kiểm tra lại, không chứng minh được gì.
 		code, output = self.runValidate()
 		self.assertNotEqual(code, 0, output)
@@ -374,9 +403,11 @@ class ValidateTest(unittest.TestCase):
 		path = self.repo / 'newlines.txt'
 		for data in (b'a\r\nb\rc\nd', b'\r\r\n\n', 'Toàn Quỳnh\r\n'.encode(), b''):
 			path.write_bytes(data)
-			self.validator.bytesCache.clear()
-			self.validator.textCache.clear()
-			self.assertEqual(self.validator.readText(path), path.read_text(encoding='utf-8'))
+			self.modules['common'].bytesCache.clear()
+			self.modules['common'].textCache.clear()
+			self.assertEqual(
+				self.modules['common'].readText(path), path.read_text(encoding='utf-8')
+			)
 
 	def testSecurityTxtNeedsCompanyEmail(self):
 		self.edit('.well-known/security.txt', 'Contact: mailto:toanquynhvn@gmail.com\n', '')
@@ -491,11 +522,12 @@ class ValidateTest(unittest.TestCase):
 
 	def testJsonObjectCacheRefreshesNextRun(self):
 		self.runValidate()
-		path = self.validator.ROOT / 'package.json'
-		first = self.validator.readJsonObject(path)
+		common = self.modules['common']
+		path = common.ROOT / 'package.json'
+		first = common.readJsonObject(path)
 		(self.repo / 'package.json').write_text('[]\n', encoding='utf-8')
 		self.assertFails('package.json: cấu trúc JSON phải là object')
-		self.assertIsNot(first, self.validator.readJsonObject(path))
+		self.assertIsNot(first, common.readJsonObject(path))
 
 	def testInvalidWorkflowStructureReportsPath(self):
 		path = self.repo / '.github/workflows/links.yml'
