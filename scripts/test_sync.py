@@ -25,20 +25,28 @@ class SyncTest(unittest.TestCase):
 		self.tmp = tempfile.TemporaryDirectory()
 		folder = Path(self.tmp.name)
 		# Không phụ thuộc cấu hình git của máy (danh tính, ký commit, hook toàn cục).
-		config = folder / 'gitconfig'
+		# git < 2.32 bỏ qua GIT_CONFIG_GLOBAL và đọc $HOME/.gitconfig: đặt cả hai cùng trỏ cấu hình sạch.
+		home = folder / 'home'
+		home.mkdir()
+		config = home / '.gitconfig'
 		config.write_text(
 			'[user]\n\tname = test\n\temail = \n'
 			'[commit]\n\tgpgsign = false\n[init]\n\tdefaultBranch = main\n',
 			encoding='utf-8',
 		)
-		self.environment = dict(os.environ, GIT_CONFIG_GLOBAL=str(config), GIT_CONFIG_NOSYSTEM='1')
+		self.environment = dict(
+			os.environ, GIT_CONFIG_GLOBAL=str(config), GIT_CONFIG_NOSYSTEM='1', HOME=str(home)
+		)
 		self.remote, self.clone, self.other = (
 			folder / 'remote.git',
 			folder / 'clone',
 			folder / 'other',
 		)
 		self.git(folder, 'init', '-q', '--bare', str(self.remote))
+		# init.defaultBranch chỉ có từ git 2.28: đặt main tường minh để test chạy được với git cũ.
+		self.git(self.remote, 'symbolic-ref', 'HEAD', 'refs/heads/main')
 		self.git(folder, 'clone', '-q', str(self.remote), str(self.clone))
+		self.git(self.clone, 'symbolic-ref', 'HEAD', 'refs/heads/main')
 		self.commit(self.clone, 'base.txt', 'base')
 		self.git(self.clone, 'push', '-q', '-u', 'origin', 'main')
 		self.git(folder, 'clone', '-q', str(self.remote), str(self.other))

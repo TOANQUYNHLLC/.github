@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Git hook của repository — make hooks (install) liên kết .git/hooks/<tên hook> tới tệp này.
+"""Git hook của repository — make hooks (install) liên kết .git/hooks/<tên hook> tới tệp này (không tạo được liên
+kết tượng trưng — Windows chưa bật Developer Mode — thì ghi tệp gọi script).
 
 pre-commit: Prettier, ruff format, ruff check kiểm tra đúng nội dung đã stage (không phải tệp trên đĩa).
 pre-push: make check trên đúng nội dung được đẩy — chặn khi còn thay đổi chưa commit hoặc đẩy branch khác
@@ -234,13 +235,29 @@ def installHooks(root):
 	for name in HOOKS:
 		link = folder / name
 		target = os.path.relpath(SCRIPT, folder.resolve())
+		wrapper = hookWrapper(name)
 		if link.is_symlink() and os.readlink(link) == target:
+			continue
+		if not link.is_symlink() and link.is_file() and link.read_text(encoding='utf-8') == wrapper:
 			continue
 		if link.exists() or link.is_symlink():
 			link.unlink()
-		link.symlink_to(target)
+		try:
+			link.symlink_to(target)
+		except OSError:
+			# Windows không cho tạo liên kết tượng trưng khi chưa bật Developer Mode: ghi tệp gọi script thay thế
+			# (Git for Windows chạy hook bằng sh đi kèm).
+			link.write_text(wrapper, encoding='utf-8')
+			link.chmod(0o755)
 		print(f'Đã cài hook {name}')
 	return 0
+
+
+def hookWrapper(name):
+	"""Tệp hook gọi script này khi không tạo được liên kết tượng trưng: dùng đúng Python đang chạy make hooks —
+	Windows thường không có lệnh python3 — và truyền tên hook như khi chạy tay."""
+	python = Path(sys.executable).as_posix()
+	return f'#!/bin/sh\n# Sinh bởi scripts/git-hooks.py install.\nexec "{python}" "{SCRIPT.as_posix()}" {name} "$@"\n'
 
 
 HOOKS = {
