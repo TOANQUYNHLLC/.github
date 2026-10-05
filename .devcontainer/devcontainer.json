@@ -1,5 +1,5 @@
 {
-	"name": "TOÀN QUỲNH — .github",
+	"name": "TOANQUYNH CO., LTD — .github",
 	"image": "mcr.microsoft.com/devcontainers/python:3-3-trixie",
 	"features": {
 		"ghcr.io/devcontainers/features/ruby:2": {},
@@ -17,7 +17,9 @@
 				"charliermarsh.ruff",
 				"timonwong.shellcheck",
 				"github.vscode-github-actions",
-				"redhat.vscode-yaml"
+				"redhat.vscode-yaml",
+				"anthropic.claude-code",
+				"openai.chatgpt"
 			]
 		}
 	}
