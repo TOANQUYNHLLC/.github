@@ -108,16 +108,17 @@ Workflow gắn nhãn dùng `pull_request_target` theo [hướng dẫn của acti
 
 **Cấu hình và công cụ phát triển**
 
-| Đường dẫn                                                                                                                                   | Chức năng                                                                                                                                       |
-| ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`Makefile`](Makefile)                                                                                                                      | Lệnh chạy kiểm tra cục bộ — gõ `make` để xem danh sách                                                                                          |
-| [`mise.toml`](mise.toml) · [`.nvmrc`](.nvmrc) · [`package.json`](package.json)                                                              | Nguồn phiên bản duy nhất: Python, ruff, ShellCheck, actionlint; Node.js; Prettier (`devEngines` chặn phiên bản sai)                             |
-| [`.editorconfig`](.editorconfig) · [`.prettierrc.json`](.prettierrc.json) · [`.prettierignore`](.prettierignore) · [`ruff.toml`](ruff.toml) | Quy tắc định dạng (mục [PHÁT TRIỂN CỤC BỘ](#️-phát-triển-cục-bộ))                                                                                |
-| [`.gitattributes`](.gitattributes) · [`.gitignore`](.gitignore)                                                                             | Xuống dòng theo loại tệp, tệp nhị phân; bỏ qua tệp tạm, `node_modules/`, bí mật                                                                 |
-| [`.devcontainer/`](.devcontainer/) · [`.vscode/extensions.json`](.vscode/extensions.json)                                                   | Dev Container (image, feature ghim theo phiên bản chính): Ruby, GitHub CLI và công cụ từ `mise.toml`; extension VS Code giống nhau ở cả hai nơi |
-| [`.gitmessage`](.gitmessage) · [`.git-blame-ignore-revs`](.git-blame-ignore-revs) · [`.mailmap`](.mailmap)                                  | Mẫu commit theo quy ước; `git blame` bỏ qua commit chỉ đổi định dạng; gộp các cách viết tên tác giả                                             |
-| [`.npmrc`](.npmrc) · [`.shellcheckrc`](.shellcheckrc)                                                                                       | npm ghi phiên bản chính xác, không tạo `package-lock.json`; cấu hình ShellCheck                                                                 |
-| [`CITATION.cff`](CITATION.cff)                                                                                                              | Cách trích dẫn repository; từ khóa là nguồn của topics trên GitHub                                                                              |
+| Đường dẫn                                                                                                                                   | Chức năng                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`Makefile`](Makefile)                                                                                                                      | Lệnh chạy kiểm tra cục bộ — gõ `make` để xem danh sách                                                                                                        |
+| [`mise.toml`](mise.toml) · [`.nvmrc`](.nvmrc) · [`package.json`](package.json)                                                              | Nguồn phiên bản duy nhất: Python, ruff, ShellCheck, actionlint; Node.js; Prettier (`devEngines` chặn phiên bản sai)                                           |
+| [`.editorconfig`](.editorconfig) · [`.prettierrc.json`](.prettierrc.json) · [`.prettierignore`](.prettierignore) · [`ruff.toml`](ruff.toml) | Quy tắc định dạng (mục [PHÁT TRIỂN CỤC BỘ](#️-phát-triển-cục-bộ))                                                                                              |
+| [`.gitattributes`](.gitattributes) · [`.gitignore`](.gitignore)                                                                             | Xuống dòng theo loại tệp, tệp nhị phân; bỏ qua tệp tạm, `node_modules/`, bí mật                                                                               |
+| [`.devcontainer/`](.devcontainer/) · [`.vscode/extensions.json`](.vscode/extensions.json)                                                   | Dev Container (image, feature ghim theo phiên bản chính): Ruby, GitHub CLI và công cụ từ `mise.toml`; extension VS Code giống nhau ở cả hai nơi               |
+| [`.gitmessage`](.gitmessage) · [`.git-blame-ignore-revs`](.git-blame-ignore-revs) · [`.mailmap`](.mailmap)                                  | Mẫu commit theo quy ước; `git blame` bỏ qua commit chỉ đổi định dạng; gộp các cách viết tên tác giả                                                           |
+| [`pyproject.toml`](pyproject.toml)                                                                                                          | Python tối thiểu của script (`requires-python`) để ruff trong VS Code và `ruff check` gõ tay kiểm tra giống `make check`; không đóng gói, không có dependency |
+| [`.npmrc`](.npmrc) · [`.shellcheckrc`](.shellcheckrc)                                                                                       | npm ghi phiên bản chính xác, không tạo `package-lock.json`; cấu hình ShellCheck                                                                               |
+| [`CITATION.cff`](CITATION.cff)                                                                                                              | Cách trích dẫn repository; từ khóa là nguồn của topics trên GitHub                                                                                            |
 
 **Tài liệu cho người phát triển**
 
@@ -152,7 +153,7 @@ Không dùng mise thì cài Node.js đúng bản trong `.nvmrc` (ví dụ `brew 
 - Chỉ ngôn ngữ **bắt buộc dấu cách** mới dùng dấu cách: **4** cho YAML (cả `.cff`), Markdown, F#, Elm, Nim, Zig; **2** cho Dart, Elixir, Terraform, Crystal, Gleam, Nix (formatter chính thức cố định độ rộng 2).
 - UTF-8, xuống dòng **LF**, có dòng trống cuối tệp; **CRLF** chỉ cho tệp bắt buộc: batch script, dự án Visual Studio/Visual C++, registry/INF (UTF-16 LE), MIME/iCalendar/vCard/CSV.
 - Formatter: **Prettier** cho JSON, YAML, Markdown; **ruff** cho Python. Định dạng lại toàn bộ: `make format`.
-- Lint Python: `ruff check` với bộ luật mặc định cùng B, C4, UP, SIM, PERF, PLW, RUF (khai báo trong `[lint]` của [`ruff.toml`](ruff.toml)).
+- Lint Python: `ruff check` với bộ luật mặc định cùng B, C4, UP, SIM, PERF, PLW, RUF (khai báo trong `[lint]` của [`ruff.toml`](ruff.toml)); phiên bản Python tối thiểu lấy từ `requires-python` của [`pyproject.toml`](pyproject.toml).
 
 Chạy toàn bộ kiểm tra giống GitHub Actions trên Pull Request (trừ CodeQL) trước khi đẩy:
 
@@ -205,7 +206,7 @@ Không truyền tên thì chạy toàn bộ test. Tên sai, tệp không có tes
 - **Cài đặt:** lệnh `settings` quản lý phương thức hợp nhất, bảo mật và quyền Actions; topics lấy từ `CITATION.cff`. Tính năng bảo mật chỉ được bật khi đọc được trạng thái và các tính năng phụ thuộc đã sẵn sàng.
 - **Ruleset:** đọc hết danh sách, xác minh tên, ID và cấu trúc chi tiết trước khi ghi trong từng repository hoặc cấp tổ chức. Đọc song song, ghi tuần tự; gói Free dùng GraphQL để đối chiếu cấp tổ chức. Cấu hình và cách áp dụng xem [`rulesets/README.md`](rulesets/README.md).
 - **Team:** chỉ thành viên `active` được coi là đã tham gia; lời mời `pending`, quyền tùy chỉnh chưa xếp hạng được hoặc dữ liệu chưa rõ chặn đồng bộ team. Quyền chuẩn đã cao hơn được giữ nguyên.
-- **Nhãn:** nguồn là `labels.yml`; tên không trống, không trùng khi bỏ qua hoa/thường, màu hex 6 ký tự và mô tả tối đa 100 ký tự. Phản hồi sai chặn ghi lên repository đó; nhãn riêng được giữ nguyên.
+- **Nhãn:** nguồn là `labels.yml`; tên không trống, không trùng khi bỏ qua hoa/thường, màu hex 6 ký tự và mô tả tối đa 100 ký tự. Nhãn trên GitHub chỉ khác chữ hoa/thường được đổi tên theo `labels.yml`. Phản hồi sai chặn ghi lên repository đó; nhãn riêng được giữ nguyên.
 
 Lỗi quyền, giới hạn API hoặc lỗi mạng được báo để tránh ghi dựa trên dữ liệu chưa đọc được; chỉ HTTP 404 được coi là chưa có tài nguyên. Dữ liệu được đọc mới mỗi lượt. Các lần ghi đã thành công không được tự hoàn tác nếu một lần ghi sau thất bại.
 

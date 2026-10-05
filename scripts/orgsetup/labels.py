@@ -3,6 +3,7 @@
 import json
 import re
 import subprocess
+import urllib.parse
 
 from orgsetup import github
 
@@ -84,39 +85,65 @@ def readLabels(repo):
 
 
 def syncLabels(repos, apply):
-	"""Tạo hoặc cập nhật nhãn chuẩn khác với labels.yml; không xóa nhãn riêng của repository."""
+	"""Tạo hoặc cập nhật nhãn chuẩn khác với labels.yml (kể cả tên chỉ khác chữ hoa/thường); không xóa nhãn riêng
+	của repository."""
 	wanted = loadLabels()
 	for repo in repos:
 		print(f'== {github.ORG}/{repo}')
 		current = readLabels(repo)
 		changes = []
 		for label in wanted:
+			# GitHub tra tên nhãn không phân biệt hoa/thường: "stable" đã có thì không tạo được "Stable" — so cả
+			# cách viết để đổi tên cho đúng labels.yml.
 			live = current.get(label['name'].lower())
 			if (
 				live is None
+				or live['name'] != label['name']
 				or live['color'].lower() != label['color'].lower()
 				or (live.get('description') or '') != (label.get('description') or '')
 			):
-				changes.append((label, 'cập nhật' if live else 'tạo'))
+				changes.append((label, live['name'] if live else None))
 		if not changes:
 			print(f'   ✔ đủ {len(wanted)} nhãn chuẩn')
 			continue
-		for label, action in changes:
+		for label, liveName in changes:
+			if liveName is None:
+				action = 'tạo'
+			elif liveName != label['name']:
+				action = f'đổi tên "{liveName}" →'
+			else:
+				action = 'cập nhật'
 			if not apply:
 				print(f'   (xem trước) {action} nhãn "{label["name"]}"')
 				continue
-			github.gh(
-				'label',
-				'create',
-				label['name'],
-				'--repo',
-				f'{github.ORG}/{repo}',
-				'--color',
-				label['color'],
-				'--description',
-				label.get('description') or '',
-				'--force',
-			)
+			description = label.get('description') or ''
+			if liveName is None:
+				github.gh(
+					'label',
+					'create',
+					label['name'],
+					'--repo',
+					f'{github.ORG}/{repo}',
+					'--color',
+					label['color'],
+					'--description',
+					description,
+				)
+			else:
+				# PATCH theo tên đang có (mã hóa cả "/", ":" như ui/ux, area: api); new_name đổi được cả chữ hoa/thường.
+				github.gh(
+					'api',
+					'-X',
+					'PATCH',
+					f'repos/{github.ORG}/{repo}/labels/{urllib.parse.quote(liveName, safe="")}',
+					'-f',
+					f'new_name={label["name"]}',
+					'-f',
+					f'color={label["color"]}',
+					'-f',
+					f'description={description}',
+					'--silent',
+				)
 			print(f'   ✔ {action} nhãn "{label["name"]}"')
 	# Nhãn mặc định cho repository tạo mới (Organization settings) không có API: lệnh này chỉ đồng bộ repository đã
 	# có — nhắc để người quản trị không tưởng trang đó cũng đã đồng bộ.

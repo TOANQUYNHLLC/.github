@@ -8,7 +8,7 @@ Chạy:
 
 prepare: phiên bản có dạng Stable.vYYYY.MM.DDXXXX hoặc Beta.vYYYY.MM.DDXXXX theo ngày ở Việt Nam;
 mặc định Stable, chọn Beta bằng --channel Beta. Số thứ tự có bốn chữ số, dùng chung cho hai kênh,
-bắt đầu lại từ 0001 mỗi tháng; bỏ qua (mã thoát 0) khi tag đã có hoặc không có commit kể từ tag trước;
+bắt đầu lại từ 0001 mỗi tháng, chọn sau khi tải tag từ origin; bỏ qua (mã thoát 0) khi tag đã có hoặc không có commit kể từ tag trước;
 báo lỗi khi có commit mà mục CHƯA PHÁT HÀNH trống; ghi kết quả vào
 $GITHUB_OUTPUT cho workflow monthly-release.yml. --open-pr (make release-pr, khi GitHub Actions tắt): làm tiếp
 open-pr tại máy rồi trả CHANGELOG.md về như cũ — chỉ chạy trên main sạch, trùng origin/main.
@@ -142,6 +142,17 @@ def onCleanMain():
 	return False
 
 
+def fetchTags():
+	"""Tải tag mới từ origin trước khi tự chọn số thứ tự; không tải được thì cảnh báo, dùng tag đang có."""
+	try:
+		runCommand('git', 'fetch', '--quiet', '--tags', 'origin')
+	except subprocess.CalledProcessError as exc:
+		reportMessage(
+			'warning',
+			f'Không tải được tag từ origin ({exc.stderr.strip()}) — số thứ tự chọn theo tag đang có tại máy.',
+		)
+
+
 def validateReleaseInputs(version, date=None):
 	"""Phiên bản chứa ngày có thật, trùng ngày chuẩn bị; kiểm tra trước khi gọi Git hoặc sửa CHANGELOG."""
 	match = RELEASE_VERSION.fullmatch(version) if isinstance(version, str) else None
@@ -205,6 +216,10 @@ def prepareRelease(version, date, openPullRequest=False, channel='Stable'):
 	if openPullRequest and not onCleanMain():
 		return 1
 	if version is None:
+		# Số thứ tự dùng chung mọi tag của tháng (ADR 0014): thiếu tag mới trên origin thì chọn trùng số đã phát
+		# hành. onCleanMain() đã tải tag khi mở Pull Request; còn lại tải ở đây, mất mạng thì chỉ cảnh báo.
+		if not openPullRequest:
+			fetchTags()
 		version = nextReleaseVersion(date, channel)
 	if runCommand('git', 'tag', '--list', version):
 		print(f'Đã có tag {version} — bỏ qua.')

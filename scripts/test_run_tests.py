@@ -56,14 +56,15 @@ class RunTestsTest(unittest.TestCase):
 			)
 			with mock.patch.object(module, 'SCRIPTS', root):
 				self.assertEqual(
-					module.discoverTests(['test_selected']), ['test_selected.Selected.testValid']
+					module.discoverTests(['test_selected']),
+					(['test_selected.Selected.testValid'], []),
 				)
 
 	def testFallbackKeepsSelectedScope(self):
 		module = loadScript('run-tests')
 		with (
 			mock.patch.object(module.sys, 'argv', ['run-tests.py', 'test_conventions']),
-			mock.patch.object(module, 'discoverTests', return_value=None),
+			mock.patch.object(module, 'discoverTests', return_value=(None, [])),
 			mock.patch.object(
 				module.subprocess, 'run', return_value=subprocess.CompletedProcess([], 1)
 			) as run,
@@ -83,19 +84,21 @@ class RunTestsTest(unittest.TestCase):
 			contextlib.redirect_stdout(output),
 		):
 			self.assertEqual(module.main(), 1)
-		self.assertIn('test_missing', output.getvalue())
+		self.assertIn('Không có test nào khớp: test_missing\n', output.getvalue())
+		self.assertNotIn('test_conventions', output.getvalue())
 		run.assert_not_called()
 
 	def testSelectsTestFilesByName(self):
 		module = loadScript('run-tests')
-		ids = module.discoverTests(['test_conventions'])
+		ids, missing = module.discoverTests(['test_conventions'])
+		self.assertEqual(missing, [])
 		self.assertTrue(ids)
 		self.assertTrue(all(test.startswith('test_conventions.') for test in ids))
 
 	def testShardReportsCountAndFailure(self):
 		# Nhóm đạt: mã thoát 0 và đếm đúng số test; test không tồn tại: mã thoát khác 0 để cả lượt báo lỗi.
 		module = loadScript('run-tests')
-		ids = module.discoverTests(['test_conventions'])
+		ids, _ = module.discoverTests(['test_conventions'])
 		code, ran, _ = module.runShard(ids)
 		self.assertEqual((code, ran), (0, len(ids)))
 		code, _, output = module.runShard(['test_conventions.KhongCo.testKhongCo'])
