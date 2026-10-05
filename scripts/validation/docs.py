@@ -110,7 +110,7 @@ def checkDocsMatchCode():
 	for target in sorted(targets - {'help'}):
 		if f'`make {target}' not in readme:
 			error(readmePath, f'bảng lệnh thiếu "make {target}" (có trong Makefile)')
-	# Script shell trong shell/ (make syncmain…) cũng phải có trong mục cấu trúc.
+	# Script shell trong shell/ (make sync…) cũng phải có trong mục cấu trúc.
 	for path in [*scripts, *(file for file in trackedFiles() if file.parent == ROOT / 'shell')]:
 		relative = path.relative_to(ROOT).as_posix()
 		folder = path.parent.relative_to(ROOT).as_posix() + '/'

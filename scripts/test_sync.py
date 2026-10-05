@@ -1,4 +1,4 @@
-"""Test tự động cho shell/sync-main.sh (về main, git pull) và shell/cleanup-main.sh (xóa branch đã hợp nhất mà
+"""Test tự động cho shell/sync.sh (chuyển branch, git pull) và shell/cleanup-main.sh (xóa branch đã hợp nhất mà
 remote đã xóa).
 
 Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
@@ -16,7 +16,7 @@ try:
 except ModuleNotFoundError:
 	from scripts.testsupport import ROOT
 
-SCRIPT = ROOT / 'shell' / 'sync-main.sh'
+SCRIPT = ROOT / 'shell' / 'sync.sh'
 CLEANUP = ROOT / 'shell' / 'cleanup-main.sh'
 
 
@@ -81,9 +81,9 @@ class SyncMainTest(unittest.TestCase):
 			self.git(self.other, 'merge', '-q', '--no-ff', '-m', f'Merge {name}', f'origin/{name}')
 		self.git(self.other, 'push', '-q', 'origin', 'main', f':{name}')
 
-	def runScript(self, script=SCRIPT):
+	def runScript(self, script=SCRIPT, *arguments):
 		return subprocess.run(
-			['bash', str(script)],
+			['bash', str(script), *arguments],
 			cwd=self.clone,
 			env=self.environment,
 			capture_output=True,
@@ -131,6 +131,50 @@ class SyncMainTest(unittest.TestCase):
 		self.assertEqual(self.localBranches(), ['docs/worktree', 'main'])
 		self.assertIn('Giữ lại docs/worktree: đang mở ở worktree', result.stdout)
 
+	def testSyncsGivenBranchFromRemote(self):
+		# make sync BRANCH=…: branch chỉ có trên remote thì git switch tạo branch theo dõi origin; kéo được commit
+		# mới do người khác đẩy, rồi vẫn dọn branch đã hợp nhất.
+		self.git(self.other, 'switch', '-q', '-c', 'feat/other')
+		self.commit(self.other, 'other.txt', 'từ máy khác')
+		self.git(self.other, 'push', '-q', '-u', 'origin', 'feat/other')
+		self.branch('fix/squashed', 'b.txt')
+		self.mergeOnRemote('fix/squashed', squash=True)
+		self.runScript(SCRIPT, 'feat/other')
+		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'feat/other')
+		self.assertTrue((self.clone / 'other.txt').exists())
+		self.assertEqual(
+			self.git(self.clone, 'rev-parse', '--abbrev-ref', 'feat/other@{upstream}').strip(),
+			'origin/feat/other',
+		)
+		self.assertEqual(self.localBranches(), ['feat/other', 'main'])
+
+	def testLocalOnlyBranchSkipsPullButStillCleansUp(self):
+		# Branch chưa đẩy lên không có upstream: bỏ qua git pull (không dừng), vẫn dọn branch đã hợp nhất.
+		self.git(self.clone, 'branch', 'local/only')
+		self.branch('fix/squashed', 'b.txt')
+		self.mergeOnRemote('fix/squashed', squash=True)
+		result = self.runScript(SCRIPT, 'local/only')
+		self.assertIn(
+			'Bỏ qua git pull: local/only chưa có branch theo dõi trên origin.', result.stdout
+		)
+		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'local/only')
+		self.assertEqual(self.localBranches(), ['local/only', 'main'])
+
+	def testUnknownBranchStopsWithoutCleanup(self):
+		# Branch không có ở máy lẫn remote: git switch báo lỗi, script dừng, không dọn branch nào.
+		self.branch('fix/squashed', 'b.txt')
+		self.mergeOnRemote('fix/squashed', squash=True)
+		result = subprocess.run(
+			['bash', str(SCRIPT), 'khong/co'],
+			cwd=self.clone,
+			env=self.environment,
+			capture_output=True,
+			text=True,
+			check=False,
+		)
+		self.assertNotEqual(result.returncode, 0)
+		self.assertEqual(self.localBranches(), ['fix/squashed', 'main'])
+
 	def testRefusesUncommittedChanges(self):
 		# git switch mang thay đổi chưa commit sang main: script dừng trước khi đổi branch, không xóa gì.
 		self.branch('feat/squashed', 'a.txt')
@@ -166,7 +210,7 @@ class SyncMainTest(unittest.TestCase):
 		self.assertEqual(self.git(self.clone, 'rev-parse', 'main'), localMain)
 
 	def testCleanupKeepsUncommittedWorkInPlace(self):
-		# Khác sync-main.sh, cleanup-main.sh chạy được khi còn thay đổi chưa commit: không đổi branch nên không mang
+		# Khác sync.sh, cleanup-main.sh chạy được khi còn thay đổi chưa commit: không đổi branch nên không mang
 		# thay đổi đi đâu.
 		self.branch('fix/squashed', 'b.txt')
 		self.mergeOnRemote('fix/squashed', squash=True)
