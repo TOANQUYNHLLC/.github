@@ -58,41 +58,6 @@ class PostCreateTest(unittest.TestCase):
 			).stdout.splitlines()
 			self.assertEqual(trusted, [str(ROOT.resolve())])
 
-	def testCurrentVersionsBecomeGlobalDefaults(self):
-		# Shim của mise ở thư mục tạm (hook pre-commit, test) không thấy mise.toml, .nvmrc — script đặt đúng phiên
-		# bản mà repository đang dùng (mise current) làm mặc định toàn máy.
-		with tempfile.TemporaryDirectory() as folder:
-			tools, home = Path(folder) / 'bin', Path(folder) / 'home'
-			tools.mkdir()
-			home.mkdir()
-			calls = Path(folder) / 'mise-calls'
-			for name in ('curl', 'npm', 'make'):
-				fake = tools / name
-				fake.write_text('#!/bin/sh\nexit 0\n', encoding='utf-8')
-				fake.chmod(0o755)
-			fake = tools / 'mise'
-			fake.write_text(
-				'#!/bin/sh\n'
-				f'echo "$*" >>"{calls}"\n'
-				'[ "$1" = current ] && printf "ruff 0.16.10\\nnode 24.21.0\\n"\n'
-				'exit 0\n',
-				encoding='utf-8',
-			)
-			fake.chmod(0o755)
-			environment = dict(os.environ, HOME=str(home), PATH=f'{tools}:/usr/bin:/bin')
-			environment.pop('GIT_CONFIG_GLOBAL', None)
-			subprocess.run(
-				['bash', str(ROOT / '.devcontainer' / 'post-create.sh')],
-				cwd=ROOT,
-				env=environment,
-				capture_output=True,
-				check=True,
-			)
-			self.assertIn(
-				'use --global ruff@0.16.10 node@24.21.0',
-				calls.read_text(encoding='utf-8').splitlines(),
-			)
-
 
 if __name__ == '__main__':
 	unittest.main()

@@ -16,13 +16,6 @@ done
 
 mise trust --yes
 mise install
-# VS Code và git hook gọi từ VS Code chạy công cụ qua shim của mise; shim chọn phiên bản theo thư mục hiện tại nên
-# Prettier, ruff chạy trong thư mục tạm (hook pre-commit, test) không có phiên bản nào. Đặt đúng phiên bản của
-# repository làm mặc định toàn máy; đổi phiên bản trong mise.toml, .nvmrc thì chạy lại script này.
-mapfile -t current < <(mise current | tr ' ' '@')
-if ((${#current[@]})); then
-	mise use --global "${current[@]}"
-fi
 
 npm install --include=dev --no-audit --no-fund
 # Thư mục làm việc gắn vào container có thể thuộc người dùng khác (root): git báo "dubious ownership" và từ chối
