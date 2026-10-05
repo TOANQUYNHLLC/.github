@@ -50,9 +50,11 @@ syncmain: ## Về main, git pull, xóa branch cục bộ đã hợp nhất mà b
 	shell/sync.sh main
 	shell/prune-branches.sh
 
+# sync đọc BRANCH từ môi trường (make xuất biến truyền trên dòng lệnh) thay vì chèn vào lệnh: giá trị không bị
+# shell thông dịch.
 sync: ## Như syncmain nhưng chuyển sang branch khác: make sync BRANCH=<branch>
 	$(if $(BRANCH),,$(error Thiếu BRANCH: make sync BRANCH=<branch> — về main thì dùng make syncmain))
-	shell/sync.sh "$(BRANCH)"
+	shell/sync.sh "$$BRANCH"
 	shell/prune-branches.sh
 
 cleanup: ## XÓA VĨNH VIỄN mọi tệp git không quản lý, kể cả tệp mới chưa add và node_modules/, .env (git clean -fdx)

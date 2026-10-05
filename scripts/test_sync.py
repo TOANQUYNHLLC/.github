@@ -97,6 +97,17 @@ class SyncTest(unittest.TestCase):
 		second = self.runScript(PRUNE)
 		return subprocess.CompletedProcess(first.args, 0, first.stdout + second.stdout, '')
 
+	def attempt(self, script, *arguments, environment=None):
+		"""Chạy script, không ném lỗi khi thoát khác 0 — để khẳng định mã thoát, thông báo."""
+		return subprocess.run(
+			['bash', str(script), *arguments],
+			cwd=self.clone,
+			env=environment or self.environment,
+			capture_output=True,
+			text=True,
+			check=False,
+		)
+
 	def localBranches(self):
 		return self.git(
 			self.clone, 'for-each-ref', '--format=%(refname:short)', 'refs/heads'
@@ -211,11 +222,103 @@ class SyncTest(unittest.TestCase):
 		)
 		self.assertEqual(
 			recipe('sync', 'BRANCH=feat/x').stdout.splitlines(),
-			['shell/sync.sh "feat/x"', 'shell/prune-branches.sh'],
+			['shell/sync.sh "$BRANCH"', 'shell/prune-branches.sh'],
 		)
 		missing = recipe('sync')
 		self.assertNotEqual(missing.returncode, 0)
 		self.assertIn('Thiếu BRANCH', missing.stderr)
+
+	def testDivergedBranchIsNotMergedAutomatically(self):
+		# Branch ở máy và trên origin cùng có commit mới: chỉ tua nhanh — dừng, không tự tạo merge commit (git
+		# pull mặc định tạo merge commit hoặc dừng với thông báo khó hiểu tùy cấu hình pull.rebase).
+		self.commit(self.other, 'remote.txt', 'trên origin')
+		self.git(self.other, 'push', '-q', 'origin', 'main')
+		self.commit(self.clone, 'local.txt', 'chỉ ở máy')
+		before = self.git(self.clone, 'rev-parse', 'HEAD')
+		result = self.attempt(SCRIPT, 'main')
+		self.assertEqual(result.returncode, 1, result.stderr)
+		self.assertIn('Không tua nhanh được main', result.stderr)
+		self.assertEqual(self.git(self.clone, 'rev-parse', 'HEAD'), before)
+
+	def testRefusesOperationInProgress(self):
+		# Đang dở merge (xung đột): không chuyển branch giữa chừng.
+		self.git(self.clone, 'switch', '-q', '-c', 'feat/a')
+		self.commit(self.clone, 'base.txt', 'nhánh a')
+		self.git(self.clone, 'switch', '-q', 'main')
+		self.commit(self.clone, 'base.txt', 'nhánh main')
+		subprocess.run(
+			['git', 'merge', '-q', 'feat/a'],
+			cwd=self.clone,
+			env=self.environment,
+			capture_output=True,
+			check=False,
+		)
+		self.git(self.clone, 'add', 'base.txt')
+		result = self.attempt(SCRIPT, 'feat/a')
+		self.assertEqual(result.returncode, 1, result.stderr)
+		self.assertIn('Đang dở thao tác git (MERGE_HEAD)', result.stderr)
+		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'main')
+
+	def testRejectsInvalidBranchNames(self):
+		# Tên bắt đầu bằng "-" là tùy chọn của git switch; tên sai quy tắc ref bị từ chối trước khi gọi git.
+		for name in ('-c', '--detach', 'a..b', 'x y'):
+			with self.subTest(name=name):
+				result = self.attempt(SCRIPT, name)
+				self.assertEqual(result.returncode, 1, result.stderr)
+				self.assertIn(f'Tên branch không hợp lệ: {name}', result.stderr)
+				self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'main')
+
+	def testReportsDeletedUpstream(self):
+		# Branch theo dõi trên origin đã bị xóa: báo đúng lý do bỏ qua git pull, không nhầm với branch chưa đẩy.
+		self.branch('feat/gone', 'a.txt')
+		self.git(self.other, 'push', '-q', 'origin', ':feat/gone')
+		result = self.attempt(SCRIPT, 'feat/gone')
+		self.assertEqual(result.returncode, 0, result.stderr)
+		self.assertIn('branch theo dõi của feat/gone trên origin đã bị xóa', result.stdout)
+
+	def testPruneWorksWithoutGitIdentity(self):
+		# Máy chưa đặt user.name, user.email (máy mới, CI): commit-tree của bước nhận diện Squash vẫn chạy được.
+		# main có thêm commit sau khi hợp nhất để nội dung khác branch — buộc đi qua bước so bằng git cherry.
+		self.branch('fix/squashed', 'b.txt')
+		self.mergeOnRemote('fix/squashed', squash=True)
+		self.commit(self.other, 'later.txt', 'sau khi hợp nhất')
+		self.git(self.other, 'push', '-q', 'origin', 'main')
+		config = Path(self.tmp.name) / 'no-identity'
+		config.write_text('[commit]\n\tgpgsign = false\n', encoding='utf-8')
+		environment = {
+			key: value
+			for key, value in self.environment.items()
+			if not key.startswith(('GIT_AUTHOR_', 'GIT_COMMITTER_')) and key != 'EMAIL'
+		}
+		environment.update(
+			GIT_CONFIG_GLOBAL=str(config), HOME=self.tmp.name, GIT_CONFIG_NOSYSTEM='1'
+		)
+		result = self.attempt(PRUNE, environment=environment)
+		self.assertEqual(result.returncode, 0, result.stderr)
+		self.assertEqual(self.localBranches(), ['main'])
+
+	def testPruneStopsWithoutOriginMain(self):
+		# Không có origin/main thì không so được gì: báo lỗi rõ, không coi mọi branch là "có thay đổi".
+		self.branch('fix/squashed', 'b.txt')
+		self.git(self.other, 'push', '-q', 'origin', 'main:trunk')
+		# Remote không cho xóa branch đang là HEAD của nó: đổi HEAD sang trunk trước.
+		self.git(self.remote, 'symbolic-ref', 'HEAD', 'refs/heads/trunk')
+		self.git(self.other, 'push', '-q', 'origin', ':main')
+		result = self.attempt(PRUNE)
+		self.assertEqual(result.returncode, 1, result.stderr)
+		self.assertIn('Không có origin/main', result.stderr)
+		self.assertEqual(self.localBranches(), ['fix/squashed', 'main'])
+
+	def testPruneNeverDeletesMain(self):
+		# main theo dõi một branch đã bị xóa trên origin (ví dụ đổi upstream nhầm): vẫn giữ main.
+		self.git(self.other, 'push', '-q', 'origin', 'main:old-main')
+		self.git(self.clone, 'fetch', '-q')
+		self.git(self.clone, 'branch', '-q', '--set-upstream-to=origin/old-main', 'main')
+		self.git(self.other, 'push', '-q', 'origin', ':old-main')
+		result = self.attempt(PRUNE)
+		self.assertEqual(result.returncode, 0, result.stderr)
+		self.assertIn('Giữ lại main: branch chính', result.stdout)
+		self.assertEqual(self.localBranches(), ['main'])
 
 	def testRefusesUncommittedChanges(self):
 		# git switch mang thay đổi chưa commit sang main: script dừng trước khi đổi branch, không xóa gì.
