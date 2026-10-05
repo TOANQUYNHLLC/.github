@@ -138,7 +138,7 @@ class RunTestsTest(unittest.TestCase):
 			mock.patch.object(
 				module.sys, 'argv', ['run-tests.py', 'test_conventions.py', 'test_missing']
 			),
-			mock.patch.object(module, 'runShard', return_value=(0, 1, '')) as run,
+			mock.patch.object(module, 'timedShard', return_value=(0, 1, '', {})) as run,
 			contextlib.redirect_stdout(output),
 		):
 			self.assertEqual(module.main(), 1)
@@ -157,9 +157,10 @@ class RunTestsTest(unittest.TestCase):
 		# Nhóm đạt: mã thoát 0 và đếm đúng số test; test không tồn tại: mã thoát khác 0 để cả lượt báo lỗi.
 		module = loadScript('run-tests')
 		ids, _ = module.discoverTests(['test_conventions'])
-		code, ran, _ = module.runShard(ids)
+		code, ran, _, timings = module.timedShard(ids)
 		self.assertEqual((code, ran), (0, len(ids)))
-		code, _, output = module.runShard(['test_conventions.KhongCo.testKhongCo'])
+		self.assertEqual(sorted(timings), sorted(ids))
+		code, _, output, _ = module.timedShard(['test_conventions.KhongCo.testKhongCo'])
 		self.assertNotEqual(code, 0, output)
 
 

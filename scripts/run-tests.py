@@ -114,6 +114,7 @@ def runWorker(ids, timingPath):
 
 
 def timedShard(ids):
+	"""Chạy một nhóm test trong tiến trình riêng; trả (mã thoát, số test, đầu ra, thời gian từng test)."""
 	with tempfile.TemporaryDirectory() as folder:
 		path = Path(folder) / 'times.json'
 		result = subprocess.run(
@@ -161,11 +162,6 @@ def discoverTests(names):
 	if names:
 		ids = [test for test in ids if test.split('.')[0] in names]
 	return ids, sorted(set(names) - {test.split('.')[0] for test in ids})
-
-
-def runShard(ids):
-	"""Chạy một nhóm test trong tiến trình riêng; trả (mã thoát, số test, đầu ra)."""
-	return timedShard(ids)[:3]
 
 
 def main():

@@ -51,7 +51,15 @@ def preCommit(root, args):
 		configs = [
 			name for name in git(root, 'ls-files', '-z', '--', *FORMAT_CONFIGS).split('\0') if name
 		]
-		paths = sorted(set(files) | set(configs))
+		python = [name for name in files if name.endswith('.py')]
+		# ruff xếp import theo gói (thư mục có __init__.py, module cùng gói): thiếu các tệp Python khác của index
+		# thì module của repository bị coi là thư viện ngoài, báo I001 sai. Chỉ xuất để đọc, không kiểm tra.
+		sources = (
+			[name for name in git(root, 'ls-files', '-z', '--', '*.py').split('\0') if name]
+			if python
+			else []
+		)
+		paths = sorted(set(files) | set(configs) | set(sources))
 		exported = subprocess.run(
 			['git', 'checkout-index', f'--prefix={folder}/', '--', *paths],
 			cwd=root,
@@ -71,7 +79,6 @@ def preCommit(root, args):
 		else:
 			print('⚠️  Chưa có Prettier — chạy make tools.', file=sys.stderr)
 			failed = True
-		python = [name for name in files if name.endswith('.py')]
 		if python and not shutil.which('ruff'):
 			print('⚠️  Chưa có ruff — chạy mise install.', file=sys.stderr)
 			failed = True

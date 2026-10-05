@@ -995,6 +995,16 @@ class Holder:
 		self.edit('.github/ISSUE_TEMPLATE/bug_report.yml', 'id: expected', 'id: description')
 		self.assertFails('id "description" bị trùng')
 
+	def testFormFieldsWithoutIdAreNotDuplicates(self):
+		# GitHub không bắt buộc id: hai trường đều không có id không phải là id trùng.
+		path = self.repo / '.github' / 'ISSUE_TEMPLATE' / 'bug_report.yml'
+		text = path.read_text(encoding='utf-8')
+		self.assertGreaterEqual(len(re.findall(r'^      id: .+\n', text, re.MULTILINE)), 2)
+		path.write_text(re.sub(r'^      id: .+\n', '', text, flags=re.MULTILINE), encoding='utf-8')
+		code, output = self.runValidate()
+		self.assertNotIn('bị trùng', output)
+		self.assertEqual(code, 0, output)
+
 	def testContactLinksHaveAllFields(self):
 		self.editRegex('.github/ISSUE_TEMPLATE/config.yml', r'^ +about: .+\n', '')
 		self.assertFails('contact_links thiếu "about"')
@@ -1055,17 +1065,19 @@ class Holder:
 		self.edit(
 			'ROADMAP.md',
 			'# 🗺️ LỘ TRÌNH\n',
-			'# 🗺️ LỘ TRÌNH\n\nChạy `make deploy`, xem `scripts/deploy.py`, hàm `deployAll()`.\n',
+			'# 🗺️ LỘ TRÌNH\n\nChạy `make deploy`, xem `scripts/deploy.py`, `shell/deploy.sh`, hàm `deployAll()`.\n',
 		)
 		code, output = self.runValidate()
 		self.assertEqual(code, 1, output)
 		self.assertIn('nhắc "make deploy" nhưng Makefile không có lệnh này', output)
 		self.assertIn('nhắc "scripts/deploy.py" nhưng tệp, thư mục này không có', output)
+		self.assertIn('nhắc "shell/deploy.sh" nhưng tệp, thư mục này không có', output)
 		self.assertIn('nhắc hàm "deployAll()" nhưng không script nào', output)
 
 	def testReadmeListsEveryTargetScriptWorkflow(self):
 		self.edit('Makefile', 'help: ##', 'deploy: ## Triển khai\n\techo deploy\n\nhelp: ##')
 		(self.repo / 'scripts' / 'deploy.py').write_text('"""Triển khai."""\n', encoding='utf-8')
+		(self.repo / 'shell' / 'deploy.sh').write_text('#!/usr/bin/env bash\n', encoding='utf-8')
 		(self.repo / '.github' / 'workflows' / 'deploy.yml').write_text(
 			(self.repo / '.github' / 'workflows' / 'stale.yml').read_text(encoding='utf-8'),
 			encoding='utf-8',
@@ -1074,6 +1086,7 @@ class Holder:
 		self.assertEqual(code, 1, output)
 		self.assertIn('bảng lệnh thiếu "make deploy"', output)
 		self.assertIn('mục cấu trúc thiếu scripts/deploy.py', output)
+		self.assertIn('mục cấu trúc thiếu shell/deploy.sh', output)
 		self.assertIn('mục cấu trúc thiếu .github/workflows/deploy.yml', output)
 
 	def testLabelsKeepGithubDefaults(self):
