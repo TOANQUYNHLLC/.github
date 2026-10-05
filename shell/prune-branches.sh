@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Xóa branch cục bộ đã hợp nhất vào main mà branch trên GitHub đã bị xóa; không đổi branch, không kéo code.
-# make sync gọi script này sau khi chuyển branch và kéo code mới (sync.sh).
+# make syncmain, make sync chạy script này sau sync.sh (chuyển branch, kéo code mới).
 # Pull Request hợp nhất bằng Squash tạo commit mới trên main nên `git branch -d` báo "not fully merged";
 # script so theo nội dung nên nhận ra cả Merge lẫn Squash, branch còn thay đổi chưa vào main thì giữ nguyên.
 # So với origin/main vừa tải về: main cục bộ có thể chưa kéo các commit hợp nhất mới.

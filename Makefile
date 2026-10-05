@@ -5,7 +5,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help check quick validate test format format-check lint conventions audit tools links versions forms release-notes release-prepare release-pr labels-preview labels-apply hooks sync cleanup org-preview
+.PHONY: help check quick validate test format format-check lint conventions audit tools links versions forms release-notes release-prepare release-pr labels-preview labels-apply hooks syncmain sync cleanup org-preview
 
 help: ## Hiển thị danh sách lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-15s %s\n", $$1, $$2}'
@@ -46,8 +46,14 @@ hooks: ## Cài git hook (danh sách trong scripts/git-hooks.py), mẫu commit v�
 	git config blame.ignoreRevsFile .git-blame-ignore-revs
 	git config commit.template .gitmessage
 
-sync: ## Chuyển sang branch, git pull, xóa branch cục bộ đã hợp nhất: make sync BRANCH=<branch> (mặc định main)
-	shell/sync.sh "$(or $(BRANCH),main)"
+syncmain: ## Về main, git pull, xóa branch cục bộ đã hợp nhất mà branch trên GitHub đã bị xóa
+	shell/sync.sh main
+	shell/prune-branches.sh
+
+sync: ## Như syncmain nhưng chuyển sang branch khác: make sync BRANCH=<branch>
+	$(if $(BRANCH),,$(error Thiếu BRANCH: make sync BRANCH=<branch> — về main thì dùng make syncmain))
+	shell/sync.sh "$(BRANCH)"
+	shell/prune-branches.sh
 
 cleanup: ## XÓA VĨNH VIỄN mọi tệp git không quản lý, kể cả tệp mới chưa add và node_modules/, .env (git clean -fdx)
 	git clean -fdx
