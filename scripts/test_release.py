@@ -4,11 +4,14 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 """
 
 import contextlib
+import datetime
 import io
 import json
+import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -212,6 +215,28 @@ class ReleaseTest(unittest.TestCase):
 				)
 			self.assertIn('Đã có tag', output.getvalue())
 			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
+
+	def testRunsWithoutTimeZoneDatabase(self):
+		# Máy thiếu dữ liệu múi giờ (Windows không có gói tzdata, image Docker tối giản): release.py vẫn chạy — giờ
+		# Việt Nam là UTC+7 cố định.
+		with tempfile.TemporaryDirectory() as empty:
+			result = subprocess.run(
+				[
+					sys.executable,
+					str(ROOT / 'scripts' / 'release.py'),
+					'notes',
+					'Stable.v2099.01.010001',
+				],
+				cwd=ROOT,
+				env=dict(os.environ, PYTHONTZPATH=empty),
+				capture_output=True,
+				text=True,
+				check=False,
+			)
+		self.assertNotIn('Traceback', result.stderr)
+		self.assertEqual(result.returncode, 1, result.stderr)
+		self.assertIn('chưa có mục ## [Stable.v2099.01.010001]', result.stderr)
+		self.assertEqual(self.module.TIMEZONE.utcoffset(None), datetime.timedelta(hours=7))
 
 	def testNoCommitSinceLastTagSkipsPreparation(self):
 		# Workflow hằng tháng chạy cả khi không có gì mới: không có commit kể từ tag trước thì bỏ qua (mã 0), không
@@ -760,6 +785,27 @@ class ReleaseTest(unittest.TestCase):
 			self.assertEqual(code, 1)
 			self.assertIn('Cần đứng ở main sạch', output.getvalue())
 			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
+
+	def testOpenPrSeesNewFilesDespiteUserConfig(self):
+		# status.showUntrackedFiles=no làm git status ẩn tệp mới: main có tệp lạ vẫn phải bị coi là chưa sạch.
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			(clone / 'draft.txt').write_text('chưa add\n', encoding='utf-8')
+			output = io.StringIO()
+			with (
+				mock.patch.dict(
+					os.environ,
+					{
+						'GIT_CONFIG_COUNT': '1',
+						'GIT_CONFIG_KEY_0': 'status.showUntrackedFiles',
+						'GIT_CONFIG_VALUE_0': 'no',
+					},
+				),
+				contextlib.redirect_stdout(output),
+			):
+				code = self.module.prepareRelease('Stable.v2099.02.010001', '2099-02-01', True)
+			self.assertEqual(code, 1)
+			self.assertIn('Cần đứng ở main sạch', output.getvalue())
 
 	def testOpenPrReportsFetchFailure(self):
 		# Không tải được origin (mất mạng, sai remote): báo rõ thay vì văng traceback.

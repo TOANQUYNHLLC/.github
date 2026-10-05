@@ -177,6 +177,24 @@ class SyncTest(unittest.TestCase):
 		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'local/only')
 		self.assertEqual(self.localBranches(), ['local/only', 'main'])
 
+	def testTracksOriginWhenAnotherRemoteHasSameBranch(self):
+		# Remote khác (upstream của fork…) cũng có branch cùng tên: vẫn theo dõi đúng origin, không để git switch báo
+		# "matched multiple remote tracking branches".
+		self.git(self.other, 'switch', '-q', '-c', 'feat/shared')
+		self.commit(self.other, 'shared.txt', 'trên origin')
+		self.git(self.other, 'push', '-q', '-u', 'origin', 'feat/shared')
+		upstream = Path(self.tmp.name) / 'upstream.git'
+		self.git(self.clone, 'init', '-q', '--bare', str(upstream))
+		self.git(self.clone, 'remote', 'add', 'upstream', str(upstream))
+		self.git(self.clone, 'push', '-q', 'upstream', 'main:feat/shared')
+		self.git(self.clone, 'fetch', '-q', 'upstream')
+		self.sync('feat/shared')
+		self.assertEqual(
+			self.git(self.clone, 'rev-parse', '--abbrev-ref', 'feat/shared@{upstream}').strip(),
+			'origin/feat/shared',
+		)
+		self.assertTrue((self.clone / 'shared.txt').exists())
+
 	def testUnknownBranchStopsWithoutCleanup(self):
 		# Branch không có ở máy lẫn remote: git switch báo lỗi, script dừng, không dọn branch nào.
 		self.branch('fix/squashed', 'b.txt')
@@ -189,7 +207,8 @@ class SyncTest(unittest.TestCase):
 			text=True,
 			check=False,
 		)
-		self.assertNotEqual(result.returncode, 0)
+		self.assertEqual(result.returncode, 1, result.stderr)
+		self.assertIn('Không có branch khong/co ở máy lẫn trên origin', result.stderr)
 		self.assertEqual(self.localBranches(), ['fix/squashed', 'main'])
 
 	def testSyncNeedsBranch(self):
@@ -364,6 +383,24 @@ class SyncTest(unittest.TestCase):
 		self.runScript(PRUNE)
 		self.assertEqual(self.localBranches(), ['feature/wip', 'main'])
 		self.assertTrue((self.clone / 'draft.txt').exists())
+
+	def testRefusesNewFilesDespiteUserConfig(self):
+		# status.showUntrackedFiles=no làm git status ẩn tệp mới: git switch sẽ mang tệp đó sang branch khác.
+		self.git(self.clone, 'switch', '-q', '-c', 'feature/wip')
+		(self.clone / 'draft.txt').write_text('chưa add\n', encoding='utf-8')
+		result = self.attempt(
+			SCRIPT,
+			'main',
+			environment=dict(
+				self.environment,
+				GIT_CONFIG_COUNT='1',
+				GIT_CONFIG_KEY_0='status.showUntrackedFiles',
+				GIT_CONFIG_VALUE_0='no',
+			),
+		)
+		self.assertEqual(result.returncode, 1, result.stderr)
+		self.assertIn('Còn thay đổi chưa commit', result.stderr)
+		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'feature/wip')
 
 	def testKeepsBranchWithoutRemoteOrStillOnRemote(self):
 		# Chỉ xét branch mà remote đã xóa: branch chưa đẩy và branch còn trên remote giữ nguyên.

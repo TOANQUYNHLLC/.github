@@ -140,7 +140,8 @@ def prePush(root, args):
 		print('Bỏ qua make check: lần đẩy chỉ có tag hoặc xóa branch.')
 		return 0
 	# make check chạy trên thư mục làm việc — phải trùng đúng nội dung được đẩy.
-	if git(root, 'status', '--porcelain'):
+	# --untracked-files=normal: status.showUntrackedFiles=no của người dùng làm git ẩn tệp mới.
+	if git(root, 'status', '--porcelain', '--untracked-files=normal'):
 		print(
 			'❌ Còn thay đổi chưa commit — make check sẽ kiểm tra khác nội dung được đẩy. '
 			'Commit hoặc git stash -u rồi đẩy lại.',
