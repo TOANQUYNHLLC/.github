@@ -63,7 +63,17 @@ def checkGroups():
 		],
 		'format': [
 			# --no: chỉ dùng Prettier đã cài theo package.json, không tự tải bản mới nhất.
-			['npx', '--no', '--', 'prettier', '--check', '.'],
+			[
+				'npx',
+				'--no',
+				'--',
+				'prettier',
+				'--check',
+				'.',
+				'--cache',
+				'--cache-strategy',
+				'content',
+			],
 			['ruff', 'format', '--check', '.'],
 			# Python ≥ 3.11 (tomllib, datetime.UTC); ruff.toml giữ đúng cấu hình chuẩn nên khai báo ở đây.
 			['ruff', 'check', '--target-version', 'py311', '.'],
@@ -130,22 +140,31 @@ def runCommand(name, command):
 	return result.returncode == 0, output
 
 
-def runGroup(name):
-	"""Chạy lần lượt các lệnh của một nhóm; trả (đầu ra, lệnh lỗi)."""
+def runGroup(name, selectedTests=None):
+	"""Các lệnh kiểm tra độc lập chạy đồng thời; đầu ra và lệnh lỗi giữ thứ tự khai báo."""
+	commands = []
+	for original in checkGroups()[name]:
+		command = original
+		if selectedTests and name == 'content' and original[1] == 'scripts/run-tests.py':
+			command = [*original, *selectedTests]
+		commands.append(command)
+	with ThreadPoolExecutor(max_workers=max(1, len(commands))) as pool:
+		results = list(pool.map(functools.partial(runCommand, name), commands))
 	outputs, failed = [], []
-	for command in checkGroups()[name]:
-		passed, output = runCommand(name, command)
+	for command, (passed, output) in zip(commands, results, strict=True):
 		outputs.append(f'$ {" ".join(command)}\n{output}')
 		if not passed:
 			failed.append(f'{name}: {" ".join(command)[:80]}')
 	return ''.join(outputs), failed
 
 
-def runGroups(groups):
-	"""Các nhóm độc lập nên chạy song song (test đã chia nhiều tiến trình, Prettier, audit chờ mạng…); đầu ra in
-	liền khối theo thứ tự nhóm."""
+def runGroups(groups, selectedTests=None):
+	"""Các nhóm và lệnh độc lập chạy song song (test đã chia nhiều tiến trình); đầu ra liền khối theo thứ tự nhóm."""
 	with ThreadPoolExecutor(max_workers=len(groups)) as pool:
-		results = list(pool.map(runGroup, groups))
+		runner = (
+			functools.partial(runGroup, selectedTests=selectedTests) if selectedTests else runGroup
+		)
+		results = list(pool.map(runner, groups))
 	failed = []
 	for output, groupFailed in results:
 		print(output, end='', flush=True)
@@ -153,6 +172,42 @@ def runGroups(groups):
 	for item in failed:
 		print(f'❌ {item}')
 	return not failed
+
+
+def changedFiles():
+	"""Thay đổi đã commit so với origin/main, đã stage, chưa stage và tệp mới; lỗi Git thì chạy đầy đủ."""
+	names = set()
+	for arguments in (
+		['diff', '--name-only', '-z', 'origin/main...HEAD'],
+		['diff', '--name-only', '-z', 'HEAD'],
+		['ls-files', '--others', '--exclude-standard', '-z'],
+	):
+		result = subprocess.run(
+			['git', *arguments], cwd=ROOT, capture_output=True, text=True, check=False
+		)
+		if result.returncode:
+			return None
+		names.update(filter(None, result.stdout.split('\0')))
+	return names
+
+
+def quickTests(paths):
+	"""Chỉ thu hẹp test cho tệp test còn tồn tại; sửa luật, cấu hình hoặc nguồn dùng chung chạy đầy đủ."""
+	if not paths:
+		return None
+	tests = set()
+	for name in paths:
+		path = Path(name)
+		if (
+			path.parent != Path('scripts')
+			or not path.name.startswith('test_')
+			or path.suffix != '.py'
+		):
+			return None
+		if not (ROOT / path).is_file():
+			return None
+		tests.add(path.stem)
+	return sorted(tests)
 
 
 def main():
@@ -163,7 +218,15 @@ def main():
 			f'Cần Python ≥ 3.11 (đang dùng {sys.version.split()[0]}) — chạy mise install, mở terminal có mise.'
 		)
 		return 1
+	selected = None
 	names = sys.argv[1:] or list(checkGroups())
+	if names == ['quick']:
+		selected = quickTests(changedFiles())
+		if selected:
+			print('Kiểm tra nhanh: chỉ thu hẹp tests; mọi nhóm kiểm tra khác vẫn chạy đầy đủ.')
+		else:
+			print('Không xác định chắc phạm vi test — chạy mọi kiểm tra.')
+		names = list(checkGroups())
 	unknown = [name for name in names if name not in (*checkGroups(), 'tools')]
 	if unknown:
 		print(f'Nhóm không có: {", ".join(unknown)}. Có: {", ".join(checkGroups())}, tools.')
@@ -173,7 +236,7 @@ def main():
 		return 1
 	if names == ['tools']:
 		return 0
-	return 0 if runGroups(groups) else 1
+	return 0 if runGroups(groups, selected) else 1
 
 
 if __name__ == '__main__':

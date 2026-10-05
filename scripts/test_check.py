@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import tomllib
 import unittest
@@ -23,6 +24,58 @@ except ModuleNotFoundError:
 
 
 class CheckTest(unittest.TestCase):
+	def testCommandsRunTogetherAndKeepOrderedFailures(self):
+		module = loadScript('check')
+		commands = [['first'], ['second'], ['third']]
+		barrier = threading.Barrier(len(commands), timeout=3)
+
+		def runCommand(name, command):
+			barrier.wait()
+			return command == commands[1], f'{command[0]} hoàn tất\n'
+
+		with (
+			mock.patch.object(module, 'checkGroups', return_value={'content': commands}),
+			mock.patch.object(module, 'runCommand', side_effect=runCommand),
+		):
+			output, failed = module.runGroup('content')
+		self.assertEqual(
+			output,
+			''.join(f'$ {command[0]}\n{command[0]} hoàn tất\n' for command in commands),
+		)
+		self.assertEqual(failed, ['content: first', 'content: third'])
+
+	def testQuickScopeFallsBackForSharedFilesAndDeletedTests(self):
+		module = loadScript('check')
+		self.assertEqual(module.quickTests({'scripts/test_check.py'}), ['test_check'])
+		for paths in (
+			None,
+			set(),
+			{'labels.yml'},
+			{'scripts/test_missing.py'},
+			{'scripts/test_check.py', 'scripts/check.py'},
+		):
+			self.assertIsNone(module.quickTests(paths))
+
+	def testQuickSelectionDoesNotMutateFullCommands(self):
+		module = loadScript('check')
+		commands = [list(command) for command in module.checkGroups()['content']]
+		with mock.patch.object(module, 'runCommand', return_value=(True, '')) as run:
+			module.runGroup('content', ['test_check'])
+			run.assert_has_calls(
+				[
+					mock.call('content', commands[0]),
+					mock.call('content', [*commands[-1], 'test_check']),
+				],
+				any_order=True,
+			)
+			run.reset_mock()
+			module.runGroup('content')
+			run.assert_has_calls(
+				[mock.call('content', command) for command in commands], any_order=True
+			)
+			self.assertEqual(run.call_count, len(commands))
+		self.assertEqual(module.checkGroups()['content'], commands)
+
 	def testMinimumPythonDeclaredConsistently(self):
 		# requires-python của pyproject.toml (ruff đọc khi chạy ngoài check.py) phải trùng --target-version mà
 		# check.py, git hook truyền cho ruff và phiên bản check.py chặn — lệch thì VS Code và make check báo khác nhau.

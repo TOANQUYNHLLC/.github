@@ -5,6 +5,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 
 import contextlib
 import io
+import json
 import subprocess
 import tempfile
 import unittest
@@ -19,6 +20,63 @@ except ModuleNotFoundError:
 
 
 class RunTestsTest(unittest.TestCase):
+	def testTimingWriteFailurePreservesCacheAndCleansTemporaryFile(self):
+		module = loadScript('run-tests')
+		with tempfile.TemporaryDirectory() as folder:
+			module.TIMINGS_FILE = Path(folder) / 'times.json'
+			module.TIMINGS_FILE.write_text('{"old": 2}', encoding='utf-8')
+			with mock.patch.object(module.os, 'replace', side_effect=OSError):
+				module.writeTimings(['new'], {'new': 1})
+			self.assertEqual(module.readTimings(), {'old': 2})
+			self.assertEqual(list(Path(folder).iterdir()), [module.TIMINGS_FILE])
+			module.writeTimings(['new'], {'new': 1, 'removed': 3})
+			self.assertEqual(json.loads(module.TIMINGS_FILE.read_text()), {'new': 1})
+			self.assertEqual(list(Path(folder).iterdir()), [module.TIMINGS_FILE])
+
+	def testBalancedShardsNeverDropNewTests(self):
+		module = loadScript('run-tests')
+		ids = ['slow', 'fast', 'new', 'other']
+		shards = module.splitTests(ids, 2, {'slow': 10, 'fast': 1, 'other': 1})
+		self.assertCountEqual([test for shard in shards for test in shard], ids)
+		self.assertEqual(shards[0], ['slow'])
+		self.assertEqual(module.splitTests(ids, 2, {}), [ids[::2], ids[1::2]])
+
+	def testTimedShardsKeepClassFixturesTogether(self):
+		module = loadScript('run-tests')
+		ids = ['a.First.testA', 'a.First.testB', 'b.Second.testA']
+		shards = module.splitTests(ids, 1, dict(zip(ids, [10, 1, 5], strict=True)))
+		self.assertEqual(shards, [ids])
+
+	def testInvalidTimingHistoryFallsBack(self):
+		module = loadScript('run-tests')
+		with tempfile.TemporaryDirectory() as folder:
+			module.TIMINGS_FILE = Path(folder) / 'times.json'
+			for content in (
+				'bad',
+				'[]',
+				'{"a": -1, "b": true, "c": "x", "d": 2}',
+				'{"huge": ' + '9' * 400 + '}',
+			):
+				module.TIMINGS_FILE.write_text(content)
+				self.assertEqual(module.readTimings(), {'d': 2} if '"d"' in content else {})
+
+	def testCpuQuotaAndAffinityLimitWorkers(self):
+		module = loadScript('run-tests')
+		with (
+			mock.patch.object(module.os, 'process_cpu_count', return_value=16, create=True),
+			mock.patch.object(
+				module.os, 'sched_getaffinity', return_value={0, 1, 2, 3}, create=True
+			),
+			mock.patch.object(Path, 'read_text', return_value='150000 100000'),
+		):
+			self.assertEqual(module.availableCpus(), 2)
+		with (
+			mock.patch.object(module.os, 'process_cpu_count', return_value=2, create=True),
+			mock.patch.object(module.os, 'sched_getaffinity', side_effect=OSError, create=True),
+			mock.patch.object(Path, 'read_text', side_effect=OSError),
+		):
+			self.assertEqual(module.availableCpus(), 2)
+
 	def testBrokenImportWithMissingSelectionDoesNotRun(self):
 		module = loadScript('run-tests')
 		output = io.StringIO()

@@ -143,14 +143,16 @@ def onCleanMain():
 
 
 def fetchTags():
-	"""Tải tag mới từ origin trước khi tự chọn số thứ tự; không tải được thì cảnh báo, dùng tag đang có."""
+	"""Tải tag mới từ origin; không tải được thì dừng để tránh chọn trùng số thứ tự đã phát hành."""
 	try:
 		runCommand('git', 'fetch', '--quiet', '--tags', 'origin')
 	except subprocess.CalledProcessError as exc:
 		reportMessage(
-			'warning',
-			f'Không tải được tag từ origin ({exc.stderr.strip()}) — số thứ tự chọn theo tag đang có tại máy.',
+			'error',
+			f'Không tải được tag từ origin ({exc.stderr.strip()}) — kiểm tra mạng rồi chạy lại trước khi chọn số thứ tự.',
 		)
+		return False
+	return True
 
 
 def validateReleaseInputs(version, date=None):
@@ -217,9 +219,9 @@ def prepareRelease(version, date, openPullRequest=False, channel='Stable'):
 		return 1
 	if version is None:
 		# Số thứ tự dùng chung mọi tag của tháng (ADR 0014): thiếu tag mới trên origin thì chọn trùng số đã phát
-		# hành. onCleanMain() đã tải tag khi mở Pull Request; còn lại tải ở đây, mất mạng thì chỉ cảnh báo.
-		if not openPullRequest:
-			fetchTags()
+		# hành. onCleanMain() đã tải tag khi mở Pull Request; còn lại tải ở đây, lỗi thì dừng.
+		if not openPullRequest and not fetchTags():
+			return 1
 		version = nextReleaseVersion(date, channel)
 	if runCommand('git', 'tag', '--list', version):
 		print(f'Đã có tag {version} — bỏ qua.')
