@@ -43,6 +43,11 @@ if git show-ref --verify --quiet "refs/heads/$branch"; then
 elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
 	git switch --create "$branch" --track "origin/$branch"
 else
+	case $branch in
+	origin/* | refs/heads/* | refs/remotes/*)
+		fail "Không có branch $branch ở máy lẫn trên origin — truyền tên branch không kèm tiền tố (ví dụ ${branch##*/})."
+		;;
+	esac
 	fail "Không có branch $branch ở máy lẫn trên origin."
 fi
 

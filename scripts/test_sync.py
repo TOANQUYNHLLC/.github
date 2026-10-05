@@ -203,6 +203,19 @@ class SyncTest(unittest.TestCase):
 		)
 		self.assertTrue((self.clone / 'shared.txt').exists())
 
+	def testRefNameWithPrefixGetsHint(self):
+		# Nhập nhầm origin/main, refs/heads/main: dừng, gợi ý tên đúng; không đổi branch, không tạo branch lạ.
+		self.git(self.clone, 'switch', '-q', '-c', 'feature/here')
+		for name in ('origin/main', 'refs/heads/main'):
+			with self.subTest(name=name):
+				result = self.attempt(SCRIPT, name)
+				self.assertEqual(result.returncode, 1, result.stderr)
+				self.assertIn('truyền tên branch không kèm tiền tố (ví dụ main)', result.stderr)
+				self.assertEqual(
+					self.git(self.clone, 'branch', '--show-current').strip(), 'feature/here'
+				)
+		self.assertEqual(self.localBranches(), ['feature/here', 'main'])
+
 	def testUnknownBranchStopsWithoutCleanup(self):
 		# Branch không có ở máy lẫn remote: git switch báo lỗi, script dừng, không dọn branch nào.
 		self.branch('fix/squashed', 'b.txt')
