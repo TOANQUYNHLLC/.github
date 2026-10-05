@@ -7,6 +7,7 @@ import contextlib
 import io
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -244,6 +245,25 @@ class GitHooksTest(unittest.TestCase):
 			[str(hook)], cwd=self.repo, capture_output=True, text=True, check=False
 		)
 		self.assertEqual(result.returncode, 0, result.stderr)
+
+	def testHookWrapperKeepsPathsWithShellCharacters(self):
+		# Đường dẫn hợp lệ có $, `, dấu nháy, dấu cách: tệp gọi script phải truyền nguyên văn, sh không thông dịch.
+		folder = Path(self.tmp.name) / 'dự án $2026 `x` \'a\' "b"'
+		folder.mkdir()
+		calls = folder / 'calls'
+		python = folder / 'py'
+		python.write_text(
+			f'#!/bin/sh\nprintf "%s\\n" "$@" > {shlex.quote(str(calls))}\n', encoding='utf-8'
+		)
+		python.chmod(0o755)
+		hook = Path(self.tmp.name) / 'hook'
+		with mock.patch.object(self.module.sys, 'executable', str(python)):
+			hook.write_text(self.module.hookWrapper('pre-push'), encoding='utf-8')
+		subprocess.run(['sh', str(hook), 'origin', 'url có $HOME'], check=True)
+		self.assertEqual(
+			calls.read_text(encoding='utf-8').splitlines(),
+			[self.module.SCRIPT.as_posix(), 'pre-push', 'origin', 'url có $HOME'],
+		)
 
 	def testInstallLinksEveryHookAndWarnsHooksPath(self):
 		self.git('config', 'core.hooksPath', '.husky')

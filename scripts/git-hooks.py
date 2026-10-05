@@ -14,6 +14,7 @@ Chạy tay: python3 scripts/git-hooks.py <install|pre-commit|pre-push|post-merge
 import contextlib
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -256,8 +257,12 @@ def installHooks(root):
 def hookWrapper(name):
 	"""Tệp hook gọi script này khi không tạo được liên kết tượng trưng: dùng đúng Python đang chạy make hooks —
 	Windows thường không có lệnh python3 — và truyền tên hook như khi chạy tay."""
-	python = Path(sys.executable).as_posix()
-	return f'#!/bin/sh\n# Sinh bởi scripts/git-hooks.py install.\nexec "{python}" "{SCRIPT.as_posix()}" {name} "$@"\n'
+	# shlex.quote: đường dẫn có $, `, \\ hay dấu nháy bị sh thông dịch nếu chỉ đặt trong dấu nháy kép.
+	python = shlex.quote(Path(sys.executable).as_posix())
+	script = shlex.quote(SCRIPT.as_posix())
+	return (
+		f'#!/bin/sh\n# Sinh bởi scripts/git-hooks.py install.\nexec {python} {script} {name} "$@"\n'
+	)
 
 
 HOOKS = {
