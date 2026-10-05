@@ -1725,9 +1725,14 @@ class OrgSetupTest(unittest.TestCase):
 			re.findall(r'^kết quả (\S+)$', output.getvalue(), re.MULTILINE), list(module.COMMANDS)
 		)
 		self.assertIn('❌ gh lỗi', output.getvalue())
+		# make check gọi test qua make: tắt thông báo thư mục của make lồng nhau để chỉ so lệnh.
 		self.assertEqual(
 			subprocess.run(
-				['make', '-n', 'org-preview'], cwd=ROOT, capture_output=True, text=True, check=True
+				['make', '--no-print-directory', '-n', 'org-preview'],
+				cwd=ROOT,
+				capture_output=True,
+				text=True,
+				check=True,
 			).stdout.strip(),
 			'python3 scripts/org-setup.py preview',
 		)
