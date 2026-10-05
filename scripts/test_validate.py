@@ -697,6 +697,24 @@ class ValidateTest(unittest.TestCase):
 		self.edit('scripts/release.py', 'def releaseNotes(', 'def release_notes(')
 		self.assertFails('tên hàm "release_notes" phải viết camelCase tiếng Anh')
 
+	def testNamesInNestedScopesAreChecked(self):
+		path = self.repo / 'scripts' / 'test_nested.py'
+		path.write_text(
+			'def outerFunction():\n'
+			'\tdef inner_function(bad_parameter):\n'
+			'\t\treturn [bad_variable for bad_variable in bad_parameter]\n'
+			'\treturn inner_function\n',
+			encoding='utf-8',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 1)
+		for kind, name in (
+			('tên hàm', 'inner_function'),
+			('tham số', 'bad_parameter'),
+			('tên biến', 'bad_variable'),
+		):
+			self.assertIn(f'{kind} "{name}" phải viết camelCase', output)
+
 	def testParameterAndVariableNamesMustNotBeSnakeCase(self):
 		self.edit(
 			'scripts/release.py', 'def releaseNotes(changelog,', 'def releaseNotes(change_log,'
