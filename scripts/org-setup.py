@@ -45,6 +45,14 @@ import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
+# Gói orgsetup cần Python ≥ 3.11 (tomllib) — chặn sớm, báo rõ khi chạy bằng python3 cũ của hệ thống.
+try:
+	import tomllib  # noqa: F401
+except ModuleNotFoundError:
+	sys.exit(
+		f'Cần Python ≥ 3.11 (đang dùng {sys.version.split()[0]}) — chạy mise install, mở terminal có mise.'
+	)
+
 from orgsetup import files, github, labels, rulesets, settings, teams
 
 COMMANDS = ('files', 'settings', 'rulesets', 'team', 'labels', 'org-rulesets', 'org-settings')

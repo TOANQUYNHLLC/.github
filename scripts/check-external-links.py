@@ -217,6 +217,12 @@ def publishedCopyDiffers(path, text=None):
 
 
 def main():
+	# zip(strict=…) cần Python ≥ 3.10, script cần ≥ 3.11 — báo rõ thay vì traceback giữa chừng.
+	if sys.version_info < (3, 11):  # noqa: UP036 — cố ý: chặn khi bị chạy bằng Python cũ
+		print(
+			f'Cần Python ≥ 3.11 (đang dùng {sys.version.split()[0]}) — chạy mise install, mở terminal có mise.'
+		)
+		return 1
 	try:
 		documents, problems = readDocuments()
 	except (OSError, subprocess.CalledProcessError) as exc:

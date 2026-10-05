@@ -251,6 +251,15 @@ HOOKS = {
 
 
 def main():
+	# Như check.py: ứng dụng giao diện (VS Code, GitHub Desktop…) gọi hook bằng python3 của hệ thống — macOS là
+	# 3.9 — không có PATH của mise. Báo rõ thay vì traceback giữa chừng (zip strict của post-merge cần ≥ 3.10).
+	if sys.version_info < (3, 11):  # noqa: UP036 — cố ý: chặn khi bị chạy bằng Python cũ
+		print(
+			f'❌ Git hook cần Python ≥ 3.11 (đang dùng {sys.version.split()[0]}) — chạy mise install, mở '
+			'ứng dụng từ terminal có mise hoặc đặt python3 ≥ 3.11 lên đầu PATH.',
+			file=sys.stderr,
+		)
+		return 1
 	# Git gọi hook qua liên kết .git/hooks/<tên hook> kèm tham số của hook; chạy tay thì tên hook là tham số đầu.
 	name, args = Path(sys.argv[0]).name, sys.argv[1:]
 	if name not in HOOKS:

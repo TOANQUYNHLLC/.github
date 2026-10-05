@@ -116,6 +116,38 @@ class CheckTest(unittest.TestCase):
 		check = (ROOT / 'scripts' / 'check.py').read_text(encoding='utf-8')
 		self.assertIn(f'sys.version_info < ({major}, {minor})', check)
 
+	def testScriptsNeedingNewPythonReportOldVersionClearly(self):
+		# python3 của macOS là 3.9; ứng dụng giao diện gọi hook, make gọi script bằng bản đó. Script dùng tomllib,
+		# zip(strict=…) phải báo phiên bản cần thay vì traceback — giả lập Python 3.9: không có tomllib.
+		simulate = (
+			'import os, runpy, sys; sys.modules["tomllib"] = None; sys.version_info = (3, 9, 25); '
+			'sys.version = "3.9.25 (giả lập)"; sys.argv = sys.argv[1:]; '
+			'sys.path.insert(0, os.path.dirname(sys.argv[0])); '
+			'runpy.run_path(sys.argv[0], run_name="__main__")'
+		)
+		for script, arguments in (
+			('check.py', []),
+			('validate.py', []),
+			('git-hooks.py', ['post-merge', '0']),
+			('org-setup.py', ['preview']),
+			('check-tool-versions.py', []),
+			('check-external-links.py', []),
+			('check-github-forms.py', []),
+		):
+			with self.subTest(script=script):
+				result = subprocess.run(
+					[sys.executable, '-c', simulate, str(ROOT / 'scripts' / script), *arguments],
+					cwd=ROOT,
+					capture_output=True,
+					text=True,
+					timeout=30,
+					check=False,
+				)
+				output = result.stdout + result.stderr
+				self.assertEqual(result.returncode, 1, output)
+				self.assertIn('Python ≥ 3.11 (đang dùng 3.9.25)', output)
+				self.assertNotIn('Traceback', output)
+
 	def testLabelerSupportsForksWithoutRunningPrCode(self):
 		validator = loadScript('validate')
 		for name in ('.github/workflows/labeler.yml', 'workflow-templates/labeler.yml'):
@@ -232,20 +264,25 @@ class CheckTest(unittest.TestCase):
 		self.assertEqual(len(calls), 1)
 
 	def testGroupsRunInParallelButPrintInOrder(self):
-		# Nhóm chậm (đầu) và nhóm nhanh chạy cùng lúc; đầu ra vẫn theo thứ tự nhóm, lệnh lỗi được liệt kê.
+		# Nhóm chậm (đầu) và nhóm nhanh chạy cùng lúc; đầu ra vẫn theo thứ tự nhóm, lệnh lỗi được liệt kê. Barrier
+		# chỉ mở khi cả hai nhóm cùng đang chạy — chạy tuần tự thì hết hạn chờ; không đo thời gian nên không phụ
+		# thuộc tốc độ máy.
 		module = loadScript('check')
-		groups = {
-			'slow': [[sys.executable, '-c', 'import time; time.sleep(0.5); print("chậm")']],
-			'fast': [[sys.executable, '-c', 'print("nhanh"); raise SystemExit(1)']],
-		}
+		barrier = threading.Barrier(2, timeout=10)
+
+		def runGroup(name, selectedTests=None):
+			barrier.wait()
+			if name == 'slow':
+				time.sleep(0.05)  # xong sau nhóm nhanh: đầu ra vẫn phải đứng trước
+				return '$ slow\nchậm\n', []
+			return '$ fast\nnhanh\n', ['fast: fast']
+
 		output = io.StringIO()
 		with (
-			mock.patch.object(module, 'checkGroups', return_value=groups),
+			mock.patch.object(module, 'runGroup', runGroup),
 			contextlib.redirect_stdout(output),
 		):
-			started = time.monotonic()
 			self.assertFalse(module.runGroups(['slow', 'fast']))
-			self.assertLess(time.monotonic() - started, 1.0)
 		text = output.getvalue()
 		self.assertLess(text.index('chậm'), text.index('nhanh'))
 		self.assertIn('❌ fast:', text)

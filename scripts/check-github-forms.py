@@ -112,6 +112,12 @@ def templateErrors(template):
 
 
 def main():
+	# zip(strict=…) cần Python ≥ 3.10, script cần ≥ 3.11 — báo rõ thay vì traceback giữa chừng.
+	if sys.version_info < (3, 11):  # noqa: UP036 — cố ý: chặn khi bị chạy bằng Python cũ
+		print(
+			f'Cần Python ≥ 3.11 (đang dùng {sys.version.split()[0]}) — chạy mise install, mở terminal có mise.'
+		)
+		return 1
 	ref = sys.argv[1] if len(sys.argv) > 1 else 'main'
 	failed = 0
 	relatives = [path.relative_to(ROOT).as_posix() for path in formPaths()]

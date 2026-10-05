@@ -14,11 +14,18 @@ import re
 import shutil
 import subprocess
 import sys
-import tomllib
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
+# Cần Python ≥ 3.11 (tomllib) — chặn sớm, báo rõ khi chạy bằng python3 cũ của hệ thống.
+try:
+	import tomllib
+except ModuleNotFoundError:
+	sys.exit(
+		f'Cần Python ≥ 3.11 (đang dùng {sys.version.split()[0]}) — chạy mise install, mở terminal có mise.'
+	)
 
 ROOT = Path(__file__).resolve().parents[1]
 # Công cụ trong mise.toml → repository phát hành trên GitHub.

@@ -174,6 +174,21 @@ class GitHooksTest(unittest.TestCase):
 		self.assertEqual(self.module.pushedBranches(lines), [('refs/heads/main', 'a' * 40)])
 		self.assertEqual(self.module.pushedBranches(lines[1:]), [])
 
+	def testOldPythonIsReportedBeforeRunningHooks(self):
+		# Ứng dụng giao diện trên macOS gọi hook bằng Python 3.9 của hệ thống: báo rõ phiên bản cần, thoát mã 1,
+		# không chạy hook nào (post-merge trên 3.9 từng dừng bằng traceback của zip strict).
+		output = io.StringIO()
+		with (
+			mock.patch.object(self.module.sys, 'version_info', (3, 9, 25)),
+			mock.patch.object(self.module.sys, 'version', '3.9.25 (main)'),
+			mock.patch.object(self.module.sys, 'argv', ['post-merge', '0']),
+			mock.patch.object(self.module, 'afterPull') as afterPull,
+			contextlib.redirect_stderr(output),
+		):
+			self.assertEqual(self.module.main(), 1)
+		afterPull.assert_not_called()
+		self.assertIn('Git hook cần Python ≥ 3.11 (đang dùng 3.9.25)', output.getvalue())
+
 	def testOutsideRepositoryReportsGitError(self):
 		# Không phải repository git (hoặc git từ chối vì dubious ownership): in đúng lời git, thoát mã 1, không
 		# traceback.
