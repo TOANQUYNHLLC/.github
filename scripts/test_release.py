@@ -532,6 +532,38 @@ class ReleaseTest(unittest.TestCase):
 					]
 					self.assertEqual(labels, ['release', 'Pre-Release', channel])
 
+	def testReleasePullRequestFromActionsExplainsHowToRunChecks(self):
+		# Pull Request mở bằng GITHUB_TOKEN không khởi chạy workflow kiểm tra; mở tại máy (make release-pr) thì
+		# kiểm tra chạy bình thường nên không cần hướng dẫn.
+		with tempfile.TemporaryDirectory() as folder:
+			self.module.ROOT = Path(folder)
+			(self.module.ROOT / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
+			for onActions in (False, True):
+				with self.subTest(onActions=onActions):
+					with (
+						mock.patch.object(self.module, 'runCommand', return_value='abc123'),
+						mock.patch.object(self.module.github, 'ghExists', return_value=False),
+						mock.patch.dict(
+							self.module.os.environ,
+							{'GITHUB_ACTIONS': 'true'} if onActions else {},
+							clear=True,
+						),
+						mock.patch.object(
+							self.module.subprocess,
+							'run',
+							return_value=subprocess.CompletedProcess(
+								[], 0, 'https://github.com/x/y/pull/1', ''
+							),
+						) as run,
+						contextlib.redirect_stdout(io.StringIO()),
+					):
+						self.module.openReleasePullRequest(
+							'Stable.v2099.02.040001', 'v2099.01.Stable', 1
+						)
+					command = run.call_args.args[0]
+					body = command[command.index('--body') + 1]
+					self.assertEqual('Reopen pull request' in body, onActions)
+
 	def testExtractsVersionNotes(self):
 		# Dữ liệu mẫu cố định: nội dung CHANGELOG.md thật thay đổi theo từng lần phát hành.
 		notes = self.module.releaseNotes(RELEASE_FIXTURE, 'v2099.01.Stable')

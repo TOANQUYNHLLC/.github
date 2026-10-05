@@ -40,9 +40,11 @@ def runGofmt():
 
 
 def reportError(message):
-	"""Chú thích ::error:: trên GitHub Actions (xuống dòng mã hóa %0A để hiện đủ), dòng ❌ khi chạy tại máy."""
+	"""Chú thích ::error:: trên GitHub Actions (mã hóa %, xuống dòng thành %25, %0D, %0A để hiện đủ), dòng ❌ khi
+	chạy tại máy."""
 	if os.environ.get('GITHUB_ACTIONS'):
-		print(f'::error::{message.replace(chr(10), "%0A")}')
+		message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+		print(f'::error::{message}')
 	else:
 		print(f'❌ {message}')
 

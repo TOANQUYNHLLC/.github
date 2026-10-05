@@ -61,18 +61,18 @@ git push -u origin feature/appointment_booking
 
 ## 🌿 QUY ƯỚC ĐẶT TÊN BRANCH
 
-| Tiền tố     | Mục đích                                    | Ví dụ                           |
-| ----------- | ------------------------------------------- | ------------------------------- |
-| `feature/`  | Tính năng mới                               | `feature/appointment_booking`   |
-| `fix/`      | Sửa lỗi                                     | `fix/login_error`               |
-| `hotfix/`   | Sửa lỗi khẩn cấp trên bản đang chạy thật    | `hotfix/payment_timeout`        |
-| `docs/`     | Tài liệu                                    | `docs/update_readme`            |
-| `refactor/` | Tái cấu trúc, không đổi hành vi             | `refactor/split_payment_module` |
-| `perf/`     | Cải thiện hiệu năng                         | `perf/cache_patient_list`       |
-| `test/`     | Bổ sung hoặc sửa kiểm thử                   | `test/booking_edge_cases`       |
-| `ci/`       | Workflow CI/CD, build, triển khai           | `ci/add_docker_build`           |
-| `chore/`    | Cấu hình, phụ thuộc, bảo trì                | `chore/upgrade_dependencies`    |
-| `release/`  | Chuẩn bị phát hành: CHANGELOG, số phiên bản | `release/v2026.10`              |
+| Tiền tố     | Mục đích                                    | Ví dụ                            |
+| ----------- | ------------------------------------------- | -------------------------------- |
+| `feature/`  | Tính năng mới                               | `feature/appointment_booking`    |
+| `fix/`      | Sửa lỗi                                     | `fix/login_error`                |
+| `hotfix/`   | Sửa lỗi khẩn cấp trên bản đang chạy thật    | `hotfix/payment_timeout`         |
+| `docs/`     | Tài liệu                                    | `docs/update_readme`             |
+| `refactor/` | Tái cấu trúc, không đổi hành vi             | `refactor/split_payment_module`  |
+| `perf/`     | Cải thiện hiệu năng                         | `perf/cache_patient_list`        |
+| `test/`     | Bổ sung hoặc sửa kiểm thử                   | `test/booking_edge_cases`        |
+| `ci/`       | Workflow CI/CD, build, triển khai           | `ci/add_docker_build`            |
+| `chore/`    | Cấu hình, phụ thuộc, bảo trì                | `chore/upgrade_dependencies`     |
+| `release/`  | Chuẩn bị phát hành: CHANGELOG, số phiên bản | `release/stable.v2026.11.010001` |
 
 - Tên branch viết bằng **tiếng Anh**, chữ thường, không dấu; các từ nối bằng **dấu gạch dưới** (`_`), ví dụ `feature/appointment_booking`.
 - Có thể thêm số Issue sau tiền tố: `fix/123_login_error`.

@@ -1527,13 +1527,17 @@ class OrgSetupTest(unittest.TestCase):
 		self.assertTrue(all(args[0].endswith('?ref=abc123') for args, _ in exists.call_args_list))
 		write.assert_not_called()
 
-	def testFilesCommitFailureDoesNotOpenPartialPr(self):
+	def filesCommitFailure(self, deleteError=None):
+		"""Chạy files --apply với commit GraphQL bị từ chối; trả (lỗi ném ra, các lệnh gh đã gọi)."""
+		calls = []
+
 		def read(*args):
 			if '/git/ref/' in args[-1]:
 				return {'object': {'sha': 'abc123'}}
 			return {'truncated': False, 'tree': [{'path': 'package.json', 'type': 'blob'}]}
 
 		def write(*args, **kwargs):
+			calls.append(args)
 			if args[:2] == ('api', 'graphql'):
 				commit = json.loads(kwargs['stdin'])['variables']['input']
 				actual = {
@@ -1543,7 +1547,8 @@ class OrgSetupTest(unittest.TestCase):
 				self.assertEqual(actual, files.plannedFiles({'package.json'}))
 				self.assertEqual(commit['expectedHeadOid'], 'abc123')
 				raise RuntimeError('branch đã đổi')
-			self.assertEqual(args[:2], ('api', 'repos/TOANQUYNHLLC/app/git/refs'))
+			if 'DELETE' in args and deleteError:
+				raise RuntimeError(deleteError)
 
 		with (
 			mock.patch.object(github, 'defaultBranch', return_value='main'),
@@ -1551,24 +1556,50 @@ class OrgSetupTest(unittest.TestCase):
 			mock.patch.object(github, 'ghExists', return_value=False),
 			mock.patch.object(github, 'gh', write),
 			contextlib.redirect_stdout(io.StringIO()),
-			self.assertRaisesRegex(RuntimeError, 'branch đã đổi'),
+			self.assertRaises(RuntimeError) as raised,
 		):
 			files.syncFiles(['app'], apply=True)
+		return str(raised.exception), calls
+
+	def testFilesCommitFailureDeletesBranchWithoutPr(self):
+		# Commit bị từ chối: xóa branch vừa tạo để lần chạy sau không bỏ qua repository vì "branch đã tồn tại".
+		message, calls = self.filesCommitFailure()
+		self.assertIn('branch đã đổi', message)
+		self.assertIn(f'đã xóa branch {files.SYNC_BRANCH}', message)
+		self.assertEqual(calls[0][:2], ('api', 'repos/TOANQUYNHLLC/app/git/refs'))
+		self.assertEqual(
+			calls[-1],
+			(
+				'api',
+				'-X',
+				'DELETE',
+				f'repos/TOANQUYNHLLC/app/git/refs/heads/{files.SYNC_BRANCH}',
+				'--silent',
+			),
+		)
+		self.assertFalse([call for call in calls if call[:2] == ('pr', 'create')])
+
+	def testFilesCommitFailureReportsBranchLeftBehind(self):
+		message, calls = self.filesCommitFailure(deleteError='HTTP 403')
+		self.assertIn('branch đã đổi', message)
+		self.assertIn('chưa xóa được branch', message)
+		self.assertIn('HTTP 403', message)
+		self.assertFalse([call for call in calls if call[:2] == ('pr', 'create')])
 
 	def testEmptyRepositoryIsSkippedOnlyForMissingDefaultRef(self):
-		output = io.StringIO()
-		with (
-			mock.patch.object(github, 'defaultBranch', return_value='main'),
-			mock.patch.object(
-				github, 'ghJson', side_effect=RuntimeError('Not Found (HTTP 404)')
-			) as read,
-			mock.patch.object(github, 'gh') as write,
-			contextlib.redirect_stdout(output),
-		):
-			files.syncFiles(['app'], apply=True)
-		self.assertIn('repository trống', output.getvalue())
-		self.assertEqual(read.call_args.args[-1], 'repos/TOANQUYNHLLC/app/git/ref/heads/main')
-		write.assert_not_called()
+		# 404: chưa có nhánh mặc định; 409: GitHub báo "Git Repository is empty" cho repository chưa có commit.
+		for message in ('Not Found (HTTP 404)', 'Git Repository is empty. (HTTP 409)'):
+			output = io.StringIO()
+			with (
+				mock.patch.object(github, 'defaultBranch', return_value='main'),
+				mock.patch.object(github, 'ghJson', side_effect=RuntimeError(message)) as read,
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(output),
+			):
+				files.syncFiles(['app'], apply=True)
+			self.assertIn('repository trống', output.getvalue())
+			self.assertEqual(read.call_args.args[-1], 'repos/TOANQUYNHLLC/app/git/ref/heads/main')
+			write.assert_not_called()
 
 	def testTeamDescriptionDriftIsPatched(self):
 		calls = []

@@ -79,6 +79,17 @@ class GofmtTest(unittest.TestCase):
 			self.assertIn(expected, output.getvalue())
 			self.assertIn('ugly.go', output.getvalue())
 
+	def testActionsAnnotationEscapesPercentSigns(self):
+		# GitHub Actions giải mã %25, %0D, %0A trong chú thích: tên tệp có % phải mã hóa để hiện đúng.
+		module = loadScript('check-gofmt')
+		output = io.StringIO()
+		with (
+			mock.patch.dict(module.os.environ, {'GITHUB_ACTIONS': 'true'}),
+			contextlib.redirect_stdout(output),
+		):
+			module.reportError('50%0A.go\r\nhết')
+		self.assertEqual(output.getvalue(), '::error::50%250A.go%0D%0Ahết\n')
+
 
 if __name__ == '__main__':
 	unittest.main()
