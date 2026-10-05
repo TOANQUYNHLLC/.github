@@ -6,3 +6,10 @@ indent-width = 4
 indent-style = "tab"
 line-ending = "lf"
 quote-style = "single"
+
+[lint]
+# Ngoài bộ mặc định (E, F): lỗi logic hay gặp (B), viết gọn (C4, SIM), cú pháp Python mới (UP), hiệu năng
+# vòng lặp (PERF), cảnh báo pylint (PLW) và luật riêng của ruff (RUF).
+extend-select = ["B", "C4", "UP", "SIM", "PERF", "PLW", "RUF"]
+# Thông báo tiếng Việt dùng dấu gạch ngang "–" có chủ ý.
+ignore = ["RUF001"]

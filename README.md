@@ -152,6 +152,7 @@ Không dùng mise thì cài Node.js đúng bản trong `.nvmrc` (ví dụ `brew 
 - Chỉ ngôn ngữ **bắt buộc dấu cách** mới dùng dấu cách: **4** cho YAML (cả `.cff`), Markdown, F#, Elm, Nim, Zig; **2** cho Dart, Elixir, Terraform, Crystal, Gleam, Nix (formatter chính thức cố định độ rộng 2).
 - UTF-8, xuống dòng **LF**, có dòng trống cuối tệp; **CRLF** chỉ cho tệp bắt buộc: batch script, dự án Visual Studio/Visual C++, registry/INF (UTF-16 LE), MIME/iCalendar/vCard/CSV.
 - Formatter: **Prettier** cho JSON, YAML, Markdown; **ruff** cho Python. Định dạng lại toàn bộ: `make format`.
+- Lint Python: `ruff check` với bộ luật mặc định cùng B, C4, UP, SIM, PERF, PLW, RUF (khai báo trong `[lint]` của [`ruff.toml`](ruff.toml)).
 
 Chạy toàn bộ kiểm tra giống GitHub Actions trên Pull Request (trừ CodeQL) trước khi đẩy:
 

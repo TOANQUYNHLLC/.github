@@ -668,15 +668,17 @@ def checkFormatConfig():
 		if options.get('useTabs') is False and not files <= {'*.md', '*.yml', '*.yaml'}:
 			errors.append('.prettierrc.json: chỉ Markdown, YAML được dùng dấu cách')
 	editorconfig = readText(ROOT / '.editorconfig')
-	for setting in (
-		'indent_style = tab',
-		'indent_size = 4',
-		'tab_width = 4',
-		'[*.{yml,yaml,cff,md,fs,fsi,fsx,elm,nim,nims,nimble,zig,zon}]',
-		TWO_SPACE_SECTION,
-	):
-		if setting not in editorconfig:
-			errors.append(f'.editorconfig: thiếu "{setting}"')
+	errors.extend(
+		f'.editorconfig: thiếu "{setting}"'
+		for setting in (
+			'indent_style = tab',
+			'indent_size = 4',
+			'tab_width = 4',
+			'[*.{yml,yaml,cff,md,fs,fsi,fsx,elm,nim,nims,nimble,zig,zon}]',
+			TWO_SPACE_SECTION,
+		)
+		if setting not in editorconfig
+	)
 	# Độ rộng 2 chỉ được phép trong mục của các ngôn ngữ có formatter cố định 2 dấu cách.
 	for section in re.split(r'\n(?=\[)', editorconfig):
 		if section.startswith(TWO_SPACE_SECTION):
@@ -735,8 +737,10 @@ def checkLintIgnoreConfig():
 			line.strip() for line in text.split('\n') if line.strip() and not line.startswith('#')
 		}
 
-	for entry in sorted(entries('.prettierignore') & entries('.gitignore')):
-		errors.append(f'.prettierignore: "{entry}" đã có trong .gitignore — Prettier 3 tự bỏ qua')
+	errors.extend(
+		f'.prettierignore: "{entry}" đã có trong .gitignore — Prettier 3 tự bỏ qua'
+		for entry in sorted(entries('.prettierignore') & entries('.gitignore'))
+	)
 	# Quy tắc chung của tổ chức, áp dụng khi repository dùng ESLint.
 	eslintPath = ROOT / 'eslint.config.js'
 	if not eslintPath.exists():
@@ -855,10 +859,10 @@ def checkConventions():
 			for rule in configItems(labeler, data, 'release')
 		):
 			covered.discard('release')
-		for prefix in sorted(prefixes - covered):
-			errors.append(
-				f'{labeler.relative_to(ROOT)}: thiếu luật head-branch cho tiền tố "{prefix}/" của CONTRIBUTING.md'
-			)
+		errors.extend(
+			f'{labeler.relative_to(ROOT)}: thiếu luật head-branch cho tiền tố "{prefix}/" của CONTRIBUTING.md'
+			for prefix in sorted(prefixes - covered)
+		)
 	# Mẫu commit (.gitmessage, bật bằng make hooks) liệt kê đúng các loại commit.
 	message = ROOT / '.gitmessage'
 	listed = (
@@ -977,15 +981,17 @@ def nameProblems(text):
 			problems.append((node.lineno, 'tên hàm', node.name))
 		if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
 			arguments = node.args
-			for argument in (
-				*arguments.posonlyargs,
-				*arguments.args,
-				*arguments.kwonlyargs,
-				arguments.vararg,
-				arguments.kwarg,
-			):
-				if argument and not FUNCTION_NAME.fullmatch(argument.arg):
-					problems.append((argument.lineno, 'tham số', argument.arg))
+			problems.extend(
+				(argument.lineno, 'tham số', argument.arg)
+				for argument in (
+					*arguments.posonlyargs,
+					*arguments.args,
+					*arguments.kwonlyargs,
+					arguments.vararg,
+					arguments.kwarg,
+				)
+				if argument and not FUNCTION_NAME.fullmatch(argument.arg)
+			)
 		elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
 			if not VARIABLE_NAME.fullmatch(node.id) and not DUNDER_NAME.fullmatch(node.id):
 				problems.append((node.lineno, 'tên biến', node.id))
@@ -1579,17 +1585,19 @@ def checkFile(file):
 
 
 def checkRequiredFiles():
-	for required in (
-		'README.md',
-		'CHANGELOG.md',
-		'LICENSE',
-		'SECURITY.md',
-		'CONTRIBUTING.md',
-		'CODE_OF_CONDUCT.md',
-		'SUPPORT.md',
-	):
-		if not (ROOT / required).exists():
-			errors.append(f'thiếu tệp bắt buộc {required}')
+	errors.extend(
+		f'thiếu tệp bắt buộc {required}'
+		for required in (
+			'README.md',
+			'CHANGELOG.md',
+			'LICENSE',
+			'SECURITY.md',
+			'CONTRIBUTING.md',
+			'CODE_OF_CONDUCT.md',
+			'SUPPORT.md',
+		)
+		if not (ROOT / required).exists()
+	)
 
 
 def checkLabelUsage():
