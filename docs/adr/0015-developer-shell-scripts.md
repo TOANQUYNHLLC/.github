@@ -6,11 +6,11 @@
 
 ## 📌 BỐI CẢNH
 
-`scripts/` chứa các kiểm tra mà `make check` và GitHub Actions chạy ([ADR 0009](0009-checks-as-scripts.md)). Ngoài kiểm tra, người phát triển cần lệnh tiện ích chạy tại máy, không thuộc nhóm kiểm tra nào: `make syncmain` về `main`, kéo code mới rồi xóa branch cục bộ đã hợp nhất. Pull Request hợp nhất bằng Squash tạo commit mới trên `main` nên `git branch -d` báo "not fully merged"; việc dọn branch chỉ nối các lệnh `git` và đọc kết quả từng dòng. [ADR 0013](0013-docs-match-code.md) chỉ đối chiếu tài liệu với `scripts/` và vài thư mục khác: script đặt ngoài các thư mục đó mà đổi tên hay bị xóa thì tài liệu nhắc tới nó không bị báo.
+`scripts/` chứa các kiểm tra mà `make check` và GitHub Actions chạy ([ADR 0009](0009-checks-as-scripts.md)). Ngoài kiểm tra, người phát triển cần lệnh tiện ích chạy tại máy, không thuộc nhóm kiểm tra nào: `make sync` chuyển sang branch, kéo code mới rồi xóa branch cục bộ đã hợp nhất. Pull Request hợp nhất bằng Squash tạo commit mới trên `main` nên `git branch -d` báo "not fully merged"; việc dọn branch chỉ nối các lệnh `git` và đọc kết quả từng dòng. [ADR 0013](0013-docs-match-code.md) chỉ đối chiếu tài liệu với `scripts/` và vài thư mục khác: script đặt ngoài các thư mục đó mà đổi tên hay bị xóa thì tài liệu nhắc tới nó không bị báo.
 
 ## ✅ QUYẾT ĐỊNH
 
-- Script tiện ích cho người phát triển — không phải kiểm tra — đặt trong `shell/`, mỗi script có lệnh `make` gọi nó (`make syncmain` → `shell/sync-main.sh`). Kiểm tra vẫn đặt trong `scripts/` theo [ADR 0009](0009-checks-as-scripts.md).
+- Script tiện ích cho người phát triển — không phải kiểm tra — đặt trong `shell/`, mỗi script có lệnh `make` gọi nó (`make sync` → `shell/sync.sh`). Kiểm tra vẫn đặt trong `scripts/` theo [ADR 0009](0009-checks-as-scripts.md).
 - Script trong `shell/` theo [ADR 0009](0009-checks-as-scripts.md) như mọi script: ưu tiên Python; dùng shell thì ghi dòng `Không viết bằng Python vì: <lý do>`; ShellCheck kiểm tra; có test trong `scripts/test_*.py`.
 - `checkDocsMatchCode()` mở rộng phạm vi của [ADR 0013](0013-docs-match-code.md):
     - Đường dẫn trong `shell/` và `.devcontainer/` được nhắc trong tài liệu Markdown phải có thật.
