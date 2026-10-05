@@ -1,4 +1,5 @@
-"""Test tự động cho shell/sync-main.sh (về main, git pull, xóa branch đã hợp nhất mà remote đã xóa).
+"""Test tự động cho shell/sync-main.sh (về main, git pull) và shell/cleanup-main.sh (xóa branch đã hợp nhất mà
+remote đã xóa).
 
 Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
 """
@@ -16,6 +17,7 @@ except ModuleNotFoundError:
 	from scripts.testsupport import ROOT
 
 SCRIPT = ROOT / 'shell' / 'sync-main.sh'
+CLEANUP = ROOT / 'shell' / 'cleanup-main.sh'
 
 
 class SyncMainTest(unittest.TestCase):
@@ -79,9 +81,9 @@ class SyncMainTest(unittest.TestCase):
 			self.git(self.other, 'merge', '-q', '--no-ff', '-m', f'Merge {name}', f'origin/{name}')
 		self.git(self.other, 'push', '-q', 'origin', 'main', f':{name}')
 
-	def runScript(self):
+	def runScript(self, script=SCRIPT):
 		return subprocess.run(
-			['bash', str(SCRIPT)],
+			['bash', str(script)],
 			cwd=self.clone,
 			env=self.environment,
 			capture_output=True,
@@ -147,6 +149,32 @@ class SyncMainTest(unittest.TestCase):
 		self.assertIn('Còn thay đổi chưa commit', result.stderr)
 		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'feat/squashed')
 		self.assertEqual(self.localBranches(), ['feat/squashed', 'main'])
+
+	def testCleanupStaysOnCurrentBranchAndUsesOriginMain(self):
+		# make cleanup không đổi branch, không kéo code: branch hiện tại được giữ (không xóa được), branch khác đã
+		# squash vẫn bị xóa dù main cục bộ chưa có commit hợp nhất — so với origin/main vừa tải về.
+		self.branch('feat/current', 'a.txt')
+		self.branch('fix/squashed', 'b.txt')
+		self.mergeOnRemote('feat/current', squash=True)
+		self.mergeOnRemote('fix/squashed', squash=True)
+		self.git(self.clone, 'switch', '-q', 'feat/current')
+		localMain = self.git(self.clone, 'rev-parse', 'main')
+		result = self.runScript(CLEANUP)
+		self.assertEqual(self.localBranches(), ['feat/current', 'main'])
+		self.assertIn('Giữ lại feat/current: đang là branch hiện tại', result.stdout)
+		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'feat/current')
+		self.assertEqual(self.git(self.clone, 'rev-parse', 'main'), localMain)
+
+	def testCleanupKeepsUncommittedWorkInPlace(self):
+		# Khác make syncmain, make cleanup chạy được khi còn thay đổi chưa commit: không đổi branch nên không mang
+		# thay đổi đi đâu.
+		self.branch('fix/squashed', 'b.txt')
+		self.mergeOnRemote('fix/squashed', squash=True)
+		self.git(self.clone, 'switch', '-q', '-c', 'feature/wip')
+		(self.clone / 'draft.txt').write_text('đang sửa\n', encoding='utf-8')
+		self.runScript(CLEANUP)
+		self.assertEqual(self.localBranches(), ['feature/wip', 'main'])
+		self.assertTrue((self.clone / 'draft.txt').exists())
 
 	def testKeepsBranchWithoutRemoteOrStillOnRemote(self):
 		# Chỉ xét branch mà remote đã xóa: branch chưa đẩy và branch còn trên remote giữ nguyên.
