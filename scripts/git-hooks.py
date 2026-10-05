@@ -10,7 +10,9 @@ post-rewrite: như post-merge sau git pull --rebase; bỏ qua git commit --amend
 Chạy tay: python3 scripts/git-hooks.py <install|pre-commit|pre-push|post-merge|post-rewrite [rebase]>
 """
 
+import contextlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -40,6 +42,22 @@ def stagedFiles(root):
 	"""Tệp thêm, sửa, đổi tên đang được stage."""
 	output = git(root, 'diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z')
 	return [name for name in output.split('\0') if name]
+
+
+def toolEnvironment():
+	"""Môi trường chạy Prettier, ruff trong thư mục tạm: shim của mise chọn phiên bản theo thư mục hiện tại, ở
+	thư mục tạm không thấy mise.toml, .nvmrc — ghim phiên bản của repository chứa script bằng MISE_RUFF_VERSION,
+	MISE_NODE_VERSION (không dùng mise thì các biến này không có tác dụng)."""
+	environment = dict(os.environ)
+	root = SCRIPT.parents[1]
+	with contextlib.suppress(OSError):
+		mise = (root / 'mise.toml').read_text(encoding='utf-8')
+		if ruff := re.search(r'^ruff = "([^"]+)"$', mise, re.MULTILINE):
+			environment.setdefault('MISE_RUFF_VERSION', ruff.group(1))
+	with contextlib.suppress(OSError):
+		if node := (root / '.nvmrc').read_text(encoding='utf-8').strip():
+			environment.setdefault('MISE_NODE_VERSION', node)
+	return environment
 
 
 def preCommit(root, args):
@@ -73,9 +91,12 @@ def preCommit(root, args):
 			)
 			return 1
 		failed = False
+		environment = toolEnvironment()
 		if PRETTIER.exists():
 			command = [str(PRETTIER), '--check', '--ignore-unknown', *files]
-			failed |= subprocess.run(command, cwd=folder, check=False).returncode != 0
+			failed |= (
+				subprocess.run(command, cwd=folder, env=environment, check=False).returncode != 0
+			)
 		else:
 			print('⚠️  Chưa có Prettier — chạy make tools.', file=sys.stderr)
 			failed = True
@@ -88,7 +109,10 @@ def preCommit(root, args):
 				# Như nhóm format của check.py: Python ≥ 3.11 (tomllib, datetime.UTC).
 				['ruff', 'check', '--target-version', 'py311', *python],
 			):
-				failed |= subprocess.run(command, cwd=folder, check=False).returncode != 0
+				failed |= (
+					subprocess.run(command, cwd=folder, env=environment, check=False).returncode
+					!= 0
+				)
 	if failed:
 		print(
 			'❌ Nội dung đã stage chưa đúng định dạng hoặc còn lỗi ruff check — chạy make format, sửa lỗi '

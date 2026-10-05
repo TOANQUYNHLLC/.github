@@ -79,6 +79,23 @@ class GitHooksTest(unittest.TestCase):
 			['git', *args], cwd=self.repo, capture_output=True, text=True, check=True
 		).stdout.strip()
 
+	def testToolEnvironmentPinsRepositoryVersions(self):
+		# Shim của mise ở thư mục tạm không thấy mise.toml, .nvmrc: hook ghim đúng phiên bản của repository; biến
+		# người dùng đã đặt được giữ nguyên.
+		ruff = re.search(
+			r'^ruff = "([^"]+)"$', (ROOT / 'mise.toml').read_text(encoding='utf-8'), re.MULTILINE
+		).group(1)
+		node = (ROOT / '.nvmrc').read_text(encoding='utf-8').strip()
+		with mock.patch.dict('os.environ', clear=False) as environ:
+			environ.pop('MISE_RUFF_VERSION', None)
+			environ['MISE_NODE_VERSION'] = '22'
+			environment = self.module.toolEnvironment()
+		self.assertEqual(environment['MISE_RUFF_VERSION'], ruff)
+		self.assertEqual(environment['MISE_NODE_VERSION'], '22')
+		with mock.patch.dict('os.environ', clear=False) as environ:
+			environ.pop('MISE_NODE_VERSION', None)
+			self.assertEqual(self.module.toolEnvironment()['MISE_NODE_VERSION'], node)
+
 	def testPushedBranchesSkipsTagsAndDeletions(self):
 		zero = self.module.ZERO_SHA
 		lines = [
@@ -175,6 +192,7 @@ class GitHooksTest(unittest.TestCase):
 		result = subprocess.run(
 			['ruff', 'check', '--select', 'I001', 'tools/checks/docs.py'],
 			cwd=self.repo,
+			env=self.module.toolEnvironment(),
 			capture_output=True,
 			check=False,
 		)
