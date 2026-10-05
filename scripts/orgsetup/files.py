@@ -4,6 +4,7 @@ import base64
 import json
 import re
 import tomllib
+import urllib.parse
 from pathlib import Path
 
 from orgsetup import github
@@ -106,7 +107,10 @@ def syncFiles(repos, apply):
 			continue
 		base = github.defaultBranch(repo)
 		try:
-			reference = github.ghJson('api', f'repos/{github.ORG}/{repo}/git/ref/heads/{base}')
+			encodedBase = urllib.parse.quote(base, safe='')
+			reference = github.ghJson(
+				'api', f'repos/{github.ORG}/{repo}/git/ref/heads/{encodedBase}'
+			)
 			commit = reference.get('object') if isinstance(reference, dict) else None
 			if (
 				not isinstance(commit, dict)

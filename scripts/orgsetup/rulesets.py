@@ -2,6 +2,7 @@
 
 import json
 import re
+import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 
 from orgsetup import files, github
@@ -419,7 +420,7 @@ def syncRulesets(repos, apply):
 	for repo in repos:
 		print(f'== {github.ORG}/{repo}')
 		if repo != '.github':
-			base = github.defaultBranch(repo)
+			base = urllib.parse.quote(github.defaultBranch(repo), safe='')
 			absent = [
 				workflow
 				for workflow in files.REQUIRED_WORKFLOWS

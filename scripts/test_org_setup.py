@@ -28,6 +28,26 @@ from orgsetup import files, github, labels, rulesets, settings, teams
 
 
 class OrgSetupTest(unittest.TestCase):
+	def testDefaultBranchSpecialCharactersAreEncoded(self):
+		# Git nhận #, &, %, / trong tên nhánh; URL phải giữ nguyên ref thay vì hiểu thành fragment/query.
+		with (
+			mock.patch.object(github, 'defaultBranch', return_value='release/a&b#c%d'),
+			mock.patch.object(github, 'ghExists', return_value=False) as exists,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			rulesets.syncRulesets(['app'], apply=False)
+			for call in exists.call_args_list:
+				self.assertTrue(call.args[0].endswith('?ref=release%2Fa%26b%23c%25d'))
+		with (
+			mock.patch.object(github, 'defaultBranch', return_value='release/a&b#c%d'),
+			mock.patch.object(github, 'ghJson', side_effect=RuntimeError('HTTP 409')) as read,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			files.syncFiles(['app'], apply=False)
+			read.assert_called_once_with(
+				'api', 'repos/TOANQUYNHLLC/app/git/ref/heads/release%2Fa%26b%23c%25d'
+			)
+
 	def testGraphqlDeployKeysKeepNullableIds(self):
 		node = {
 			'name': 'x',
