@@ -114,6 +114,31 @@ class ExternalLinksTest(unittest.TestCase):
 			server.shutdown()
 			server.server_close()
 
+	def testBlockedPagesWarnWithoutFailing(self):
+		# Trang chặn truy cập tự động (401, 403, 429, 999) chỉ cảnh báo kiểm tra thủ công; trang mất (404) vẫn lỗi.
+		module = loadScript('check-external-links')
+		documents = {
+			module.ROOT / 'README.md': '[a](https://blocked.test/)\n[b](https://gone.test/)\n'
+		}
+		statuses = {'https://blocked.test/': 403, 'https://gone.test/': 404}
+		for urls, expected in ((['https://blocked.test/'], 0), (list(statuses), 1)):
+			with self.subTest(urls=urls):
+				selected = {
+					path: '\n'.join(
+						line for line in text.split('\n') if any(u in line for u in urls)
+					)
+					for path, text in documents.items()
+				}
+				with (
+					mock.patch.object(module, 'readDocuments', return_value=(selected, [])),
+					mock.patch.object(module, 'linkStatus', side_effect=statuses.get),
+					contextlib.redirect_stdout(io.StringIO()) as output,
+				):
+					self.assertEqual(module.main(), expected)
+				self.assertIn(
+					'⚠️  403 https://blocked.test/ — trang chặn truy cập tự động', output.getvalue()
+				)
+
 	def testEscapedBackticksDoNotHideExternalLinks(self):
 		module = loadScript('check-external-links')
 		documents = {

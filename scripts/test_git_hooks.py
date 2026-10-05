@@ -96,6 +96,74 @@ class GitHooksTest(unittest.TestCase):
 			environ.pop('MISE_NODE_VERSION', None)
 			self.assertEqual(self.module.toolEnvironment()['MISE_NODE_VERSION'], node)
 
+	def prePush(self, lines, makeCode=0):
+		"""Chạy hook pre-push với các dòng git đưa vào stdin; make check thay bằng lệnh giả trả makeCode, git thật.
+		Trả (mã thoát, đã gọi make check chưa)."""
+		originalRun, made = subprocess.run, []
+
+		def run(command, *args, **kwargs):
+			if command[:2] == ['make', 'check']:
+				made.append(command)
+				return subprocess.CompletedProcess(command, makeCode)
+			return originalRun(command, *args, **kwargs)
+
+		with (
+			mock.patch.object(self.module.subprocess, 'run', run),
+			mock.patch.object(
+				self.module.sys, 'stdin', io.StringIO(''.join(f'{line}\n' for line in lines))
+			),
+			silenced(),
+		):
+			code = self.module.prePush(self.repo, [])
+		return code, bool(made)
+
+	def testPrePushRunsMakeCheckOnPushedHead(self):
+		# Đẩy đúng HEAD, thư mục làm việc sạch: chạy make check, lỗi thì chặn.
+		head = self.git('rev-parse', 'HEAD')
+		line = f'refs/heads/main {head} refs/heads/main {self.module.ZERO_SHA}'
+		self.assertEqual(self.prePush([line]), (0, True))
+		self.assertEqual(self.prePush([line], makeCode=2), (1, True))
+
+	def testPrePushBlocksWhatMakeCheckCannotSee(self):
+		# make check kiểm tra thư mục làm việc: còn thay đổi chưa commit, hoặc đẩy branch khác HEAD thì chặn mà
+		# không chạy make check; chỉ đẩy tag hoặc xóa branch thì bỏ qua.
+		head = self.git('rev-parse', 'HEAD')
+		zero = self.module.ZERO_SHA
+		self.assertEqual(
+			self.prePush([f'refs/heads/other {"a" * 40} refs/heads/other {zero}']), (1, False)
+		)
+		self.assertEqual(self.prePush([f'refs/tags/v1 {head} refs/tags/v1 {zero}']), (0, False))
+		(self.repo / 'draft.txt').write_text('chưa commit\n', encoding='utf-8')
+		self.assertEqual(
+			self.prePush([f'refs/heads/main {head} refs/heads/main {zero}']), (1, False)
+		)
+
+	def testPreCommitRunsToolsWithPinnedVersions(self):
+		# Prettier, ruff chạy trong thư mục tạm phải nhận môi trường ghim phiên bản — không dựa vào mặc định toàn
+		# máy của mise (máy chạy test có thể đã đặt, che mất lỗi).
+		(self.repo / 'tool.py').write_text("print('ok')\n", encoding='utf-8')
+		self.git('add', 'tool.py')
+		originalRun, environments = subprocess.run, []
+
+		def run(command, *args, **kwargs):
+			if command[0] in (str(self.module.PRETTIER), 'ruff'):
+				environments.append(kwargs.get('env') or {})
+				return subprocess.CompletedProcess(command, 0)
+			return originalRun(command, *args, **kwargs)
+
+		with (
+			# Tệp có thật thay cho Prettier: máy chưa chạy make tools vẫn kiểm tra được môi trường truyền vào.
+			mock.patch.object(self.module, 'PRETTIER', Path(__file__)),
+			mock.patch.object(self.module.shutil, 'which', return_value='/usr/bin/ruff'),
+			mock.patch.object(self.module.subprocess, 'run', run),
+			silenced(),
+		):
+			self.assertEqual(self.module.preCommit(self.repo, []), 0)
+		self.assertEqual(len(environments), 3)
+		for environment in environments:
+			self.assertIn('MISE_RUFF_VERSION', environment)
+			self.assertIn('MISE_NODE_VERSION', environment)
+
 	def testPushedBranchesSkipsTagsAndDeletions(self):
 		zero = self.module.ZERO_SHA
 		lines = [

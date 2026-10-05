@@ -213,6 +213,26 @@ class ReleaseTest(unittest.TestCase):
 			self.assertIn('Đã có tag', output.getvalue())
 			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
 
+	def testNoCommitSinceLastTagSkipsPreparation(self):
+		# Workflow hằng tháng chạy cả khi không có gì mới: không có commit kể từ tag trước thì bỏ qua (mã 0), không
+		# sửa CHANGELOG.md, không ghi kết quả để bước mở Pull Request không chạy.
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			subprocess.run(
+				['git', '-c', 'tag.gpgsign=false', 'tag', 'Beta.v2099.01.150001'],
+				cwd=clone,
+				check=True,
+			)
+			outputs = Path(folder) / 'outputs'
+			with (
+				mock.patch.dict(self.module.os.environ, {'GITHUB_OUTPUT': str(outputs)}),
+				contextlib.redirect_stdout(io.StringIO()) as output,
+			):
+				self.assertEqual(self.module.prepareRelease(None, '2099-02-01'), 0)
+			self.assertIn('Không có thay đổi kể từ Beta.v2099.01.150001', output.getvalue())
+			self.assertEqual((clone / 'CHANGELOG.md').read_text(encoding='utf-8'), RELEASE_FIXTURE)
+			self.assertFalse(outputs.exists())
+
 	def testValidLeapDatePreparesRealRepositoryRelease(self):
 		with tempfile.TemporaryDirectory() as folder:
 			clone = self.releaseClone(folder)

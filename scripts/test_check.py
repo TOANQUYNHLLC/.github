@@ -56,6 +56,33 @@ class CheckTest(unittest.TestCase):
 		):
 			self.assertIsNone(module.quickTests(paths))
 
+	def testChangedFilesCombinesCommittedStagedAndNewFiles(self):
+		# make quick xét commit so với origin/main, thay đổi chưa commit và tệp mới; một lệnh git lỗi (chưa có
+		# origin/main…) thì không đoán phạm vi — trả None để chạy đầy đủ.
+		module = loadScript('check')
+		outputs = {
+			'origin/main...HEAD': 'scripts/test_check.py\0',
+			'HEAD': 'scripts/test_check.py\0README.md\0',
+			'--others': 'scripts/test_new.py\0',
+		}
+
+		def run(command, *args, **kwargs):
+			key = next(key for key in outputs if key in command)
+			return subprocess.CompletedProcess(command, 0, outputs[key], '')
+
+		with mock.patch.object(module.subprocess, 'run', run):
+			self.assertEqual(
+				module.changedFiles(),
+				{'scripts/test_check.py', 'README.md', 'scripts/test_new.py'},
+			)
+
+		def failing(command, *args, **kwargs):
+			code = 128 if 'origin/main...HEAD' in command else 0
+			return subprocess.CompletedProcess(command, code, '', 'fatal: bad revision')
+
+		with mock.patch.object(module.subprocess, 'run', failing):
+			self.assertIsNone(module.changedFiles())
+
 	def testQuickSelectionDoesNotMutateFullCommands(self):
 		module = loadScript('check')
 		commands = [list(command) for command in module.checkGroups()['content']]
