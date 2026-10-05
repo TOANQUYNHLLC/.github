@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import tomllib
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -22,6 +23,19 @@ except ModuleNotFoundError:
 
 
 class CheckTest(unittest.TestCase):
+	def testMinimumPythonDeclaredConsistently(self):
+		# requires-python của pyproject.toml (ruff đọc khi chạy ngoài check.py) phải trùng --target-version mà
+		# check.py, git hook truyền cho ruff và phiên bản check.py chặn — lệch thì VS Code và make check báo khác nhau.
+		project = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))['project']
+		major, minor = re.fullmatch(r'>=(\d+)\.(\d+)', project['requires-python']).groups()
+		target = f'py{major}{minor}'
+		lint = loadScript('check').checkGroups()['format']
+		self.assertIn(['ruff', 'check', '--target-version', target, '.'], lint)
+		hooks = (ROOT / 'scripts' / 'git-hooks.py').read_text(encoding='utf-8')
+		self.assertIn(f"'--target-version', '{target}'", hooks)
+		check = (ROOT / 'scripts' / 'check.py').read_text(encoding='utf-8')
+		self.assertIn(f'sys.version_info < ({major}, {minor})', check)
+
 	def testLabelerSupportsForksWithoutRunningPrCode(self):
 		validator = loadScript('validate')
 		for name in ('.github/workflows/labeler.yml', 'workflow-templates/labeler.yml'):

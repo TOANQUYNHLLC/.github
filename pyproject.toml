@@ -1,0 +1,8 @@
+# Phiên bản Python tối thiểu của các script trong scripts/ (tomllib, datetime.UTC — ADR 0008). ruff đọc
+# requires-python để chọn phiên bản cú pháp khi chạy ngoài scripts/check.py (extension Ruff của VS Code, ruff check
+# gõ tay); cấu hình ruff vẫn ở ruff.toml — tệp dùng chung cho mọi repository nên không ghi phiên bản riêng.
+# Repository không đóng gói Python: không có dependencies, không cài bằng pip.
+[project]
+name = "toanquynh-github"
+version = "0"
+requires-python = ">=3.11"

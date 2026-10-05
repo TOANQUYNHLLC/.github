@@ -26,7 +26,8 @@ Lệnh (nên chạy theo thứ tự):
 		quyền của từng team trên mọi repository (không hạ quyền đã cao hơn); đã đủ thì báo đã đúng.
 		Lời mời đang chờ, dữ liệu sai hoặc quyền tùy chỉnh chưa xếp hạng được dừng trước khi ghi;
 		lời mời mới được báo chờ chấp nhận cho đến khi GitHub xác nhận maintainer active.
-	labels: tạo hoặc cập nhật màu, mô tả theo labels.yml (chỉ nhãn khác); không xóa nhãn riêng của repository.
+	labels: tạo hoặc cập nhật màu, mô tả theo labels.yml (chỉ nhãn khác), đổi tên nhãn chỉ khác chữ hoa/thường;
+		không xóa nhãn riêng của repository.
 	org-settings: cài đặt tổ chức (ORG_SETTINGS) và quyền GitHub Actions cấp tổ chức; mục chỉ đổi được
 		trên web (ORG_WEB_ONLY_SETTINGS) thì chỉ so và báo.
 	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Protect Main (Organization), Protect Release

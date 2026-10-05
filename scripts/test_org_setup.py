@@ -835,14 +835,18 @@ class OrgSetupTest(unittest.TestCase):
 				write.assert_not_called()
 				self.assertNotIn('✔', output.getvalue())
 
-	def testLabelComparisonPreservesCaseAndNullableDescription(self):
+	def testLabelComparisonIgnoresColorCaseAndNullableDescription(self):
+		# Màu hex khác chữ hoa/thường, mô tả null của API so với mô tả trống: không ghi. Tên chỉ khác chữ hoa/thường
+		# vẫn đổi theo labels.yml; nhãn riêng của repository giữ nguyên.
 		wanted = [
 			{'name': 'Bug', 'color': 'FFaa00'},
 			{'name': 'Security', 'color': 'ABCDEF', 'description': 'Mô tả'},
+			{'name': 'docs', 'color': 'ABCDEF'},
 		]
 		current = [
 			{'name': 'bug', 'color': 'ffaa00', 'description': None},
 			{'name': 'SECURITY', 'color': 'abcdef', 'description': 'Mô tả'},
+			{'name': 'docs', 'color': 'abcdef', 'description': None},
 			{'name': 'custom', 'color': 'ffffff', 'description': None},
 		]
 		with (
@@ -852,7 +856,10 @@ class OrgSetupTest(unittest.TestCase):
 			contextlib.redirect_stdout(io.StringIO()),
 		):
 			labels.syncLabels(['app'], apply=True)
-		write.assert_not_called()
+		self.assertEqual(
+			[call.args[3] for call in write.call_args_list],
+			['repos/TOANQUYNHLLC/app/labels/bug', 'repos/TOANQUYNHLLC/app/labels/SECURITY'],
+		)
 
 	def testInvalidLabelsStopBeforeGithubRead(self):
 		with tempfile.TemporaryDirectory() as folder:
@@ -1627,7 +1634,38 @@ class OrgSetupTest(unittest.TestCase):
 		with contextlib.redirect_stdout(io.StringIO()):
 			labels.syncLabels(['app'], apply=True)
 		# Một nhãn thiếu (tạo) và một nhãn sai màu (cập nhật); nhãn đúng không ghi lại.
-		self.assertEqual([args[2] for args in calls], [wanted[0]['name'], wanted[1]['name']])
+		self.assertEqual(len(calls), 2)
+		self.assertEqual(calls[0][:3], ('label', 'create', wanted[0]['name']))
+		self.assertEqual(calls[1][:3], ('api', '-X', 'PATCH'))
+		self.assertIn(f'color={wanted[1]["color"]}', calls[1])
+
+	def testLabelCaseDifferenceIsRenamed(self):
+		# GitHub coi "stable" và "Stable" là một nhãn: chỉ khác chữ hoa/thường vẫn phải đổi tên theo labels.yml;
+		# tên có "/", ":" được mã hóa trong đường dẫn API.
+		calls = []
+		wanted = labels.loadLabels()
+		live = [dict(label) for label in wanted]
+		renamed = {'Stable': 'stable', 'ui/ux': 'UI/UX'}
+		for label in live:
+			label['name'] = renamed.get(label['name'], label['name'])
+		github.ghJson = lambda *args: [live]
+		github.gh = lambda *args, **kwargs: calls.append(args)
+		output = io.StringIO()
+		with contextlib.redirect_stdout(output):
+			labels.syncLabels(['app'], apply=False)
+		self.assertIn('(xem trước) đổi tên "stable" → nhãn "Stable"', output.getvalue())
+		self.assertEqual(calls, [])
+		with contextlib.redirect_stdout(io.StringIO()):
+			labels.syncLabels(['app'], apply=True)
+		self.assertEqual(
+			sorted(args[3] for args in calls),
+			['repos/TOANQUYNHLLC/app/labels/UI%2FUX', 'repos/TOANQUYNHLLC/app/labels/stable'],
+		)
+		self.assertTrue(all(args[:3] == ('api', '-X', 'PATCH') for args in calls))
+		self.assertEqual(
+			{arg for args in calls for arg in args if arg.startswith('new_name=')},
+			{'new_name=Stable', 'new_name=ui/ux'},
+		)
 
 	def testLabelsRemindOrganizationDefaultsOnce(self):
 		# Lệnh chỉ đồng bộ repository đã có; nhắc một lần rằng nhãn mặc định cấp tổ chức (không có API) phải làm trên

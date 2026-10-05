@@ -7,6 +7,7 @@ import contextlib
 import io
 import json
 import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -455,6 +456,13 @@ class ReleaseTest(unittest.TestCase):
 						self.assertEqual(module.main(), 1)
 					self.assertIn('❌', output.getvalue())
 
+	@classmethod
+	def setUpClass(cls):
+		# Repository mẫu cho releaseClone() dựng một lần mỗi tiến trình: dựng bằng git mất khoảng 0,2 giây, chép lại
+		# chỉ vài chục mili giây.
+		cls.templates = tempfile.TemporaryDirectory()
+		cls.addClassCleanup(cls.templates.cleanup)
+
 	def setUp(self):
 		self.module = loadScript('release')
 
@@ -654,7 +662,24 @@ class ReleaseTest(unittest.TestCase):
 		self.assertIn('Chưa có tag phát hành nào', output.getvalue())
 
 	def releaseClone(self, folder):
-		"""Repository có origin, tag v2099.01.Stable và một commit sau tag, đang ở main trùng origin/main."""
+		"""Repository có origin, tag v2099.01.Stable và một commit sau tag, đang ở main trùng origin/main — chép từ
+		repository mẫu của lớp; origin trỏ tới bản chép, mỗi test sửa thoải mái."""
+		template = Path(type(self).templates.name)
+		if not (template / 'clone').exists():
+			self.buildReleaseClone(template)
+		shutil.copytree(template, folder, symlinks=True, dirs_exist_ok=True)
+		clone = Path(folder) / 'clone'
+		# git clone ghi đường dẫn origin nguyên văn vào .git/config: đổi sang origin của bản chép.
+		config = clone / '.git' / 'config'
+		config.write_text(
+			config.read_text(encoding='utf-8').replace(str(template), str(Path(folder))),
+			encoding='utf-8',
+		)
+		self.module.ROOT = clone
+		return clone
+
+	@staticmethod
+	def buildReleaseClone(folder):
 		origin, clone = Path(folder) / 'origin.git', Path(folder) / 'clone'
 		subprocess.run(['git', 'init', '-q', '--bare', str(origin)], check=True)
 		subprocess.run(
@@ -672,8 +697,36 @@ class ReleaseTest(unittest.TestCase):
 			['push', '-q', 'origin', 'main'],
 		):
 			subprocess.run([*git, *command], cwd=clone, check=True)
-		self.module.ROOT = clone
-		return clone
+
+	def testPrepareFetchesTagsBeforeChoosingSequence(self):
+		# Tag mới chỉ có trên origin (người khác vừa phát hành) vẫn được tính: make release-prepare không chọn trùng
+		# số thứ tự đã dùng. Không tải được origin thì cảnh báo và chọn theo tag tại máy.
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			origin = Path(folder) / 'origin.git'
+			subprocess.run(
+				['git', '-c', 'tag.gpgsign=false', 'tag', 'Beta.v2099.02.010005', 'main~1'],
+				cwd=origin,
+				check=True,
+			)
+			with contextlib.redirect_stdout(io.StringIO()):
+				self.assertEqual(self.module.prepareRelease(None, '2099-02-01'), 0)
+			changelog = (clone / 'CHANGELOG.md').read_text(encoding='utf-8')
+			self.assertIn('## [Stable.v2099.02.010006]', changelog)
+
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			subprocess.run(
+				['git', 'remote', 'set-url', 'origin', str(Path(folder) / 'khong-co.git')],
+				cwd=clone,
+				check=True,
+			)
+			output = io.StringIO()
+			with contextlib.redirect_stdout(output):
+				self.assertEqual(self.module.prepareRelease(None, '2099-02-01'), 0)
+			self.assertIn('Không tải được tag từ origin', output.getvalue())
+			changelog = (clone / 'CHANGELOG.md').read_text(encoding='utf-8')
+			self.assertIn('## [Stable.v2099.02.010001]', changelog)
 
 	def testOpenPrRequiresCleanMain(self):
 		# make release-pr lấy HEAD làm gốc branch phát hành: đứng ở branch khác main thì dừng trước khi sửa

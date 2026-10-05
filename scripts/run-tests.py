@@ -32,21 +32,25 @@ def testIds(suite):
 
 
 def discoverTests(names):
-	"""Mã test của các tệp test được chọn (mặc định mọi tệp test_*.py); lỗi nạp tệp thì trả None."""
+	"""(mã test, tên không có test nào) của các tệp test được chọn (mặc định mọi tệp test_*.py). Có tên sai thì
+	trả ngay danh sách tên đó, không chạy phần còn lại; lỗi nạp tệp thì mã test là None."""
 	loader = unittest.TestLoader()
-	patterns = [f'{name}.py' for name in dict.fromkeys(names)] if names else ['test_*.py']
-	ids = []
-	for pattern in patterns:
+	selected = list(dict.fromkeys(names)) if names else [None]
+	ids, missing = [], []
+	for name in selected:
+		pattern = f'{name}.py' if name else 'test_*.py'
 		suite = loader.discover(str(SCRIPTS), pattern=pattern, top_level_dir=str(SCRIPTS))
 		found = list(testIds(suite))
-		if names and not found:
-			return []
+		if name and not found:
+			missing.append(name)
 		ids.extend(found)
+	if missing:
+		return [], missing
 	if loader.errors or any(test.startswith('unittest.loader.') for test in ids):
-		return None
+		return None, []
 	if names:
 		ids = [test for test in ids if test.split('.')[0] in names]
-	return ids
+	return ids, sorted(set(names) - {test.split('.')[0] for test in ids})
 
 
 def runShard(ids):
@@ -65,18 +69,18 @@ def runShard(ids):
 
 def main():
 	names = [name.removesuffix('.py') for name in sys.argv[1:]]
-	ids = discoverTests(names)
+	ids, missing = discoverTests(names)
+	# Chỉ nêu tên sai, không nêu tên đúng đi kèm.
+	if missing:
+		print(f'Không có test nào khớp: {", ".join(missing)}')
+		return 1
 	if ids is None:
 		# Báo lỗi nạp đúng phạm vi đã chọn; chạy mọi tệp chỉ khi không truyền tên.
 		command = [sys.executable, '-m', 'unittest']
 		command += names if names else ['discover', '-s', str(SCRIPTS), '-p', 'test_*.py']
 		return subprocess.run(command, cwd=SCRIPTS, check=False).returncode
 	if not ids:
-		print(f'Không có test nào khớp: {", ".join(names)}')
-		return 1
-	unknown = sorted(set(names) - {test.split('.')[0] for test in ids})
-	if unknown:
-		print(f'Không có test nào khớp: {", ".join(unknown)}')
+		print('Không có tệp test_*.py nào.')
 		return 1
 	workers = max(1, min(MAX_WORKERS, os.cpu_count() or 1, len(ids)))
 	shards = [ids[index::workers] for index in range(workers)]
