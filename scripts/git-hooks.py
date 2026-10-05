@@ -147,7 +147,7 @@ def afterPull(root):
 		)
 	reports += [
 		('links', 'liên kết bên ngoài còn hoạt động'),
-		('versions', 'công cụ trong mise.toml có bản mới'),
+		('versions', 'công cụ trong mise.toml, action của workflow mẫu có bản mới'),
 	]
 
 	def report(target):

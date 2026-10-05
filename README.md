@@ -103,7 +103,7 @@ Workflow gắn nhãn dùng `pull_request_target` theo [hướng dẫn của acti
 | [`scripts/check-gofmt.py`](scripts/check-gofmt.py)                                        | Định dạng Go cho workflow mẫu `go-ci.yml`                                                                                                                                                                                                                                                                                                     |
 | [`scripts/check-external-links.py`](scripts/check-external-links.py)                      | Liên kết bên ngoài còn hoạt động; bản `security.txt` trên website khớp repository                                                                                                                                                                                                                                                             |
 | [`scripts/check-github-forms.py`](scripts/check-github-forms.py)                          | GitHub chấp nhận biểu mẫu Issue, Discussion (lỗi khóa chỉ hiện trên trang xem tệp)                                                                                                                                                                                                                                                            |
-| [`scripts/check-tool-versions.py`](scripts/check-tool-versions.py)                        | Công cụ trong `mise.toml` có bản phát hành mới hơn                                                                                                                                                                                                                                                                                            |
+| [`scripts/check-tool-versions.py`](scripts/check-tool-versions.py)                        | Công cụ trong `mise.toml` và action chỉ có trong `workflow-templates/` (Dependabot không theo dõi) có bản phát hành mới hơn                                                                                                                                                                                                                   |
 | [`scripts/test_*.py`](scripts/) · [`scripts/testsupport.py`](scripts/testsupport.py)      | Test tự động, mỗi script một tệp; mỗi luật của `validate.py` có test cố ý làm hỏng một điểm để chứng minh luật còn hoạt động                                                                                                                                                                                                                  |
 
 **Cấu hình và công cụ phát triển**
@@ -170,30 +170,30 @@ python3 scripts/run-tests.py test_check test_check_markdown_links.py
 
 Không truyền tên thì chạy toàn bộ test. Tên sai, tệp không có test, lỗi import hoặc cú pháp đều làm lệnh thất bại. Bộ kiểm tra liên kết Markdown hỗ trợ anchor của GitHub, tiêu đề trùng, khối mã và mã nội tuyến; tệp đích được đọc một lần trong lượt kiểm tra, lượt sau đọc lại.
 
-`make links` kiểm tra liên kết HTTP(S) và nội dung `security.txt` trên website. Các URL chỉ khác fragment dùng chung một lần kiểm tra HTTP trong lượt chạy; đường dẫn và query khác vẫn được kiểm tra riêng. Máy chủ `img.shields.io` được bỏ qua; URL sai được báo lỗi. Phép kiểm tra HTTP không xác minh anchor bên trong trang ngoài. Kết quả được đọc mới ở lượt sau. `make forms` xác minh biểu mẫu trên GitHub; `make versions` đối chiếu công cụ với phiên bản phát hành mới nhất. Kiểm tra phiên bản ưu tiên `GH_TOKEN`, rồi `GITHUB_TOKEN`, sau đó token GitHub CLI; thông tin đăng nhập được đọc mới mỗi lượt. `make audit` cần kết nối registry npm; khi mất mạng, chạy lại để xác minh dependency. Lỗi cài thư viện npm làm kiểm tra dừng.
+`make links` kiểm tra liên kết HTTP(S) và nội dung `security.txt` trên website. Các URL chỉ khác fragment dùng chung một lần kiểm tra HTTP trong lượt chạy; đường dẫn và query khác vẫn được kiểm tra riêng. Máy chủ `img.shields.io` được bỏ qua; URL sai được báo lỗi. Phép kiểm tra HTTP không xác minh anchor bên trong trang ngoài. Kết quả được đọc mới ở lượt sau. `make forms` xác minh biểu mẫu trên GitHub; `make versions` đối chiếu công cụ và action của workflow mẫu với phiên bản phát hành mới nhất. Kiểm tra phiên bản ưu tiên `GH_TOKEN`, rồi `GITHUB_TOKEN`, sau đó token GitHub CLI; thông tin đăng nhập được đọc mới mỗi lượt. `make audit` cần kết nối registry npm; khi mất mạng, chạy lại để xác minh dependency. Lỗi cài thư viện npm làm kiểm tra dừng.
 
-| Lệnh                       | Tác dụng                                                                                     |
-| -------------------------- | -------------------------------------------------------------------------------------------- |
-| `make`                     | Xem danh sách lệnh                                                                           |
-| `make check`               | Mọi nhóm kiểm tra, chạy song song                                                            |
-| `make validate`            | Kiểm tra nội dung bằng `scripts/validate.py`                                                 |
-| `make test`                | Test tự động của các script, song song trên mọi lõi CPU                                      |
-| `make format`              | Định dạng lại toàn bộ bằng Prettier và ruff                                                  |
-| `make format-check`        | Prettier, ruff format, ruff check — job "Định dạng (Prettier, ruff)"                         |
-| `make lint`                | shellcheck, actionlint — job "Shell script và workflow"                                      |
-| `make conventions`         | Tên branch và tiêu đề commit theo quy ước                                                    |
-| `make audit`               | Dependency có lỗ hổng mức high trở lên                                                       |
-| `make tools`               | Kiểm tra đã cài đủ công cụ; cài thư viện Node.js nếu thiếu hoặc sai phiên bản                |
-| `make hooks`               | Cài git hook, mẫu commit `.gitmessage`, cấu hình `git blame` bỏ qua commit chỉ đổi định dạng |
-| `make links`               | Liên kết bên ngoài còn hoạt động; bản `security.txt` trên website khớp repository            |
-| `make versions`            | Công cụ trong `mise.toml` có bản phát hành mới hơn                                           |
-| `make forms REF=…`         | GitHub chấp nhận biểu mẫu Issue, Discussion trên một branch đã đẩy (mặc định `main`)         |
-| `make org-preview`         | Xem trước việc áp dụng cấu hình chung lên mọi repository và cài đặt tổ chức (cần GitHub CLI) |
-| `make labels-preview`      | Xem trước việc đồng bộ nhãn lên các repository                                               |
-| `make labels-apply`        | Đồng bộ nhãn lên repository đã có (cần GitHub CLI); nhãn mặc định cấp tổ chức nhập trên web  |
-| `make release-notes TAG=…` | Xem trước nội dung GitHub Release của một tag                                                |
-| `make release-prepare`     | Chuyển mục CHƯA PHÁT HÀNH thành phiên bản của tháng nếu có thay đổi kể từ tag trước          |
-| `make release-pr`          | Chuẩn bị rồi mở Pull Request phát hành tại máy (cần GitHub CLI, đứng ở `main` sạch)          |
+| Lệnh                       | Tác dụng                                                                                      |
+| -------------------------- | --------------------------------------------------------------------------------------------- |
+| `make`                     | Xem danh sách lệnh                                                                            |
+| `make check`               | Mọi nhóm kiểm tra, chạy song song                                                             |
+| `make validate`            | Kiểm tra nội dung bằng `scripts/validate.py`                                                  |
+| `make test`                | Test tự động của các script, song song trên mọi lõi CPU                                       |
+| `make format`              | Định dạng lại toàn bộ bằng Prettier và ruff                                                   |
+| `make format-check`        | Prettier, ruff format, ruff check — job "Định dạng (Prettier, ruff)"                          |
+| `make lint`                | shellcheck, actionlint — job "Shell script và workflow"                                       |
+| `make conventions`         | Tên branch và tiêu đề commit theo quy ước                                                     |
+| `make audit`               | Dependency có lỗ hổng mức high trở lên                                                        |
+| `make tools`               | Kiểm tra đã cài đủ công cụ; cài thư viện Node.js nếu thiếu hoặc sai phiên bản                 |
+| `make hooks`               | Cài git hook, mẫu commit `.gitmessage`, cấu hình `git blame` bỏ qua commit chỉ đổi định dạng  |
+| `make links`               | Liên kết bên ngoài còn hoạt động; bản `security.txt` trên website khớp repository             |
+| `make versions`            | Công cụ trong `mise.toml`, action chỉ có trong `workflow-templates/` có bản phát hành mới hơn |
+| `make forms REF=…`         | GitHub chấp nhận biểu mẫu Issue, Discussion trên một branch đã đẩy (mặc định `main`)          |
+| `make org-preview`         | Xem trước việc áp dụng cấu hình chung lên mọi repository và cài đặt tổ chức (cần GitHub CLI)  |
+| `make labels-preview`      | Xem trước việc đồng bộ nhãn lên các repository                                                |
+| `make labels-apply`        | Đồng bộ nhãn lên repository đã có (cần GitHub CLI); nhãn mặc định cấp tổ chức nhập trên web   |
+| `make release-notes TAG=…` | Xem trước nội dung GitHub Release của một tag                                                 |
+| `make release-prepare`     | Chuyển mục CHƯA PHÁT HÀNH thành phiên bản của tháng nếu có thay đổi kể từ tag trước           |
+| `make release-pr`          | Chuẩn bị rồi mở Pull Request phát hành tại máy (cần GitHub CLI, đứng ở `main` sạch)           |
 
 ---
 

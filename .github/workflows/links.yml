@@ -32,7 +32,7 @@ jobs:
               if: ${{ !cancelled() }}
               run: python3 scripts/check-github-forms.py
 
-            - name: Kiểm tra công cụ trong mise.toml có bản mới
+            - name: Kiểm tra công cụ trong mise.toml, action của workflow mẫu có bản mới
               if: ${{ !cancelled() }}
               env:
                   GH_TOKEN: ${{ github.token }}

@@ -46,7 +46,7 @@ hooks: ## Cài git hook (danh sách trong scripts/git-hooks.py), mẫu commit v�
 links: ## Kiểm tra liên kết bên ngoài (website, Facebook…) còn hoạt động
 	python3 scripts/check-external-links.py
 
-versions: ## Báo công cụ trong mise.toml có bản phát hành mới hơn (Dependabot chưa hỗ trợ mise.toml)
+versions: ## Báo công cụ trong mise.toml, action chỉ có trong workflow-templates/ có bản mới (Dependabot không theo dõi)
 	python3 scripts/check-tool-versions.py
 
 forms: ## Kiểm tra GitHub chấp nhận biểu mẫu Issue, Discussion: make forms REF=<branch> (mặc định main)
