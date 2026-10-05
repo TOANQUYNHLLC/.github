@@ -5,7 +5,7 @@
 
 .DEFAULT_GOAL := help
 
-.PHONY: help check quick validate test format format-check lint conventions audit tools links versions forms release-notes release-prepare release-pr labels-preview labels-apply hooks org-preview
+.PHONY: help check quick validate test format format-check lint conventions audit tools links versions forms release-notes release-prepare release-pr labels-preview labels-apply hooks syncmain org-preview
 
 help: ## Hiển thị danh sách lệnh
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-15s %s\n", $$1, $$2}'
@@ -45,6 +45,9 @@ hooks: ## Cài git hook (danh sách trong scripts/git-hooks.py), mẫu commit v�
 	python3 scripts/git-hooks.py install
 	git config blame.ignoreRevsFile .git-blame-ignore-revs
 	git config commit.template .gitmessage
+
+syncmain: ## Về main, git pull, xóa branch cục bộ đã hợp nhất mà branch trên GitHub đã bị xóa (shell/sync-main.sh)
+	shell/sync-main.sh
 
 links: ## Kiểm tra liên kết bên ngoài (website, Facebook…) còn hoạt động
 	python3 scripts/check-external-links.py
