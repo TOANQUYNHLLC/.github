@@ -116,7 +116,7 @@ def syncFiles(repos, apply):
 				raise ValueError(f'{repo}: không đọc được SHA của nhánh {base}')
 			sha = commit['sha']
 		except RuntimeError as exc:
-			if not github.isNotFound(exc):
+			if not (github.isNotFound(exc) or github.isEmptyRepository(exc)):
 				raise
 			print('   ⚠ repository trống — bỏ qua')
 			continue
@@ -207,7 +207,26 @@ def syncFiles(repos, apply):
 				}
 			},
 		}
-		github.gh('api', 'graphql', '--input', '-', '--silent', stdin=json.dumps(commit))
+		try:
+			github.gh('api', 'graphql', '--input', '-', '--silent', stdin=json.dumps(commit))
+		except RuntimeError as exc:
+			# Xóa branch vừa tạo: còn branch thì lần chạy sau bỏ qua repository vì "branch đã tồn tại".
+			try:
+				github.gh(
+					'api',
+					'-X',
+					'DELETE',
+					f'repos/{github.ORG}/{repo}/git/refs/heads/{SYNC_BRANCH}',
+					'--silent',
+				)
+			except RuntimeError as cleanup:
+				raise RuntimeError(
+					f'{repo}: không commit được tệp dùng chung ({exc}); chưa xóa được branch '
+					f'{SYNC_BRANCH} ({cleanup}) — xóa trên GitHub trước khi chạy lại'
+				) from exc
+			raise RuntimeError(
+				f'{repo}: không commit được tệp dùng chung ({exc}); đã xóa branch {SYNC_BRANCH}'
+			) from exc
 		body = (
 			f'Thêm các tệp dùng chung của tổ chức từ {github.ORG}/.github:\n\n'
 			+ ''.join(f'- `{path}`\n' for path in missing)

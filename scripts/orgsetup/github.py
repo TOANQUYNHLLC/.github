@@ -40,6 +40,11 @@ def isNotFound(exc):
 	return re.search(r'\bHTTP 404\b', str(exc)) is not None
 
 
+def isEmptyRepository(exc):
+	"""API Git database (ref, cây) trả HTTP 409 "Git Repository is empty" cho repository chưa có commit nào."""
+	return re.search(r'\bHTTP 409\b', str(exc)) is not None
+
+
 def ghExists(endpoint):
 	"""True nếu đọc được tài nguyên, False chỉ khi HTTP 404; các lỗi khác để người gọi xử lý."""
 	try:

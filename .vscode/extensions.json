@@ -5,6 +5,8 @@
 		"charliermarsh.ruff",
 		"timonwong.shellcheck",
 		"github.vscode-github-actions",
-		"redhat.vscode-yaml"
+		"redhat.vscode-yaml",
+		"anthropic.claude-code",
+		"openai.chatgpt"
 	]
 }

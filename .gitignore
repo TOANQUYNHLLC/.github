@@ -27,5 +27,5 @@ node_modules/
 .env.*
 !.env.example
 
-# Lockfile của Dev Container: repository này không commit; devcontainer.json dùng bản mới nhất (latest), không ghim phiên bản.
+# Lockfile của Dev Container: repository này không commit; devcontainer.json ghim image, feature theo phiên bản chính.
 devcontainer-lock.json

@@ -370,6 +370,14 @@ def openReleasePullRequest(version, previous, commits):
 		'Workflow `release.yml` tạo GitHub Release từ `CHANGELOG.md` (khi GitHub Actions tắt: '
 		f'`python3 scripts/release.py create {version}`).'
 	)
+	if os.environ.get('GITHUB_ACTIONS'):
+		# Sự kiện do GITHUB_TOKEN tạo không khởi chạy workflow khác: kiểm tra bắt buộc của Protect Main chỉ chạy
+		# khi người quản trị đóng rồi mở lại Pull Request.
+		description += (
+			'\n\nPull Request này do workflow mở bằng `GITHUB_TOKEN` nên GitHub không chạy kiểm tra: '
+			'bấm **Close pull request** rồi **Reopen pull request** để chạy các kiểm tra bắt buộc trước khi '
+			'hợp nhất.'
+		)
 	created = subprocess.run(
 		[
 			'gh',
