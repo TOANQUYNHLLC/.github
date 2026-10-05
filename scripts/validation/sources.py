@@ -110,7 +110,14 @@ def nameProblems(text):
 	except SyntaxError:
 		return None
 	# Duyệt cây một lần, ba bước dùng chung danh sách nút.
-	nodes = list(ast.walk(tree))
+	# Đọc trực tiếp các trường đã có trên nút, tránh getattr cho từng trường của cây lớn.
+	nodes = [tree]
+	for node in nodes:
+		for value in vars(node).values():
+			if isinstance(value, ast.AST):
+				nodes.append(value)
+			elif isinstance(value, list):
+				nodes.extend(item for item in value if isinstance(item, ast.AST))
 	required = libraryMethods(nodes)
 	problems = []
 	for node in nodes:
