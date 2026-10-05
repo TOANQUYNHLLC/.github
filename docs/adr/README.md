@@ -18,7 +18,7 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0012](0012-monthly-releases.md)              | Phát hành hằng tháng từ `CHANGELOG.md`                                       | Chấp nhận                     | 2026-10-03 |
 | [0013](0013-docs-match-code.md)               | Tài liệu luôn khớp với code                                                  | Bị thay thế một phần bởi 0015 | 2026-10-03 |
 | [0014](0014-release-sequence.md)              | Số thứ tự phát hành bắt đầu lại mỗi tháng                                    | Chấp nhận                     | 2026-10-04 |
-| [0015](0015-developer-shell-scripts.md)       | Script tiện ích cho người phát triển nằm trong `shell/`                      | Đề xuất                       | 2026-10-05 |
+| [0015](0015-developer-shell-scripts.md)       | Script tiện ích cho người phát triển nằm trong `shell/`                      | Chấp nhận                     | 2026-10-05 |
 
 ## ✍️ CÁCH THÊM ADR
 

@@ -129,6 +129,25 @@ class SyncMainTest(unittest.TestCase):
 		self.assertEqual(self.localBranches(), ['docs/worktree', 'main'])
 		self.assertIn('Giữ lại docs/worktree: đang mở ở worktree', result.stdout)
 
+	def testRefusesUncommittedChanges(self):
+		# git switch mang thay đổi chưa commit sang main: script dừng trước khi đổi branch, không xóa gì.
+		self.branch('feat/squashed', 'a.txt')
+		self.mergeOnRemote('feat/squashed', squash=True)
+		self.git(self.clone, 'switch', '-q', 'feat/squashed')
+		(self.clone / 'draft.txt').write_text('đang sửa\n', encoding='utf-8')
+		result = subprocess.run(
+			['bash', str(SCRIPT)],
+			cwd=self.clone,
+			env=self.environment,
+			capture_output=True,
+			text=True,
+			check=False,
+		)
+		self.assertEqual(result.returncode, 1, result.stderr)
+		self.assertIn('Còn thay đổi chưa commit', result.stderr)
+		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'feat/squashed')
+		self.assertEqual(self.localBranches(), ['feat/squashed', 'main'])
+
 	def testKeepsBranchWithoutRemoteOrStillOnRemote(self):
 		# Chỉ xét branch mà remote đã xóa: branch chưa đẩy và branch còn trên remote giữ nguyên.
 		self.branch('feat/open', 'a.txt')

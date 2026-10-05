@@ -16,6 +16,11 @@ merged() {
 	[[ $(git cherry main "$squashed") == -* ]]
 }
 
+# git switch mang thay đổi chưa commit sang main — commit sau đó rơi nhầm lên main thay vì branch đang làm.
+if [[ -n $(git status --porcelain) ]]; then
+	echo "Còn thay đổi chưa commit — commit hoặc git stash -u rồi chạy lại." >&2
+	exit 1
+fi
 git switch main
 git pull
 git fetch --prune --quiet

@@ -1,6 +1,6 @@
 # 0015. SCRIPT TIỆN ÍCH CHO NGƯỜI PHÁT TRIỂN NẰM TRONG SHELL/
 
-- **Trạng thái:** Đề xuất
+- **Trạng thái:** Chấp nhận
 - **Ngày:** 2026-10-05
 - **Điều chỉnh:** 0013 — phạm vi thư mục mà `checkDocsMatchCode()` đối chiếu
 
