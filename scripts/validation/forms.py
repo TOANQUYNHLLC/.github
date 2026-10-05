@@ -45,8 +45,9 @@ def checkForm(path, required=('name', 'description', 'body')):
 			error(path, f'phần tử {index}: thiếu label')
 		elif label != label.upper():
 			error(path, f'phần tử {index}: tiêu đề trường "{attributes["label"]}" phải viết hoa')
+		# id không bắt buộc: chỉ so trùng giữa các trường có id.
 		itemId = configField(path, item, 'id', str)
-		if itemId in ids:
+		if itemId and itemId in ids:
 			error(path, f'phần tử {index}: id "{itemId}" bị trùng')
 		ids.add(itemId)
 		if kind in ('dropdown', 'checkboxes') and not attributes.get('options'):

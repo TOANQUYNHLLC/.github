@@ -33,7 +33,8 @@ EMAIL = re.compile(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-
 ADR_SECTIONS = ('BỐI CẢNH', 'QUYẾT ĐỊNH', 'PHƯƠNG ÁN ĐÃ CÂN NHẮC', 'HỆ QUẢ')
 # Đường dẫn trong tài liệu bắt đầu bằng các thư mục này phải có thật trong repository.
 DOC_PATH = re.compile(
-	r'`((?:scripts|docs|rulesets|workflow-templates|repository-templates|\.github/workflows)/[^`\s*<>…]*)`'
+	r'`((?:scripts|shell|docs|rulesets|workflow-templates|repository-templates|\.devcontainer|\.github/workflows)/'
+	r'[^`\s*<>…]*)`'
 )
 # security.txt: báo trước khi Expires hết hạn để kịp gia hạn và đăng lại lên website.
 EXPIRY_NOTICE_DAYS = 30
@@ -109,7 +110,8 @@ def checkDocsMatchCode():
 	for target in sorted(targets - {'help'}):
 		if f'`make {target}' not in readme:
 			error(readmePath, f'bảng lệnh thiếu "make {target}" (có trong Makefile)')
-	for path in scripts:
+	# Script shell trong shell/ (make syncmain…) cũng phải có trong mục cấu trúc.
+	for path in [*scripts, *(file for file in trackedFiles() if file.parent == ROOT / 'shell')]:
 		relative = path.relative_to(ROOT).as_posix()
 		folder = path.parent.relative_to(ROOT).as_posix() + '/'
 		if f'`{relative}`' not in readme and (folder == 'scripts/' or f'`{folder}`' not in readme):

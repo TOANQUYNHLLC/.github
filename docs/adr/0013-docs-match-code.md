@@ -1,6 +1,6 @@
 # 0013. TÀI LIỆU LUÔN KHỚP VỚI CODE
 
-- **Trạng thái:** Chấp nhận
+- **Trạng thái:** Bị thay thế một phần bởi 0015 (phạm vi thư mục mà `checkDocsMatchCode()` đối chiếu)
 - **Ngày:** 2026-10-03
 
 ## 📌 BỐI CẢNH

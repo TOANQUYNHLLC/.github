@@ -1,0 +1,141 @@
+"""Test tự động cho shell/sync-main.sh (về main, git pull, xóa branch đã hợp nhất mà remote đã xóa).
+
+Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
+"""
+
+import os
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+
+# discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
+try:
+	from testsupport import ROOT
+except ModuleNotFoundError:
+	from scripts.testsupport import ROOT
+
+SCRIPT = ROOT / 'shell' / 'sync-main.sh'
+
+
+class SyncMainTest(unittest.TestCase):
+	def setUp(self):
+		self.tmp = tempfile.TemporaryDirectory()
+		folder = Path(self.tmp.name)
+		# Không phụ thuộc cấu hình git của máy (danh tính, ký commit, hook toàn cục).
+		config = folder / 'gitconfig'
+		config.write_text(
+			'[user]\n\tname = test\n\temail = \n'
+			'[commit]\n\tgpgsign = false\n[init]\n\tdefaultBranch = main\n',
+			encoding='utf-8',
+		)
+		self.environment = dict(os.environ, GIT_CONFIG_GLOBAL=str(config), GIT_CONFIG_NOSYSTEM='1')
+		self.remote, self.clone, self.other = (
+			folder / 'remote.git',
+			folder / 'clone',
+			folder / 'other',
+		)
+		self.git(folder, 'init', '-q', '--bare', str(self.remote))
+		self.git(folder, 'clone', '-q', str(self.remote), str(self.clone))
+		self.commit(self.clone, 'base.txt', 'base')
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'main')
+		self.git(folder, 'clone', '-q', str(self.remote), str(self.other))
+
+	def tearDown(self):
+		self.tmp.cleanup()
+
+	def git(self, cwd, *args):
+		return subprocess.run(
+			['git', *args],
+			cwd=cwd,
+			env=self.environment,
+			capture_output=True,
+			text=True,
+			check=True,
+		).stdout
+
+	def commit(self, repo, name, content):
+		(repo / name).write_text(f'{content}\n', encoding='utf-8')
+		self.git(repo, 'add', name)
+		self.git(repo, 'commit', '-qm', f'thêm {name}')
+
+	def branch(self, name, *files):
+		"""Tạo branch từ main trong clone, commit từng tệp, đẩy lên remote, quay lại main."""
+		self.git(self.clone, 'switch', '-q', '-c', name, 'main')
+		for file in files:
+			self.commit(self.clone, file, name)
+		self.git(self.clone, 'push', '-q', '-u', 'origin', name)
+		self.git(self.clone, 'switch', '-q', 'main')
+
+	def mergeOnRemote(self, name, squash):
+		"""Hợp nhất như GitHub (Squash hoặc Merge) từ một bản clone khác rồi xóa branch trên remote."""
+		self.git(self.other, 'fetch', '-q', 'origin')
+		self.git(self.other, 'switch', '-q', 'main')
+		self.git(self.other, 'pull', '-q')
+		if squash:
+			self.git(self.other, 'merge', '-q', '--squash', f'origin/{name}')
+			self.git(self.other, 'commit', '-qm', f'{name} (#1)')
+		else:
+			self.git(self.other, 'merge', '-q', '--no-ff', '-m', f'Merge {name}', f'origin/{name}')
+		self.git(self.other, 'push', '-q', 'origin', 'main', f':{name}')
+
+	def runScript(self):
+		return subprocess.run(
+			['bash', str(SCRIPT)],
+			cwd=self.clone,
+			env=self.environment,
+			capture_output=True,
+			text=True,
+			check=True,
+		)
+
+	def localBranches(self):
+		return self.git(
+			self.clone, 'for-each-ref', '--format=%(refname:short)', 'refs/heads'
+		).split()
+
+	def testDeletesSquashedAndMergedBranches(self):
+		# Squash đổi SHA nên git branch -d báo "not fully merged"; script nhận ra theo nội dung. Branch hợp nhất
+		# bằng Merge là tổ tiên của main.
+		self.branch('feat/squashed', 'a.txt', 'b.txt')
+		self.branch('fix/merged', 'c.txt')
+		self.mergeOnRemote('feat/squashed', squash=True)
+		self.mergeOnRemote('fix/merged', squash=False)
+		self.git(self.clone, 'switch', '-q', 'feat/squashed')
+		self.runScript()
+		self.assertEqual(self.localBranches(), ['main'])
+		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'main')
+		self.assertTrue((self.clone / 'a.txt').exists())
+
+	def testKeepsBranchWithUnmergedChanges(self):
+		# Branch được squash rồi có thêm commit chưa vào main: remote đã xóa nhưng còn thay đổi — giữ lại.
+		self.branch('feat/extra', 'a.txt')
+		self.mergeOnRemote('feat/extra', squash=True)
+		self.git(self.clone, 'switch', '-q', 'feat/extra')
+		self.commit(self.clone, 'later.txt', 'chưa đẩy')
+		result = self.runScript()
+		self.assertEqual(self.localBranches(), ['feat/extra', 'main'])
+		self.assertIn('Giữ lại feat/extra: có thay đổi chưa vào main', result.stdout)
+
+	def testKeepsBranchOpenInWorktree(self):
+		# Branch đang mở ở worktree khác: git branch -D từ chối — script báo và chạy tiếp các branch sau.
+		self.branch('docs/worktree', 'a.txt')
+		self.branch('feat/squashed', 'b.txt')
+		self.mergeOnRemote('docs/worktree', squash=True)
+		self.mergeOnRemote('feat/squashed', squash=True)
+		worktree = Path(self.tmp.name) / 'worktree'
+		self.git(self.clone, 'worktree', 'add', '-q', str(worktree), 'docs/worktree')
+		result = self.runScript()
+		self.assertEqual(self.localBranches(), ['docs/worktree', 'main'])
+		self.assertIn('Giữ lại docs/worktree: đang mở ở worktree', result.stdout)
+
+	def testKeepsBranchWithoutRemoteOrStillOnRemote(self):
+		# Chỉ xét branch mà remote đã xóa: branch chưa đẩy và branch còn trên remote giữ nguyên.
+		self.branch('feat/open', 'a.txt')
+		self.git(self.clone, 'branch', 'local/only')
+		self.runScript()
+		self.assertEqual(self.localBranches(), ['feat/open', 'local/only', 'main'])
+
+
+if __name__ == '__main__':
+	unittest.main()

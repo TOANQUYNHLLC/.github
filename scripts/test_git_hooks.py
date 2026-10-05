@@ -144,6 +144,45 @@ class GitHooksTest(unittest.TestCase):
 			self.assertEqual(self.module.preCommit(self.repo, []), 0)
 
 	@unittest.skipUnless(
+		(ROOT / 'node_modules' / '.bin' / 'prettier').exists() and shutil.which('ruff'),
+		'cần Prettier (make tools) và ruff (mise install)',
+	)
+	def testPreCommitSortsImportsWithUnstagedPackageFiles(self):
+		# Chỉ stage một tệp trong gói (như scripts/validation/docs.py): ruff vẫn phải thấy __init__.py và module
+		# cùng gói đã commit để nhận gói là của repository — nếu không, thứ tự import đúng bị báo I001.
+		package = self.repo / 'tools' / 'checks'
+		package.mkdir(parents=True)
+		(package / '__init__.py').write_text('', encoding='utf-8')
+		(package / 'common.py').write_text('VALUE = 1\n', encoding='utf-8')
+		self.git('add', 'tools')
+		self.git(
+			'-c',
+			'user.name=test',
+			'-c',
+			'user.email=',
+			'-c',
+			'commit.gpgsign=false',
+			'commit',
+			'-qm',
+			'gói',
+		)
+		(package / 'docs.py').write_text(
+			'import re\n\nfrom markdown import render\n\nfrom checks.common import VALUE\n\n'
+			'print(re, render, VALUE)\n',
+			encoding='utf-8',
+		)
+		self.git('add', 'tools/checks/docs.py')
+		result = subprocess.run(
+			['ruff', 'check', '--select', 'I001', 'tools/checks/docs.py'],
+			cwd=self.repo,
+			capture_output=True,
+			check=False,
+		)
+		self.assertEqual(result.returncode, 0, 'thứ tự import trong test phải đúng tại repository')
+		with silenced():
+			self.assertEqual(self.module.preCommit(self.repo, []), 0)
+
+	@unittest.skipUnless(
 		(ROOT / 'node_modules' / '.bin' / 'prettier').exists(), 'cần Prettier (make tools)'
 	)
 	def testPreCommitWithoutRuffBlocksClearly(self):
