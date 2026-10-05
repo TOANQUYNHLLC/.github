@@ -151,7 +151,7 @@ class SyncMainTest(unittest.TestCase):
 		self.assertEqual(self.localBranches(), ['feat/squashed', 'main'])
 
 	def testCleanupStaysOnCurrentBranchAndUsesOriginMain(self):
-		# make cleanup không đổi branch, không kéo code: branch hiện tại được giữ (không xóa được), branch khác đã
+		# cleanup-main.sh không đổi branch, không kéo code: branch hiện tại được giữ (không xóa được), branch khác đã
 		# squash vẫn bị xóa dù main cục bộ chưa có commit hợp nhất — so với origin/main vừa tải về.
 		self.branch('feat/current', 'a.txt')
 		self.branch('fix/squashed', 'b.txt')
@@ -166,7 +166,7 @@ class SyncMainTest(unittest.TestCase):
 		self.assertEqual(self.git(self.clone, 'rev-parse', 'main'), localMain)
 
 	def testCleanupKeepsUncommittedWorkInPlace(self):
-		# Khác make syncmain, make cleanup chạy được khi còn thay đổi chưa commit: không đổi branch nên không mang
+		# Khác sync-main.sh, cleanup-main.sh chạy được khi còn thay đổi chưa commit: không đổi branch nên không mang
 		# thay đổi đi đâu.
 		self.branch('fix/squashed', 'b.txt')
 		self.mergeOnRemote('fix/squashed', squash=True)

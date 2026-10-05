@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Về main, kéo code mới, rồi dọn branch cục bộ đã hợp nhất bằng cleanup-main.sh (make cleanup).
+# Về main, kéo code mới, rồi dọn branch cục bộ đã hợp nhất bằng cleanup-main.sh (make syncmain).
 # Không viết bằng Python vì: script chỉ nối các lệnh git — shell gọn và tự nhiên hơn.
 set -euo pipefail
 
