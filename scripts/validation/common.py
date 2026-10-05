@@ -44,14 +44,14 @@ trackedCache = []
 bytesCache = {}
 textCache = {}
 anchorsCache = {}
-# Kết quả đọc theo nội dung tệp, giữ qua các lần runChecks() trong cùng tiến trình (bộ test chạy validate hàng
-# trăm lần): tệp không đổi thì không gọi lại Ruby.
+# Kết quả đọc theo đường dẫn và nội dung, giữ qua các lần runChecks() trong cùng tiến trình: tệp không đổi
+# thì không gọi lại Ruby; thông báo lỗi của Ruby chứa đường dẫn nên không dùng chung giữa các tệp.
 yamlResults = {}
 
 
 def readYamlFiles(paths):
 	"""Đọc nhiều tệp YAML trong một lần gọi Ruby; mỗi tệp trả {"data": …} hoặc {"error": …}."""
-	keys = {str(path): hashlib.sha256(readBytes(path)).hexdigest() for path in paths}
+	keys = {str(path): (str(path), hashlib.sha256(readBytes(path)).hexdigest()) for path in paths}
 	missing = [str(path) for path in paths if keys[str(path)] not in yamlResults]
 	if missing:
 		result = subprocess.run(

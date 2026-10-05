@@ -520,6 +520,18 @@ class ValidateTest(unittest.TestCase):
 		self.assertIn('.github/labeler.yml: YAML không hợp lệ', output)
 		self.assertNotIn('labels.yml: YAML không hợp lệ', output)
 
+	def testYamlCacheKeepsErrorPathForEachFile(self):
+		self.runValidate()
+		common = self.modules['common']
+		first = self.repo / 'first.yml'
+		second = self.repo / 'second.yml'
+		for path in (first, second):
+			path.write_text('broken: [\n', encoding='utf-8')
+			message = common.readYamlFiles([path])[str(path)]['error']
+			self.assertIn(str(path), message)
+			if path == second:
+				self.assertNotIn(str(first), message)
+
 	def testJsonObjectCacheRefreshesNextRun(self):
 		self.runValidate()
 		common = self.modules['common']
