@@ -1,9 +1,9 @@
 {
 	"name": "TOÀN QUỲNH — .github",
-	"image": "mcr.microsoft.com/devcontainers/python:latest",
+	"image": "mcr.microsoft.com/devcontainers/python:3-3-trixie",
 	"features": {
-		"ghcr.io/devcontainers/features/ruby:latest": {},
-		"ghcr.io/devcontainers/features/github-cli:latest": {}
+		"ghcr.io/devcontainers/features/ruby:2": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {}
 	},
 	"containerEnv": {
 		"MISE_DISABLE_TOOLS": "python"

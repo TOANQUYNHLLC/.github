@@ -21,5 +21,5 @@ Người đóng góp dùng cả Windows và macOS; CI chạy trên Linux. Shell 
 
 ## ⚖️ HỆ QUẢ
 
-- Danh sách đuôi tệp nằm ở `.editorconfig`, `.gitattributes` và `scripts/validate.py`; `validate.py` kiểm tra ba nơi khớp nhau.
+- Danh sách đuôi tệp nằm ở `.editorconfig`, `.gitattributes` và `scripts/validation/formatting.py`; `validate.py` kiểm tra ba nơi khớp nhau.
 - `.reg`, `.inf` lưu UTF-8 trong repository (diff đọc được) và checkout ra UTF-16 LE nhờ `working-tree-encoding`.

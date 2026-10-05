@@ -52,6 +52,9 @@ RELEASE_VERSION = re.compile(
 	r'(?P<channel>Stable|Beta)\.v(?P<year>[0-9]{4})\.(?P<month>0[1-9]|1[0-2])\.'
 	r'(?P<day>[0-9]{2})(?P<sequence>(?!0000)[0-9]{4})'
 )
+# Tag vYYYY.MM.<kênh> của GitHub Release đã phát hành: Release bất biến nên tag giữ nguyên tên, mỗi tag chiếm một
+# số thứ tự của tháng.
+MONTH_TAG = re.compile(r'v[0-9]{4}\.(0[1-9]|1[0-2])\.(Stable|Beta)')
 
 
 def releaseNotes(changelog, version):
@@ -179,6 +182,10 @@ def nextReleaseVersion(date, channel='Stable'):
 		match = RELEASE_VERSION.fullmatch(tag)
 		if int(match['year']) == month.year and int(match['month']) == month.month:
 			maxSequence = max(maxSequence, int(match['sequence']))
+	monthTags = runCommand(
+		'git', 'tag', '--list', f'v{month.year:04d}.{month.month:02d}.*'
+	).splitlines()
+	maxSequence = max(maxSequence, sum(1 for tag in monthTags if MONTH_TAG.fullmatch(tag)))
 	sequence = maxSequence + 1
 	if sequence > 9999:
 		raise ValueError(

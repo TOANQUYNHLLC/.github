@@ -254,7 +254,8 @@ def syncActions(endpoint, wanted, enabledKey, apply, readings=None):
 	)
 	if readings is None:
 		readings = readActions(endpoint)
-	for (path, target, keep), current in zip(targets, readings, strict=True):
+	for (path, target, keep), reading in zip(targets, readings, strict=True):
+		current = reading
 		if not isinstance(current, Exception):
 			try:
 				validateActions(current, keep)

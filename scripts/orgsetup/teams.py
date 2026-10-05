@@ -188,8 +188,8 @@ def syncTeams(repos, apply):
 				'-f',
 				'role=maintainer',
 			)
-			role, state = membershipState(data, f'{team}/{user}')
-			if state == 'pending':
+			role, membership = membershipState(data, f'{team}/{user}')
+			if membership == 'pending':
 				print(f'   ⚠ {user}: chờ chấp nhận lời mời vào team {team}')
 			elif role == 'maintainer':
 				print(f'   ✔ thêm {user} (maintainer)')

@@ -43,6 +43,7 @@ class ToolVersionsTest(unittest.TestCase):
 				self.subTest(key=key),
 				mock.patch.dict(module.os.environ, {key: 'provided_token'}, clear=True),
 				mock.patch.object(module, 'cliToken') as cli,
+				mock.patch.object(module, 'templateOnlyActions', dict),
 				mock.patch.object(
 					module, 'latestRelease', side_effect=lambda repo, *args: releases[repo]
 				) as latest,
@@ -69,6 +70,7 @@ class ToolVersionsTest(unittest.TestCase):
 			mock.patch.dict(module.os.environ, {}, clear=True),
 			mock.patch.object(module.shutil, 'which', return_value='gh'),
 			mock.patch.object(module.subprocess, 'run', side_effect=responses) as read,
+			mock.patch.object(module, 'templateOnlyActions', dict),
 			mock.patch.object(
 				module, 'latestRelease', side_effect=lambda repo, *args: releases[repo]
 			) as latest,
@@ -177,6 +179,64 @@ class ToolVersionsTest(unittest.TestCase):
 		self.assertEqual(code, 1)
 		self.assertIn('❌ ruff: không đọc được bản phát hành mới nhất (đóng kết nối)', output)
 		self.assertIn('✅ actionlint 1.7.12', output)
+
+	def testTemplateOnlyActionsAreChecked(self):
+		# Dependabot chỉ quét .github/workflows/: action chỉ có trong workflow-templates/ được so với bản phát hành
+		# mới nhất; action có trong .github/workflows/ không hỏi lại. Nhiều mẫu dùng khác nhau thì lấy bản thấp nhất.
+		sha = '0' * 40
+		workflows = {
+			'.github/workflows/ci.yml': f'steps:\n    - uses: actions/checkout@{sha} # v7.0.1\n',
+			'workflow-templates/docker.yml': (
+				f'steps:\n    - uses: actions/checkout@{sha} # v6.0.0\n'
+				f'    - uses: docker/login-action@{sha} # v4.6.0\n'
+				f'    - name: Go\n      uses: actions/setup-go@{sha} # v7.0.0\n'
+			),
+			'workflow-templates/old.yaml': f'jobs:\n  - uses: docker/login-action@{sha} # v4.5.0\n',
+		}
+		module = loadScript('check-tool-versions')
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			for name, text in workflows.items():
+				(module.ROOT / name).parent.mkdir(parents=True, exist_ok=True)
+				(module.ROOT / name).write_text(text, encoding='utf-8')
+			self.assertEqual(
+				module.templateOnlyActions(),
+				{'docker/login-action': '4.5.0', 'actions/setup-go': '7.0.0'},
+			)
+
+		releases = {
+			'docker/login-action': '4.6.0',
+			'actions/setup-go': '7.0.0',
+			'koalaman/shellcheck': '0.11.0',
+		}
+		module = loadScript('check-tool-versions')
+		output = io.StringIO()
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			(module.ROOT / 'mise.toml').write_text(MISE, encoding='utf-8')
+			with (
+				mock.patch.object(
+					module,
+					'templateOnlyActions',
+					return_value={'docker/login-action': '4.5.0', 'actions/setup-go': '7.0.0'},
+				),
+				mock.patch.object(
+					module,
+					'latestRelease',
+					lambda repository, token: releases.get(
+						repository, '0.16.10' if 'ruff' in repository else '1.7.12'
+					),
+				),
+				mock.patch.object(module, 'cliToken', str),
+				contextlib.redirect_stdout(output),
+			):
+				self.assertEqual(module.main(), 1)
+		text = output.getvalue()
+		self.assertIn(
+			'⬆️  docker/login-action 4.5.0 → 4.6.0: sửa SHA và chú thích trong workflow-templates/',
+			text,
+		)
+		self.assertIn('✅ actions/setup-go 7.0.0', text)
 
 
 if __name__ == '__main__':

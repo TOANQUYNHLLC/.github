@@ -19,11 +19,11 @@ validate: ## Kiểm tra nội dung bằng scripts/validate.py
 test: ## Chạy test tự động của các script (song song trên nhiều tiến trình)
 	python3 scripts/run-tests.py
 
-tools: ## Kiểm tra đã cài đủ công cụ, cài thư viện Node.js nếu thiếu
+tools: ## Kiểm tra đã cài đủ công cụ, cài thư viện Node.js nếu thiếu hoặc sai phiên bản
 	python3 scripts/check.py tools
 
 format: tools ## Định dạng lại toàn bộ bằng Prettier và ruff
-	npx prettier --write .
+	npx --no -- prettier --write .
 	ruff format .
 
 format-check: ## Prettier, ruff format, ruff check (job "Định dạng (Prettier, ruff)")
@@ -46,7 +46,7 @@ hooks: ## Cài git hook (danh sách trong scripts/git-hooks.py), mẫu commit v�
 links: ## Kiểm tra liên kết bên ngoài (website, Facebook…) còn hoạt động
 	python3 scripts/check-external-links.py
 
-versions: ## Báo công cụ trong mise.toml có bản phát hành mới hơn (Dependabot chưa hỗ trợ mise.toml)
+versions: ## Báo công cụ trong mise.toml, action chỉ có trong workflow-templates/ có bản mới (Dependabot không theo dõi)
 	python3 scripts/check-tool-versions.py
 
 forms: ## Kiểm tra GitHub chấp nhận biểu mẫu Issue, Discussion: make forms REF=<branch> (mặc định main)
