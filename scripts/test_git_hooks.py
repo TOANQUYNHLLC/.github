@@ -5,6 +5,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 
 import contextlib
 import io
+import os
 import re
 import shutil
 import subprocess
@@ -219,6 +220,30 @@ class GitHooksTest(unittest.TestCase):
 		):
 			self.assertEqual(self.module.main(), 1)
 		self.assertRegex(output.getvalue(), r'^❌ fatal: not a git repository')
+
+	def testInstallFallsBackWhenSymlinksAreDenied(self):
+		# Windows chưa bật Developer Mode từ chối tạo liên kết tượng trưng (WinError 1314): cài tệp gọi script thay
+		# thế, hook vẫn chạy được; cài lại không ghi lại tệp đã đúng.
+		def deny(self, *args, **kwargs):
+			raise OSError(1314, 'A required privilege is not held by the client')
+
+		output = io.StringIO()
+		with (
+			mock.patch.object(Path, 'symlink_to', deny),
+			contextlib.redirect_stdout(output),
+			contextlib.redirect_stderr(io.StringIO()),
+		):
+			self.assertEqual(self.module.installHooks(self.repo), 0)
+			self.assertEqual(self.module.installHooks(self.repo), 0)
+		self.assertEqual(output.getvalue().count('Đã cài hook pre-commit'), 1)
+		hook = self.repo / '.git' / 'hooks' / 'pre-commit'
+		self.assertFalse(hook.is_symlink())
+		self.assertTrue(os.access(hook, os.X_OK))
+		# Không có gì được stage: hook chạy qua tệp gọi script và cho commit.
+		result = subprocess.run(
+			[str(hook)], cwd=self.repo, capture_output=True, text=True, check=False
+		)
+		self.assertEqual(result.returncode, 0, result.stderr)
 
 	def testInstallLinksEveryHookAndWarnsHooksPath(self):
 		self.git('config', 'core.hooksPath', '.husky')
