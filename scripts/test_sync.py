@@ -91,6 +91,12 @@ class SyncTest(unittest.TestCase):
 			check=True,
 		)
 
+	def sync(self, branch='main'):
+		"""Như make syncmain, make sync BRANCH=…: sync.sh rồi prune-branches.sh; trả đầu ra của cả hai."""
+		first = self.runScript(SCRIPT, branch)
+		second = self.runScript(PRUNE)
+		return subprocess.CompletedProcess(first.args, 0, first.stdout + second.stdout, '')
+
 	def localBranches(self):
 		return self.git(
 			self.clone, 'for-each-ref', '--format=%(refname:short)', 'refs/heads'
@@ -104,7 +110,7 @@ class SyncTest(unittest.TestCase):
 		self.mergeOnRemote('feat/squashed', squash=True)
 		self.mergeOnRemote('fix/merged', squash=False)
 		self.git(self.clone, 'switch', '-q', 'feat/squashed')
-		self.runScript()
+		self.sync()
 		self.assertEqual(self.localBranches(), ['main'])
 		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'main')
 		self.assertTrue((self.clone / 'a.txt').exists())
@@ -115,7 +121,7 @@ class SyncTest(unittest.TestCase):
 		self.mergeOnRemote('feat/extra', squash=True)
 		self.git(self.clone, 'switch', '-q', 'feat/extra')
 		self.commit(self.clone, 'later.txt', 'chưa đẩy')
-		result = self.runScript()
+		result = self.sync()
 		self.assertEqual(self.localBranches(), ['feat/extra', 'main'])
 		self.assertIn('Giữ lại feat/extra: có thay đổi chưa vào main', result.stdout)
 
@@ -127,7 +133,7 @@ class SyncTest(unittest.TestCase):
 		self.mergeOnRemote('feat/squashed', squash=True)
 		worktree = Path(self.tmp.name) / 'worktree'
 		self.git(self.clone, 'worktree', 'add', '-q', str(worktree), 'docs/worktree')
-		result = self.runScript()
+		result = self.sync()
 		self.assertEqual(self.localBranches(), ['docs/worktree', 'main'])
 		self.assertIn('Giữ lại docs/worktree: đang mở ở worktree', result.stdout)
 
@@ -139,7 +145,7 @@ class SyncTest(unittest.TestCase):
 		self.git(self.other, 'push', '-q', '-u', 'origin', 'feat/other')
 		self.branch('fix/squashed', 'b.txt')
 		self.mergeOnRemote('fix/squashed', squash=True)
-		self.runScript(SCRIPT, 'feat/other')
+		self.sync('feat/other')
 		self.assertEqual(self.git(self.clone, 'branch', '--show-current').strip(), 'feat/other')
 		self.assertTrue((self.clone / 'other.txt').exists())
 		self.assertEqual(
@@ -153,7 +159,7 @@ class SyncTest(unittest.TestCase):
 		self.git(self.clone, 'branch', 'local/only')
 		self.branch('fix/squashed', 'b.txt')
 		self.mergeOnRemote('fix/squashed', squash=True)
-		result = self.runScript(SCRIPT, 'local/only')
+		result = self.sync('local/only')
 		self.assertIn(
 			'Bỏ qua git pull: local/only chưa có branch theo dõi trên origin.', result.stdout
 		)
@@ -175,6 +181,42 @@ class SyncTest(unittest.TestCase):
 		self.assertNotEqual(result.returncode, 0)
 		self.assertEqual(self.localBranches(), ['fix/squashed', 'main'])
 
+	def testSyncNeedsBranch(self):
+		# sync.sh chỉ chuyển branch, kéo code: thiếu tên branch thì báo cách dùng, không làm gì.
+		result = subprocess.run(
+			['bash', str(SCRIPT)],
+			cwd=self.clone,
+			env=self.environment,
+			capture_output=True,
+			text=True,
+			check=False,
+		)
+		self.assertEqual(result.returncode, 2)
+		self.assertIn('Cách dùng: shell/sync.sh <branch>', result.stderr)
+
+	def testMakeTargetsRunSyncThenPrune(self):
+		# Mỗi script một việc, Makefile ghép lại: chuyển branch, kéo code rồi mới dọn branch; thiếu BRANCH thì dừng.
+		def recipe(*arguments):
+			return subprocess.run(
+				['make', '--no-print-directory', '-n', *arguments],
+				cwd=ROOT,
+				capture_output=True,
+				text=True,
+				check=False,
+			)
+
+		self.assertEqual(
+			recipe('syncmain').stdout.splitlines(),
+			['shell/sync.sh main', 'shell/prune-branches.sh'],
+		)
+		self.assertEqual(
+			recipe('sync', 'BRANCH=feat/x').stdout.splitlines(),
+			['shell/sync.sh "feat/x"', 'shell/prune-branches.sh'],
+		)
+		missing = recipe('sync')
+		self.assertNotEqual(missing.returncode, 0)
+		self.assertIn('Thiếu BRANCH', missing.stderr)
+
 	def testRefusesUncommittedChanges(self):
 		# git switch mang thay đổi chưa commit sang main: script dừng trước khi đổi branch, không xóa gì.
 		self.branch('feat/squashed', 'a.txt')
@@ -182,7 +224,7 @@ class SyncTest(unittest.TestCase):
 		self.git(self.clone, 'switch', '-q', 'feat/squashed')
 		(self.clone / 'draft.txt').write_text('đang sửa\n', encoding='utf-8')
 		result = subprocess.run(
-			['bash', str(SCRIPT)],
+			['bash', str(SCRIPT), 'main'],
 			cwd=self.clone,
 			env=self.environment,
 			capture_output=True,
@@ -224,7 +266,7 @@ class SyncTest(unittest.TestCase):
 		# Chỉ xét branch mà remote đã xóa: branch chưa đẩy và branch còn trên remote giữ nguyên.
 		self.branch('feat/open', 'a.txt')
 		self.git(self.clone, 'branch', 'local/only')
-		self.runScript()
+		self.sync()
 		self.assertEqual(self.localBranches(), ['feat/open', 'local/only', 'main'])
 
 
