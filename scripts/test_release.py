@@ -98,6 +98,25 @@ class ReleaseTest(unittest.TestCase):
 			)
 			self.assertEqual(self.module.nextReleaseVersion('2099-05-01'), 'Stable.v2099.05.019999')
 
+	def testMonthTagsTakeSequenceNumbers(self):
+		# Release bất biến gắn tag vYYYY.MM.<kênh>: mỗi tag là một lần phát hành của tháng, bản kế tiếp không dùng
+		# lại số đã phát hành. Tag sai dạng, tháng khác không tính.
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			for tag in ('v2099.06.Stable', 'v2099.07.Stable', 'v2099.07.Beta', 'v2099.08.Gamma'):
+				subprocess.run(
+					['git', '-c', 'tag.gpgsign=false', 'tag', tag], cwd=clone, check=True
+				)
+			self.assertEqual(self.module.nextReleaseVersion('2099-06-05'), 'Stable.v2099.06.050002')
+			self.assertEqual(self.module.nextReleaseVersion('2099-07-01'), 'Stable.v2099.07.010003')
+			self.assertEqual(self.module.nextReleaseVersion('2099-08-01'), 'Stable.v2099.08.010001')
+			subprocess.run(
+				['git', '-c', 'tag.gpgsign=false', 'tag', 'Beta.v2099.06.100002'],
+				cwd=clone,
+				check=True,
+			)
+			self.assertEqual(self.module.nextReleaseVersion('2099-06-12'), 'Stable.v2099.06.120003')
+
 	def testInvalidDefaultDateDoesNotCallGitOrChangeChangelog(self):
 		with tempfile.TemporaryDirectory() as folder:
 			self.module.ROOT = Path(folder)
