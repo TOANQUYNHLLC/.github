@@ -38,7 +38,11 @@ Phần cấu trúc liên quan đến tài liệu cộng đồng và cấu hình 
 │   │   ├── bugfix.md                  ← Mẫu PR sửa lỗi
 │   │   ├── release.md                 ← Mẫu PR chuẩn bị phát hành
 │   │   ├── configuration.md           ← Mẫu PR cấu hình, workflow và hạ tầng
-│   │   └── documentation.md           ← Mẫu PR tài liệu
+│   │   ├── documentation.md           ← Mẫu PR tài liệu
+│   │   ├── hotfix.md                  ← Mẫu PR sửa lỗi khẩn cấp
+│   │   ├── refactor.md                ← Mẫu PR tái cấu trúc
+│   │   ├── dependencies.md            ← Mẫu PR dependency, công cụ và action
+│   │   └── testing.md                 ← Mẫu PR kiểm thử
 │   ├── DISCUSSION_TEMPLATE/
 │   │   ├── announcements.yml          ← Thông báo
 │   │   ├── general.yml                ← Thảo luận chung
@@ -89,10 +93,14 @@ Repository giữ mẫu chung và các mẫu riêng theo loại công việc. Cá
     ├── bugfix.md
     ├── release.md
     ├── configuration.md
-    └── documentation.md
+    ├── documentation.md
+    ├── hotfix.md
+    ├── refactor.md
+    ├── dependencies.md
+    └── testing.md
 ```
 
-Nhiều mẫu PR không tự tạo bộ chọn giống mẫu issue. Trên URL so sánh nhánh của repository đích, thêm `?quick_pull=1&template=feature.md`; đổi tên thành `bugfix.md`, `release.md`, `configuration.md` hoặc `documentation.md` để chọn mẫu tương ứng. Nếu URL đã có tham số, thêm `&template=feature.md`. Các mẫu cần được hợp nhất vào nhánh mặc định trước khi GitHub sử dụng. Xem [hướng dẫn chọn mẫu](CONTRIBUTING.md#-chọn-mẫu-pull-request).
+Nhiều mẫu PR không tự tạo bộ chọn giống mẫu issue. Trên URL so sánh nhánh của repository đích, thêm `?quick_pull=1&template=feature.md`; thay `feature.md` bằng tên tệp mẫu tương ứng trong cây thư mục ở trên. Nếu URL đã có tham số, thêm `&template=feature.md`. Các mẫu cần được hợp nhất vào nhánh mặc định trước khi GitHub sử dụng. Xem [hướng dẫn chọn mẫu](CONTRIBUTING.md#-chọn-mẫu-pull-request).
 
 ### MẪU THÔNG BÁO DISCUSSION
 
