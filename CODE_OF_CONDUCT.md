@@ -32,7 +32,7 @@ Chúng tôi cam kết xây dựng môi trường cộng tác chuyên nghiệp, t
 
 ## ⚖️ XỬ LÝ VI PHẠM
 
-Người quản trị (xem [`GOVERNANCE.md`](GOVERNANCE.md)) có quyền chỉnh sửa, ẩn hoặc xóa nội dung vi phạm, và tạm khóa hoặc chấm dứt quyền tham gia của cá nhân vi phạm. Mức độ xử lý tùy theo tính chất và mức độ nghiêm trọng của hành vi.
+Người quản trị (xem [`GOVERNANCE.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/GOVERNANCE.md)) có quyền chỉnh sửa, ẩn hoặc xóa nội dung vi phạm, và tạm khóa hoặc chấm dứt quyền tham gia của cá nhân vi phạm. Mức độ xử lý tùy theo tính chất và mức độ nghiêm trọng của hành vi.
 
 ---
 

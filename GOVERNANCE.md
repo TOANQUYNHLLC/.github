@@ -33,7 +33,7 @@ Tài liệu này mô tả ai ra quyết định và cách thay đổi được c
 ## ➕ THAY ĐỔI NGƯỜI QUẢN TRỊ
 
 - Thêm người quản trị: người quản trị hiện tại đề xuất qua Pull Request kèm lý do, sửa cùng lúc [`MAINTAINERS.md`](MAINTAINERS.md), `MAINTAINERS` trong [`scripts/orgsetup/teams.py`](scripts/orgsetup/teams.py) và `actor_id` trong danh sách bỏ qua của [`rulesets/protect-*.json`](rulesets/) (`validate.py` báo lỗi khi lệch). Sau khi hợp nhất, chạy `python3 scripts/org-setup.py team --apply` và `rulesets --apply`. `CODEOWNERS` dùng team `@TOANQUYNHLLC/maintainers` nên không cần sửa.
-- Người quản trị nghỉ hoặc không còn tham gia: chuyển sang mục cựu người quản trị trong `MAINTAINERS.md`, bỏ khỏi `teams.py` và danh sách bỏ qua của ruleset như trên rồi chạy `rulesets --apply`; gỡ khỏi các team và thu hồi quyền truy cập ngay trên web (`org-setup.py team` chỉ thêm người, không gỡ).
+- Người quản trị nghỉ hoặc không còn tham gia: bỏ khỏi danh sách hiện tại trong `MAINTAINERS.md`, `teams.py` và danh sách bỏ qua của ruleset như trên rồi chạy `rulesets --apply`; gỡ khỏi các team và thu hồi quyền truy cập ngay trên web (`org-setup.py team` chỉ thêm người, không gỡ).
 - Quyền truy cập GitHub cấp theo nguyên tắc tối thiểu: chỉ cấp quyền cần cho công việc.
 
 ---

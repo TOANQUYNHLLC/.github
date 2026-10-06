@@ -2,7 +2,7 @@
 
 Hướng dẫn này áp dụng cho **mọi repository** của **CÔNG TY TNHH TOÀN QUỲNH** trên GitHub, trừ khi repository đó có tệp `CONTRIBUTING.md` riêng.
 
-Cảm ơn bạn đã dành thời gian đóng góp cho dự án. Khi tham gia, bạn đồng ý tuân thủ [Quy tắc ứng xử](CODE_OF_CONDUCT.md). Cần hỗ trợ? Xem [`SUPPORT.md`](SUPPORT.md).
+Cảm ơn bạn đã dành thời gian đóng góp cho dự án. Khi tham gia, bạn đồng ý tuân thủ [Quy tắc ứng xử](https://github.com/TOANQUYNHLLC/.github/blob/main/CODE_OF_CONDUCT.md). Cần hỗ trợ? Xem [`SUPPORT.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/SUPPORT.md).
 
 ---
 
@@ -12,7 +12,7 @@ Cảm ơn bạn đã dành thời gian đóng góp cho dự án. Khi tham gia, b
 - Cài môi trường theo `README.md` và chạy các kiểm tra tự động một lần **trước khi sửa**, để biết lỗi nào có sẵn từ trước.
 - Tìm trong Issues và Discussions xem vấn đề hoặc ý tưởng đã được nêu chưa, tránh tạo trùng lặp.
 - Với thay đổi lớn, tạo Issue (hoặc Discussion mục Ý tưởng nếu repository đã bật) để trao đổi hướng xử lý trước khi viết mã.
-- Vấn đề bảo mật **không** tạo Issue công khai — làm theo [`SECURITY.md`](SECURITY.md).
+- Vấn đề bảo mật **không** tạo Issue công khai — làm theo [`SECURITY.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md).
 
 ---
 
@@ -26,7 +26,9 @@ Tạo Issue mới và chọn biểu mẫu phù hợp:
 | ✨ Đề xuất tính năng       | Ý tưởng mới hoặc cải thiện chức năng, giao diện, hiệu năng, tài liệu |
 | ❓ Câu hỏi hoặc cần hỗ trợ | Cần hỏi về cách sử dụng, cấu hình hoặc hoạt động của dự án           |
 
-Pull Request được tự gắn nhãn loại theo tiền tố branch (`feature/` → `enhancement`, `fix/` → `bug`…). Issue mới được gắn nhãn `needs triage`; người quản trị phân loại (mức độ ưu tiên, `help wanted`, `good first issue`…), gắn `confirmed` khi đã xác nhận, rồi bỏ nhãn này. Khi cần người báo bổ sung, Issue được gắn `needs more info`; lỗi ở chức năng trước đây chạy đúng gắn `regression`; lỗi do thư viện bên ngoài gắn `upstream`.
+Khi repository có workflow và cấu hình labeler, đã bật GitHub Actions và có các labels cần thiết, Pull Request được tự gắn nhãn loại theo tiền tố branch (`feature/` → `enhancement`, `fix/` → `bug`…) và tệp thay đổi. Tệp cộng đồng mặc định không tự tạo workflow hay labels trong repository đích.
+
+Biểu mẫu Issue yêu cầu nhãn `needs triage`; nhãn phải tồn tại trong repository dùng mẫu. Người quản trị phân loại (mức độ ưu tiên, `help wanted`, `good first issue`…), gắn `confirmed` khi đã xác nhận, rồi bỏ nhãn `needs triage`. Khi cần người báo bổ sung, Issue được gắn `needs more info`; lỗi ở chức năng trước đây chạy đúng gắn `regression`; lỗi do thư viện bên ngoài gắn `upstream`.
 
 Một báo lỗi tốt gồm:
 
@@ -77,13 +79,13 @@ git push -u origin feature/appointment_booking
 - Tên branch viết bằng **tiếng Anh**, chữ thường, không dấu; các từ nối bằng **dấu gạch dưới** (`_`), ví dụ `feature/appointment_booking`.
 - Có thể thêm số Issue sau tiền tố: `fix/123_login_error`.
 - Ngắn gọn, tối đa khoảng 50 ký tự; mỗi branch chỉ phục vụ một mục đích.
-- Tên branch của Pull Request được kiểm tra tự động (trừ branch do Dependabot tạo).
+- Workflow kiểm tra tên branch cần có trong repository và GitHub Actions cần được bật để kiểm tra tự động (trừ branch do Dependabot tạo); khi Actions tắt, kiểm tra tại máy theo hướng dẫn của dự án.
 
 ---
 
 ## 📝 QUY ƯỚC COMMIT
 
-Viết commit theo dạng [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) `<loại>(<phạm vi>): <mô tả ngắn>`, ví dụ `fix(booking): sửa lỗi không lưu được lịch hẹn`. Phạm vi là tùy chọn. Tiêu đề Pull Request dùng cùng quy ước và được kiểm tra tự động.
+Viết commit theo dạng [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) `<loại>(<phạm vi>): <mô tả ngắn>`, ví dụ `fix(booking): sửa lỗi không lưu được lịch hẹn`. Phạm vi là tùy chọn. Tiêu đề Pull Request dùng cùng quy ước; kiểm tra tự động cần workflow tương ứng và GitHub Actions được bật.
 
 | Loại       | Ý nghĩa                                               |
 | ---------- | ----------------------------------------------------- |
@@ -155,7 +157,7 @@ Chỉ force push bằng `--force-with-lease --force-if-includes` (git ≥ 2.30: 
 
 ## ✅ YÊU CẦU ĐỐI VỚI PULL REQUEST
 
-- Điền đầy đủ [biểu mẫu Pull Request](.github/PULL_REQUEST_TEMPLATE.md), liên kết Issue liên quan.
+- Điền đầy đủ [biểu mẫu Pull Request chung](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE.md) hoặc mẫu riêng phù hợp bên dưới, liên kết Issue liên quan.
 - Giữ Pull Request nhỏ, dễ đánh giá; tách thay đổi lớn thành nhiều Pull Request nối tiếp.
 - Công việc chưa xong mở dưới dạng **Draft Pull Request**, chuyển sang **Ready for review** khi hoàn tất.
 - Tự đọc lại toàn bộ diff trước khi yêu cầu đánh giá.
@@ -164,6 +166,18 @@ Chỉ force push bằng `--force-with-lease --force-if-includes` (git ≥ 2.30: 
 - Không chứa mật khẩu, khóa API, token truy cập hoặc thông tin bảo mật.
 - Không chứa dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm.
 - Nêu rõ rủi ro, thay đổi phá vỡ tương thích và phương án khôi phục nếu có.
+
+### 📄 CHỌN MẪU PULL REQUEST
+
+| Mẫu                                                                                                        | Khi sử dụng                                                                          |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| [`feature.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/feature.md) | Tính năng mới: hành vi, tiêu chí chấp nhận và kiểm thử                               |
+| [`bugfix.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/bugfix.md)   | Sửa lỗi: cách tái hiện, nguyên nhân và kiểm thử hồi quy                              |
+| [`release.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/release.md) | Chuẩn bị phát hành: phiên bản, nội dung dành cho người dùng, triển khai và khôi phục |
+
+GitHub không tự tạo bộ chọn cho nhiều mẫu Pull Request. Trên URL so sánh nhánh của **repository đích**, thêm `?quick_pull=1&template=feature.md` để chọn mẫu tính năng; đổi tên thành `bugfix.md` hoặc `release.md` khi cần. Nếu URL đã có tham số, thêm `&template=feature.md`. Không chọn mẫu riêng thì dùng mẫu chung.
+
+Các mẫu cần có trên nhánh mặc định của repository nguồn trước khi sử dụng. Repository khác có thể dùng mặc định từ repository `.github` public của tổ chức khi không có mẫu riêng; mẫu của repository đích được ưu tiên. Xem [tài liệu GitHub về mẫu Pull Request](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository) và [tham số tạo Pull Request](https://docs.github.com/en/pull-requests/reference/using-query-parameters-to-create-a-pull-request).
 
 ---
 

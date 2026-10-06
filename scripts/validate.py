@@ -74,11 +74,14 @@ from validation.workflows import checkWorkflow, checkWorkflowTemplate
 
 def checkFile(file):
 	"""Kiểm tra từng tệp: vị trí, ngôn ngữ script, định dạng, mã hóa, nội dung theo loại tệp."""
-	# GitHub chỉ nhận biểu mẫu Issue, Discussion và FUNDING.yml trong thư mục .github/.
+	# GitHub chỉ nhận biểu mẫu Issue, Discussion, báo cáo lỗ hổng và FUNDING.yml trong thư mục .github/.
 	if (
 		file.parent.name in ('ISSUE_TEMPLATE', 'DISCUSSION_TEMPLATE')
 		and file.parent.parent != ROOT / '.github'
-	) or (file.name == 'FUNDING.yml' and file.parent != ROOT / '.github'):
+	) or (
+		file.name in ('FUNDING.yml', 'VULNERABILITY_REPORT.yml', 'VULNERABILITY_REPORT.yaml')
+		and file.parent != ROOT / '.github'
+	):
 		error(file, 'phải nằm trong thư mục .github/ để GitHub nhận diện')
 	# Script ưu tiên Python; ngôn ngữ khác chỉ khi xử lý việc đó tốt hơn, ghi lý do ở đầu tệp (ADR 0009).
 	if (file.parent == ROOT / 'scripts' and file.suffix != '.py') or file.suffix in SCRIPT_SUFFIXES:
@@ -115,7 +118,10 @@ def checkFile(file):
 		checkBadges(file, content)
 	if file.name == 'SECURITY.md':
 		checkSecurityMailto(file, content)
-	if file.name == 'PULL_REQUEST_TEMPLATE.md':
+	if file.suffix == '.md' and (
+		file.stem.upper() == 'PULL_REQUEST_TEMPLATE'
+		or file.parent.name.upper() == 'PULL_REQUEST_TEMPLATE'
+	):
 		checkAbsoluteLinks(file, content)
 	if file.parent.name == 'ISSUE_TEMPLATE' and file.suffix in ('.yml', '.yaml'):
 		if file.stem == 'config':
@@ -124,6 +130,8 @@ def checkFile(file):
 			checkForm(file)
 	elif file.parent.name == 'DISCUSSION_TEMPLATE' and file.suffix in ('.yml', '.yaml'):
 		checkForm(file, required=('body',))
+	elif file.name in ('VULNERABILITY_REPORT.yml', 'VULNERABILITY_REPORT.yaml'):
+		checkForm(file)
 	elif file.suffix in ('.yml', '.yaml') and (
 		file.parent.name == 'workflow-templates'
 		or file.parent.parts[-2:] == ('.github', 'workflows')

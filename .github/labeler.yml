@@ -9,7 +9,7 @@ hotfix:
 documentation:
     - head-branch: ['^docs/']
     - changed-files:
-          - any-glob-to-any-file: ['docs/**']
+          - any-glob-to-any-file: ['**/*.md', 'docs/**', 'specs/**']
 refactor:
     - head-branch: ['^refactor/']
 performance:
