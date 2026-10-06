@@ -91,7 +91,7 @@ Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Reque
 - [ ] Đã kiểm thử trên môi trường phát triển
 - [ ] Các kiểm thử tự động đã chạy thành công
 - [ ] Đã kiểm tra các trường hợp biên liên quan
-- [ ] Chưa thể kiểm thử đầy đủ và đã nêu rõ lý do bên dưới
+- [ ] Chưa thể kiểm thử đầy đủ và đã nêu rõ phần chưa kiểm chứng và lý do
 
 ## 📷 HÌNH ẢNH HOẶC VIDEO MINH HỌA
 

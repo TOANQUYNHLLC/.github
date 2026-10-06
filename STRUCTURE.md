@@ -36,8 +36,11 @@ Phần cấu trúc liên quan đến tài liệu cộng đồng và cấu hình 
 │   ├── PULL_REQUEST_TEMPLATE/
 │   │   ├── feature.md                 ← Mẫu PR tính năng
 │   │   ├── bugfix.md                  ← Mẫu PR sửa lỗi
-│   │   └── release.md                 ← Mẫu PR chuẩn bị phát hành
+│   │   ├── release.md                 ← Mẫu PR chuẩn bị phát hành
+│   │   ├── configuration.md           ← Mẫu PR cấu hình, workflow và hạ tầng
+│   │   └── documentation.md           ← Mẫu PR tài liệu
 │   ├── DISCUSSION_TEMPLATE/
+│   │   ├── announcements.yml          ← Thông báo
 │   │   ├── general.yml                ← Thảo luận chung
 │   │   ├── ideas.yml                  ← Ý tưởng
 │   │   └── q-a.yml                    ← Hỏi đáp
@@ -84,10 +87,16 @@ Repository giữ mẫu chung và các mẫu riêng theo loại công việc. Cá
 └── PULL_REQUEST_TEMPLATE/
     ├── feature.md
     ├── bugfix.md
-    └── release.md
+    ├── release.md
+    ├── configuration.md
+    └── documentation.md
 ```
 
-Nhiều mẫu PR không tự tạo bộ chọn giống mẫu issue. Trên URL so sánh nhánh của repository đích, thêm `?quick_pull=1&template=feature.md`; đổi tên thành `bugfix.md` hoặc `release.md` để chọn mẫu tương ứng. Nếu URL đã có tham số, thêm `&template=feature.md`. Các mẫu cần được hợp nhất vào nhánh mặc định trước khi GitHub sử dụng. Xem [hướng dẫn chọn mẫu](CONTRIBUTING.md#-chọn-mẫu-pull-request).
+Nhiều mẫu PR không tự tạo bộ chọn giống mẫu issue. Trên URL so sánh nhánh của repository đích, thêm `?quick_pull=1&template=feature.md`; đổi tên thành `bugfix.md`, `release.md`, `configuration.md` hoặc `documentation.md` để chọn mẫu tương ứng. Nếu URL đã có tham số, thêm `&template=feature.md`. Các mẫu cần được hợp nhất vào nhánh mặc định trước khi GitHub sử dụng. Xem [hướng dẫn chọn mẫu](CONTRIBUTING.md#-chọn-mẫu-pull-request).
+
+### MẪU THÔNG BÁO DISCUSSION
+
+`.github/DISCUSSION_TEMPLATE/announcements.yml` chuẩn hóa nội dung, phạm vi ảnh hưởng, thời điểm áp dụng và việc người sử dụng cần làm. Repository dùng mẫu phải bật Discussions và có category với slug `announcements`; tệp mẫu không tự tạo category hoặc thay đổi quyền đăng thông báo.
 
 ## 4. CÁC FILE KHÔNG TỰ KẾ THỪA
 

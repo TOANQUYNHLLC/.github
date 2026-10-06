@@ -2,7 +2,7 @@
 
 <!--
 Cảm ơn bạn đã đóng góp cho dự án.
-Mẫu dành cho Pull Request thêm tính năng mới.
+Mẫu dành cho Pull Request cập nhật tài liệu.
 Vui lòng điền đầy đủ các nội dung phù hợp và xóa những phần không áp dụng.
 Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Pull Request.
 Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Request công khai — báo cáo riêng qua tab Security → Report a vulnerability hoặc email toanquynhvn@gmail.com theo chính sách tại https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md
@@ -12,16 +12,14 @@ Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Reque
 
 <!-- Mô tả ngắn gọn những nội dung đã thay đổi và kết quả mong muốn. -->
 
-- Hành vi hiện tại:
-- Hành vi sau thay đổi:
+- Tài liệu và đối tượng đọc bị ảnh hưởng:
+- Nội dung cần bổ sung hoặc sửa:
 
 ## 🎯 MỤC ĐÍCH
 
 <!-- Giải thích lý do cần thực hiện thay đổi này và vấn đề mà Pull Request giải quyết. -->
 
-- Người sử dụng và tình huống cần tính năng:
-- Tiêu chí chấp nhận có thể kiểm chứng:
-    - [ ]
+- Thông tin còn thiếu, chưa rõ hoặc không còn khớp với code:
 
 ## 🔗 VẤN ĐỀ LIÊN QUAN
 
@@ -34,14 +32,14 @@ Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Reque
 <!-- Đánh dấu [x] vào các lựa chọn phù hợp. -->
 
 - [ ] 🐛 Sửa lỗi
-- [x] ✨ Thêm tính năng mới
+- [ ] ✨ Thêm tính năng mới
 - [ ] ♻️ Tái cấu trúc hoặc cải thiện mã nguồn
 - [ ] ⚡ Cải thiện hiệu năng
 - [ ] 🎨 Thay đổi giao diện hoặc trải nghiệm người dùng
 - [ ] 🔐 Cập nhật bảo mật
 - [ ] 🗄️ Thay đổi cơ sở dữ liệu
 - [ ] ⚙️ Thay đổi cấu hình, hạ tầng hoặc triển khai
-- [ ] 📝 Cập nhật tài liệu
+- [x] 📝 Cập nhật tài liệu
 - [ ] 🧪 Bổ sung hoặc cập nhật kiểm thử
 - [ ] 🔧 Công việc bảo trì khác
 
@@ -62,7 +60,8 @@ Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Reque
 
 <!-- Liệt kê những thay đổi chính để người đánh giá dễ kiểm tra. -->
 
-- Giới hạn của tính năng và quyết định cần người đánh giá xem xét:
+- Nội dung đã đối chiếu với code và cấu hình hiện tại:
+- Liên kết, lệnh và ví dụ cần kiểm tra:
 
 -
 -
@@ -80,9 +79,9 @@ Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Reque
 
 ### KẾT QUẢ
 
-- Lệnh kiểm thử:
-- Kết quả luồng chính và tiêu chí chấp nhận:
-- Kết quả trường hợp biên, lỗi và phân quyền:
+- Kết quả kiểm tra liên kết và đường dẫn:
+- Kết quả thử lệnh hoặc ví dụ, nếu có:
+- Kết quả xem trước Markdown, cấu trúc tiêu đề và văn bản thay thế của hình ảnh:
 - Phần chưa kiểm chứng và lý do:
 
 - [ ] Đã kiểm thử trên môi trường phát triển
@@ -109,8 +108,7 @@ Không áp dụng.
 
 <!-- Nêu cách hoàn tác hoặc khôi phục nếu thay đổi gây lỗi sau khi triển khai. -->
 
-- Cách tắt hoặc hoàn tác tính năng:
-- Cách khôi phục dữ liệu hoặc cấu hình nếu có:
+- Cách khôi phục tài liệu nếu hướng dẫn mới chưa phù hợp:
 
 ## ✅ CHECKLIST TRƯỚC KHI GỬI
 
@@ -126,7 +124,8 @@ Không áp dụng.
 - [ ] Tôi không đưa mật khẩu, khóa API, token truy cập hoặc thông tin bảo mật vào mã nguồn.
 - [ ] Tôi không đưa dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào repository.
 - [ ] Tôi đã kiểm tra các tệp cấu hình và biến môi trường liên quan.
-- [ ] Tôi đã kiểm chứng các tiêu chí chấp nhận của tính năng.
+- [ ] Tôi đã đối chiếu tài liệu với code, cấu hình và hành vi hiện tại.
+- [ ] Tôi đã kiểm tra các liên kết, lệnh và ví dụ liên quan, hoặc nêu rõ giới hạn kiểm chứng.
 - [ ] Pull Request đã sẵn sàng để được đánh giá.
 
 ## 💬 GHI CHÚ CHO NGƯỜI ĐÁNH GIÁ

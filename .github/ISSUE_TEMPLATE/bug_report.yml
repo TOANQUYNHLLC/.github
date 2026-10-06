@@ -25,7 +25,7 @@ body:
       id: steps
       attributes:
           label: 🔁 CÁC BƯỚC TÁI HIỆN
-          value: |
+          placeholder: |
               1.
               2.
               3.
@@ -71,7 +71,7 @@ body:
               - Khẩn cấp — hệ thống ngừng hoạt động hoặc mất dữ liệu
               - Cao — ảnh hưởng lớn, chưa có cách xử lý tạm
               - Trung bình — có cách xử lý tạm
-              - Thấp — cải tiến nhỏ
+              - Thấp — ảnh hưởng nhỏ, chức năng chính vẫn sử dụng được
       validations:
           required: true
 
@@ -103,6 +103,13 @@ body:
       attributes:
           label: 💻 THIẾT BỊ, HỆ ĐIỀU HÀNH VÀ TRÌNH DUYỆT
           placeholder: 'Ví dụ: MacBook, macOS 15, Chrome 130'
+
+    - type: input
+      id: assistive-technology
+      attributes:
+          label: ♿ CÔNG NGHỆ HỖ TRỢ VÀ PHIÊN BẢN
+          description: Điền nếu lỗi liên quan đến trợ năng; không cung cấp tình trạng sức khỏe hoặc thông tin khuyết tật cá nhân.
+          placeholder: 'Ví dụ: NVDA, VoiceOver, trình phóng to màn hình hoặc chỉ thao tác bằng bàn phím'
 
     - type: textarea
       id: attachments

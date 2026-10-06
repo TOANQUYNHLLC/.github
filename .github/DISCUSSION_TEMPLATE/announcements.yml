@@ -1,0 +1,46 @@
+title: '[Thông báo] '
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thông báo thông tin chính thức về dự án, phiên bản hoặc thay đổi có ảnh hưởng đến người sử dụng.
+              Vui lòng tuân thủ [Quy tắc ứng xử](https://github.com/TOANQUYNHLLC/.github/blob/main/CODE_OF_CONDUCT.md).
+
+              > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào thảo luận.
+              > 🔐 Vấn đề bảo mật chưa công bố: báo cáo riêng theo [chính sách bảo mật](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md).
+
+    - type: textarea
+      id: summary
+      attributes:
+          label: 📋 NỘI DUNG THÔNG BÁO
+          description: Thông tin chính cần truyền đạt và lý do của thông báo.
+      validations:
+          required: true
+
+    - type: textarea
+      id: impact
+      attributes:
+          label: 📦 PHẠM VI VÀ ẢNH HƯỞNG
+          description: Repository, phiên bản, môi trường hoặc nhóm người sử dụng bị ảnh hưởng; ghi Không áp dụng nếu không có.
+      validations:
+          required: true
+
+    - type: input
+      id: effective-date
+      attributes:
+          label: 🗓️ THỜI ĐIỂM ÁP DỤNG
+          description: Ngày, giờ và múi giờ nếu thông báo có thời điểm áp dụng.
+
+    - type: textarea
+      id: action
+      attributes:
+          label: 🛠️ VIỆC NGƯỜI SỬ DỤNG CẦN LÀM
+          description: Các bước nâng cấp, điều chỉnh hoặc phản hồi; ghi Không cần hành động nếu chỉ để thông tin.
+      validations:
+          required: true
+
+    - type: textarea
+      id: references
+      attributes:
+          label: 🔗 TÀI LIỆU VÀ KÊNH HỖ TRỢ
+          description: Liên kết Release, tài liệu, Issue hoặc Discussion liên quan và nơi tiếp nhận câu hỏi.

@@ -661,6 +661,15 @@ class ReleaseTest(unittest.TestCase):
 			(self.module.ROOT / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
 			for onActions in (False, True):
 				with self.subTest(onActions=onActions):
+					bodies = []
+
+					def createPullRequest(command, capturedBodies=bodies, **kwargs):
+						bodyPath = Path(command[command.index('--body-file') + 1])
+						capturedBodies.append(bodyPath.read_text(encoding='utf-8'))
+						return subprocess.CompletedProcess(
+							[], 0, 'https://github.com/x/y/pull/1', ''
+						)
+
 					with (
 						mock.patch.object(self.module, 'runCommand', return_value='abc123'),
 						mock.patch.object(self.module.github, 'ghExists', return_value=False),
@@ -672,18 +681,81 @@ class ReleaseTest(unittest.TestCase):
 						mock.patch.object(
 							self.module.subprocess,
 							'run',
-							return_value=subprocess.CompletedProcess(
-								[], 0, 'https://github.com/x/y/pull/1', ''
-							),
-						) as run,
+							side_effect=createPullRequest,
+						),
 						contextlib.redirect_stdout(io.StringIO()),
 					):
 						self.module.openReleasePullRequest(
 							'Stable.v2099.02.040001', 'v2099.01.Stable', 1
 						)
-					command = run.call_args.args[0]
-					body = command[command.index('--body') + 1]
-					self.assertEqual('Reopen pull request' in body, onActions)
+					self.assertEqual(len(bodies), 1)
+					self.assertEqual('Reopen pull request' in bodies[0], onActions)
+
+	def testReleaseBodyUsesTemplateAndKeepsReviewUnchecked(self):
+		with tempfile.TemporaryDirectory() as folder:
+			templatePath = Path(folder) / 'release.md'
+			templateText = self.module.RELEASE_TEMPLATE.read_text(encoding='utf-8')
+			marker = '<!-- Nêu những phần cần được chú ý hoặc cần người đánh giá hỗ trợ kiểm tra kỹ hơn. -->'
+			templateText = templateText.replace(
+				marker, marker + '\n\nNội dung riêng cần giữ: tiếng Việt và `\\n`.'
+			)
+			templatePath.write_text(templateText, encoding='utf-8')
+			for channel in ('Stable', 'Beta'):
+				with (
+					self.subTest(channel=channel),
+					mock.patch.object(self.module, 'RELEASE_TEMPLATE', templatePath),
+					mock.patch.dict(self.module.os.environ, {}, clear=True),
+				):
+					version = f'{channel}.v2099.02.040001'
+					body = self.module.releasePullRequestBody(version, 'v2099.01.Stable', 7)
+					self.assertIn(f'- Phiên bản dự kiến theo quy ước của dự án: `{version}`', body)
+					self.assertIn('- Phiên bản hiện tại: `v2099.01.Stable`', body)
+					self.assertIn(f'- Kênh phát hành: {channel}', body)
+					self.assertIn('7 commit kể từ `v2099.01.Stable`', body)
+					self.assertIn(f'git tag {version}\ngit push origin {version}', body)
+					self.assertIn('Nội dung riêng cần giữ: tiếng Việt và `\\n`.', body)
+					self.assertIn('## ⚠️ RỦI RO VÀ KHẢ NĂNG TƯƠNG THÍCH', body)
+					self.assertIn('## ↩️ PHƯƠNG ÁN KHÔI PHỤC', body)
+					self.assertIn('**CÔNG TY TNHH TOÀN QUỲNH**', body)
+					self.assertIn('- [ ] Các kiểm thử tự động đã chạy thành công', body)
+					self.assertIn('- [ ] Pull Request đã sẵn sàng để được đánh giá.', body)
+					self.assertEqual(body.count('- [x]'), templateText.count('- [x]'))
+
+	def testInvalidReleaseTemplateStopsBeforeBranchCreation(self):
+		originalTemplate = self.module.RELEASE_TEMPLATE.read_bytes()
+		field = b'- ' + 'Kênh phát hành:'.encode()
+		cases = (
+			None,
+			b'\xff',
+			originalTemplate.replace(field, b'- Channel:'),
+			originalTemplate + b'\n' + field + b'\n',
+		)
+		with tempfile.TemporaryDirectory() as folder:
+			self.module.ROOT = Path(folder)
+			(self.module.ROOT / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
+			for index, templateData in enumerate(cases):
+				with self.subTest(index=index):
+					templatePath = Path(folder) / f'template-{index}.md'
+					if templateData is not None:
+						templatePath.write_bytes(templateData)
+					with (
+						mock.patch.object(self.module, 'RELEASE_TEMPLATE', templatePath),
+						mock.patch.object(self.module, 'runCommand', return_value='abc123') as run,
+						mock.patch.object(self.module.github, 'ghExists', return_value=False),
+						mock.patch.object(self.module.subprocess, 'run') as create,
+						contextlib.redirect_stdout(io.StringIO()) as output,
+					):
+						self.assertEqual(
+							self.module.openReleasePullRequest(
+								'Stable.v2099.02.040001', 'v2099.01.Stable', 1
+							),
+							1,
+						)
+						self.assertIn(
+							'Không chuẩn bị được nội dung PR từ mẫu phát hành', output.getvalue()
+						)
+						run.assert_called_once_with('git', 'rev-parse', 'HEAD')
+						create.assert_not_called()
 
 	def testExtractsVersionNotes(self):
 		# Dữ liệu mẫu cố định: nội dung CHANGELOG.md thật thay đổi theo từng lần phát hành.

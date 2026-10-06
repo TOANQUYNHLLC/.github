@@ -15,7 +15,8 @@ open-pr tại máy rồi trả CHANGELOG.md về như cũ — chỉ chạy trên
 open-pr: tạo branch release/stable.vYYYY.MM.DDXXXX hoặc release/beta.vYYYY.MM.DDXXXX,
 commit CHANGELOG.md qua GraphQL createCommitOnBranch (GitHub ký, thỏa
 quy tắc commit có chữ ký) rồi mở Pull Request; đọc và kiểm tra UTF-8 của CHANGELOG.md trước khi tạo branch;
-branch đã có thì chỉ bỏ qua khi có Pull Request đang mở;
+branch đã có thì chỉ bỏ qua khi có Pull Request đang mở; nội dung PR lấy từ mẫu release.md,
+điền phiên bản và hướng dẫn phát hành, giữ checklist chưa xác nhận để người quản trị đánh giá;
 commit lỗi thì thử xóa branch vừa tạo và báo kết quả để lần chạy sau làm lại.
 create: workflow release.yml (và workflow mẫu release.yml của repository khác, với --changelog CHANGELOG.md
 --allow-generated-notes) gọi khi đẩy tag Stable.v*, Beta.v* hoặc v*; Beta là bản phát hành thử nghiệm.
@@ -38,6 +39,7 @@ from pathlib import Path
 from orgsetup import github
 
 ROOT = Path(__file__).resolve().parents[1]
+RELEASE_TEMPLATE = ROOT / '.github' / 'PULL_REQUEST_TEMPLATE' / 'release.md'
 # Giờ Việt Nam: UTC+7 cố định, không có giờ mùa hè từ 1975 — không cần dữ liệu múi giờ (ZoneInfo lỗi khi máy
 # thiếu tzdata: Windows, image Docker tối giản).
 TIMEZONE = timezone(timedelta(hours=7), 'Asia/Ho_Chi_Minh')
@@ -276,6 +278,56 @@ def prepareRelease(version, date, openPullRequest=False, channel='Stable'):
 		runCommand('git', 'checkout', '--', 'CHANGELOG.md')
 
 
+def releasePullRequestBody(version, previous, commits):
+	"""Điền thông tin phát hành vào mẫu PR của tổ chức; không tự xác nhận kiểm thử hoặc review."""
+	channel = RELEASE_VERSION.fullmatch(version)['channel']
+	description = RELEASE_TEMPLATE.read_text(encoding='utf-8')
+	fields = {
+		'Phiên bản hiện tại': f'`{previous}`',
+		'Phiên bản dự kiến theo quy ước của dự án': f'`{version}`',
+		'Kênh phát hành': channel,
+		'Nội dung phát hành trong `CHANGELOG.md` nếu dự án có': (
+			f'Xem mục `{version}` trong `CHANGELOG.md` trên branch của PR.'
+		),
+		'Mục tiêu và phạm vi phát hành': (
+			f'Phát hành hằng tháng **{version}**: {commits} commit kể từ `{previous}`.'
+		),
+		'Các tệp khai báo phiên bản cần cập nhật': '`CHANGELOG.md`',
+		'Nội dung và tài nguyên chuẩn bị cho phiên bản': (
+			'Mục **CHƯA PHÁT HÀNH** của `CHANGELOG.md` đã chuyển thành phiên bản này.'
+		),
+	}
+	for label, value in fields.items():
+		pattern = rf'^- {re.escape(label)}:[ \t]*$'
+		description, count = re.subn(
+			pattern,
+			lambda match, replacement=f'- {label}: {value}': replacement,
+			description,
+			flags=re.MULTILINE,
+		)
+		if count != 1:
+			raise ValueError(f'Mẫu PR phát hành phải có đúng một trường {label!r}.')
+	instructions = (
+		'Sau khi hợp nhất (**Squash** hoặc **Merge**), người quản trị gắn tag trên `main`:\n\n'
+		f'```sh\ngit switch main\ngit pull --ff-only\ngit tag {version}\n'
+		f'git push origin {version}\n```\n\n'
+		'Workflow `release.yml` tạo GitHub Release từ `CHANGELOG.md` (khi GitHub Actions tắt: '
+		f'`python3 scripts/release.py create {version}`).'
+	)
+	if os.environ.get('GITHUB_ACTIONS'):
+		instructions += (
+			'\n\nPull Request này do workflow mở bằng `GITHUB_TOKEN` nên GitHub không chạy kiểm tra: '
+			'bấm **Close pull request** rồi **Reopen pull request** để chạy các kiểm tra bắt buộc trước khi '
+			'hợp nhất.'
+		)
+	marker = (
+		'<!-- Nêu những phần cần được chú ý hoặc cần người đánh giá hỗ trợ kiểm tra kỹ hơn. -->'
+	)
+	if description.count(marker) != 1:
+		raise ValueError('Mẫu PR phát hành thiếu hoặc trùng phần hướng dẫn cho người đánh giá.')
+	return description.replace(marker, marker + '\n\n' + instructions)
+
+
 def openReleasePullRequest(version, previous, commits):
 	validateReleaseInputs(version)
 	channel = RELEASE_VERSION.fullmatch(version)['channel']
@@ -325,6 +377,11 @@ def openReleasePullRequest(version, previous, commits):
 		changelog.decode('utf-8')
 	except (OSError, UnicodeError) as exc:
 		reportMessage('error', f'Không đọc được CHANGELOG.md: {exc}')
+		return 1
+	try:
+		description = releasePullRequestBody(version, previous, commits)
+	except (OSError, UnicodeError, ValueError) as exc:
+		reportMessage('error', f'Không chuẩn bị được nội dung PR từ mẫu phát hành: {exc}')
 		return 1
 	contents = base64.b64encode(changelog).decode('ascii')
 	try:
@@ -379,49 +436,35 @@ def openReleasePullRequest(version, previous, commits):
 			f'Không commit được CHANGELOG.md lên {branch}: {exc.stderr.strip()} — {cleanup}',
 		)
 		return 1
-	description = (
-		f'Phát hành hằng tháng **{version}**: {commits} commit kể từ `{previous}`. Mục **CHƯA PHÁT '
-		'HÀNH** của `CHANGELOG.md` đã chuyển thành phiên bản này.\n\n'
-		'Sau khi hợp nhất (**Squash** hoặc **Merge**), người quản trị gắn tag trên `main`:\n\n'
-		f'```sh\ngit switch main && git pull --ff-only && git tag {version} && '
-		f'git push origin {version}\n```\n\n'
-		'Workflow `release.yml` tạo GitHub Release từ `CHANGELOG.md` (khi GitHub Actions tắt: '
-		f'`python3 scripts/release.py create {version}`).'
-	)
-	if os.environ.get('GITHUB_ACTIONS'):
-		# Sự kiện do GITHUB_TOKEN tạo không khởi chạy workflow khác: kiểm tra bắt buộc của Protect Main chỉ chạy
-		# khi người quản trị đóng rồi mở lại Pull Request.
-		description += (
-			'\n\nPull Request này do workflow mở bằng `GITHUB_TOKEN` nên GitHub không chạy kiểm tra: '
-			'bấm **Close pull request** rồi **Reopen pull request** để chạy các kiểm tra bắt buộc trước khi '
-			'hợp nhất.'
+	with tempfile.TemporaryDirectory() as folder:
+		bodyPath = Path(folder) / 'pull-request.md'
+		bodyPath.write_text(description, encoding='utf-8')
+		created = subprocess.run(
+			[
+				'gh',
+				'pr',
+				'create',
+				'--repo',
+				repository,
+				'--base',
+				'main',
+				'--head',
+				branch,
+				'--title',
+				title,
+				'--body-file',
+				str(bodyPath),
+				'--label',
+				'release',
+				'--label',
+				'Pre-Release',
+				'--label',
+				channel,
+			],
+			capture_output=True,
+			text=True,
+			check=False,
 		)
-	created = subprocess.run(
-		[
-			'gh',
-			'pr',
-			'create',
-			'--repo',
-			repository,
-			'--base',
-			'main',
-			'--head',
-			branch,
-			'--title',
-			title,
-			'--body',
-			description,
-			'--label',
-			'release',
-			'--label',
-			'Pre-Release',
-			'--label',
-			channel,
-		],
-		capture_output=True,
-		text=True,
-		check=False,
-	)
 	if created.returncode == 0:
 		print(created.stdout.strip())
 		return 0
