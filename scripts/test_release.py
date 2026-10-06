@@ -727,12 +727,32 @@ class ReleaseTest(unittest.TestCase):
 	def buildReleaseClone(folder):
 		origin, clone = Path(folder) / 'origin.git', Path(folder) / 'clone'
 		subprocess.run(['git', 'init', '-q', '--bare', str(origin)], check=True)
+		# Tắt bảo trì tự động: commit và push (receive-pack) chạy "git maintenance run --auto" ở tiến trình nền, ghi
+		# rồi xóa objects/maintenance.lock — releaseClone() chép mẫu đúng lúc đó thì copytree báo tệp không còn.
+		for key, value in (
+			('maintenance.auto', 'false'),
+			('gc.auto', '0'),
+			('receive.autogc', 'false'),
+		):
+			subprocess.run(['git', 'config', key, value], cwd=origin, check=True)
 		subprocess.run(
 			['git', 'clone', '-q', str(origin), str(clone)], capture_output=True, check=True
 		)
 		(clone / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
 		# Không phụ thuộc cấu hình git của máy (runner chưa đặt danh tính, máy bật ký commit, tag).
-		git = ['git', '-c', 'user.name=test', '-c', 'user.email=', '-c', 'commit.gpgsign=false']
+		git = [
+			'git',
+			'-c',
+			'user.name=test',
+			'-c',
+			'user.email=',
+			'-c',
+			'commit.gpgsign=false',
+			'-c',
+			'maintenance.auto=false',
+			'-c',
+			'gc.auto=0',
+		]
 		for command in (
 			['add', 'CHANGELOG.md'],
 			['commit', '-q', '-m', 'đầu'],
