@@ -169,6 +169,8 @@ Chỉ force push bằng `--force-with-lease --force-if-includes` (git ≥ 2.30: 
 
 ### 📄 CHỌN MẪU PULL REQUEST
 
+Các mẫu riêng giữ đầy đủ bố cục, checklist, hướng dẫn bảo mật và phần thông tin công ty của mẫu chung; bổ sung câu hỏi và checklist phù hợp với từng loại công việc.
+
 | Mẫu                                                                                                        | Khi sử dụng                                                                          |
 | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | [`feature.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/feature.md) | Tính năng mới: hành vi, tiêu chí chấp nhận và kiểm thử                               |
