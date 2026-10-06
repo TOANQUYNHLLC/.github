@@ -1,90 +1,143 @@
-# Lệnh tiện ích — chạy giống hệt GitHub Actions trên máy cục bộ. Gõ `make` để xem danh sách lệnh.
+# ==============================================================================
+# Makefile — repository .github của CÔNG TY TNHH TOÀN QUỲNH
+# ==============================================================================
+# Lệnh tiện ích chạy tại máy giống hệt GitHub Actions. Gõ `make` để xem danh sách lệnh theo nhóm.
 # Yêu cầu: Node.js (theo .nvmrc), Python ≥ 3.11 (mise.toml), ruby, git, ruff, shellcheck, actionlint
 # Cài đúng phiên bản trong mise.toml và .nvmrc: mise install; thư viện Node.js tự cài khi chạy kiểm tra.
-# Các nhóm kiểm tra khai báo một nơi trong scripts/check.py — workflow validate.yml gọi cùng script.
+# Các nhóm kiểm tra khai báo một nơi trong scripts/check.py — workflow validate.yml gọi cùng script; logic nhiều
+# bước nằm trong scripts/, shell/ (có test), Makefile chỉ gọi lệnh (ADR 0009, ADR 0015).
+# Tương thích GNU Make ≥ 3.81 (bản mặc định của macOS): không dùng .ONESHELL, .SHELLFLAGS, !=.
 
+# ------------------------------------------------------------------------------
+# Cấu hình
+# ------------------------------------------------------------------------------
+SHELL := /bin/sh
 .DEFAULT_GOAL := help
+# Lệnh lỗi giữa chừng thì xóa tệp đích dở dang; không dùng luật dựng sẵn của make (repository không biên dịch).
+.DELETE_ON_ERROR:
+.SUFFIXES:
+MAKEFLAGS += --no-builtin-rules
 
-.PHONY: help check quick validate test format format-check lint conventions audit tools links versions forms release-notes release-prepare release-pr labels-preview labels-apply hooks syncmain sync cleanup org-preview
+# Trình thông dịch Python chạy script (cần ≥ 3.11); ghi đè khi cần: make check PYTHON=python3.14
+PYTHON := python3
 
-help: ## Hiển thị danh sách lệnh
-	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  make %-15s %s\n", $$1, $$2}'
+# Tham số của lệnh: make sync BRANCH=…, make release-notes TAG=…, make forms REF=…. Công thức đọc giá trị từ biến
+# môi trường ("$$BRANCH") thay vì chèn $(BRANCH) vào lệnh — ký tự đặc biệt không bị shell thông dịch.
+export BRANCH TAG REF
 
-check: ## Mọi kiểm tra GitHub Actions chạy trên Pull Request (trừ CodeQL) — chạy trước khi đẩy
-	python3 scripts/check.py
+##@ Trợ giúp
 
-quick: ## Kiểm tra nhanh khi đang sửa; phạm vi không chắc thì chạy đầy đủ
-	python3 scripts/check.py quick
+.PHONY: help
+help: ## Hiển thị danh sách lệnh theo nhóm
+	@awk 'BEGIN { FS = ":.*## " } /^##@ / { printf "\n%s\n", substr($$0, 5); next } /^[a-z][a-z-]*:.*## / { printf "  make %-16s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
-validate: ## Kiểm tra nội dung bằng scripts/validate.py
-	python3 scripts/validate.py
+##@ Thiết lập
 
-test: ## Chạy test tự động của các script (song song trên nhiều tiến trình)
-	python3 scripts/run-tests.py
-
+.PHONY: tools
 tools: ## Kiểm tra đã cài đủ công cụ, cài thư viện Node.js nếu thiếu hoặc sai phiên bản
-	python3 scripts/check.py tools
+	$(PYTHON) scripts/check.py tools
 
+.PHONY: hooks
+hooks: ## Cài git hook (danh sách trong scripts/git-hooks.py), mẫu commit và để git blame bỏ qua commit chỉ đổi định dạng
+	$(PYTHON) scripts/git-hooks.py install
+	git config blame.ignoreRevsFile .git-blame-ignore-revs
+	git config commit.template .gitmessage
+
+.PHONY: format
 format: tools ## Định dạng lại toàn bộ bằng Prettier và ruff
 	npx --no -- prettier --write .
 	ruff format .
 
+##@ Kiểm tra trước khi đẩy
+
+.PHONY: check
+check: ## Mọi kiểm tra GitHub Actions chạy trên Pull Request (trừ CodeQL) — chạy trước khi đẩy
+	$(PYTHON) scripts/check.py
+
+.PHONY: quick
+quick: ## Kiểm tra nhanh khi đang sửa; phạm vi không chắc thì chạy đầy đủ
+	$(PYTHON) scripts/check.py quick
+
+.PHONY: validate
+validate: ## Kiểm tra nội dung bằng scripts/validate.py
+	$(PYTHON) scripts/validate.py
+
+.PHONY: test
+test: ## Chạy test tự động của các script (song song trên nhiều tiến trình)
+	$(PYTHON) scripts/run-tests.py
+
+.PHONY: format-check
 format-check: ## Prettier, ruff format, ruff check (job "Định dạng (Prettier, ruff)")
-	python3 scripts/check.py format
+	$(PYTHON) scripts/check.py format
 
+.PHONY: lint
 lint: ## shellcheck, actionlint (job "Shell script và workflow")
-	python3 scripts/check.py lint
+	$(PYTHON) scripts/check.py lint
 
+.PHONY: conventions
 conventions: ## Tên branch và tiêu đề commit theo quy ước (giống branch-name.yml, pr-title.yml)
-	python3 scripts/check.py conventions
+	$(PYTHON) scripts/check.py conventions
 
+.PHONY: audit
 audit: ## Dependency có lỗ hổng mức high trở lên (giống dependency-review.yml)
-	python3 scripts/check.py audit
+	$(PYTHON) scripts/check.py audit
 
-hooks: ## Cài git hook (danh sách trong scripts/git-hooks.py), mẫu commit và để git blame bỏ qua commit chỉ đổi định dạng
-	python3 scripts/git-hooks.py install
-	git config blame.ignoreRevsFile .git-blame-ignore-revs
-	git config commit.template .gitmessage
+##@ Kiểm tra trực tuyến (cần mạng)
 
+.PHONY: links
+links: ## Kiểm tra liên kết bên ngoài (website, Facebook…) còn hoạt động
+	$(PYTHON) scripts/check-external-links.py
+
+.PHONY: versions
+versions: ## Báo công cụ trong mise.toml, action chỉ có trong workflow-templates/ có bản mới (Dependabot không theo dõi)
+	$(PYTHON) scripts/check-tool-versions.py
+
+.PHONY: forms
+forms: ## Kiểm tra GitHub chấp nhận biểu mẫu Issue, Discussion: make forms REF=<branch> (mặc định main)
+	$(PYTHON) scripts/check-github-forms.py "$${REF:-main}"
+
+##@ Đồng bộ git tại máy
+
+.PHONY: syncmain
 syncmain: ## Về main, git pull, xóa branch cục bộ đã hợp nhất mà branch trên GitHub đã bị xóa
 	shell/sync.sh main
 	shell/prune-branches.sh
 
-# sync đọc BRANCH từ môi trường (make xuất biến truyền trên dòng lệnh) thay vì chèn vào lệnh: giá trị không bị
-# shell thông dịch.
+.PHONY: sync
 sync: ## Như syncmain nhưng chuyển sang branch khác: make sync BRANCH=<branch>
 	$(if $(BRANCH),,$(error Thiếu BRANCH: make sync BRANCH=<branch> — về main thì dùng make syncmain))
 	shell/sync.sh "$$BRANCH"
 	shell/prune-branches.sh
 
+.PHONY: cleanup
 cleanup: ## XÓA VĨNH VIỄN mọi tệp git không quản lý, kể cả tệp mới chưa add và node_modules/, .env (git clean -fdx)
 	git clean -fdx
 
-links: ## Kiểm tra liên kết bên ngoài (website, Facebook…) còn hoạt động
-	python3 scripts/check-external-links.py
+##@ Phát hành
 
-versions: ## Báo công cụ trong mise.toml, action chỉ có trong workflow-templates/ có bản mới (Dependabot không theo dõi)
-	python3 scripts/check-tool-versions.py
-
-# forms, release-notes đọc REF, TAG từ môi trường như sync: giá trị không bị shell thông dịch.
-forms: ## Kiểm tra GitHub chấp nhận biểu mẫu Issue, Discussion: make forms REF=<branch> (mặc định main)
-	python3 scripts/check-github-forms.py "$${REF:-main}"
-
+.PHONY: release-notes
 release-notes: ## Xem trước nội dung Release của một tag: make release-notes TAG=Stable.v2026.11.010001
 	$(if $(TAG),,$(error Thiếu TAG: make release-notes TAG=<tag>, ví dụ TAG=Stable.v2026.11.010001))
-	python3 scripts/release.py notes "$$TAG"
+	$(PYTHON) scripts/release.py notes "$$TAG"
 
+.PHONY: release-prepare
 release-prepare: ## Chuyển CHƯA PHÁT HÀNH của CHANGELOG.md thành phiên bản của tháng nếu có thay đổi từ tag trước
-	python3 scripts/release.py prepare
+	$(PYTHON) scripts/release.py prepare
 
+.PHONY: release-pr
 release-pr: ## Chuẩn bị rồi mở Pull Request phát hành tại máy (khi GitHub Actions tắt; cần gh, đứng ở main)
-	python3 scripts/release.py prepare --open-pr
+	$(PYTHON) scripts/release.py prepare --open-pr
 
+##@ Quản trị tổ chức (cần GitHub CLI đã đăng nhập)
+
+.PHONY: org-preview
+org-preview: ## Xem trước việc áp dụng tệp, cài đặt, ruleset, team, nhãn lên mọi repository và cài đặt tổ chức
+	$(PYTHON) scripts/org-setup.py preview
+
+.PHONY: labels-preview
 labels-preview: ## Xem trước việc đồng bộ nhãn lên các repository
-	python3 scripts/org-setup.py labels
+	$(PYTHON) scripts/org-setup.py labels
 
-labels-apply: ## Đồng bộ nhãn lên repository đã có (cần GitHub CLI, quyền quản trị); nhãn mặc định cấp tổ chức nhập trên web
-	python3 scripts/org-setup.py labels --apply
-
-org-preview: ## Xem trước việc áp dụng tệp, cài đặt, ruleset, team, nhãn lên mọi repository và cài đặt tổ chức (cần gh)
-	python3 scripts/org-setup.py preview
+.PHONY: labels-apply
+labels-apply: ## Đồng bộ nhãn lên repository đã có (cần quyền quản trị); nhãn mặc định cấp tổ chức nhập trên web
+	$(PYTHON) scripts/org-setup.py labels --apply

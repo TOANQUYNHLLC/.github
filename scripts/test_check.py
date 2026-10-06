@@ -328,6 +328,31 @@ class CheckTest(unittest.TestCase):
 		self.assertLess(text.index('chậm'), text.index('nhanh'))
 		self.assertIn('❌ fast:', text)
 
+	def testMakefileTargetsArePhonyAndGrouped(self):
+		# Lệnh có mô tả (hiện trong make help) khai báo .PHONY ngay phía trên — tệp trùng tên lệnh không làm make bỏ
+		# qua lệnh — và nằm dưới một nhóm ##@ để make help in theo nhóm.
+		lines = (ROOT / 'Makefile').read_text(encoding='utf-8').split('\n')
+		group = None
+		targets = []
+		for index, line in enumerate(lines):
+			if line.startswith('##@ '):
+				group = line[4:]
+			match = re.match(r'^([a-z][a-z-]*):.*## ', line)
+			if match:
+				target = match.group(1)
+				targets.append(target)
+				self.assertEqual(lines[index - 1], f'.PHONY: {target}', target)
+				self.assertIsNotNone(group, target)
+		self.assertEqual(len(targets), len(set(targets)))
+		listing = subprocess.run(
+			['make', '--no-print-directory', 'help'],
+			cwd=ROOT,
+			capture_output=True,
+			text=True,
+			check=True,
+		).stdout
+		self.assertEqual(re.findall(r'^  make (\S+)', listing, re.MULTILINE), targets)
+
 	def testPrettierUsesInstalledVersion(self):
 		# --no: không tự tải Prettier mới nhất; thiếu "--" thì npm coi --check là cấu hình của npm, in tệp rồi
 		# thoát 0 mà Prettier không chạy.
