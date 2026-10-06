@@ -1,0 +1,56 @@
+title: '[Chia sẻ] '
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Chia sẻ demo, tình huống sử dụng hoặc bài học triển khai để cộng đồng cùng trao đổi. Vui lòng tuân thủ [Quy tắc ứng xử](https://github.com/TOANQUYNHLLC/.github/blob/main/CODE_OF_CONDUCT.md).
+              Với yêu cầu cần theo dõi xử lý, chọn kênh phù hợp theo [hướng dẫn hỗ trợ](https://github.com/TOANQUYNHLLC/.github/blob/main/SUPPORT.md).
+
+              > ⚠️ Chỉ chia sẻ tài nguyên được phép công khai. Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào nội dung, ảnh, video hoặc demo.
+              > 🔐 Vấn đề bảo mật: báo cáo riêng theo [chính sách bảo mật](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md).
+
+    - type: textarea
+      id: summary
+      attributes:
+          label: 📋 NỘI DUNG CHIA SẺ
+          description: Giới thiệu demo, cách sử dụng hoặc kết quả triển khai.
+      validations:
+          required: true
+
+    - type: textarea
+      id: useCase
+      attributes:
+          label: 🎯 TÌNH HUỐNG SỬ DỤNG
+          description: Vấn đề cần giải quyết, đối tượng sử dụng và giá trị đạt được; chỉ dùng dữ liệu mẫu hoặc thông tin được phép công khai.
+      validations:
+          required: true
+
+    - type: input
+      id: project
+      attributes:
+          label: 📁 DỰ ÁN VÀ PHIÊN BẢN
+          description: Repository, sản phẩm hoặc phiên bản liên quan, nếu có.
+
+    - type: textarea
+      id: demo
+      attributes:
+          label: 📷 DEMO VÀ TÀI NGUYÊN MINH HỌA
+          description: Liên kết, ảnh chụp hoặc video đã loại bỏ thông tin nhạy cảm; nêu rõ điều kiện truy cập nếu cần.
+
+    - type: textarea
+      id: setup
+      attributes:
+          label: 🛠️ CÁCH THỬ DEMO
+          description: Các bước chạy, điều kiện cần và cấu hình mẫu nếu có.
+
+    - type: textarea
+      id: lessons
+      attributes:
+          label: 💡 BÀI HỌC VÀ GIỚI HẠN
+          description: Điều đã làm hiệu quả, khó khăn, giới hạn hoặc điểm có thể cải thiện.
+
+    - type: textarea
+      id: feedback
+      attributes:
+          label: 💬 PHẢN HỒI MONG MUỐN
+          description: Những khía cạnh bạn muốn người đọc trao đổi hoặc góp ý.

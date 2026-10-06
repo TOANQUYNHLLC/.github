@@ -1,0 +1,114 @@
+name: 🧪 Lỗi CI hoặc kiểm thử
+description: Báo workflow, job hoặc kiểm thử thất bại liên tục hay lúc đạt lúc lỗi
+title: '[CI/Test] '
+labels:
+    - tests
+    - ci
+    - needs triage
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Dùng mẫu này để theo dõi lỗi CI hoặc kiểm thử. Lỗi chức năng của sản phẩm dùng mẫu **🐛 Báo lỗi**.
+
+              > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue. Loại bỏ thông tin nhạy cảm khỏi log và dữ liệu thử trước khi chia sẻ.
+              > 🔐 Vấn đề bảo mật: **không** tạo Issue công khai — báo cáo riêng theo [chính sách bảo mật](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md).
+
+    - type: input
+      id: repository
+      attributes:
+          label: 📁 DỰ ÁN / REPOSITORY
+      validations:
+          required: true
+
+    - type: textarea
+      id: jobs
+      attributes:
+          label: ⚙️ WORKFLOW, JOB HOẶC BỘ KIỂM THỬ
+          description: Tên workflow, job hoặc bộ kiểm thử bị lỗi; nêu rõ nếu chỉ chạy tại máy.
+      validations:
+          required: true
+
+    - type: textarea
+      id: tests
+      attributes:
+          label: 🧪 KIỂM THỬ BỊ ẢNH HƯỞNG
+          description: Tên test và đường dẫn tệp nếu xác định được. Để trống nếu lỗi xảy ra trước khi chạy test.
+
+    - type: dropdown
+      id: failureType
+      attributes:
+          label: 🔁 KIỂU THẤT BẠI
+          options:
+              - Thất bại liên tục
+              - Lúc đạt lúc lỗi dù mã nguồn không đổi
+              - Chưa xác định
+      validations:
+          required: true
+
+    - type: textarea
+      id: runs
+      attributes:
+          label: 🔗 CÁC LẦN CHẠY LIÊN QUAN
+          description: Liên kết lần chạy thất bại và lần chạy thành công gần nhất nếu có; chỉ chia sẻ tài nguyên phù hợp với quyền truy cập của repository.
+
+    - type: input
+      id: commit
+      attributes:
+          label: 🏷️ PHIÊN BẢN HOẶC COMMIT BỊ ẢNH HƯỞNG
+
+    - type: input
+      id: since
+      attributes:
+          label: 🗓️ THỜI ĐIỂM BẮT ĐẦU LỖI
+          description: Ngày, lần chạy hoặc commit đầu tiên quan sát thấy lỗi, nếu biết.
+
+    - type: textarea
+      id: environment
+      attributes:
+          label: 🖥️ MÔI TRƯỜNG KIỂM THỬ
+          description: Runner hoặc hệ điều hành, runtime, dependency và cấu hình liên quan. Ghi Chưa xác định cho thông tin chưa biết.
+      validations:
+          required: true
+
+    - type: textarea
+      id: reproduction
+      attributes:
+          label: 🔁 CÁCH TÁI HIỆN VÀ TẦN SUẤT
+          description: Lệnh hoặc các bước chạy. Với lỗi không ổn định, nêu số lần thất bại trên số lần chạy đã quan sát; nếu chưa tái hiện được, ghi rõ điều kiện đã biết.
+      validations:
+          required: true
+
+    - type: textarea
+      id: expected
+      attributes:
+          label: ✅ KẾT QUẢ MONG ĐỢI
+          description: Hành vi cần được kiểm chứng hoặc kết quả job lẽ ra phải đạt.
+      validations:
+          required: true
+
+    - type: textarea
+      id: actual
+      attributes:
+          label: ❌ KẾT QUẢ THỰC TẾ VÀ LOG LIÊN QUAN
+          description: Thông báo lỗi và đoạn log cần thiết đã loại bỏ thông tin nhạy cảm.
+      validations:
+          required: true
+
+    - type: textarea
+      id: troubleshooting
+      attributes:
+          label: 🔎 CÁC CÁCH ĐÃ THỬ
+          description: Các cách đã thử cô lập nguyên nhân và kết quả, nếu có.
+
+    - type: checkboxes
+      id: checklist
+      attributes:
+          label: ✅ CHECKLIST
+          options:
+              - label: Tôi đã tìm kiếm và không thấy Issue nào trùng lặp.
+                required: true
+              - label: Đây không phải báo cáo lỗ hổng bảo mật cần gửi riêng theo chính sách bảo mật.
+                required: true
+              - label: Tôi đã loại bỏ mật khẩu, khóa API, token, dữ liệu cá nhân và thông tin y tế nhạy cảm khỏi nội dung, log và dữ liệu thử.
+                required: true

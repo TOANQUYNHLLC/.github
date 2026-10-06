@@ -23,10 +23,15 @@ Tạo Issue mới và chọn biểu mẫu phù hợp:
 | Biểu mẫu                   | Khi nào dùng                                                            |
 | -------------------------- | ----------------------------------------------------------------------- |
 | 🐛 Báo lỗi                 | Một chức năng chạy sai, không chạy hoặc hiển thị không đúng             |
+| 🧪 Lỗi CI hoặc kiểm thử    | Workflow, job hoặc test thất bại liên tục hay lúc đạt lúc lỗi           |
 | ✨ Đề xuất tính năng       | Ý tưởng mới hoặc cải thiện chức năng, giao diện, hiệu năng, tài liệu    |
 | ❓ Câu hỏi hoặc cần hỗ trợ | Yêu cầu hỗ trợ cần theo dõi xử lý, hoặc repository chưa bật Discussions |
 
 Câu hỏi hướng dẫn và trao đổi chung dùng mục Hỏi đáp trong Discussions của repository nếu đã bật. Ý tưởng chưa rõ phạm vi có thể trao đổi trong mục Ý tưởng trước khi tạo Issue đề xuất. Xem [hướng dẫn chọn kênh hỗ trợ](https://github.com/TOANQUYNHLLC/.github/blob/main/SUPPORT.md).
+
+Lỗi CI hoặc kiểm thử cần nêu workflow/job, test bị ảnh hưởng, kiểu thất bại, môi trường, lệnh tái hiện và liên kết lần chạy nếu có. Với lỗi lúc đạt lúc lỗi dù mã nguồn không đổi, ghi tần suất đã quan sát; không cần khẳng định nguyên nhân khi chưa xác định. Mẫu này dùng nhãn `tests`, `ci` và `needs triage`; các nhãn phải tồn tại trong từng repository sử dụng mẫu.
+
+Demo, tình huống sử dụng và bài học triển khai có thể chia sẻ trong Discussions mục **Show and tell** nếu repository đã bật và có category với slug `show-and-tell`. Chỉ chia sẻ tài nguyên được phép công khai và đã loại bỏ thông tin nhạy cảm.
 
 Khi repository có workflow và cấu hình labeler, đã bật GitHub Actions và có các labels cần thiết, Pull Request được tự gắn nhãn loại theo tiền tố branch (`feature/` → `enhancement`, `fix/` → `bug`…) và tệp thay đổi. Tệp cộng đồng mặc định không tự tạo workflow hay labels trong repository đích.
 
