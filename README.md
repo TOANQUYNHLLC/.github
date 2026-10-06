@@ -51,18 +51,18 @@ GitHub hỗ trợ mặc định cho `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SE
 
 **Tệp cộng đồng mặc định** — dùng khi repository đích không có bản riêng tương ứng
 
-| Đường dẫn                                                              | Chức năng                                                                                                                                        |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md)                                   | Quy trình đóng góp, quy ước branch, commit và Pull Request                                                                                       |
-| [`SECURITY.md`](SECURITY.md)                                           | Chính sách bảo mật và cách báo cáo lỗ hổng                                                                                                       |
-| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)                             | Quy tắc ứng xử trong không gian cộng tác                                                                                                         |
-| [`SUPPORT.md`](SUPPORT.md)                                             | Kênh hỗ trợ: đặt câu hỏi, báo lỗi, đề xuất, bảo mật và liên hệ                                                                                   |
-| [`ACCESSIBILITY.md`](ACCESSIBILITY.md)                                 | Mục tiêu trợ năng, cách báo cáo vấn đề và hướng dẫn đóng góp                                                                                     |
-| [`.github/VULNERABILITY_REPORT.yml`](.github/VULNERABILITY_REPORT.yml) | Biểu mẫu báo cáo lỗ hổng riêng tư theo chính sách bảo mật                                                                                        |
-| [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/)                   | Biểu mẫu Issue: báo lỗi, đề xuất tính năng, câu hỏi; cấu hình `config.yml`                                                                       |
-| [`.github/DISCUSSION_TEMPLATE/`](.github/DISCUSSION_TEMPLATE/)         | Biểu mẫu Discussions: Ý tưởng, Hỏi đáp, Thảo luận chung                                                                                          |
-| [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) | Biểu mẫu Pull Request: tóm tắt thay đổi, kiểm thử, rủi ro và checklist                                                                           |
-| [`.github/PULL_REQUEST_TEMPLATE/`](.github/PULL_REQUEST_TEMPLATE/)     | Mẫu PR riêng cho tính năng, sửa lỗi và phát hành; chọn bằng tham số `template` theo [hướng dẫn đóng góp](CONTRIBUTING.md#-chọn-mẫu-pull-request) |
+| Đường dẫn                                                              | Chức năng                                                                                                                                                            |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md)                                   | Quy trình đóng góp, quy ước branch, commit và Pull Request                                                                                                           |
+| [`SECURITY.md`](SECURITY.md)                                           | Chính sách bảo mật và cách báo cáo lỗ hổng                                                                                                                           |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)                             | Quy tắc ứng xử trong không gian cộng tác                                                                                                                             |
+| [`SUPPORT.md`](SUPPORT.md)                                             | Kênh hỗ trợ: đặt câu hỏi, báo lỗi, đề xuất, bảo mật và liên hệ                                                                                                       |
+| [`ACCESSIBILITY.md`](ACCESSIBILITY.md)                                 | Mục tiêu trợ năng, cách báo cáo vấn đề và hướng dẫn đóng góp                                                                                                         |
+| [`.github/VULNERABILITY_REPORT.yml`](.github/VULNERABILITY_REPORT.yml) | Biểu mẫu báo cáo lỗ hổng riêng tư theo chính sách bảo mật                                                                                                            |
+| [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/)                   | Biểu mẫu Issue: báo lỗi, đề xuất tính năng, câu hỏi; cấu hình `config.yml`                                                                                           |
+| [`.github/DISCUSSION_TEMPLATE/`](.github/DISCUSSION_TEMPLATE/)         | Biểu mẫu Discussions: Thông báo, Ý tưởng, Hỏi đáp, Thảo luận chung                                                                                                   |
+| [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) | Biểu mẫu Pull Request: tóm tắt thay đổi, kiểm thử, rủi ro và checklist                                                                                               |
+| [`.github/PULL_REQUEST_TEMPLATE/`](.github/PULL_REQUEST_TEMPLATE/)     | Mẫu PR riêng cho tính năng, sửa lỗi, phát hành, cấu hình và tài liệu; chọn bằng tham số `template` theo [hướng dẫn đóng góp](CONTRIBUTING.md#-chọn-mẫu-pull-request) |
 
 **Tài nguyên dùng chung cho các repository**
 
@@ -262,6 +262,8 @@ Khi cập nhật nội dung, cần bảo đảm:
 Phiên bản có dạng `Stable.vYYYY.MM.DDXXXX` / `Beta.vYYYY.MM.DDXXXX`. `YYYY.MM.DD` là ngày chuẩn bị phát hành theo giờ Việt Nam; `XXXX` là số thứ tự gồm 4 chữ số, từ `0001` đến `9999`, dùng chung cho Stable và Beta, bắt đầu lại từ `0001` mỗi tháng. Script xác định số tiếp theo từ các tag phát hành của tháng, kể cả khi đổi ngày hoặc đổi kênh. Workflow hằng tháng chuẩn bị bản Stable ngày 1 khi có commit mới kể từ tag trước.
 
 [`CHANGELOG.md`](CHANGELOG.md) là khung chuẩn bị nội dung phiên bản: điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH** trước khi phát hành. Mục này trống thì script báo lỗi. Mỗi lần chuẩn bị, script tạo mục phiên bản để workflow đọc khi gắn tag; tệp chỉ giữ nội dung đang chuẩn bị. Các bản đã phát hành được công bố tại [GitHub Releases](https://github.com/TOANQUYNHLLC/.github/releases).
+
+PR phát hành tự động lấy bố cục từ [mẫu phát hành](.github/PULL_REQUEST_TEMPLATE/release.md), điền phiên bản, kênh và hướng dẫn phát hành. Các mục kiểm thử và checklist cần được người quản trị kiểm tra, điền và xác nhận trước khi hợp nhất. Script dừng trước khi tạo branch nếu không đọc được mẫu hoặc thiếu các trường cần điền.
 
 Khi dùng chức năng **Generate release notes** của GitHub, [`.github/release.yml`](.github/release.yml) phân nhóm Pull Request theo nhãn và loại trừ các mục `duplicate`, `invalid`, `wontfix`. Validator kiểm tra nhãn của cấu hình này và [`repository-templates/release.yml`](repository-templates/release.yml) theo `labels.yml`. Workflow phát hành của repository lấy nội dung từ `CHANGELOG.md`.
 
