@@ -721,6 +721,16 @@ class ReleaseTest(unittest.TestCase):
 				if footer:
 					self.assertTrue(prepared.endswith('<p align="center">© 2099</p>\n'))
 
+	def testInitialCommitComparisonCanPrepareFirstRelease(self):
+		changelog = RELEASE_FIXTURE.replace('compare/v2099.01.Stable...', f'compare/{"a" * 40}...')
+		prepared = self.module.cutRelease(changelog, 'Stable.v2099.02.010001', '2099-02-01')
+		self.assertEqual(
+			self.module.releaseNotes(prepared, 'Stable.v2099.02.010001'),
+			'### ✨ THÊM\n\n- Mục mới.',
+		)
+		self.assertIn('compare/Stable.v2099.02.010001...HEAD', prepared)
+		self.assertNotIn('compare/' + 'a' * 40, prepared)
+
 	def testCutsUnreleasedIntoVersion(self):
 		# CHANGELOG mẫu cố định: mục CHƯA PHÁT HÀNH của tệp thật trống ngay sau mỗi lần phát hành.
 		changelog = self.module.cutRelease(RELEASE_FIXTURE, 'Stable.v2099.02.010001', '2099-02-01')

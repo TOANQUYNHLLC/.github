@@ -1,8 +1,8 @@
 # 📦 NỘI DUNG PHÁT HÀNH
 
-Nội dung dùng để chuẩn bị GitHub Release của repository `.github`. Khi chuẩn bị phiên bản, điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH**; tệp không giữ mục của các phiên bản trước — lịch sử phát hành xem tại [GitHub Releases](https://github.com/TOANQUYNHLLC/.github/releases). Phiên bản có dạng `Stable.vYYYY.MM.DDXXXX` / `Beta.vYYYY.MM.DDXXXX`; `DD` là ngày chuẩn bị phát hành, số thứ tự `XXXX` gồm 4 chữ số, dùng chung cho hai kênh và bắt đầu lại từ `0001` mỗi tháng.
+Khung nội dung dành cho người sử dụng khi chuẩn bị GitHub Release của repository `.github`. Điền tóm tắt vào mục **CHƯA PHÁT HÀNH** khi chuẩn bị phiên bản; xem quy trình và định dạng phiên bản trong [`README.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/README.md#-phát-hành).
 
-## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/v2026.10.Stable...HEAD)
+## [CHƯA PHÁT HÀNH](https://github.com/TOANQUYNHLLC/.github/compare/50a0eebfe538443eb6af1805f7ed473ca41541e8...HEAD)
 
 ---
 

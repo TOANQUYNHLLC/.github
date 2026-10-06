@@ -281,7 +281,7 @@ def checkDependabotCooldown():
 
 
 def configLabels():
-	"""Nhãn dùng trong dependabot.yml, release.yml (bản mẫu), labeler.yml và workflow stale."""
+	"""Nhãn dùng trong dependabot.yml, release.yml, labeler.yml và workflow stale của repository và bản mẫu."""
 	found = []
 	for path in (
 		ROOT / '.github' / 'dependabot.yml',
@@ -290,7 +290,7 @@ def configLabels():
 		data = (loadYaml(path, dict) if path.exists() else None) or {}
 		for update in configItems(path, data, 'updates'):
 			found += [(path, label) for label in configItems(path, update, 'labels', str)]
-	for path in (ROOT / 'repository-templates' / 'release.yml',):
+	for path in (ROOT / '.github' / 'release.yml', ROOT / 'repository-templates' / 'release.yml'):
 		data = (loadYaml(path, dict) if path.exists() else None) or {}
 		changelog = configField(path, data, 'changelog', dict)
 		exclude = configField(path, changelog, 'exclude', dict)

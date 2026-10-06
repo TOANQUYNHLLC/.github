@@ -261,15 +261,19 @@ def checkChangelog(path, text):
 		error(path, 'mục đầu tiên phải là "## [CHƯA PHÁT HÀNH]"')
 	if len(versions) != len(set(versions)):
 		error(path, 'có phiên bản bị lặp')
-	# Liên kết CHƯA PHÁT HÀNH so sánh từ tag phát hành gần nhất tới HEAD (release.py ghi như vậy khi chuẩn bị phát
-	# hành); gốc là tên branch (main…HEAD) thì trang so sánh luôn rỗng.
+	# So sánh từ tag phát hành gần nhất tới HEAD; trước tag đầu tiên dùng SHA commit gốc. Không dùng tên branch
+	# (main…HEAD) vì trang so sánh sẽ rỗng khi xem trên main.
 	unreleased = re.search(
 		r'^## \[CHƯA PHÁT HÀNH\]\([^)]*/compare/([^)]+)\.\.\.HEAD\)', text, re.MULTILINE
 	)
-	if unreleased and not RELEASE_TAG.fullmatch(unreleased.group(1)):
+	if unreleased and not (
+		RELEASE_TAG.fullmatch(unreleased.group(1))
+		or re.fullmatch(r'[0-9a-f]{40}', unreleased.group(1))
+	):
 		error(
 			path,
-			f'liên kết CHƯA PHÁT HÀNH phải so sánh từ tag phát hành (Stable.v…, Beta.v…, v…) tới HEAD, '
+			f'liên kết CHƯA PHÁT HÀNH phải so sánh từ tag phát hành (Stable.v…, Beta.v…, v…) '
+			f'hoặc SHA commit gốc trước lần phát hành đầu tiên tới HEAD, '
 			f'không phải "{unreleased.group(1)}"',
 		)
 	checkAbsoluteLinks(path, text, 'mỗi mục thành nội dung GitHub Release')
@@ -281,7 +285,6 @@ def checkRequiredFiles():
 		for required in (
 			'README.md',
 			'CHANGELOG.md',
-			'LICENSE',
 			'SECURITY.md',
 			'CONTRIBUTING.md',
 			'CODE_OF_CONDUCT.md',

@@ -28,12 +28,6 @@ Lệnh đọc đầy đủ trạng thái trước khi ghi; thành viên chỉ đ
 
 ---
 
-## 🗂️ CỰU NGƯỜI QUẢN TRỊ
-
-Chưa có.
-
----
-
 ## 📞 LIÊN HỆ
 
 Liên hệ người quản trị qua Issue với biểu mẫu **❓ Câu hỏi hoặc cần hỗ trợ** hoặc email [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com). Vấn đề bảo mật: làm theo [`SECURITY.md`](SECURITY.md).

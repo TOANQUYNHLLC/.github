@@ -113,6 +113,95 @@ class ValidateTest(unittest.TestCase):
 				path.write_text(content, encoding='utf-8')
 				self.assertFails('phải là')
 
+	def testFormSchemaRejectsInvalidValues(self):
+		cases = (
+			('name: 42\ndescription: Mô tả\n', 'name: phải là chuỗi'),
+			('name: Mẫu\ndescription: [42]\n', 'description: phải là chuỗi'),
+		)
+		path = self.repo / '.github/VULNERABILITY_REPORT.yml'
+		for header, problem in cases:
+			with self.subTest(problem=problem):
+				path.write_text(
+					header + 'body: [{type: input, attributes: {label: TÓM TẮT}}]\n',
+					encoding='utf-8',
+				)
+				self.assertFails(problem)
+		for field, problem in (
+			(
+				'type: input, attributes: {label: TÓM TẮT}, validations: {required: "true"}',
+				'required: phải là boolean',
+			),
+			(
+				'type: textarea, attributes: {label: TÓM TẮT}, validations: {min_length: -1}',
+				'min_length',
+			),
+			(
+				'type: textarea, attributes: {label: TÓM TẮT}, validations: {min_length: true}',
+				'min_length',
+			),
+			(
+				'type: dropdown, attributes: {label: CHỌN, options: [42]}',
+				'options[1]: phải là chuỗi',
+			),
+			('type: dropdown, attributes: {label: CHỌN, options: [A, A]}', 'options bị trùng'),
+			(
+				'type: checkboxes, attributes: {label: CHỌN, options: [42]}',
+				'options[1]: phải là object',
+			),
+			(
+				'type: checkboxes, attributes: {label: CHỌN, options: [{label: Chọn, required: "true"}]}',
+				'required: phải là boolean',
+			),
+			('type: input, id: "bad id", attributes: {label: TÓM TẮT}', 'id "bad id" không hợp lệ'),
+		):
+			with self.subTest(problem=problem):
+				path.write_text(
+					f'name: Mẫu\ndescription: Mô tả\nbody: [{{{field}}}]\n', encoding='utf-8'
+				)
+				self.assertFails(problem)
+
+	def testFormMinimumLengthAcceptsValidInteger(self):
+		path = self.repo / '.github/VULNERABILITY_REPORT.yml'
+		with path.open('a', encoding='utf-8') as file:
+			file.write(
+				'    - type: textarea\n      id: proof\n      attributes:\n'
+				'          label: MINH HỌA\n      validations:\n'
+				'          required: true\n          min_length: 100\n'
+			)
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
+
+	def testUnknownFormKeysDoNotStopOtherChecks(self):
+		for name in (
+			'.github/ISSUE_TEMPLATE/bug_report.yml',
+			'.github/DISCUSSION_TEMPLATE/ideas.yml',
+		):
+			with self.subTest(path=name):
+				path = self.repo / name
+				content = path.read_text(encoding='utf-8')
+				path.write_text(content + '\n42: Giá trị\nunknown: Giá trị\n', encoding='utf-8')
+				code, output = self.runValidate()
+				self.assertEqual(code, 1)
+				self.assertIn('"42"', output)
+				self.assertIn('"unknown"', output)
+				path.write_text(content, encoding='utf-8')
+
+	def testIssueConfigRejectsInvalidFieldTypes(self):
+		path = self.repo / '.github/ISSUE_TEMPLATE/config.yml'
+		path.write_text(
+			'blank_issues_enabled: "false"\ncontact_links: [{name: 42, url: [42], about: Mô tả}]\n',
+			encoding='utf-8',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 1)
+		for problem in ('blank_issues_enabled', 'name: phải là chuỗi', 'url: phải là chuỗi'):
+			self.assertIn(problem, output)
+
+	def testChangelogCanCompareFromInitialCommit(self):
+		self.editRegex('CHANGELOG.md', r'compare/[^)]+\.\.\.HEAD\)', f'compare/{"a" * 40}...HEAD)')
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
+
 	def testYamlWorkflowCannotPinToolVersions(self):
 		path = self.repo / '.github/workflows/extra.yaml'
 		path.write_text('name: test\n# ruff==0.0.1\n', encoding='utf-8')
@@ -346,6 +435,11 @@ class ValidateTest(unittest.TestCase):
 			)
 
 	def testCurrentRepositoryIsValid(self):
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
+
+	def testRepositoryWithoutLicenseIsValid(self):
+		(self.repo / 'LICENSE').unlink(missing_ok=True)
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
 
@@ -924,9 +1018,58 @@ class Holder:
 		)
 		self.assertFails('phải là URL tuyệt đối')
 
+	def testPullRequestTemplatesMustNotUseRelativeLinks(self):
+		for name, target in (
+			('.github/PULL_REQUEST_TEMPLATE.md', '../CONTRIBUTING.md'),
+			('.github/PULL_REQUEST_TEMPLATE/feature.md', '../../CONTRIBUTING.md'),
+			('.github/PULL_REQUEST_TEMPLATE/bugfix.md', '../../CONTRIBUTING.md'),
+			('.github/PULL_REQUEST_TEMPLATE/release.md', '../../CONTRIBUTING.md'),
+		):
+			with self.subTest(path=name):
+				path = self.repo / name
+				content = path.read_text(encoding='utf-8')
+				path.write_text(content + f'\n[Hướng dẫn đóng góp]({target})\n', encoding='utf-8')
+				self.assertFails(f'{name}: liên kết "{target}" phải là URL tuyệt đối')
+				path.write_text(content, encoding='utf-8')
+
+	def testVulnerabilityFormsMustLiveInGithubFolder(self):
+		for suffix in ('.yml', '.yaml'):
+			with self.subTest(suffix=suffix):
+				source = self.repo / '.github' / 'VULNERABILITY_REPORT.yml'
+				target = self.repo / f'VULNERABILITY_REPORT{suffix}'
+				source.rename(target)
+				self.assertFails('phải nằm trong thư mục .github/ để GitHub nhận diện')
+				target.rename(source)
+
+	def testVulnerabilityFormsMustNotUseRelativeLinks(self):
+		self.edit(
+			'.github/VULNERABILITY_REPORT.yml',
+			'(https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md)',
+			'(SECURITY.md)',
+		)
+		self.assertFails('VULNERABILITY_REPORT.yml: liên kết "SECURITY.md" phải là URL tuyệt đối')
+
+	def testVulnerabilityFormFieldsAreChecked(self):
+		self.edit('.github/VULNERABILITY_REPORT.yml', 'label: 📋 TÓM TẮT', 'label: 📋 Tóm tắt')
+		self.assertFails('tiêu đề trường "📋 Tóm tắt" phải viết hoa')
+
+	def testVulnerabilityYamlFormsAreChecked(self):
+		path = self.repo / '.github' / 'VULNERABILITY_REPORT.yml'
+		path.rename(path.with_suffix('.yaml'))
+		self.edit('.github/VULNERABILITY_REPORT.yaml', 'type: input', 'type: unsupported')
+		self.assertFails('VULNERABILITY_REPORT.yaml: phần tử 2: type "unsupported" không hợp lệ')
+
 	def testConfigLabelsMustExistInLabels(self):
 		self.edit('workflow-templates/stale.yml', 'stale-pr-label: stale', 'stale-pr-label: cu')
 		self.assertFails('nhãn "cu" chưa có trong labels.yml')
+
+	def testRepositoryReleaseCategoryLabelsMustExistInLabels(self):
+		self.edit('.github/release.yml', '            - enhancement', '            - missing-label')
+		self.assertFails('.github/release.yml: nhãn "missing-label" chưa có trong labels.yml')
+
+	def testRepositoryReleaseExcludedLabelsMustExistInLabels(self):
+		self.edit('.github/release.yml', '            - duplicate', '            - missing-label')
+		self.assertFails('.github/release.yml: nhãn "missing-label" chưa có trong labels.yml')
 
 	def testWritePermissionNotAtWorkflowLevel(self):
 		# Khối permissions cấp workflow (không thụt lề) — không phụ thuộc thứ tự khối phía sau.
@@ -939,7 +1082,7 @@ class Holder:
 
 	def testFilesWithoutExtensionAreChecked(self):
 		path = self.repo / 'LICENSE'
-		path.write_bytes(path.read_bytes().replace(b'\n', b'\r\n'))
+		path.write_bytes('Văn bản kiểm thử tệp không có đuôi.\r\n'.encode())
 		self.assertFails('LICENSE: phải xuống dòng bằng LF')
 
 	def testBinaryListMatchesGitattributes(self):
@@ -1180,7 +1323,7 @@ class Holder:
 		self.assertFails('.editorconfig: mục [*] thiếu "end_of_line = lf"')
 
 	def testPrettierignoreDoesNotRepeatGitignore(self):
-		self.edit('.prettierignore', 'LICENSE\n', 'LICENSE\nnode_modules/\n')
+		(self.repo / '.prettierignore').write_text('node_modules/\n', encoding='utf-8')
 		self.assertFails('.prettierignore: "node_modules/" đã có trong .gitignore')
 
 	def testEditorExtensionsMustMatch(self):

@@ -58,6 +58,8 @@ class GitHooksTest(unittest.TestCase):
 		self.repo = Path(self.tmp.name)
 		self.git('init', '-q')
 		for name in self.module.FORMAT_CONFIGS:
+			if name == '.prettierignore' and not (ROOT / name).exists():
+				continue  # Tệp bỏ qua tùy chọn; Prettier đọc .gitignore khi không có tệp này.
 			shutil.copy2(ROOT / name, self.repo / name)
 		self.git('add', '-A')
 		# Không phụ thuộc cấu hình git của máy (runner chưa đặt danh tính, máy bật ký commit).
@@ -75,6 +77,17 @@ class GitHooksTest(unittest.TestCase):
 
 	def tearDown(self):
 		self.tmp.cleanup()
+
+	@unittest.skipUnless(
+		(ROOT / 'node_modules/.bin/prettier').exists(), 'cần Prettier (make tools)'
+	)
+	def testPreCommitWithoutOptionalPrettierignore(self):
+		if (self.repo / '.prettierignore').exists():
+			self.git('rm', '.prettierignore')
+		(self.repo / 'a.json').write_text('{\n\t"a": 1\n}\n', encoding='utf-8')
+		self.git('add', 'a.json')
+		with silenced():
+			self.assertEqual(self.module.preCommit(self.repo, []), 0)
 
 	def git(self, *args):
 		return subprocess.run(

@@ -1,4 +1,6 @@
-"""Biểu mẫu Issue, Discussion và cấu hình chọn biểu mẫu."""
+"""Biểu mẫu Issue, Discussion, báo cáo lỗ hổng riêng tư: cấu trúc, kiểu dữ liệu và cấu hình chọn biểu mẫu."""
+
+import re
 
 from validation.common import configField, configItems, error, loadYaml, readText
 from validation.docs import checkAbsoluteLinks
@@ -19,14 +21,15 @@ def checkForm(path, required=('name', 'description', 'body')):
 	if form is None:
 		return
 	for key in required:
-		if not form.get(key):
+		value = form.get(key) if key == 'body' else configField(path, form, key, str)
+		if not value or (isinstance(value, str) and not value.strip()):
 			error(path, f'thiếu khóa bắt buộc "{key}"')
 	checkAbsoluteLinks(path, readText(path))
 	if path.parent.name == 'DISCUSSION_TEMPLATE':
-		for key in sorted(set(form) - DISCUSSION_FORM_KEYS):
+		for key in sorted(set(form) - DISCUSSION_FORM_KEYS, key=str):
 			error(path, f'biểu mẫu Discussion không hỗ trợ khóa "{key}"')
 	if path.parent.name == 'ISSUE_TEMPLATE':
-		for key in sorted(set(form) - ISSUE_FORM_KEYS):
+		for key in sorted(set(form) - ISSUE_FORM_KEYS, key=str):
 			error(path, f'khóa "{key}" không được GitHub chấp nhận trong biểu mẫu Issue')
 	FORM_LABELS.extend((path, label) for label in configItems(path, form, 'labels', str))
 	ids = set()
@@ -37,28 +40,60 @@ def checkForm(path, required=('name', 'description', 'body')):
 			error(path, f'phần tử {index}: type "{kind}" không hợp lệ')
 			continue
 		if kind == 'markdown':
-			if not attributes.get('value'):
+			if not configField(path, attributes, 'value', str).strip():
 				error(path, f'phần tử {index}: markdown thiếu value')
 			continue
 		label = configField(path, attributes, 'label', str)
-		if not label:
+		if not label.strip():
 			error(path, f'phần tử {index}: thiếu label')
 		elif label != label.upper():
 			error(path, f'phần tử {index}: tiêu đề trường "{attributes["label"]}" phải viết hoa')
 		# id không bắt buộc: chỉ so trùng giữa các trường có id.
 		itemId = configField(path, item, 'id', str)
+		if itemId and not re.fullmatch(r'[A-Za-z0-9_-]+', itemId):
+			error(path, f'phần tử {index}: id "{itemId}" không hợp lệ')
 		if itemId and itemId in ids:
 			error(path, f'phần tử {index}: id "{itemId}" bị trùng')
 		ids.add(itemId)
-		if kind in ('dropdown', 'checkboxes') and not attributes.get('options'):
-			error(path, f'phần tử {index}: {kind} thiếu options')
+		checkValidations(
+			path, configField(path, item, 'validations', dict), kind, f'phần tử {index}'
+		)
+		if kind in ('dropdown', 'checkboxes'):
+			optionType = str if kind == 'dropdown' else dict
+			options = configItems(path, attributes, 'options', optionType)
+			if not options:
+				error(path, f'phần tử {index}: {kind} thiếu options')
+			labels = []
+			for optionIndex, option in enumerate(options, start=1):
+				label = option if kind == 'dropdown' else configField(path, option, 'label', str)
+				if not label.strip():
+					error(path, f'phần tử {index}: options[{optionIndex}] thiếu label không trống')
+				if kind == 'checkboxes':
+					checkValidations(path, option, kind, f'phần tử {index}, options[{optionIndex}]')
+				labels.append(label)
+			if len(labels) != len(set(labels)):
+				error(path, f'phần tử {index}: options bị trùng')
+
+
+def checkValidations(path, validations, kind, location):
+	"""Giữ boolean của YAML và số nguyên min_length đúng kiểu mà GitHub yêu cầu."""
+	if 'required' in validations and type(validations['required']) is not bool:
+		error(path, f'{location}: required: phải là boolean')
+	if 'min_length' in validations and (
+		kind not in ('input', 'textarea')
+		or type(validations['min_length']) is not int
+		or validations['min_length'] < 0
+	):
+		error(path, f'{location}: min_length phải là số nguyên không âm cho input hoặc textarea')
 
 
 def checkIssueConfig(path):
 	config = loadYaml(path, dict)
 	if config is None:
 		return
+	if 'blank_issues_enabled' in config and type(config['blank_issues_enabled']) is not bool:
+		error(path, 'blank_issues_enabled: phải là boolean')
 	for link in configItems(path, config, 'contact_links'):
 		for key in ('name', 'url', 'about'):
-			if not link.get(key):
+			if not configField(path, link, key, str).strip():
 				error(path, f'contact_links thiếu "{key}"')
