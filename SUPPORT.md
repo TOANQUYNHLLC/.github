@@ -10,8 +10,10 @@ Hướng dẫn này áp dụng cho **mọi repository** của **CÔNG TY TNHH TO
 | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | ❓ Yêu cầu hỗ trợ cần theo dõi xử lý, hoặc repository chưa bật Discussions | Tạo Issue với biểu mẫu **❓ Câu hỏi hoặc cần hỗ trợ**                                                                   |
 | 🐛 Một chức năng chạy sai hoặc không chạy                                  | Tạo Issue với biểu mẫu **🐛 Báo lỗi**                                                                                   |
+| 🧪 Workflow, job hoặc kiểm thử thất bại                                    | Tạo Issue với biểu mẫu **🧪 Lỗi CI hoặc kiểm thử**                                                                      |
 | ✨ Ý tưởng hoặc cải tiến                                                   | Tạo Issue với biểu mẫu **✨ Đề xuất tính năng**                                                                         |
 | 💬 Hỏi cách sử dụng, cấu hình, trao đổi ý tưởng hoặc hỏi đáp chung         | **Discussions** của repository (nếu đã bật), mục Ý tưởng, Hỏi đáp hoặc Thảo luận chung                                  |
+| 📷 Chia sẻ demo, tình huống sử dụng hoặc bài học triển khai                | **Discussions** của repository, mục **Show and tell** (nếu đã bật và có danh mục này)                                   |
 | 🔐 Lỗ hổng hoặc vấn đề bảo mật                                             | **Không** tạo Issue — báo cáo riêng theo [`SECURITY.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md) |
 | 🏢 Hợp tác, dịch vụ hoặc thông tin công ty                                 | Email [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com) hoặc [toanquynh.com](https://toanquynh.com)                 |
 

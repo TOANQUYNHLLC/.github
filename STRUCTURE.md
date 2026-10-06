@@ -29,6 +29,7 @@ Phần cấu trúc liên quan đến tài liệu cộng đồng và cấu hình 
 ├── .github/                           ← Thư mục cấu hình GitHub
 │   ├── ISSUE_TEMPLATE/
 │   │   ├── bug_report.yml             ← Form báo lỗi
+│   │   ├── test_failure.yml           ← Form lỗi CI hoặc kiểm thử
 │   │   ├── feature_request.yml        ← Form đề xuất tính năng
 │   │   ├── question.yml               ← Form câu hỏi
 │   │   └── config.yml                 ← Cấu hình bộ mẫu issue
@@ -47,7 +48,8 @@ Phần cấu trúc liên quan đến tài liệu cộng đồng và cấu hình 
 │   │   ├── announcements.yml          ← Thông báo
 │   │   ├── general.yml                ← Thảo luận chung
 │   │   ├── ideas.yml                  ← Ý tưởng
-│   │   └── q-a.yml                    ← Hỏi đáp
+│   │   ├── q-a.yml                    ← Hỏi đáp
+│   │   └── show-and-tell.yml          ← Chia sẻ demo và tình huống sử dụng
 │   ├── VULNERABILITY_REPORT.yml       ← Form báo cáo lỗ hổng riêng tư
 │   ├── CODEOWNERS                     ← Người phụ trách code của repo
 │   ├── dependabot.yml                 ← Dependabot của repo
@@ -106,6 +108,12 @@ Nhiều mẫu PR không tự tạo bộ chọn giống mẫu issue. Trên URL so
 
 `.github/DISCUSSION_TEMPLATE/announcements.yml` chuẩn hóa nội dung, phạm vi ảnh hưởng, thời điểm áp dụng và việc người sử dụng cần làm. Repository dùng mẫu phải bật Discussions và có category với slug `announcements`; tệp mẫu không tự tạo category hoặc thay đổi quyền đăng thông báo.
 
+### MẪU LỖI KIỂM THỬ VÀ CHIA SẺ DEMO
+
+`.github/ISSUE_TEMPLATE/test_failure.yml` thu thập workflow/job, test bị ảnh hưởng, kiểu thất bại, lần chạy, commit, môi trường và cách tái hiện. Mẫu dùng nhãn `tests`, `ci`, `needs triage`; các nhãn phải tồn tại ở từng repository sử dụng mẫu.
+
+`.github/DISCUSSION_TEMPLATE/show-and-tell.yml` thu thập demo, tình huống sử dụng, tài nguyên minh họa, cách thử và bài học triển khai. Repository dùng mẫu phải bật Discussions và có category với slug `show-and-tell`; mẫu không tự tạo danh mục. Mẫu cần được hợp nhất vào nhánh mặc định trước khi GitHub sử dụng. Chỉ chia sẻ tài nguyên được phép công khai.
+
 ## 4. CÁC FILE KHÔNG TỰ KẾ THỪA
 
 | File/thư mục                               | Vai trò và phạm vi                                           |
@@ -141,14 +149,14 @@ Các cấu hình bảo vệ nhánh, rulesets, quyền truy cập, secrets và la
 
 Kiểm tra tại máy xác nhận cú pháp và cấu trúc tệp. Kiểm chứng việc GitHub áp dụng mặc định cần đọc trạng thái trên GitHub và dùng một repository đích thuộc cùng tổ chức. Thực hiện khi có repository đích và các tệp nguồn đã được hợp nhất vào nhánh mặc định.
 
-| Nội dung                      | Cách kiểm chứng                                                                                                                         | Điều kiện cần                                                                                                                   |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Tài liệu cộng đồng mặc định   | Đối chiếu cây tệp của nhánh mặc định ở repo nguồn và repo đích; mở các liên kết cộng đồng trên repo đích để xác nhận tài liệu được dùng | Repo nguồn `.github` public; repo đích không có tài liệu riêng cùng loại                                                        |
-| Mẫu Issue và `config.yml`     | Mở trang tạo Issue của repo đích, kiểm tra bộ chọn biểu mẫu, trường nhập và liên kết liên hệ                                            | Issues bật; repo đích không có mẫu hoặc cấu hình Issue riêng hợp lệ                                                             |
-| Labels của mẫu Issue          | Đọc danh sách labels của từng repo qua GitHub CLI/API hoặc trang Issues → Labels; đối chiếu với trường `labels` trong các mẫu           | `bug`, `enhancement`, `question`, `needs triage` phải có ở repo nguồn và từng repo dùng mẫu; `labels.yml` chỉ là nguồn cấu hình |
-| Mẫu Discussion                | Đối chiếu tên tệp với slug danh mục và mở trang tạo Discussion theo từng danh mục ở repo đích                                           | Discussions bật; danh mục phù hợp tồn tại                                                                                       |
-| Form báo cáo lỗ hổng riêng tư | Đọc cài đặt Private vulnerability reporting; mở trang báo cáo bằng tài khoản GitHub và xác nhận các trường tùy chỉnh xuất hiện          | Form trên nhánh mặc định; repo đích bật báo cáo riêng tư; có tài khoản truy cập giao diện                                       |
-| Workflow mẫu                  | Đối chiếu từng `.yml` với `.properties.json`, icon và bộ lọc `filePatterns`; mở Actions → New workflow ở repo đích rồi xem nội dung mẫu | Repo đích cho phép Actions; dự án phù hợp bộ lọc của mẫu; tài khoản có quyền tạo workflow                                       |
+| Nội dung                      | Cách kiểm chứng                                                                                                                         | Điều kiện cần                                                                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tài liệu cộng đồng mặc định   | Đối chiếu cây tệp của nhánh mặc định ở repo nguồn và repo đích; mở các liên kết cộng đồng trên repo đích để xác nhận tài liệu được dùng | Repo nguồn `.github` public; repo đích không có tài liệu riêng cùng loại                                                                       |
+| Mẫu Issue và `config.yml`     | Mở trang tạo Issue của repo đích, kiểm tra bộ chọn biểu mẫu, trường nhập và liên kết liên hệ                                            | Issues bật; repo đích không có mẫu hoặc cấu hình Issue riêng hợp lệ                                                                            |
+| Labels của mẫu Issue          | Đọc danh sách labels của từng repo qua GitHub CLI/API hoặc trang Issues → Labels; đối chiếu với trường `labels` trong các mẫu           | `bug`, `enhancement`, `question`, `tests`, `ci`, `needs triage` phải có ở repo nguồn và từng repo dùng mẫu; `labels.yml` chỉ là nguồn cấu hình |
+| Mẫu Discussion                | Đối chiếu tên tệp với slug danh mục và mở trang tạo Discussion theo từng danh mục ở repo đích                                           | Discussions bật; danh mục phù hợp tồn tại                                                                                                      |
+| Form báo cáo lỗ hổng riêng tư | Đọc cài đặt Private vulnerability reporting; mở trang báo cáo bằng tài khoản GitHub và xác nhận các trường tùy chỉnh xuất hiện          | Form trên nhánh mặc định; repo đích bật báo cáo riêng tư; có tài khoản truy cập giao diện                                                      |
+| Workflow mẫu                  | Đối chiếu từng `.yml` với `.properties.json`, icon và bộ lọc `filePatterns`; mở Actions → New workflow ở repo đích rồi xem nội dung mẫu | Repo đích cho phép Actions; dự án phù hợp bộ lọc của mẫu; tài khoản có quyền tạo workflow                                                      |
 
 Không coi một trang chuyển hướng đến đăng nhập là bằng chứng form tùy chỉnh đã hoạt động. Nếu GitHub không phân tích được form báo cáo lỗ hổng, giao diện có thể dùng form mặc định; cần đối chiếu các trường thực tế với tệp cấu hình. Chỉ mở trang xem, không gửi báo cáo thử để kiểm tra giao diện.
 
