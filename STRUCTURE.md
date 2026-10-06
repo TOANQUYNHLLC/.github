@@ -76,7 +76,7 @@ Không cần đặt cùng một tài liệu ở nhiều vị trí. Các tính n�
 
 ### NHIỀU MẪU PULL REQUEST
 
-Repository giữ mẫu chung và các mẫu riêng theo loại công việc:
+Repository giữ mẫu chung và các mẫu riêng theo loại công việc. Các mẫu riêng giữ đầy đủ bố cục và checklist của mẫu chung, bổ sung nội dung phù hợp với từng loại:
 
 ```text
 .github/
