@@ -1,14 +1,31 @@
 {
 	"name": "TOANQUYNH CO., LTD — .github",
-	"image": "mcr.microsoft.com/devcontainers/python:3-3-trixie",
+	"image": "mcr.microsoft.com/devcontainers/python:3-3.14-trixie",
 	"features": {
 		"ghcr.io/devcontainers/features/ruby:2": {},
 		"ghcr.io/devcontainers/features/github-cli:1": {}
 	},
+	"hostRequirements": {
+		"cpus": 4
+	},
 	"containerEnv": {
 		"MISE_DISABLE_TOOLS": "python"
 	},
+	"mounts": [
+		{
+			"source": "toanquynh-github-mise-${devcontainerId}",
+			"target": "/home/vscode/.local/share/mise",
+			"type": "volume"
+		},
+		{
+			"source": "toanquynh-github-npm-${devcontainerId}",
+			"target": "/home/vscode/.npm",
+			"type": "volume"
+		}
+	],
+	"updateContentCommand": "bash .devcontainer/update-content.sh",
 	"postCreateCommand": "bash .devcontainer/post-create.sh",
+	"postAttachCommand": "python3 .devcontainer/gh-login-hint.py",
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -16,12 +33,42 @@
 				"esbenp.prettier-vscode",
 				"dbaeumer.vscode-eslint",
 				"charliermarsh.ruff",
+				"ms-python.python",
+				"tamasfe.even-better-toml",
 				"timonwong.shellcheck",
 				"github.vscode-github-actions",
+				"github.vscode-pull-request-github",
 				"redhat.vscode-yaml",
 				"anthropic.claude-code",
 				"openai.chatgpt"
-			]
+			],
+			"settings": {
+				"editor.formatOnSave": true,
+				"prettier.documentSelectors": ["**/*.{yml,yaml}"],
+				"[json]": {
+					"editor.defaultFormatter": "esbenp.prettier-vscode"
+				},
+				"[jsonc]": {
+					"editor.defaultFormatter": "esbenp.prettier-vscode"
+				},
+				"[markdown]": {
+					"editor.defaultFormatter": "esbenp.prettier-vscode"
+				},
+				"[yaml]": {
+					"editor.defaultFormatter": "esbenp.prettier-vscode"
+				},
+				"[github-actions-workflow]": {
+					"editor.defaultFormatter": "esbenp.prettier-vscode"
+				},
+				"[python]": {
+					"editor.defaultFormatter": "charliermarsh.ruff"
+				},
+				"[toml]": {
+					"editor.formatOnSave": false
+				},
+				"python.testing.unittestEnabled": true,
+				"python.testing.unittestArgs": ["-s", "scripts", "-p", "test_*.py"]
+			}
 		}
 	}
 }

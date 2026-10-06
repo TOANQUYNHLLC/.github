@@ -4,8 +4,11 @@
 		"esbenp.prettier-vscode",
 		"dbaeumer.vscode-eslint",
 		"charliermarsh.ruff",
+		"ms-python.python",
+		"tamasfe.even-better-toml",
 		"timonwong.shellcheck",
 		"github.vscode-github-actions",
+		"github.vscode-pull-request-github",
 		"redhat.vscode-yaml",
 		"anthropic.claude-code",
 		"openai.chatgpt"

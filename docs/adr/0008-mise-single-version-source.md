@@ -1,6 +1,6 @@
 # 0008. MISE.TOML LÀ NGUỒN PHIÊN BẢN CÔNG CỤ DUY NHẤT
 
-- **Trạng thái:** Chấp nhận
+- **Trạng thái:** Bị thay thế một phần bởi 0016 (nơi khai báo phiên bản Python của Dev Container)
 - **Ngày:** 2026-10-03
 
 ## 📌 BỐI CẢNH

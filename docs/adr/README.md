@@ -11,7 +11,7 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0005](0005-protect-release-tags.md)          | Ruleset Protect Release Tags cho tag phát hành                               | Chấp nhận                     | 2026-10-03 |
 | [0006](0006-signed-commits-no-rebase.md)      | Commit có chữ ký trên nhánh chính và tag; không hợp nhất bằng Rebase         | Chấp nhận                     | 2026-10-03 |
 | [0007](0007-org-push-ruleset.md)              | Push ruleset Protect Pushes cấp tổ chức                                      | Chấp nhận                     | 2026-10-03 |
-| [0008](0008-mise-single-version-source.md)    | `mise.toml` là nguồn phiên bản công cụ duy nhất                              | Chấp nhận                     | 2026-10-03 |
+| [0008](0008-mise-single-version-source.md)    | `mise.toml` là nguồn phiên bản công cụ duy nhất                              | Bị thay thế một phần bởi 0016 | 2026-10-03 |
 | [0009](0009-checks-as-scripts.md)             | Mọi kiểm tra là script trong `scripts/`, ưu tiên Python, chạy được tại máy   | Chấp nhận                     | 2026-10-03 |
 | [0010](0010-camel-case-names.md)              | Tên tự đặt viết camelCase tiếng Anh; cú pháp của ngôn ngữ giữ nguyên         | Chấp nhận                     | 2026-10-03 |
 | [0011](0011-git-hooks.md)                     | Git hook kiểm tra đúng nội dung được commit, được đẩy; đối chiếu sau khi kéo | Chấp nhận                     | 2026-10-03 |
@@ -19,6 +19,7 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0013](0013-docs-match-code.md)               | Tài liệu luôn khớp với code                                                  | Bị thay thế một phần bởi 0015 | 2026-10-03 |
 | [0014](0014-release-sequence.md)              | Số thứ tự phát hành bắt đầu lại mỗi tháng                                    | Chấp nhận                     | 2026-10-04 |
 | [0015](0015-developer-shell-scripts.md)       | Script tiện ích cho người phát triển nằm trong `shell/`                      | Chấp nhận                     | 2026-10-05 |
+| [0016](0016-devcontainer-python-image.md)     | Image Dev Container ghim đúng bản Python của `mise.toml`                     | Chấp nhận                     | 2026-10-06 |
 
 ## ✍️ CÁCH THÊM ADR
 
