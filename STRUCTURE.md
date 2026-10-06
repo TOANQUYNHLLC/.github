@@ -112,7 +112,7 @@ Nhiều mẫu PR không tự tạo bộ chọn giống mẫu issue. Trên URL so
 
 `.github/ISSUE_TEMPLATE/test_failure.yml` thu thập workflow/job, test bị ảnh hưởng, kiểu thất bại, lần chạy, commit, môi trường và cách tái hiện. Mẫu dùng nhãn `tests`, `ci`, `needs triage`; các nhãn phải tồn tại ở từng repository sử dụng mẫu.
 
-`.github/DISCUSSION_TEMPLATE/show-and-tell.yml` thu thập demo, tình huống sử dụng, tài nguyên minh họa, cách thử và bài học triển khai. Repository dùng mẫu phải bật Discussions và có category với slug `show-and-tell`; mẫu không tự tạo danh mục. Chỉ chia sẻ tài nguyên được phép công khai.
+`.github/DISCUSSION_TEMPLATE/show-and-tell.yml` thu thập demo, tình huống sử dụng, tài nguyên minh họa, cách thử và bài học triển khai. Repository dùng mẫu phải bật Discussions và có category với slug `show-and-tell`; mẫu không tự tạo danh mục. Mẫu cần được hợp nhất vào nhánh mặc định trước khi GitHub sử dụng. Chỉ chia sẻ tài nguyên được phép công khai.
 
 ## 4. CÁC FILE KHÔNG TỰ KẾ THỪA
 
