@@ -5,6 +5,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 """
 
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -21,17 +22,42 @@ PRUNE = ROOT / 'shell' / 'prune-branches.sh'
 
 
 class SyncTest(unittest.TestCase):
+	@classmethod
+	def setUpClass(cls):
+		# Remote và hai bản clone mẫu dựng một lần mỗi tiến trình (khoảng mười lệnh git); mỗi test chép bản mẫu.
+		cls.templates = tempfile.TemporaryDirectory()
+		cls.addClassCleanup(cls.templates.cleanup)
+
 	def setUp(self):
 		self.tmp = tempfile.TemporaryDirectory()
 		folder = Path(self.tmp.name)
+		template = Path(type(self).templates.name)
+		if not (template / 'other').exists():
+			self.prepare(template)
+			self.build(template)
+		shutil.copytree(template, folder, symlinks=True, dirs_exist_ok=True)
+		self.prepare(folder)
+		# git clone ghi đường dẫn remote nguyên văn vào .git/config: đổi sang remote của bản chép.
+		for repo in (self.clone, self.other):
+			config = repo / '.git' / 'config'
+			config.write_text(
+				config.read_text(encoding='utf-8').replace(str(template), str(folder)),
+				encoding='utf-8',
+			)
+
+	def prepare(self, folder):
+		"""Cấu hình git sạch và đường dẫn remote, hai bản clone trong folder."""
 		# Không phụ thuộc cấu hình git của máy (danh tính, ký commit, hook toàn cục).
 		# git < 2.32 bỏ qua GIT_CONFIG_GLOBAL và đọc $HOME/.gitconfig: đặt cả hai cùng trỏ cấu hình sạch.
+		# Tắt bảo trì tự động: commit, push chạy "git maintenance run --auto" ở tiến trình nền, ghi vào repository
+		# đúng lúc test chép mẫu hoặc xóa thư mục tạm.
 		home = folder / 'home'
-		home.mkdir()
+		home.mkdir(exist_ok=True)
 		config = home / '.gitconfig'
 		config.write_text(
 			'[user]\n\tname = test\n\temail = \n'
-			'[commit]\n\tgpgsign = false\n[init]\n\tdefaultBranch = main\n',
+			'[commit]\n\tgpgsign = false\n[init]\n\tdefaultBranch = main\n'
+			'[maintenance]\n\tauto = false\n[gc]\n\tauto = 0\n[receive]\n\tautogc = false\n',
 			encoding='utf-8',
 		)
 		self.environment = dict(
@@ -42,6 +68,9 @@ class SyncTest(unittest.TestCase):
 			folder / 'clone',
 			folder / 'other',
 		)
+
+	def build(self, folder):
+		"""Remote có main với một commit; clone (đã đẩy main, theo dõi origin/main) và other cùng trỏ remote."""
 		self.git(folder, 'init', '-q', '--bare', str(self.remote))
 		# init.defaultBranch chỉ có từ git 2.28: đặt main tường minh để test chạy được với git cũ.
 		self.git(self.remote, 'symbolic-ref', 'HEAD', 'refs/heads/main')

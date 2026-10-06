@@ -101,6 +101,33 @@ class RunTestsTest(unittest.TestCase):
 				run.assert_not_called()
 		self.assertIn('Không có test nào khớp', output.getvalue())
 
+	def testPartialRunKeepsOtherTimings(self):
+		# Chạy một tệp test (make quick, run-tests.py test_a) không xóa thời gian đã đo của test khác; lượt chạy đầy
+		# đủ mới bỏ thời gian của test không còn.
+		module = loadScript('run-tests')
+		measured = (0, 1, '', {'test_a.A.testOne': 1})
+		with tempfile.TemporaryDirectory() as folder:
+			module.TIMINGS_FILE = Path(folder) / 'times.json'
+			module.TIMINGS_FILE.write_text(
+				'{"test_a.A.testOne": 2, "test_b.B.testTwo": 3}', encoding='utf-8'
+			)
+			for argv, expected in (
+				(['run-tests.py', 'test_a'], {'test_a.A.testOne': 1, 'test_b.B.testTwo': 3}),
+				(['run-tests.py'], {'test_a.A.testOne': 1}),
+			):
+				with (
+					mock.patch.object(
+						module, 'discoverTests', return_value=(['test_a.A.testOne'], [])
+					),
+					mock.patch.object(module, 'timedShard', return_value=measured),
+					mock.patch.object(module.sys, 'argv', argv),
+					contextlib.redirect_stdout(io.StringIO()),
+				):
+					self.assertEqual(module.main(), 0)
+				self.assertEqual(
+					json.loads(module.TIMINGS_FILE.read_text(encoding='utf-8')), expected, argv
+				)
+
 	def testSelectionDoesNotImportOtherFiles(self):
 		module = loadScript('run-tests')
 		with tempfile.TemporaryDirectory() as folder:
