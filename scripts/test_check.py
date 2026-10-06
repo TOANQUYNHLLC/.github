@@ -24,6 +24,47 @@ except ModuleNotFoundError:
 
 
 class CheckTest(unittest.TestCase):
+	def runMain(self, argv, changed=None):
+		"""main() của check.py với công cụ coi như đủ; trả (mã thoát, đầu ra, nhóm và test được chọn)."""
+		module = loadScript('check')
+		output = io.StringIO()
+		with (
+			mock.patch.object(module.sys, 'argv', ['check.py', *argv]),
+			mock.patch.object(module, 'ensureTools', return_value=True),
+			mock.patch.object(module, 'changedFiles', return_value=changed),
+			mock.patch.object(module, 'runGroups', return_value=True) as run,
+			contextlib.redirect_stdout(output),
+		):
+			code = module.main()
+		return code, output.getvalue(), run.call_args.args if run.called else None
+
+	def testUnknownGroupIsRejectedBeforeRunning(self):
+		code, output, ran = self.runMain(['khong_co'])
+		self.assertEqual(code, 2)
+		self.assertIn('Nhóm không có: khong_co', output)
+		self.assertIsNone(ran)
+
+	def testQuickNarrowsOnlyTestsWhenOnlyTestFilesChanged(self):
+		# make quick: chỉ sửa tệp test thì chỉ chạy các tệp test đó, mọi nhóm khác vẫn chạy đủ; sửa tệp khác (hoặc
+		# không đọc được Git) thì chạy đầy đủ.
+		module = loadScript('check')
+		groups = list(module.checkGroups())
+		for changed, selected, message in (
+			({'scripts/test_check.py'}, ['test_check'], 'chỉ thu hẹp tests'),
+			({'scripts/test_check.py', 'README.md'}, None, 'chạy mọi kiểm tra'),
+			(None, None, 'chạy mọi kiểm tra'),
+		):
+			with self.subTest(changed=changed):
+				code, output, ran = self.runMain(['quick'], changed)
+				self.assertEqual(code, 0)
+				self.assertIn(message, output)
+				self.assertEqual(ran, (groups, selected))
+
+	def testToolsOnlyChecksToolsWithoutRunning(self):
+		code, _, ran = self.runMain(['tools'])
+		self.assertEqual(code, 0)
+		self.assertIsNone(ran)
+
 	def testCommandsRunTogetherAndKeepOrderedFailures(self):
 		module = loadScript('check')
 		commands = [['first'], ['second'], ['third']]

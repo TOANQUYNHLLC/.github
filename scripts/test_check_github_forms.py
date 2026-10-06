@@ -19,6 +19,29 @@ except ModuleNotFoundError:
 
 
 class GithubFormsTest(unittest.TestCase):
+	def testTemplateErrorsCollectFormAndFieldMessages(self):
+		# Lỗi cấp biểu mẫu (bỏ thẻ HTML) và lỗi từng trường đều được báo; trường không có input bị bỏ qua.
+		module = loadScript('check-github-forms')
+		template = {
+			'valid': False,
+			'errors': [{'message': '<code>type</code> is not a permitted key'}],
+			'inputs': [{'input': None}, {'input': {'errors': {'label': 'is required'}}}, {}],
+		}
+		self.assertEqual(
+			module.templateErrors(template),
+			['type is not a permitted key', 'label: is required'],
+		)
+		self.assertEqual(
+			module.templateErrors({'valid': True, 'errors': [], 'inputs': [{'input': {}}]}), []
+		)
+		for broken in (
+			{'errors': [{'message': 42}], 'inputs': []},
+			{'errors': [], 'inputs': ['x']},
+			{'errors': [], 'inputs': [{'input': {'errors': ['x']}}]},
+		):
+			with self.subTest(broken=broken), self.assertRaises(TypeError):
+				module.templateErrors(broken)
+
 	def testMalformedValidFlagCannotReportSuccess(self):
 		module = loadScript('check-github-forms')
 		for value in (None, 0, 1, 'false', [], {}):

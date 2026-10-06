@@ -1218,6 +1218,20 @@ class Holder:
 				self.assertFails(f'phải ghim Python {wanted} như mise.toml')
 				self.tearDown()
 
+	def testMissingRulesetFilesAreReported(self):
+		# Thiếu một tệp ruleset bắt buộc thì báo đúng tệp đó, không dừng các kiểm tra khác.
+		for name in (
+			'protect-main.json',
+			'protect-release-tags.json',
+			'org-protect-main.json',
+			'org-protect-release-tags.json',
+			'org-protect-pushes.json',
+		):
+			with self.subTest(name=name):
+				(self.repo / 'rulesets' / name).unlink()
+				self.assertFails(f'thiếu tệp bắt buộc rulesets/{name}')
+				self.tearDown()
+
 	def testEslintMustNotEnableIndent(self):
 		# Repository dùng ESLint: phải có eslint-config-prettier và không bật indent.
 		(self.repo / 'eslint.config.js').write_text(
