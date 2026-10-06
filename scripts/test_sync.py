@@ -297,6 +297,30 @@ class SyncTest(unittest.TestCase):
 		self.assertNotEqual(missing.returncode, 0)
 		self.assertIn('Thiếu BRANCH', missing.stderr)
 
+	def testMakeVariablesReachScriptsUnparsedByShell(self):
+		# TAG, REF đi qua biến môi trường như BRANCH: ký tự đặc biệt của shell không thành lệnh; thiếu TAG thì báo
+		# rõ thay vì lỗi tiếng Anh của argparse; REF mặc định main.
+		def recipe(*arguments):
+			return subprocess.run(
+				['make', '--no-print-directory', '-n', *arguments],
+				cwd=ROOT,
+				capture_output=True,
+				text=True,
+				check=False,
+			)
+
+		self.assertEqual(
+			recipe('release-notes', 'TAG=x; echo chèn').stdout.splitlines(),
+			['python3 scripts/release.py notes "$TAG"'],
+		)
+		missing = recipe('release-notes')
+		self.assertNotEqual(missing.returncode, 0)
+		self.assertIn('Thiếu TAG', missing.stderr)
+		self.assertEqual(
+			recipe('forms').stdout.splitlines(),
+			['python3 scripts/check-github-forms.py "${REF:-main}"'],
+		)
+
 	def testDivergedBranchIsNotMergedAutomatically(self):
 		# Branch ở máy và trên origin cùng có commit mới: chỉ tua nhanh — dừng, không tự tạo merge commit (git
 		# pull mặc định tạo merge commit hoặc dừng với thông báo khó hiểu tùy cấu hình pull.rebase).

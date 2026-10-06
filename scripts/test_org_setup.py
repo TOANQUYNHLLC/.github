@@ -1699,6 +1699,184 @@ class OrgSetupTest(unittest.TestCase):
 		self.assertEqual(output.getvalue().count('Nhãn mặc định cho repository mới'), 1)
 		self.assertIn('nhập trên web theo labels.yml', output.getvalue())
 
+	def syncRulesetsWith(self, apply, failingMethod=None):
+		"""Chạy rulesets cho .github: Protect Main đã có (id 7, khác tệp), Protect Release Tags chưa có, thêm một
+		ruleset lạ; trả (đầu ra, các lần ghi)."""
+		wanted = dict(rulesets.rulesetsFor('.github'))
+		protectMain = wanted[rulesets.RULESET_FILE]
+		listing = [{'name': 'Protect Main', 'id': 7}, {'name': 'Cũ', 'id': 9}]
+		writes = []
+
+		def read(*args):
+			if '--paginate' in args:
+				return [listing]
+			self.assertEqual(args[-1], 'repos/TOANQUYNHLLC/.github/rulesets/7')
+			return dict(protectMain, enforcement='disabled', id=7)
+
+		def write(*args, stdin=None):
+			writes.append((args, json.loads(stdin) if stdin else None))
+			if failingMethod and failingMethod in args:
+				raise RuntimeError('HTTP 403')
+
+		output = io.StringIO()
+		with (
+			mock.patch.object(github, 'ghJson', read),
+			mock.patch.object(github, 'gh', write),
+			contextlib.redirect_stdout(output),
+		):
+			rulesets.syncRulesets(['.github'], apply=apply)
+		return output.getvalue(), writes
+
+	def testRulesetPreviewListsCreateAndUpdateWithoutWriting(self):
+		output, writes = self.syncRulesetsWith(apply=False)
+		self.assertEqual(writes, [])
+		self.assertIn(
+			'(xem trước) cập nhật ruleset "Protect Main" từ rulesets/protect-main.json', output
+		)
+		self.assertIn(
+			'(xem trước) tạo ruleset "Protect Release Tags" từ rulesets/protect-release-tags.json',
+			output,
+		)
+		self.assertIn('còn ruleset khác: Cũ', output)
+
+	def testRulesetApplyUpdatesExistingCreatesMissing(self):
+		# Ruleset đã có thì PUT theo id, chưa có thì POST; nội dung gửi đúng tệp nguồn.
+		output, writes = self.syncRulesetsWith(apply=True)
+		self.assertEqual(
+			[args[:4] for args, _ in writes],
+			[
+				('api', '-X', 'PUT', 'repos/TOANQUYNHLLC/.github/rulesets/7'),
+				('api', '-X', 'POST', 'repos/TOANQUYNHLLC/.github/rulesets'),
+			],
+		)
+		wanted = dict(rulesets.rulesetsFor('.github'))
+		self.assertEqual(writes[0][1], wanted[rulesets.RULESET_FILE])
+		self.assertEqual(writes[1][1], wanted[rulesets.TAG_RULESET_FILE])
+		self.assertIn('✔ đã cập nhật ruleset "Protect Main"', output)
+		self.assertIn('✔ đã tạo ruleset "Protect Release Tags"', output)
+
+	def testRulesetWriteFailureWarnsAndContinues(self):
+		# Gói Free từ chối ghi (repository riêng tư): cảnh báo ruleset đó, vẫn ghi ruleset kế tiếp.
+		output, writes = self.syncRulesetsWith(apply=True, failingMethod='PUT')
+		self.assertEqual([args[2] for args, _ in writes], ['PUT', 'POST'])
+		self.assertIn('⚠ không cập nhật được ruleset "Protect Main": HTTP 403', output)
+		self.assertNotIn('✔ đã cập nhật ruleset "Protect Main"', output)
+		self.assertIn('✔ đã tạo ruleset "Protect Release Tags"', output)
+
+	def testOrgRulesetsFallBackToGraphqlWhenRestBlocked(self):
+		# Gói Free: REST ruleset cấp tổ chức trả HTTP 403 — so qua GraphQL, không ghi.
+		output = io.StringIO()
+		with (
+			mock.patch.object(github, 'ghList', side_effect=RuntimeError('HTTP 403')),
+			mock.patch.object(rulesets, 'compareOrgRulesets') as compare,
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(output),
+		):
+			rulesets.syncOrgRulesets(apply=True)
+		compare.assert_called_once_with()
+		write.assert_not_called()
+		self.assertIn('REST API ruleset cấp tổ chức: HTTP 403', output.getvalue())
+
+	def testOrgSettingsPatchOnlyApiSettingsAndReportWebOnly(self):
+		# Cài đặt đổi được qua API thì PATCH phần khác; mục chỉ đổi trên web chỉ được báo, không ghi.
+		current = dict(settings.ORG_SETTINGS, **settings.ORG_WEB_ONLY_SETTINGS)
+		current['blog'] = 'https://cu.example'
+		current['two_factor_requirement_enabled'] = False
+		readings = [
+			{'enabled_repositories': 'all', **settings.ORG_ACTIONS_PERMISSIONS},
+			dict(settings.WORKFLOW_PERMISSIONS),
+		]
+		for apply in (False, True):
+			writes, output = [], io.StringIO()
+			with (
+				self.subTest(apply=apply),
+				mock.patch.object(settings, 'readActions', return_value=readings),
+				mock.patch.object(github, 'ghJson', return_value=dict(current)),
+				mock.patch.object(
+					github,
+					'gh',
+					lambda *args, stdin=None, writes=writes: writes.append((args, stdin)),
+				),
+				contextlib.redirect_stdout(output),
+			):
+				settings.syncOrgSettings(apply)
+			text = output.getvalue()
+			self.assertIn('two_factor_requirement_enabled: False ≠ True', text)
+			self.assertIn('quyền GitHub Actions đã đúng', text)
+			if apply:
+				self.assertEqual(
+					writes,
+					[
+						(
+							('api', '-X', 'PATCH', 'orgs/TOANQUYNHLLC', '--input', '-'),
+							json.dumps({'blog': settings.ORG_SETTINGS['blog']}),
+						)
+					],
+				)
+			else:
+				self.assertEqual(writes, [])
+				self.assertIn('(xem trước) blog: https://cu.example', text)
+
+	def testTopicsFollowCitationKeywords(self):
+		keywords = settings.citationKeywords()
+		writes = []
+
+		def gh(*args, stdin=None):
+			writes.append((args, stdin))
+
+		with mock.patch.object(github, 'gh', gh), contextlib.redirect_stdout(io.StringIO()):
+			# Repository khác .github không quản lý topics; topics khớp (khác thứ tự) thì không ghi.
+			settings.syncTopics('app', {'topics': ['khac']}, apply=True)
+			settings.syncTopics('.github', {'topics': list(reversed(keywords))}, apply=True)
+			self.assertEqual(writes, [])
+			settings.syncTopics('.github', {'topics': ['cu']}, apply=False)
+			self.assertEqual(writes, [])
+			settings.syncTopics('.github', {'topics': ['cu']}, apply=True)
+		self.assertEqual(
+			writes,
+			[
+				(
+					('api', '-X', 'PUT', 'repos/TOANQUYNHLLC/.github/topics', '--input', '-'),
+					json.dumps({'names': keywords}),
+				)
+			],
+		)
+
+	def testCommandsDispatchToTheirModules(self):
+		# Mỗi lệnh của org-setup.py gọi đúng hàm đồng bộ với đúng danh sách repository và cờ --apply.
+		module = loadScript('org-setup')
+		targets = {
+			'files': (module.files, 'syncFiles', (['app'], True)),
+			'settings': (module.settings, 'syncSettings', (['app'], True, True)),
+			'rulesets': (module.rulesets, 'syncRulesets', (['app'], True)),
+			'team': (module.teams, 'syncTeams', (['app'], True)),
+			'labels': (module.labels, 'syncLabels', (['app'], True)),
+			'org-rulesets': (module.rulesets, 'syncOrgRulesets', (True,)),
+			'org-settings': (module.settings, 'syncOrgSettings', (True,)),
+		}
+		self.assertEqual(set(targets), set(module.COMMANDS))
+		for command, (owner, name, arguments) in targets.items():
+			with self.subTest(command=command), mock.patch.object(owner, name) as target:
+				module.runCommand(command, ['app'], True, discussions=True)
+				target.assert_called_once_with(*arguments)
+
+	def testNewTeamPreviewListsEveryStepWithoutWriting(self):
+		output = io.StringIO()
+		with (
+			mock.patch.object(github, 'ghJson', side_effect=RuntimeError('Not Found (HTTP 404)')),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(output),
+		):
+			teams.syncTeams(['app'], apply=False)
+		write.assert_not_called()
+		text = output.getvalue()
+		for slug, (name, permission, privacy, _) in teams.TEAMS.items():
+			self.assertIn(f'== team TOANQUYNHLLC/{slug}: chưa có', text)
+			self.assertIn(f'(xem trước) tạo team {name} ({privacy})', text)
+			self.assertIn(f'(xem trước) cấp {permission} TOANQUYNHLLC/app', text)
+		for user in teams.MAINTAINERS:
+			self.assertIn(f'(xem trước) thêm {user} (maintainer)', text)
+
 	def testProtectMainPerRepository(self):
 		def checks(ruleset):
 			return [

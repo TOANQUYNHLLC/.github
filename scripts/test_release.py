@@ -552,6 +552,74 @@ class ReleaseTest(unittest.TestCase):
 						self.assertEqual('--prerelease' in command, version.startswith('Beta.'))
 						self.assertIn('--generate-notes' if generated else '--notes-file', command)
 
+	def testReleaseBranchCreateFailureStopsBeforePullRequest(self):
+		# GitHub từ chối tạo branch (thiếu quyền, branch trùng tên vừa tạo): báo lỗi, không commit, không mở PR.
+		calls = []
+
+		def runCommand(*args, stdin=None):
+			calls.append(args)
+			if args[:2] == ('gh', 'api') and args[2].endswith('/git/refs'):
+				raise subprocess.CalledProcessError(
+					1, args, '', 'Reference already exists (HTTP 422)\n'
+				)
+			return 'abc123'
+
+		with tempfile.TemporaryDirectory() as folder:
+			self.module.ROOT = Path(folder)
+			(self.module.ROOT / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
+			output = io.StringIO()
+			with (
+				mock.patch.object(self.module, 'runCommand', runCommand),
+				mock.patch.object(self.module.github, 'ghExists', return_value=False),
+				mock.patch.object(self.module.subprocess, 'run') as run,
+				contextlib.redirect_stdout(output),
+			):
+				code = self.module.openReleasePullRequest(
+					'Stable.v2099.02.010001', 'v2099.01.Stable', 1
+				)
+		self.assertEqual(code, 1)
+		self.assertIn('Không tạo được branch release/stable.v2099.02.010001', output.getvalue())
+		self.assertIn('HTTP 422', output.getvalue())
+		self.assertFalse([call for call in calls if call[:3] == ('gh', 'api', 'graphql')])
+		run.assert_not_called()
+
+	def testPullRequestFailureLeavesCompareLinkInStepSummary(self):
+		# Commit đã lên branch nhưng không mở được Pull Request (thiếu quyền của GITHUB_TOKEN): báo lỗi kèm liên kết
+		# mở tay, ghi vào tóm tắt của lượt chạy workflow.
+		with tempfile.TemporaryDirectory() as folder:
+			self.module.ROOT = Path(folder)
+			(self.module.ROOT / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
+			summary = Path(folder) / 'summary.md'
+			output = io.StringIO()
+			with (
+				mock.patch.object(self.module, 'runCommand', return_value='abc123'),
+				mock.patch.object(self.module.github, 'ghExists', return_value=False),
+				mock.patch.object(
+					self.module.subprocess,
+					'run',
+					return_value=subprocess.CompletedProcess([], 1, '', 'not permitted'),
+				),
+				mock.patch.dict(
+					self.module.os.environ,
+					{'GITHUB_STEP_SUMMARY': str(summary), 'GITHUB_REPOSITORY': ''},
+				),
+				contextlib.redirect_stdout(output),
+			):
+				code = self.module.openReleasePullRequest(
+					'Stable.v2099.02.010001', 'v2099.01.Stable', 1
+				)
+			url = (
+				'https://github.com/TOANQUYNHLLC/.github/compare/main...'
+				'release/stable.v2099.02.010001?expand=1'
+			)
+			self.assertEqual(code, 1)
+			self.assertIn('not permitted', output.getvalue())
+			self.assertIn(url, output.getvalue())
+			self.assertEqual(
+				summary.read_text(encoding='utf-8'),
+				f'Mở Pull Request phát hành Stable.v2099.02.010001: {url}\n',
+			)
+
 	def testReleasePullRequestHasPreparationAndChannelLabels(self):
 		with tempfile.TemporaryDirectory() as folder:
 			self.module.ROOT = Path(folder)
