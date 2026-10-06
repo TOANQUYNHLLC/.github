@@ -1,23 +1,9 @@
 #!/usr/bin/env bash
-# Cài công cụ cho Dev Container / Codespaces từ mise.toml và .nvmrc — ruff, ShellCheck, actionlint, Node.js cùng
-# phiên bản với CI.
-# Python lấy từ image (devcontainer.json đặt MISE_DISABLE_TOOLS=python), mise không cài lại.
-# Không viết bằng Python vì: script chỉ nối các lệnh cài đặt (curl | sh, mise, npm, make) và chạy trước khi
-# có công cụ — shell xử lý chuỗi lệnh cài đặt gọn và tự nhiên hơn.
+# Sau khi tạo Dev Container / Codespaces: tin cậy thư mục làm việc rồi cài git hook (make hooks). Công cụ do
+# update-content.sh cài trước đó.
+# Không viết bằng Python vì: script chỉ nối hai lệnh git, make — shell gọn và tự nhiên hơn.
 set -euo pipefail
 
-curl -fsSL https://mise.run | sh
-export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
-# Kích hoạt mise khi mở bash, zsh (image có sẵn zsh); chạy lại script không thêm trùng dòng.
-for shell in bash zsh; do
-	line="eval \"\$(~/.local/bin/mise activate $shell)\""
-	grep -qxF "$line" "$HOME/.${shell}rc" 2>/dev/null || echo "$line" >>"$HOME/.${shell}rc"
-done
-
-mise trust --yes
-mise install
-
-npm install --include=dev --no-audit --no-fund
 # Thư mục làm việc gắn vào container có thể thuộc người dùng khác (root): git báo "dubious ownership" và từ chối
 # chạy. Tin cậy đúng repository này như tiện ích Dev Containers của VS Code — công cụ khác không tự làm.
 # Ghi đường dẫn thật (pwd -P) như git rev-parse --show-toplevel trả về; $PWD kế thừa có thể đi qua liên kết

@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unicodedata
 import unittest
 from datetime import UTC, datetime, timedelta
@@ -1201,6 +1202,21 @@ class Holder:
 			'ghcr.io/devcontainers/features/ruby',
 		):
 			self.assertIn(f'"{reference}" phải ghim phiên bản chính', output)
+
+	def testDevcontainerPythonMustMatchMise(self):
+		# Dev Container dùng Python của image (ADR 0016): tag không ghim bản Python hoặc khác mise.toml đều bị báo.
+		wanted = tomllib.loads((self.repo / 'mise.toml').read_text(encoding='utf-8'))['tools'][
+			'python'
+		]
+		for tag in ('3-2.7-trixie', '3-3-trixie'):
+			with self.subTest(tag=tag):
+				self.editRegex(
+					'.devcontainer/devcontainer.json',
+					r'devcontainers/python:[^"]+',
+					f'devcontainers/python:{tag}',
+				)
+				self.assertFails(f'phải ghim Python {wanted} như mise.toml')
+				self.tearDown()
 
 	def testEslintMustNotEnableIndent(self):
 		# Repository dùng ESLint: phải có eslint-config-prettier và không bật indent.

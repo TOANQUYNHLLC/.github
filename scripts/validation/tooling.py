@@ -237,3 +237,18 @@ def checkDevcontainerPins():
 		tag = reference.rsplit('/', 1)[-1].partition(':')[2]
 		if not tag or tag == 'latest':
 			error(path, f'"{reference}" phải ghim phiên bản chính (ví dụ :1), không dùng latest')
+	# Dev Container dùng Python của image (MISE_DISABLE_TOOLS=python): image ghim đúng bản Python của mise.toml để
+	# container chạy script như máy cục bộ (ADR 0016).
+	if image and '/devcontainers/python:' in image:
+		mise = ROOT / 'mise.toml'
+		try:
+			wanted = tomllib.loads(readText(mise)).get('tools', {}).get('python')
+		except (OSError, tomllib.TOMLDecodeError):
+			wanted = None  # checkToolVersions báo mise.toml lỗi.
+		pinned = re.fullmatch(r'\d+-(\d+\.\d+)-[\w.-]+', image.rpartition(':')[2])
+		if wanted and (not pinned or pinned.group(1) != str(wanted)):
+			error(
+				path,
+				f'image "{image}" phải ghim Python {wanted} như mise.toml '
+				f'(ví dụ mcr.microsoft.com/devcontainers/python:3-{wanted}-trixie)',
+			)
