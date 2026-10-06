@@ -49,23 +49,44 @@ anchorsCache = {}
 yamlResults = {}
 
 
+def runYamlBatch(names):
+	"""Một lần gọi Ruby cho các tệp; trả ({tên: {"data": …} hoặc {"error": …}}, None) hoặc (None, lý do) khi Ruby
+	dừng giữa chừng."""
+	result = subprocess.run(
+		['ruby', '-ryaml', '-rjson', '-e', YAML_BATCH, *names],
+		capture_output=True,
+		text=True,
+		check=False,
+	)
+	if result.returncode != 0:
+		return None, result.stderr.strip() or f'Ruby dừng bất thường (mã {result.returncode})'
+	return json.loads(result.stdout), None
+
+
 def readYamlFiles(paths):
 	"""Đọc nhiều tệp YAML trong một lần gọi Ruby; mỗi tệp trả {"data": …} hoặc {"error": …}."""
 	keys = {str(path): (str(path), hashlib.sha256(readBytes(path)).hexdigest()) for path in paths}
 	missing = [str(path) for path in paths if keys[str(path)] not in yamlResults]
+	failed = {}
 	if missing:
-		result = subprocess.run(
-			['ruby', '-ryaml', '-rjson', '-e', YAML_BATCH, *missing],
-			capture_output=True,
-			text=True,
-			check=False,
-		)
-		if result.returncode != 0:
-			return {str(path): {'error': result.stderr.strip()} for path in paths}
-		for name, entry in json.loads(result.stdout).items():
+		entries, problem = runYamlBatch(missing)
+		if entries is None:
+			# Ruby chết giữa lô (ví dụ YAML tham chiếu vòng làm tràn stack: chạy từ git hook, Ruby bị dừng bằng
+			# tín hiệu thay vì bắt SystemStackError): đọc lại từng tệp để chỉ tệp hỏng bị báo lỗi.
+			entries = {}
+			for name in missing:
+				single, problem = runYamlBatch([name]) if len(missing) > 1 else (None, problem)
+				if single is None:
+					failed[name] = {'error': problem}
+				else:
+					entries.update(single)
+		for name, entry in entries.items():
 			yamlResults[keys[name]] = entry
-	# Bản sao: loadYaml đánh dấu "reported" trên từng mục của lần chạy.
-	return {str(path): dict(yamlResults[keys[str(path)]]) for path in paths}
+	# Bản sao: loadYaml đánh dấu "reported" trên từng mục của lần chạy. Lỗi Ruby dừng giữa chừng không giữ qua lượt
+	# sau (có thể chỉ do môi trường lúc đó).
+	return {
+		str(path): dict(failed.get(str(path)) or yamlResults[keys[str(path)]]) for path in paths
+	}
 
 
 def loadYaml(path, expectedType=None):

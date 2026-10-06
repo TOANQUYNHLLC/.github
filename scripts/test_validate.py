@@ -19,6 +19,7 @@ import unicodedata
 import unittest
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest import mock
 
 # discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
 try:
@@ -519,6 +520,29 @@ class ValidateTest(unittest.TestCase):
 		self.assertEqual(code, 1)
 		self.assertIn('.github/labeler.yml: YAML không hợp lệ', output)
 		self.assertNotIn('labels.yml: YAML không hợp lệ', output)
+
+	def testRubyCrashOnOneYamlReportsOnlyThatFile(self):
+		# Chạy từ git hook, Ruby đọc YAML tham chiếu vòng có thể bị dừng bằng tín hiệu (mã -4) thay vì bắt
+		# SystemStackError: lô đọc lại từng tệp, chỉ tệp làm Ruby dừng bị báo lỗi.
+		broken = self.repo / '.github/labeler.yml'
+		# Nội dung riêng của test: kết quả đọc YAML được lưu theo nội dung, test khác có thể đã đọc YAML vòng.
+		broken.write_text('# Ruby dừng\ncycle: &cycle\n    self: *cycle\n', encoding='utf-8')
+		original = subprocess.run
+
+		def run(command, **kwargs):
+			if command[0] == 'ruby' and any(
+				arg.endswith('/.github/labeler.yml') for arg in command
+			):
+				return subprocess.CompletedProcess(command, -4, '', '')
+			return original(command, **kwargs)
+
+		with mock.patch.object(subprocess, 'run', run):
+			code, output = self.runValidate()
+		self.assertEqual(code, 1)
+		self.assertIn(
+			'.github/labeler.yml: YAML không hợp lệ: Ruby dừng bất thường (mã -4)', output
+		)
+		self.assertEqual(output.count('YAML không hợp lệ'), 1, output)
 
 	def testYamlCacheKeepsErrorPathForEachFile(self):
 		self.runValidate()
