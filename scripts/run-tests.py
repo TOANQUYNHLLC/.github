@@ -194,7 +194,9 @@ def main():
 	total = sum(ran for _, ran, _, _ in results)
 	for _, _, _, measured in results:
 		timings.update(measured)
-	writeTimings(ids, timings)
+	# Chạy một phần (tên tệp test, make quick): giữ thời gian của các test khác để lượt chạy đầy đủ sau vẫn chia nhóm
+	# cân bằng; lượt chạy đầy đủ bỏ thời gian của test không còn.
+	writeTimings(list(timings) if names else ids, timings)
 	print(f'Ran {total} tests in {elapsed:.1f}s ({workers} tiến trình)')
 	print('FAILED' if failed else 'OK')
 	return 1 if failed else 0
