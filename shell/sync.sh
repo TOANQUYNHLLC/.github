@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Chuyển sang một branch rồi kéo code mới; dọn branch đã hợp nhất là việc của prune-branches.sh.
-# Chạy: shell/sync.sh <branch>   (make syncmain: main; make sync BRANCH=<branch>: branch khác). Branch chưa có ở máy
+# Chạy: shell/sync.sh <branch>   (make sync: main; make sync BRANCH=<branch>: branch khác). Branch chưa có ở máy
 # mà có trên origin thì git switch tự tạo branch theo dõi origin. Chỉ tua nhanh (--ff-only): branch ở máy lệch với
 # origin thì dừng, không tự tạo merge commit. Mã thoát: 0 xong, 1 lỗi, 2 sai cách dùng.
 # Không viết bằng Python vì: script chỉ nối các lệnh git — shell gọn và tự nhiên hơn.

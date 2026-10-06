@@ -129,7 +129,7 @@ class SyncTest(unittest.TestCase):
 		)
 
 	def sync(self, branch='main'):
-		"""Như make syncmain, make sync BRANCH=…: sync.sh rồi prune-branches.sh; trả đầu ra của cả hai."""
+		"""Như make sync [BRANCH=…]: sync.sh rồi prune-branches.sh; trả đầu ra của cả hai."""
 		first = self.runScript(SCRIPT, branch)
 		second = self.runScript(PRUNE)
 		return subprocess.CompletedProcess(first.args, 0, first.stdout + second.stdout, '')
@@ -274,28 +274,55 @@ class SyncTest(unittest.TestCase):
 		self.assertEqual(result.returncode, 2)
 		self.assertIn('Cách dùng: shell/sync.sh <branch>', result.stderr)
 
-	def testMakeTargetsRunSyncThenPrune(self):
-		# Mỗi script một việc, Makefile ghép lại: chuyển branch, kéo code rồi mới dọn branch; thiếu BRANCH thì dừng.
-		def recipe(*arguments):
-			return subprocess.run(
-				['make', '--no-print-directory', '-n', *arguments],
-				cwd=ROOT,
-				capture_output=True,
-				text=True,
-				check=False,
+	def testMakeSyncDefaultsToMainThenPrunes(self):
+		# Mỗi script một việc, Makefile ghép lại: chuyển branch, kéo code rồi mới dọn branch. Không truyền BRANCH
+		# (hoặc truyền rỗng) thì về main; tên có ký tự đặc biệt tới script nguyên văn. Chạy make thật với hai script
+		# giả ghi lại tham số, trong thư mục tạm (không đụng repository).
+		folder = Path(self.tmp.name) / 'make'
+		(folder / 'shell').mkdir(parents=True)
+		calls = folder / 'calls'
+		for name in ('sync.sh', 'prune-branches.sh'):
+			fake = folder / 'shell' / name
+			fake.write_text(
+				f'#!/bin/sh\nprintf "%s [%s]\\n" {name} "$*" >> "{calls}"\n', encoding='utf-8'
 			)
-
-		self.assertEqual(
-			recipe('syncmain').stdout.splitlines(),
-			['shell/sync.sh main', 'shell/prune-branches.sh'],
+			fake.chmod(0o755)
+		for arguments, branch in (
+			([], 'main'),
+			(['BRANCH='], 'main'),
+			(['BRANCH=feat/x'], 'feat/x'),
+			(['BRANCH=a; echo chèn'], 'a; echo chèn'),
+		):
+			with self.subTest(arguments=arguments):
+				calls.unlink(missing_ok=True)
+				subprocess.run(
+					[
+						'make',
+						'--no-print-directory',
+						'-s',
+						'-f',
+						str(ROOT / 'Makefile'),
+						'sync',
+						*arguments,
+					],
+					cwd=folder,
+					env=self.environment,
+					capture_output=True,
+					check=True,
+				)
+				self.assertEqual(
+					calls.read_text(encoding='utf-8').splitlines(),
+					[f'sync.sh [{branch}]', 'prune-branches.sh []'],
+				)
+		# Không có lệnh syncmain riêng: make sync không truyền BRANCH là về main.
+		removed = subprocess.run(
+			['make', '--no-print-directory', '-n', 'syncmain'],
+			cwd=ROOT,
+			capture_output=True,
+			text=True,
+			check=False,
 		)
-		self.assertEqual(
-			recipe('sync', 'BRANCH=feat/x').stdout.splitlines(),
-			['shell/sync.sh "$BRANCH"', 'shell/prune-branches.sh'],
-		)
-		missing = recipe('sync')
-		self.assertNotEqual(missing.returncode, 0)
-		self.assertIn('Thiếu BRANCH', missing.stderr)
+		self.assertNotEqual(removed.returncode, 0)
 
 	def testMakeVariablesReachScriptsUnparsedByShell(self):
 		# TAG, REF đi qua biến môi trường như BRANCH: ký tự đặc biệt của shell không thành lệnh; thiếu TAG thì báo
