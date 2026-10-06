@@ -98,15 +98,9 @@ forms: ## Kiểm tra GitHub chấp nhận biểu mẫu Issue, Discussion: make f
 
 ##@ Đồng bộ git tại máy
 
-.PHONY: syncmain
-syncmain: ## Về main, git pull, xóa branch cục bộ đã hợp nhất mà branch trên GitHub đã bị xóa
-	shell/sync.sh main
-	shell/prune-branches.sh
-
 .PHONY: sync
-sync: ## Như syncmain nhưng chuyển sang branch khác: make sync BRANCH=<branch>
-	$(if $(BRANCH),,$(error Thiếu BRANCH: make sync BRANCH=<branch> — về main thì dùng make syncmain))
-	shell/sync.sh "$$BRANCH"
+sync: ## Chuyển branch (mặc định main), git pull, xóa branch cục bộ đã hợp nhất: make sync [BRANCH=<branch>]
+	shell/sync.sh "$${BRANCH:-main}"
 	shell/prune-branches.sh
 
 .PHONY: cleanup
