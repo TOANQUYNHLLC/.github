@@ -6,14 +6,14 @@ Hướng dẫn này áp dụng cho **mọi repository** của **CÔNG TY TNHH TO
 
 ## 🧭 CHỌN ĐÚNG KÊNH
 
-| Nhu cầu                                                | Kênh                                                                                                                    |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| ❓ Hỏi cách sử dụng, cấu hình hoặc hoạt động của dự án | Tạo Issue với biểu mẫu **❓ Câu hỏi hoặc cần hỗ trợ**                                                                   |
-| 🐛 Một chức năng chạy sai hoặc không chạy              | Tạo Issue với biểu mẫu **🐛 Báo lỗi**                                                                                   |
-| ✨ Ý tưởng hoặc cải tiến                               | Tạo Issue với biểu mẫu **✨ Đề xuất tính năng**                                                                         |
-| 💬 Trao đổi ý tưởng, hỏi đáp chung                     | **Discussions** của repository (nếu đã bật), mục Ý tưởng, Hỏi đáp hoặc Thảo luận chung                                  |
-| 🔐 Lỗ hổng hoặc vấn đề bảo mật                         | **Không** tạo Issue — báo cáo riêng theo [`SECURITY.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md) |
-| 🏢 Hợp tác, dịch vụ hoặc thông tin công ty             | Email [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com) hoặc [toanquynh.com](https://toanquynh.com)                 |
+| Nhu cầu                                                                    | Kênh                                                                                                                    |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| ❓ Yêu cầu hỗ trợ cần theo dõi xử lý, hoặc repository chưa bật Discussions | Tạo Issue với biểu mẫu **❓ Câu hỏi hoặc cần hỗ trợ**                                                                   |
+| 🐛 Một chức năng chạy sai hoặc không chạy                                  | Tạo Issue với biểu mẫu **🐛 Báo lỗi**                                                                                   |
+| ✨ Ý tưởng hoặc cải tiến                                                   | Tạo Issue với biểu mẫu **✨ Đề xuất tính năng**                                                                         |
+| 💬 Hỏi cách sử dụng, cấu hình, trao đổi ý tưởng hoặc hỏi đáp chung         | **Discussions** của repository (nếu đã bật), mục Ý tưởng, Hỏi đáp hoặc Thảo luận chung                                  |
+| 🔐 Lỗ hổng hoặc vấn đề bảo mật                                             | **Không** tạo Issue — báo cáo riêng theo [`SECURITY.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md) |
+| 🏢 Hợp tác, dịch vụ hoặc thông tin công ty                                 | Email [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com) hoặc [toanquynh.com](https://toanquynh.com)                 |
 
 ---
 
@@ -22,6 +22,7 @@ Hướng dẫn này áp dụng cho **mọi repository** của **CÔNG TY TNHH TO
 - Đọc `README.md` và tài liệu của repository liên quan.
 - Tìm trong Issues và Discussions xem câu hỏi đã được trả lời chưa.
 - Chuẩn bị thông tin: repository, phiên bản hoặc commit, môi trường, các bước đã thử.
+- Nếu gặp lỗi, cung cấp ví dụ tái hiện tối thiểu và phiên bản cuối còn hoạt động nếu biết; chỉ dùng dữ liệu mẫu đã loại bỏ thông tin nhạy cảm.
 
 > ⚠️ Không gửi mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm qua bất kỳ kênh công khai nào.
 

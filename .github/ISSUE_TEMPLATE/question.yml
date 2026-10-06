@@ -1,5 +1,5 @@
 name: ❓ Câu hỏi hoặc cần hỗ trợ
-description: Hỏi về cách sử dụng, cấu hình hoặc hoạt động của dự án
+description: Yêu cầu hỗ trợ cần theo dõi xử lý về cách sử dụng, cấu hình hoặc hoạt động của dự án
 title: '[Câu hỏi] '
 labels:
     - question
@@ -9,6 +9,8 @@ body:
       attributes:
           value: |
               Cảm ơn bạn đã đặt câu hỏi cho dự án.
+
+              Dùng Issue này khi yêu cầu hỗ trợ cần được theo dõi xử lý, hoặc repository chưa bật Discussions. Với câu hỏi hướng dẫn và trao đổi chung, dùng mục Hỏi đáp trong Discussions của repository nếu đã bật. Xem [hướng dẫn chọn kênh hỗ trợ](https://github.com/TOANQUYNHLLC/.github/blob/main/SUPPORT.md).
 
               > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue.
               > 🔐 Vấn đề bảo mật: **không** tạo Issue công khai — báo cáo riêng theo [chính sách bảo mật](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md).

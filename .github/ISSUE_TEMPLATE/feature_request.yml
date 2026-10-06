@@ -49,6 +49,12 @@ body:
           description: Mong muốn hệ thống hoạt động như thế nào.
 
     - type: textarea
+      id: successCriteria
+      attributes:
+          label: ✅ TIÊU CHÍ THÀNH CÔNG
+          description: Nêu hành vi hoặc kết quả có thể kiểm chứng để biết đề xuất đã đáp ứng nhu cầu. Chỉ rõ phần ngoài phạm vi nếu cần.
+
+    - type: textarea
       id: alternatives
       attributes:
           label: 🔀 PHƯƠNG ÁN THAY THẾ

@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+    - name: 💬 Chọn kênh hỗ trợ
+      url: https://github.com/TOANQUYNHLLC/.github/blob/main/SUPPORT.md
+      about: Chọn Issue khi cần theo dõi xử lý, hoặc Discussions để trao đổi hướng dẫn nếu repository đã bật.
     - name: 🔐 Báo cáo vấn đề bảo mật
       url: https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md
       about: Không tạo Issue công khai — báo cáo riêng qua tab Security → Report a vulnerability hoặc email theo chính sách bảo mật.

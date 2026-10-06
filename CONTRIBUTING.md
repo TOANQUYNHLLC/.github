@@ -20,11 +20,13 @@ Cảm ơn bạn đã dành thời gian đóng góp cho dự án. Khi tham gia, b
 
 Tạo Issue mới và chọn biểu mẫu phù hợp:
 
-| Biểu mẫu                   | Khi nào dùng                                                         |
-| -------------------------- | -------------------------------------------------------------------- |
-| 🐛 Báo lỗi                 | Một chức năng chạy sai, không chạy hoặc hiển thị không đúng          |
-| ✨ Đề xuất tính năng       | Ý tưởng mới hoặc cải thiện chức năng, giao diện, hiệu năng, tài liệu |
-| ❓ Câu hỏi hoặc cần hỗ trợ | Cần hỏi về cách sử dụng, cấu hình hoặc hoạt động của dự án           |
+| Biểu mẫu                   | Khi nào dùng                                                            |
+| -------------------------- | ----------------------------------------------------------------------- |
+| 🐛 Báo lỗi                 | Một chức năng chạy sai, không chạy hoặc hiển thị không đúng             |
+| ✨ Đề xuất tính năng       | Ý tưởng mới hoặc cải thiện chức năng, giao diện, hiệu năng, tài liệu    |
+| ❓ Câu hỏi hoặc cần hỗ trợ | Yêu cầu hỗ trợ cần theo dõi xử lý, hoặc repository chưa bật Discussions |
+
+Câu hỏi hướng dẫn và trao đổi chung dùng mục Hỏi đáp trong Discussions của repository nếu đã bật. Ý tưởng chưa rõ phạm vi có thể trao đổi trong mục Ý tưởng trước khi tạo Issue đề xuất. Xem [hướng dẫn chọn kênh hỗ trợ](https://github.com/TOANQUYNHLLC/.github/blob/main/SUPPORT.md).
 
 Khi repository có workflow và cấu hình labeler, đã bật GitHub Actions và có các labels cần thiết, Pull Request được tự gắn nhãn loại theo tiền tố branch (`feature/` → `enhancement`, `fix/` → `bug`…) và tệp thay đổi. Tệp cộng đồng mặc định không tự tạo workflow hay labels trong repository đích.
 
@@ -33,9 +35,13 @@ Biểu mẫu Issue yêu cầu nhãn `needs triage`; nhãn phải tồn tại tro
 Một báo lỗi tốt gồm:
 
 - **Các bước tái hiện** cụ thể, đánh số theo thứ tự.
+- **Ví dụ tái hiện tối thiểu** bằng đoạn mã, cấu hình hoặc liên kết kèm cách chạy nếu có thể; chỉ dùng dữ liệu mẫu đã loại bỏ thông tin nhạy cảm.
 - **Kết quả mong đợi** và **kết quả thực tế**.
 - **Môi trường** (phát triển, kiểm thử, production), **thiết bị, hệ điều hành và trình duyệt**, **phiên bản hoặc commit**.
+- **Phiên bản cuối còn hoạt động**, các cách đã thử cô lập nguyên nhân và cách xử lý tạm nếu biết. Chọn môi trường **Không áp dụng** hoặc **Chưa xác định** khi phù hợp.
 - Ảnh chụp màn hình hoặc log liên quan — **che** mọi thông tin cá nhân, dữ liệu bệnh nhân, mật khẩu và token trước khi đính kèm.
+
+Đề xuất tính năng và thảo luận ý tưởng có thể nêu **tiêu chí thành công**: hành vi hoặc kết quả có thể kiểm chứng, cùng phần ngoài phạm vi nếu cần. Khi hỏi đáp kỹ thuật, cung cấp thông báo lỗi, đoạn mã hoặc cấu hình và liên kết ví dụ tối thiểu nếu có.
 
 ---
 

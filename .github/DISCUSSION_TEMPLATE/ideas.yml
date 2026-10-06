@@ -24,6 +24,12 @@ body:
           required: true
 
     - type: textarea
+      id: successCriteria
+      attributes:
+          label: ✅ TIÊU CHÍ THÀNH CÔNG
+          description: Kết quả nào cho thấy ý tưởng giải quyết được vấn đề? Nêu phần ngoài phạm vi nếu cần; có thể tiếp tục làm rõ trong thảo luận.
+
+    - type: textarea
       id: alternatives
       attributes:
           label: 🔀 PHƯƠNG ÁN THAY THẾ

@@ -3,7 +3,7 @@ body:
     - type: markdown
       attributes:
           value: |
-              Đặt câu hỏi về cách sử dụng, cấu hình hoặc hoạt động của dự án. Lỗi rõ ràng hãy tạo Issue **🐛 Báo lỗi**.
+              Trao đổi hướng dẫn về cách sử dụng, cấu hình hoặc hoạt động của dự án. Khi cần theo dõi xử lý, tạo Issue **❓ Câu hỏi hoặc cần hỗ trợ**; lỗi rõ ràng hãy tạo Issue **🐛 Báo lỗi**. Xem [hướng dẫn chọn kênh hỗ trợ](https://github.com/TOANQUYNHLLC/.github/blob/main/SUPPORT.md).
 
               > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào thảo luận.
               > 🔐 Vấn đề bảo mật: **không** đăng công khai — báo cáo riêng theo [chính sách bảo mật](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md).
@@ -21,6 +21,18 @@ body:
       attributes:
           label: 🔎 ĐÃ TÌM HIỂU
           description: Tài liệu, Issue hoặc cách đã thử trước khi hỏi.
+
+    - type: input
+      id: reproduction
+      attributes:
+          label: 🧩 LIÊN KẾT VÍ DỤ TÁI HIỆN
+          description: Nếu có thể, liên kết đến ví dụ tối thiểu và nêu cách chạy trong phần thông tin kỹ thuật bên dưới. Chỉ chia sẻ tài nguyên phù hợp để công khai.
+
+    - type: textarea
+      id: technicalDetails
+      attributes:
+          label: 🛠️ THÔNG TIN KỸ THUẬT
+          description: Đoạn mã hoặc cấu hình liên quan, thông báo lỗi, dependency và cách chạy ví dụ nếu có. Chỉ dùng dữ liệu mẫu đã loại bỏ thông tin nhạy cảm.
 
     - type: input
       id: version

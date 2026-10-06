@@ -33,6 +33,12 @@ body:
           required: true
 
     - type: textarea
+      id: reproduction
+      attributes:
+          label: 🧩 VÍ DỤ TÁI HIỆN TỐI THIỂU
+          description: Nếu có thể, cung cấp đoạn mã, cấu hình hoặc liên kết ví dụ nhỏ nhất vẫn tái hiện lỗi, kèm cách chạy. Chỉ dùng dữ liệu mẫu đã loại bỏ thông tin nhạy cảm.
+
+    - type: textarea
       id: expected
       attributes:
           label: ✅ KẾT QUẢ MONG ĐỢI
@@ -87,6 +93,12 @@ body:
       attributes:
           label: 🏷️ PHIÊN BẢN HOẶC COMMIT
 
+    - type: input
+      id: lastWorkingVersion
+      attributes:
+          label: ⏮️ PHIÊN BẢN HOẶC COMMIT CUỐI CÒN HOẠT ĐỘNG
+          description: Điền nếu chức năng trước đây hoạt động đúng; để trống nếu chưa xác định.
+
     - type: dropdown
       id: environment
       attributes:
@@ -95,6 +107,8 @@ body:
               - Phát triển
               - Kiểm thử
               - Production
+              - Không áp dụng
+              - Chưa xác định
       validations:
           required: true
 
@@ -110,6 +124,12 @@ body:
           label: ♿ CÔNG NGHỆ HỖ TRỢ VÀ PHIÊN BẢN
           description: Điền nếu lỗi liên quan đến trợ năng; không cung cấp tình trạng sức khỏe hoặc thông tin khuyết tật cá nhân.
           placeholder: 'Ví dụ: NVDA, VoiceOver, trình phóng to màn hình hoặc chỉ thao tác bằng bàn phím'
+
+    - type: textarea
+      id: troubleshooting
+      attributes:
+          label: 🔎 CÁC CÁCH ĐÃ THỬ VÀ XỬ LÝ TẠM
+          description: Nêu các cách đã thử để cô lập nguyên nhân, kết quả từng cách và cách xử lý tạm nếu có.
 
     - type: textarea
       id: attachments
