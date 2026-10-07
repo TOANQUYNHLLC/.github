@@ -316,9 +316,9 @@ def releasePullRequestBody(version, previous, commits):
 	)
 	if os.environ.get('GITHUB_ACTIONS'):
 		instructions += (
-			'\n\nPull Request này do workflow mở bằng `GITHUB_TOKEN` nên GitHub không chạy kiểm tra: '
-			'bấm **Close pull request** rồi **Reopen pull request** để chạy các kiểm tra bắt buộc trước khi '
-			'hợp nhất.'
+			'\n\nPull Request này do workflow mở bằng `GITHUB_TOKEN`: các lượt chạy kiểm tra có thể chờ '
+			'phê duyệt. Người có quyền ghi bấm **Approve workflows to run** khi GitHub hiển thị yêu cầu, '
+			'rồi chờ các kiểm tra bắt buộc thành công trước khi hợp nhất.'
 		)
 	marker = (
 		'<!-- Nêu những phần cần được chú ý hoặc cần người đánh giá hỗ trợ kiểm tra kỹ hơn. -->'

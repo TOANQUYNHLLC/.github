@@ -17,7 +17,7 @@ REQUIRED_WORKFLOWS = ('.github/workflows/pr-title.yml', '.github/workflows/branc
 # Ecosystem Dependabot và tệp khai báo phụ thuộc ở thư mục gốc cho biết repository dùng nó.
 ECOSYSTEM_MANIFESTS = {
 	'npm': ('package.json',),
-	'pip': ('requirements.txt', 'pyproject.toml', 'setup.py'),
+	'pip': ('requirements.txt', 'pyproject.toml', 'setup.py', 'setup.cfg'),
 	'gomod': ('go.mod',),
 	'docker': ('Dockerfile',),
 }

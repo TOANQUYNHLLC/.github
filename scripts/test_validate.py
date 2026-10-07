@@ -30,6 +30,33 @@ except ModuleNotFoundError:
 
 
 class ValidateTest(unittest.TestCase):
+	def testGitHubSettingsRejectUnknownFieldsAndDependencyConflicts(self):
+		path = self.repo / 'github-settings.json'
+		original = path.read_text(encoding='utf-8')
+		for mutate, expected in (
+			(
+				lambda data: data['organization']['settings'].update(unrecognized_setting=True),
+				'trường cài đặt không hợp lệ',
+			),
+			(
+				lambda data: data['repositories']['.github']['endpoints'][
+					'actions/permissions'
+				].update(enabled=True, allowed_actions='all'),
+				'không bật Actions khi tổ chức tắt Actions',
+			),
+		):
+			with self.subTest(expected=expected):
+				data = json.loads(original)
+				mutate(data)
+				path.write_text(
+					json.dumps(data, ensure_ascii=False, indent='\t') + '\n', encoding='utf-8'
+				)
+				code, output = self.runValidate()
+				self.assertEqual(code, 1, output)
+				self.assertIn('github-settings.json:', output)
+				self.assertIn(expected, output)
+		path.write_text(original, encoding='utf-8')
+
 	def testCodeFencesDoNotCreateMarkdownErrors(self):
 		for fence in ('~~~', '````'):
 			with self.subTest(fence=fence):
@@ -984,6 +1011,14 @@ class Holder:
 			"['pipx', 'install', 'ruff==0.1.0'], ['ruff', 'format',",
 		)
 		self.assertFails('scripts/check.py: dòng')
+
+	def testPythonInstallerReadsMiseAndRejectsLiteralPin(self):
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
+		self.edit(
+			'scripts/install-python-dependencies.py', "f'ruff=={ruffVersion}'", "'ruff==0.1.0'"
+		)
+		self.assertFails('scripts/install-python-dependencies.py: dòng')
 
 	def testCrlfLineEndingsRejected(self):
 		path = self.repo / 'SUPPORT.md'

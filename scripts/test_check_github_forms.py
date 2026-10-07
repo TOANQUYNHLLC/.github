@@ -81,7 +81,14 @@ class GithubFormsTest(unittest.TestCase):
 	def testMalformedPageDataFailsPerForm(self):
 		module = loadScript('check-github-forms')
 		forms = module.formPaths()
-		valid = {'payload': {'codeViewBlobRoute': {'issueTemplate': {'errors': [], 'inputs': []}}}}
+		valid = {
+			'payload': {
+				'codeViewBlobRoute': {
+					'issueTemplate': {'errors': [], 'inputs': []},
+					'discussionTemplate': {'errors': [], 'inputs': []},
+				}
+			}
+		}
 		for malformed in (
 			[],
 			{'payload': []},
@@ -102,6 +109,11 @@ class GithubFormsTest(unittest.TestCase):
 						if url.endswith(forms[0].relative_to(module.ROOT).as_posix())
 						else valid
 					)
+					if isinstance(data, dict) and isinstance(data.get('payload'), dict):
+						data['payload']['codeViewLayoutRoute'] = {'repo': {'defaultBranch': 'main'}}
+						data['payload']['codeViewBlobLayoutRoute'] = {
+							'refInfo': {'name': 'main', 'refType': 'branch'}
+						}
 					return (
 						'<script type="application/json" data-target="react-app.embeddedData">'
 						+ json.dumps(data)
@@ -150,6 +162,73 @@ class GithubFormsTest(unittest.TestCase):
 					'.github/ISSUE_TEMPLATE/bug%20report.yml'
 				)
 			],
+		)
+
+	def testDiscussionRejectsRenderedDefaultDataForOtherRefs(self):
+		module = loadScript('check-github-forms')
+		for name, refType, defaultBranch in (
+			('feature/forms', 'branch', 'main'),
+			('abc123', 'commit', 'main'),
+			('main', 'tag', 'main'),
+		):
+			page = self.discussionPage(name, refType, defaultBranch)
+			with (
+				self.subTest(name=name, refType=refType),
+				mock.patch.object(module, 'fetchPage', return_value=page),
+			):
+				with self.assertRaises(module.UnverifiedDiscussion):
+					module.templateData(name, '.github/DISCUSSION_TEMPLATE/ideas.yml')
+				# Issue vẫn được kiểm tra theo ref của trang.
+				self.assertEqual(
+					module.templateData(name, '.github/ISSUE_TEMPLATE/feature_request.yml'),
+					{'errors': [], 'inputs': [], 'valid': True},
+				)
+
+	def testDiscussionAcceptsActualDefaultBranchAndRequiresMetadata(self):
+		module = loadScript('check-github-forms')
+		with mock.patch.object(
+			module, 'fetchPage', return_value=self.discussionPage('develop', 'branch', 'develop')
+		):
+			self.assertEqual(
+				module.templateData('develop', '.github/DISCUSSION_TEMPLATE/ideas.yml')['valid'],
+				True,
+			)
+		with (
+			mock.patch.object(
+				module, 'fetchPage', return_value=self.discussionPage('main', 'branch', '')
+			),
+			self.assertRaises(TypeError),
+		):
+			module.templateData('main', '.github/DISCUSSION_TEMPLATE/ideas.yml')
+
+	def testUnverifiedDiscussionCannotReportCompleteSuccess(self):
+		module = loadScript('check-github-forms')
+		with (
+			mock.patch.object(
+				module,
+				'fetchPage',
+				return_value=self.discussionPage('feature/forms', 'branch', 'main'),
+			),
+			mock.patch.object(module.sys, 'argv', ['check-github-forms.py', 'feature/forms']),
+			contextlib.redirect_stdout(io.StringIO()) as output,
+		):
+			self.assertEqual(module.main(), 1)
+		self.assertIn('Discussion chưa xác minh', output.getvalue())
+		self.assertIn('✅ .github/ISSUE_TEMPLATE/', output.getvalue())
+		self.assertNotIn('GitHub chấp nhận mọi biểu mẫu', output.getvalue())
+
+	@staticmethod
+	def discussionPage(name, refType, defaultBranch):
+		template = {'errors': [], 'inputs': [], 'valid': True}
+		payload = {
+			'codeViewBlobRoute': {'discussionTemplate': template, 'issueTemplate': template},
+			'codeViewLayoutRoute': {'repo': {'defaultBranch': defaultBranch}},
+			'codeViewBlobLayoutRoute': {'refInfo': {'name': name, 'refType': refType}},
+		}
+		return (
+			'<script type="application/json" data-target="react-app.embeddedData">'
+			+ json.dumps({'payload': payload})
+			+ '</script>'
 		)
 
 	def testTransientErrorIsRetried(self):

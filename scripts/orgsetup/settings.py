@@ -4,7 +4,7 @@ import json
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 
-from orgsetup import github
+from orgsetup import github, resources
 
 SECURITY_FEATURES = ('secret_scanning', 'secret_scanning_push_protection')
 
@@ -23,85 +23,35 @@ PUBLIC_ONLY_ENDPOINTS = ('private-vulnerability-reporting',)
 # Đọc trạng thái bằng mã HTTP (204 bật, 404 tắt), không có trường enabled.
 STATUS_ONLY_ENDPOINTS = ('vulnerability-alerts',)
 
+# Nguồn cài đặt được nhập từ GitHub; không duy trì một bản giá trị cố định riêng trong Python.
+from orgsetup.configuration import readConfig
+
+CONFIG = readConfig()
+REPOSITORY_SETTINGS = CONFIG['repository_defaults']
+REPOSITORY_OVERRIDES = {name: scope['settings'] for name, scope in CONFIG['repositories'].items()}
 MERGE_SETTINGS = {
-	'allow_squash_merge': True,
-	'allow_merge_commit': True,
-	# Rebase and merge tạo lại commit không có chữ ký (ADR 0006).
-	'allow_rebase_merge': False,
-	'allow_auto_merge': True,
-	'allow_update_branch': True,
-	'delete_branch_on_merge': True,
-	'squash_merge_commit_title': 'PR_TITLE',
-	'squash_merge_commit_message': 'PR_BODY',
-	'merge_commit_title': 'MERGE_MESSAGE',
-	'merge_commit_message': 'PR_TITLE',
+	key: value
+	for key, value in REPOSITORY_SETTINGS.items()
+	if key.startswith(('allow_', 'merge_', 'squash_', 'delete_branch_'))
 }
-
-# Cài đặt mọi repository (allow_rebase_merge theo ADR 0006).
-REPOSITORY_SETTINGS = {
-	'has_issues': True,
-	'has_projects': False,
-	'has_wiki': False,
-	'web_commit_signoff_required': True,
-	**MERGE_SETTINGS,
+ORG_SETTINGS = CONFIG['organization']['settings']
+ORG_WEB_ONLY_SETTINGS = CONFIG['organization']['web_settings']
+# Lệnh settings truyền thống giữ trạng thái bật/tắt Actions; local-settings quản lý trạng thái từ tệp.
+ACTIONS_PERMISSIONS = {
+	key: value
+	for key, value in CONFIG['repositories']
+	.get('.github', {})
+	.get('endpoints', {})
+	.get('actions/permissions', {})
+	.items()
+	if key != 'enabled'
 }
-
-# Cài đặt riêng từng repository, ghi đè REPOSITORY_SETTINGS.
-REPOSITORY_OVERRIDES = {
-	'.github': {
-		'description': 'Hồ sơ tổ chức, tệp cộng đồng mặc định, biểu mẫu và cấu hình GitHub dùng chung cho mọi '
-		'repository của CÔNG TY TNHH TOÀN QUỲNH',
-		'homepage': 'https://toanquynh.com',
-		'has_discussions': True,
-	},
+ORG_ACTIONS_PERMISSIONS = {
+	key: value
+	for key, value in CONFIG['organization']['endpoints'].get('actions/permissions', {}).items()
+	if key != 'enabled_repositories'
 }
-
-# Quyền GitHub Actions; không quản lý trạng thái bật/tắt (enabled, enabled_repositories) — người quản trị
-# tự bật, tắt trên web, script gửi lại giá trị đang có vì API bắt buộc trường này.
-ACTIONS_PERMISSIONS = {'allowed_actions': 'all', 'sha_pinning_required': True}
-
-ORG_ACTIONS_PERMISSIONS = {'allowed_actions': 'all', 'sha_pinning_required': False}
-
-WORKFLOW_PERMISSIONS = {
-	'default_workflow_permissions': 'read',
-	# Workflow monthly-release.yml mở Pull Request phát hành.
-	'can_approve_pull_request_reviews': True,
-}
-
-# Cài đặt tổ chức đổi được qua API.
-ORG_SETTINGS = {
-	'name': 'TOAN QUYNH CO., LTD',
-	'description': 'The Official Repository of TOAN QUYNH Co., Ltd',
-	'blog': 'https://toanquynh.com',
-	'email': 'toanquynhvn@gmail.com',
-	'location': 'Vietnam',
-	'default_repository_permission': 'read',
-	'members_can_create_repositories': True,
-	'members_can_create_public_repositories': True,
-	'members_can_create_private_repositories': True,
-	'members_can_create_pages': True,
-	'members_can_create_public_pages': True,
-	'members_can_create_private_pages': True,
-	'members_can_fork_private_repositories': True,
-	'has_organization_projects': True,
-	'has_repository_projects': True,
-	'web_commit_signoff_required': True,
-	'deploy_keys_enabled_for_repositories': True,
-}
-
-# Cài đặt tổ chức API không đổi được — chỉ so, sửa tại Organization settings trên web.
-ORG_WEB_ONLY_SETTINGS = {
-	'two_factor_requirement_enabled': True,
-	'default_repository_branch': 'main',
-	'members_can_change_repo_visibility': True,
-	'members_can_delete_repositories': True,
-	'members_can_delete_issues': True,
-	'members_can_invite_outside_collaborators': True,
-	'members_can_create_teams': True,
-	'members_can_view_dependency_insights': True,
-	'readers_can_create_discussions': True,
-	'display_commenter_full_name_setting_enabled': False,
-}
+WORKFLOW_PERMISSIONS = CONFIG['organization']['endpoints'].get('actions/permissions/workflow', {})
 
 
 def citationKeywords():
@@ -154,7 +104,11 @@ def updateSettings(endpoint, current, wanted, apply, what):
 			and not (isinstance(value, str) and current[key] is None)
 		):
 			raise ValueError(f'{endpoint}: không đọc được cài đặt {key}')
-	changes = {key: value for key, value in wanted.items() if current.get(key) != value}
+	changes = {
+		key: value
+		for key, value in wanted.items()
+		if current.get(key) != value and not (value == '' and current.get(key) is None)
+	}
 	if not changes:
 		print(f'   ✔ {what} đã đúng')
 		return
@@ -298,10 +252,15 @@ def syncOrgSettings(apply):
 		current = github.ghJson('api', f'orgs/{github.ORG}')
 		updateSettings(f'orgs/{github.ORG}', current, ORG_SETTINGS, apply, 'cài đặt tổ chức')
 		for key, value in ORG_WEB_ONLY_SETTINGS.items():
-			if current.get(key) != value:
-				print(
-					f'   ✘ {key}: {current.get(key)} ≠ {value} — sửa tại Organization settings trên web'
-				)
+			observed = current.get(key)
+			if key == 'installed_apps':
+				try:
+					observed = resources.installedApps()
+				except (RuntimeError, ValueError, TypeError):
+					print('   ⚠ không đọc được danh sách GitHub Apps; chưa đối chiếu cài đặt này')
+					continue
+			if observed != value:
+				print(f'   ✘ {key}: {observed} ≠ {value} — sửa tại Organization settings trên web')
 		syncActions(
 			endpoint, ORG_ACTIONS_PERMISSIONS, 'enabled_repositories', apply, actions.result()
 		)

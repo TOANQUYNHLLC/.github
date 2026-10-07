@@ -654,8 +654,7 @@ class ReleaseTest(unittest.TestCase):
 					self.assertEqual(labels, ['release', 'Pre-Release', channel])
 
 	def testReleasePullRequestFromActionsExplainsHowToRunChecks(self):
-		# Pull Request mở bằng GITHUB_TOKEN không khởi chạy workflow kiểm tra; mở tại máy (make release-pr) thì
-		# kiểm tra chạy bình thường nên không cần hướng dẫn.
+		# Pull Request mở bằng GITHUB_TOKEN có thể cần phê duyệt lượt chạy; mở tại máy thì không cần ghi chú này.
 		with tempfile.TemporaryDirectory() as folder:
 			self.module.ROOT = Path(folder)
 			(self.module.ROOT / 'CHANGELOG.md').write_text(RELEASE_FIXTURE, encoding='utf-8')
@@ -689,7 +688,8 @@ class ReleaseTest(unittest.TestCase):
 							'Stable.v2099.02.040001', 'v2099.01.Stable', 1
 						)
 					self.assertEqual(len(bodies), 1)
-					self.assertEqual('Reopen pull request' in bodies[0], onActions)
+					self.assertEqual('Approve workflows to run' in bodies[0], onActions)
+					self.assertNotIn('Reopen pull request', bodies[0])
 
 	def testReleaseBodyUsesTemplateAndKeepsReviewUnchecked(self):
 		with tempfile.TemporaryDirectory() as folder:

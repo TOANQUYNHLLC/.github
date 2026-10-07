@@ -1,0 +1,212 @@
+{
+	"organization_name": "TOANQUYNHLLC",
+	"repository_defaults": {
+		"has_issues": true,
+		"has_projects": false,
+		"has_wiki": false,
+		"web_commit_signoff_required": true,
+		"allow_squash_merge": true,
+		"allow_merge_commit": true,
+		"allow_rebase_merge": false,
+		"allow_auto_merge": true,
+		"allow_update_branch": true,
+		"delete_branch_on_merge": true,
+		"squash_merge_commit_title": "PR_TITLE",
+		"squash_merge_commit_message": "PR_BODY",
+		"merge_commit_title": "MERGE_MESSAGE",
+		"merge_commit_message": "PR_TITLE"
+	},
+	"organization": {
+		"settings": {
+			"description": "The Official Repository of TOAN QUYNH Co., Ltd",
+			"name": "TOAN QUYNH CO., LTD",
+			"company": "",
+			"blog": "https://toanquynh.com",
+			"location": "Vietnam",
+			"email": "toanquynhvn@gmail.com",
+			"twitter_username": "",
+			"has_organization_projects": true,
+			"has_repository_projects": true,
+			"default_repository_permission": "none",
+			"members_can_create_repositories": true,
+			"members_can_create_public_repositories": true,
+			"members_can_create_private_repositories": true,
+			"members_can_create_internal_repositories": false,
+			"members_can_create_pages": true,
+			"members_can_fork_private_repositories": true,
+			"web_commit_signoff_required": true,
+			"deploy_keys_enabled_for_repositories": true,
+			"members_can_create_public_pages": true,
+			"members_can_create_private_pages": true,
+			"secret_scanning_push_protection_custom_link_enabled": false,
+			"secret_scanning_push_protection_custom_link": ""
+		},
+		"web_settings": {
+			"two_factor_requirement_enabled": true,
+			"members_can_delete_repositories": true,
+			"members_can_change_repo_visibility": true,
+			"members_can_invite_outside_collaborators": true,
+			"members_can_delete_issues": true,
+			"display_commenter_full_name_setting_enabled": false,
+			"readers_can_create_discussions": true,
+			"members_can_create_teams": true,
+			"members_can_view_dependency_insights": true,
+			"default_repository_branch": "main",
+			"advanced_security_enabled_for_new_repositories": false,
+			"dependabot_alerts_enabled_for_new_repositories": true,
+			"dependabot_security_updates_enabled_for_new_repositories": true,
+			"dependency_graph_enabled_for_new_repositories": true,
+			"secret_scanning_enabled_for_new_repositories": false,
+			"secret_scanning_push_protection_enabled_for_new_repositories": false,
+			"secret_scanning_validity_checks_enabled": false,
+			"installed_apps": ["atlassian", "slack"]
+		},
+		"endpoints": {
+			"actions/permissions/workflow": {
+				"default_workflow_permissions": "read",
+				"can_approve_pull_request_reviews": true
+			},
+			"actions/permissions/artifact-and-log-retention": {
+				"days": 90
+			},
+			"actions/permissions/fork-pr-contributor-approval": {
+				"approval_policy": "first_time_contributors"
+			},
+			"actions/permissions/fork-pr-workflows-private-repos": {
+				"run_workflows_from_fork_pull_requests": false,
+				"send_write_tokens_to_workflows": false,
+				"send_secrets_and_variables": false,
+				"require_approval_for_fork_pr_workflows": false
+			},
+			"interaction-limits": {},
+			"interaction-limits/pulls/creation-cap": {
+				"enabled": false,
+				"max_open_pull_requests": 1
+			},
+			"actions/oidc/customization/sub": {},
+			"actions/permissions": {
+				"enabled_repositories": "none",
+				"sha_pinning_required": false
+			},
+			"settings/immutable-releases": {
+				"enforced_repositories": "all"
+			}
+		},
+		"runner_groups": [
+			{
+				"settings": {
+					"name": "Default",
+					"visibility": "all",
+					"allows_public_repositories": false,
+					"restricted_to_workflows": false,
+					"selected_workflows": []
+				},
+				"default": true,
+				"inherited": false,
+				"workflow_restrictions_read_only": false,
+				"selected_repositories": []
+			}
+		],
+		"security_configurations": [
+			{
+				"name": "GitHub recommended",
+				"target_type": "global",
+				"default_for_new_repos": "none"
+			}
+		]
+	},
+	"repositories": {
+		".github": {
+			"settings": {
+				"description": "Hồ sơ tổ chức, tệp cộng đồng mặc định, biểu mẫu và cấu hình GitHub dùng chung cho mọi repository của CÔNG TY TNHH TOÀN QUỲNH",
+				"homepage": "https://toanquynh.com",
+				"has_issues": true,
+				"has_projects": false,
+				"has_wiki": false,
+				"has_discussions": true,
+				"archived": false,
+				"allow_forking": true,
+				"is_template": true,
+				"web_commit_signoff_required": true,
+				"has_pull_requests": true,
+				"pull_request_creation_policy": "all",
+				"visibility": "public",
+				"default_branch": "main",
+				"allow_squash_merge": true,
+				"allow_merge_commit": true,
+				"allow_rebase_merge": false,
+				"allow_auto_merge": true,
+				"delete_branch_on_merge": true,
+				"allow_update_branch": true,
+				"squash_merge_commit_message": "PR_BODY",
+				"squash_merge_commit_title": "PR_TITLE",
+				"merge_commit_message": "PR_TITLE",
+				"merge_commit_title": "MERGE_MESSAGE"
+			},
+			"web_settings": {
+				"secret_scanning_validity_checks": "disabled"
+			},
+			"endpoints": {
+				"actions/permissions/workflow": {
+					"default_workflow_permissions": "read",
+					"can_approve_pull_request_reviews": true
+				},
+				"actions/permissions/artifact-and-log-retention": {
+					"days": 90
+				},
+				"actions/permissions/fork-pr-contributor-approval": {
+					"approval_policy": "first_time_contributors"
+				},
+				"interaction-limits": {},
+				"interaction-limits/pulls/creation-cap": {
+					"enabled": false,
+					"max_open_pull_requests": 1
+				},
+				"actions/oidc/customization/sub": {
+					"use_default": true,
+					"use_immutable_subject": true
+				},
+				"actions/permissions": {
+					"enabled": false,
+					"sha_pinning_required": false
+				},
+				"topics": {
+					"names": [
+						"community-health-files",
+						"github",
+						"issue-templates",
+						"rulesets",
+						"workflow-templates"
+					]
+				},
+				"vulnerability-alerts": {
+					"enabled": true
+				},
+				"automated-security-fixes": {
+					"enabled": true
+				},
+				"private-vulnerability-reporting": {
+					"enabled": true
+				},
+				"immutable-releases": {
+					"enabled": true
+				},
+				"code-scanning/default-setup": {
+					"state": "not-configured",
+					"languages": ["actions", "python"],
+					"query_suite": "default",
+					"threat_model": "remote",
+					"runner_type": "standard",
+					"runner_label": null
+				}
+			},
+			"security": {
+				"secret_scanning": "enabled",
+				"secret_scanning_push_protection": "enabled",
+				"secret_scanning_non_provider_patterns": "disabled"
+			},
+			"security_configuration": null
+		}
+	},
+	"unavailable": {}
+}

@@ -139,6 +139,49 @@ class GitHooksTest(unittest.TestCase):
 		self.assertEqual(self.prePush([line]), (0, True))
 		self.assertEqual(self.prePush([line], makeCode=2), (1, True))
 
+	def testPrePushWorktreeKeepsForeignGitCommandsIsolated(self):
+		# Git hook của worktree mang GIT_DIR tuyệt đối: cwd của lệnh git con không đủ để đổi repository.
+		worktree, foreign = self.repo / 'worktree', self.repo / 'foreign'
+		self.git('worktree', 'add', '-q', '-b', 'feature/isolated_checks', str(worktree))
+		gitDir = subprocess.check_output(
+			['git', '-C', str(worktree), 'rev-parse', '--absolute-git-dir'], text=True
+		).strip()
+		config = self.repo / '.git' / 'config'
+		originalConfig, originalHead = config.read_bytes(), self.git('rev-parse', 'HEAD')
+		originalRun = subprocess.run
+
+		def run(command, **kwargs):
+			if command[:2] == ['make', 'check']:
+				self.assertEqual(kwargs['env']['CHECK_SENTINEL'], 'preserved')
+				self.assertNotIn('GIT_DIR', kwargs['env'])
+				self.assertNotIn('GIT_INDEX_FILE', kwargs['env'])
+				originalRun(['git', 'init', '-q', str(foreign)], env=kwargs['env'], check=True)
+				originalRun(
+					['git', 'config', 'audit.isolated', 'true'],
+					cwd=foreign,
+					env=kwargs['env'],
+					check=True,
+				)
+				return subprocess.CompletedProcess(command, 0)
+			return originalRun(command, **kwargs)
+
+		with (
+			mock.patch.dict(
+				'os.environ',
+				{
+					'GIT_DIR': gitDir,
+					'GIT_INDEX_FILE': str(Path(gitDir) / 'index'),
+					'CHECK_SENTINEL': 'preserved',
+				},
+			),
+			mock.patch.object(self.module.subprocess, 'run', run),
+			mock.patch.object(self.module.sys, 'stdin', io.StringIO('')),
+		):
+			self.assertEqual(self.module.prePush(worktree, []), 0)
+		self.assertEqual(config.read_bytes(), originalConfig)
+		self.assertEqual(self.git('rev-parse', 'HEAD'), originalHead)
+		self.assertTrue((foreign / '.git' / 'HEAD').is_file())
+
 	def testPrePushSeesNewFilesDespiteUserConfig(self):
 		# status.showUntrackedFiles=no làm git status ẩn tệp mới: make check sẽ kiểm tra cả tệp không được đẩy.
 		head = self.git('rev-parse', 'HEAD')

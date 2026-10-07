@@ -30,22 +30,21 @@ jobs:
               with:
                   python-version-file: .python-version
 
-            - name: Cài pip, ruff, pytest
-              run: python -m pip install --upgrade pip ruff pytest
+            - name: Lấy script và phiên bản công cụ của tổ chức
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  repository: TOANQUYNHLLC/.github
+                  path: .org
+                  persist-credentials: false
 
-            - name: Cài thư viện (requirements.txt)
-              if: hashFiles('requirements.txt') != ''
-              run: pip install -r requirements.txt
-
-            - name: Cài thư viện phát triển (requirements-dev.txt)
-              if: hashFiles('requirements-dev.txt') != ''
-              run: pip install -r requirements-dev.txt
+            - name: Cài công cụ, requirements và package của dự án
+              run: python .org/scripts/install-python-dependencies.py
 
             - name: Kiểm tra định dạng (ruff format)
-              run: ruff format --check .
+              run: ruff format --check --extend-exclude .org .
 
             - name: Lint (ruff check)
-              run: ruff check .
+              run: ruff check --extend-exclude .org .
 
             # Không có thư mục tests thì bỏ qua kiểm thử.
             - name: Kiểm thử
