@@ -812,6 +812,17 @@ def syncConfiguredSettings(apply=False, verify=False):
 		current, unavailable = readScope(repo)
 		if unavailable:
 			raise ValueError(f'{base}: chưa đọc được {", ".join(unavailable)}; dừng trước khi ghi')
+		archivePlan = []
+		repositorySettings = dict(wanted['settings'])
+		if repo is not None and 'archived' in repositorySettings:
+			archived = repositorySettings.pop('archived')
+			# Bỏ archive trước mọi thao tác ghi; archive sau cùng để không khóa các cập nhật còn lại.
+			addChanges(
+				archivePlan if archived else plan,
+				base,
+				current['settings'],
+				{'archived': archived},
+			)
 		securityBindingChanges(plan, base, repo, current, wanted)
 		if repo is None:
 			addChanges(plan, base, current['settings'], wanted['settings'])
@@ -822,7 +833,7 @@ def syncConfiguredSettings(apply=False, verify=False):
 					plan, current['runner_groups'], wanted['runner_groups']
 				)
 		else:
-			repositorySettingChanges(plan, base, current['settings'], wanted['settings'])
+			repositorySettingChanges(plan, base, current['settings'], repositorySettings)
 		for key, value in wanted['web_settings'].items():
 			if key not in current['web_settings']:
 				raise ValueError(f'{base}: chưa đọc được {key}; dừng trước khi ghi')
@@ -885,6 +896,7 @@ def syncConfiguredSettings(apply=False, verify=False):
 				definitions[suffix][0],
 				suffix,
 			)
+		plan.extend(archivePlan)
 	for path, method, _, changes in plan:
 		print(
 			f'{"Áp dụng" if apply else "(xem trước)"} {method} {path}: {json.dumps(changes, ensure_ascii=False)}'

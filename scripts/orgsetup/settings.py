@@ -24,7 +24,7 @@ PUBLIC_ONLY_ENDPOINTS = ('private-vulnerability-reporting',)
 STATUS_ONLY_ENDPOINTS = ('vulnerability-alerts',)
 
 # Nguồn cài đặt được nhập từ GitHub; không duy trì một bản giá trị cố định riêng trong Python.
-from orgsetup.configuration import readConfig
+from orgsetup.configuration import readConfig, repositorySettingChanges
 
 CONFIG = readConfig()
 REPOSITORY_SETTINGS = CONFIG['repository_defaults']
@@ -95,7 +95,7 @@ def repositorySettings(repo, discussions=False):
 
 
 def updateSettings(endpoint, current, wanted, apply, what):
-	"""So cài đặt đang có với cài đặt mong muốn; --apply thì PATCH phần khác."""
+	"""So cài đặt; --apply ghi phần khác, Discussions qua GraphQL sau khi xác minh ID repository."""
 	if not isinstance(current, dict):
 		raise TypeError(f'{endpoint}: không đọc được object cài đặt')
 	for key, value in wanted.items():
@@ -115,7 +115,13 @@ def updateSettings(endpoint, current, wanted, apply, what):
 	for key, value in changes.items():
 		print(f'   {"" if apply else "(xem trước) "}{key}: {current.get(key)} → {value}')
 	if apply:
-		github.gh('api', '-X', 'PATCH', endpoint, '--input', '-', stdin=json.dumps(changes))
+		plan = []
+		if endpoint.startswith('repos/'):
+			repositorySettingChanges(plan, endpoint, current, changes)
+		else:
+			plan.append((endpoint, 'PATCH', changes, changes))
+		for path, method, body, _ in plan:
+			github.gh('api', '-X', method, path, '--input', '-', stdin=json.dumps(body))
 		print('   ✔ đã cập nhật')
 
 

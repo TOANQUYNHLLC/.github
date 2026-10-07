@@ -18,7 +18,8 @@ Lệnh (nên chạy theo thứ tự):
 		repository chưa có commit được bỏ qua; commit lỗi thì xóa branch vừa tạo.
 	settings: cài đặt repository (REPOSITORY_SETTINGS: Merge và Squash, tắt Rebase — ADR 0006, auto-merge,
 		Update branch, sign-off khi commit trên web, tắt Wiki và Projects; phần riêng trong
-		REPOSITORY_OVERRIDES, topics của .github lấy từ CITATION.cff); bật Dependabot alerts, secret
+		REPOSITORY_OVERRIDES, topics của .github lấy từ CITATION.cff); Discussions qua GraphQL sau khi
+		xác minh ID repository; bật Dependabot alerts, secret
 		scanning, push protection, Dependabot security updates, báo cáo lỗ hổng riêng tư, Release bất
 		biến (immutable releases); quyền GitHub Actions (giữ nguyên trạng thái bật/tắt);
 		--discussions bật thêm GitHub Discussions.
