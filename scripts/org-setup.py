@@ -5,6 +5,12 @@ Mặc định chỉ xem trước, không thay đổi gì; thêm --apply để á
 Yêu cầu: gh đã đăng nhập bằng tài khoản có quyền quản trị tổ chức.
 
 Lệnh (nên chạy theo thứ tự):
+	import-settings: đọc cài đặt GitHub của tổ chức và mọi repository đọc được (cả archive),
+		ghi github-settings.json tại máy; không ghi GitHub, không nhận --apply, --repo, --discussions.
+	local-settings: đối chiếu github-settings.json; --apply để áp dụng các mục API được hỗ trợ,
+		bao gồm trạng thái Actions, bảo mật, thời gian lưu dữ liệu, fork, tương tác và cấu hình bảo mật.
+		Đọc mọi phạm vi trước khi ghi, đọc lại sau khi áp dụng; lỗi hoặc mục chưa hoàn tất trả mã lỗi.
+		Không nhận --repo, --discussions; nguồn JSON xác định phạm vi cần xử lý.
 	files: mở Pull Request thêm các tệp dùng chung còn thiếu — .editorconfig, .gitattributes,
 		workflow kiểm tra tiêu đề Pull Request, tên branch và gắn nhãn (labeler), CODEOWNERS, dependabot.yml, release.yml
 		và tệp định dạng, phiên bản (.nvmrc, .python-version) theo ngôn ngữ repository dùng. Không ghi đè tệp đã có.
@@ -53,7 +59,7 @@ except ModuleNotFoundError:
 		f'Cần Python ≥ 3.11 (đang dùng {sys.version.split()[0]}) — chạy mise install, mở terminal có mise.'
 	)
 
-from orgsetup import files, github, labels, rulesets, settings, teams
+from orgsetup import configuration, files, github, labels, rulesets, settings, teams
 
 COMMANDS = ('files', 'settings', 'rulesets', 'team', 'labels', 'org-rulesets', 'org-settings')
 PREVIEW_NOTE = 'Chế độ xem trước — chạy lại với --apply để áp dụng.'
@@ -142,7 +148,7 @@ def main():
 	)
 	parser.add_argument(
 		'command',
-		choices=(*COMMANDS, 'preview'),
+		choices=(*COMMANDS, 'preview', 'import-settings', 'local-settings'),
 	)
 	parser.add_argument('--apply', action='store_true', help='áp dụng thay đổi trên GitHub')
 	parser.add_argument('--repo', help='chỉ xử lý một repository')
@@ -150,12 +156,18 @@ def main():
 		'--discussions', action='store_true', help='settings: bật GitHub Discussions'
 	)
 	args = parser.parse_args()
+	if args.command in ('import-settings', 'local-settings') and (
+		args.repo or args.discussions or (args.command == 'import-settings' and args.apply)
+	):
+		parser.error(
+			'import-settings chỉ nhập local; local-settings áp dụng các phạm vi trong github-settings.json; không nhận --repo, --discussions'
+		)
 	if args.command == 'preview' and (args.apply or args.repo or args.discussions):
 		parser.error('preview chỉ xem trước mọi lệnh, không nhận --apply, --repo, --discussions')
 
 	def repositories():
 		# Giữ lỗi đọc để main báo sau khi xác minh đăng nhập; không gọi lại một request đã thất bại.
-		if args.command.startswith('org-'):
+		if args.command.startswith('org-') or args.command in ('import-settings', 'local-settings'):
 			return []
 		try:
 			return github.listRepos(args.repo)
@@ -172,6 +184,10 @@ def main():
 		print(f'❌ {repos}', file=sys.stderr)
 		return 1
 	try:
+		if args.command == 'import-settings':
+			return configuration.importSettings()
+		if args.command == 'local-settings':
+			return configuration.syncConfiguredSettings(args.apply)
 		if args.command == 'preview':
 			return previewAll(repos)
 		runCommand(args.command, repos, args.apply, args.discussions)

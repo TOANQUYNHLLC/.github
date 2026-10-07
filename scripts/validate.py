@@ -57,6 +57,7 @@ from validation.forms import FORM_LABELS, checkForm, checkIssueConfig
 from validation.repository import (
 	checkConventions,
 	checkDependabotCooldown,
+	checkGitHubSettings,
 	checkLabelUsage,
 	checkMaintainers,
 	checkRulesets,
@@ -170,6 +171,7 @@ def runChecks():
 		checkDevcontainerPins,
 		checkConventions,
 		checkRulesets,
+		checkGitHubSettings,
 		checkMaintainers,
 		checkDocsMatchCode,
 		checkAdrIndex,

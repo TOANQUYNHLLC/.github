@@ -40,6 +40,13 @@ def repositoryRoot():
 	return Path(git(Path.cwd(), 'rev-parse', '--show-toplevel'))
 
 
+def childEnvironment(root):
+	"""Lệnh con tự tìm repository theo cwd; không mang GIT_DIR/index của hook sang repository tạm trong tests.
+	Giữ các biến ngoài danh sách môi trường cục bộ do Git công bố (PATH, phiên bản công cụ, đăng nhập…)."""
+	localNames = set(git(root, 'rev-parse', '--local-env-vars').splitlines())
+	return {key: value for key, value in os.environ.items() if key not in localNames}
+
+
 def stagedFiles(root):
 	"""Tệp thêm, sửa, đổi tên đang được stage."""
 	output = git(root, 'diff', '--cached', '--name-only', '--diff-filter=ACMR', '-z')
@@ -159,7 +166,12 @@ def prePush(root, args):
 			file=sys.stderr,
 		)
 		return 1
-	if subprocess.run(['make', 'check'], cwd=root, check=False).returncode != 0:
+	if (
+		subprocess.run(
+			['make', 'check'], cwd=root, env=childEnvironment(root), check=False
+		).returncode
+		!= 0
+	):
 		print('❌ make check thất bại — sửa lỗi rồi đẩy lại.', file=sys.stderr)
 		return 1
 	return 0
@@ -188,6 +200,7 @@ def afterPull(root):
 		return subprocess.run(
 			['make', '--no-print-directory', target],
 			cwd=root,
+			env=childEnvironment(root),
 			capture_output=True,
 			text=True,
 			check=False,

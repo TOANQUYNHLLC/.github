@@ -20,6 +20,7 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0014](0014-release-sequence.md)              | Số thứ tự phát hành bắt đầu lại mỗi tháng                                    | Chấp nhận                     | 2026-10-04 |
 | [0015](0015-developer-shell-scripts.md)       | Script tiện ích cho người phát triển nằm trong `shell/`                      | Chấp nhận                     | 2026-10-05 |
 | [0016](0016-devcontainer-python-image.md)     | Image Dev Container ghim đúng bản Python của `mise.toml`                     | Chấp nhận                     | 2026-10-06 |
+| [0017](0017-local-github-settings.md)         | Nguồn cài đặt GitHub ở local                                                 | Đề xuất                       | 2026-10-07 |
 
 ## ✍️ CÁCH THÊM ADR
 

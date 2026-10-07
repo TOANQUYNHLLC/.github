@@ -1129,6 +1129,8 @@ class OrgSetupTest(unittest.TestCase):
 
 	def testActionsPermissionsKeepEnabledState(self):
 		calls = []
+		# Kiểm tra chính sách bật ghim SHA độc lập với cài đặt vừa nhập từ GitHub (Actions đang tắt).
+		wanted = {'allowed_actions': 'all', 'sha_pinning_required': True}
 		live = {
 			'repos/x/actions/permissions': {'enabled': True, 'allowed_actions': 'all'},
 			'repos/x/actions/permissions/workflow': dict(settings.WORKFLOW_PERMISSIONS),
@@ -1136,9 +1138,7 @@ class OrgSetupTest(unittest.TestCase):
 		github.ghJson = lambda *args: live[args[1]]
 		github.gh = lambda *args, **kwargs: calls.append((args, kwargs.get('stdin')))
 		with contextlib.redirect_stdout(io.StringIO()):
-			settings.syncActions(
-				'repos/x/actions/permissions', settings.ACTIONS_PERMISSIONS, 'enabled', True
-			)
+			settings.syncActions('repos/x/actions/permissions', wanted, 'enabled', True)
 		# Chỉ ghi phần khác (sha_pinning_required) và gửi lại enabled đang có — không bật, tắt Actions.
 		self.assertEqual(len(calls), 1)
 		self.assertEqual(json.loads(calls[0][1]), {'sha_pinning_required': True, 'enabled': True})
@@ -1147,9 +1147,7 @@ class OrgSetupTest(unittest.TestCase):
 		live['repos/x/actions/permissions'] = {'enabled': False, 'sha_pinning_required': False}
 		output = io.StringIO()
 		with contextlib.redirect_stdout(output):
-			settings.syncActions(
-				'repos/x/actions/permissions', settings.ACTIONS_PERMISSIONS, 'enabled', True
-			)
+			settings.syncActions('repos/x/actions/permissions', wanted, 'enabled', True)
 		self.assertEqual(calls, [])
 		# Chỉ báo đúng phần đã so được (quyền GITHUB_TOKEN), không báo quyền Actions "đã đúng".
 		self.assertIn('✔ quyền GITHUB_TOKEN đã đúng', output.getvalue())
@@ -1158,9 +1156,7 @@ class OrgSetupTest(unittest.TestCase):
 		github.ghJson = lambda *args: (_ for _ in ()).throw(RuntimeError('HTTP 403'))
 		output = io.StringIO()
 		with contextlib.redirect_stdout(output):
-			settings.syncActions(
-				'repos/x/actions/permissions', settings.ACTIONS_PERMISSIONS, 'enabled', True
-			)
+			settings.syncActions('repos/x/actions/permissions', wanted, 'enabled', True)
 		self.assertNotIn('đã đúng', output.getvalue())
 
 	def testOrgRulesetFilesMatchGenerated(self):
@@ -1366,7 +1362,7 @@ class OrgSetupTest(unittest.TestCase):
 					},
 				)
 			if path.endswith('/actions/permissions'):
-				return dict(settings.ACTIONS_PERMISSIONS, enabled=True)
+				return dict(settings.ACTIONS_PERMISSIONS, enabled=True, allowed_actions='all')
 			if path.endswith('/actions/permissions/workflow'):
 				return dict(settings.WORKFLOW_PERMISSIONS)
 			return {'enabled': True}
@@ -1783,7 +1779,11 @@ class OrgSetupTest(unittest.TestCase):
 		current['blog'] = 'https://cu.example'
 		current['two_factor_requirement_enabled'] = False
 		readings = [
-			{'enabled_repositories': 'all', **settings.ORG_ACTIONS_PERMISSIONS},
+			{
+				'enabled_repositories': 'all',
+				'allowed_actions': 'all',
+				**settings.ORG_ACTIONS_PERMISSIONS,
+			},
 			dict(settings.WORKFLOW_PERMISSIONS),
 		]
 		for apply in (False, True):

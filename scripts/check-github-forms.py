@@ -5,7 +5,8 @@ GitHub từ chối cả biểu mẫu khi gặp khóa lạ (ví dụ `type is not
 hay trong API; lỗi chỉ hiện trên trang xem tệp. Script đọc dữ liệu JSON nhúng của trang đó — không phải
 API chính thức, nên khi GitHub đổi cấu trúc trang, script báo "không đọc được" thay vì báo đạt.
 Workflow links.yml chạy hằng tuần; khi GitHub Actions tắt, chạy make forms tại máy. Sửa biểu mẫu thì đẩy
-branch rồi chạy make forms REF=<branch> trước khi hợp nhất.
+branch rồi kiểm tra Issue bằng make forms REF=<branch>. Discussion chỉ xác minh được trên nhánh mặc định;
+ref khác được báo chưa xác minh và trả mã lỗi, không dùng dữ liệu Discussion của nhánh mặc định để báo đạt.
 """
 
 import http.client
@@ -28,6 +29,10 @@ EMBEDDED = re.compile(
 	r'<script type="application/json" data-target="react-app\.embeddedData">(.*?)</script>',
 	re.DOTALL,
 )
+
+
+class UnverifiedDiscussion(Exception):
+	"""GitHub chỉ cung cấp dữ liệu Discussion của nhánh mặc định, không phải ref được yêu cầu."""
 
 
 def formPaths():
@@ -66,17 +71,34 @@ def templateData(ref, relative):
 	match = EMBEDDED.search(page)
 	if not match:
 		return None
-	data = json.loads(match.group(1))
-	for key in ('payload', 'codeViewBlobRoute'):
-		if not isinstance(data, dict):
-			raise TypeError('cấu trúc dữ liệu trang đã đổi')
-		data = data.get(key)
+	pageData = json.loads(match.group(1))
+	payload = pageData.get('payload') if isinstance(pageData, dict) else None
+	data = payload.get('codeViewBlobRoute') if isinstance(payload, dict) else None
 	if not isinstance(data, dict):
 		raise TypeError('cấu trúc dữ liệu trang đã đổi')
-	for key in ('issueTemplate', 'discussionTemplate'):
-		if key in data and data[key] is not None:
-			return data[key]
-	return None
+	if 'DISCUSSION_TEMPLATE' in Path(relative).parts:
+		# Nội dung blob theo ref, nhưng discussionTemplate theo nhánh mặc định. Chỉ tin khi trang đang xem đúng
+		# nhánh mặc định; cả SHA của commit cũ lẫn tên branch khác đều không xác minh được.
+		layout = payload.get('codeViewLayoutRoute')
+		blobLayout = payload.get('codeViewBlobLayoutRoute')
+		repo = layout.get('repo') if isinstance(layout, dict) else None
+		refInfo = blobLayout.get('refInfo') if isinstance(blobLayout, dict) else None
+		if (
+			not isinstance(repo, dict)
+			or not isinstance(repo.get('defaultBranch'), str)
+			or not repo['defaultBranch']
+			or not isinstance(refInfo, dict)
+			or not isinstance(refInfo.get('name'), str)
+			or not isinstance(refInfo.get('refType'), str)
+		):
+			raise TypeError('không đọc được nhánh mặc định và ref của trang Discussion')
+		if refInfo['name'] != repo['defaultBranch'] or refInfo['refType'] != 'branch':
+			raise UnverifiedDiscussion(
+				f'chỉ xác minh Discussion trên nhánh mặc định {repo["defaultBranch"]}; '
+				'kiểm tra tại máy bằng make validate, rồi chạy make forms sau khi hợp nhất'
+			)
+		return data.get('discussionTemplate')
+	return data.get('issueTemplate')
 
 
 def templateErrors(template):
@@ -119,7 +141,7 @@ def main():
 		)
 		return 1
 	ref = sys.argv[1] if len(sys.argv) > 1 else 'main'
-	failed = 0
+	failed = unverified = 0
 	relatives = [path.relative_to(ROOT).as_posix() for path in formPaths()]
 	if not relatives:
 		print('❌ Không tìm thấy biểu mẫu Issue hoặc Discussion để kiểm tra.')
@@ -130,7 +152,13 @@ def main():
 			return templateData(ref, relative)
 		# OSError gồm lỗi lúc gửi (URLError) lẫn lúc đọc phản hồi (máy chủ ngắt kết nối); HTTPException: phản hồi
 		# HTTP sai dạng, bị cắt ngang; ValueError: JSON nhúng sai, trang không phải UTF-8.
-		except (OSError, http.client.HTTPException, ValueError, TypeError) as exc:
+		except (
+			OSError,
+			http.client.HTTPException,
+			ValueError,
+			TypeError,
+			UnverifiedDiscussion,
+		) as exc:
 			if isinstance(exc, urllib.error.HTTPError):
 				exc.close()  # chỉ cần mã lỗi, không cần nội dung phản hồi
 			return exc
@@ -146,6 +174,10 @@ def main():
 		print(f'❌ Không có "{ref}" trên GitHub — đẩy branch trước: git push -u origin {ref}')
 		return 1
 	for relative, template in zip(relatives, templates, strict=True):
+		if isinstance(template, UnverifiedDiscussion):
+			unverified += 1
+			print(f'⚠ {relative}: chưa xác minh ({template})')
+			continue
 		if isinstance(template, Exception):
 			failed += 1
 			print(f'❌ {relative}: không đọc được trang ({template})')
@@ -165,10 +197,13 @@ def main():
 			print(f'❌ {relative}: ' + '; '.join(errors))
 		else:
 			print(f'✅ {relative}')
-	print(
-		f'{"✅ GitHub chấp nhận mọi biểu mẫu" if not failed else f"❌ {failed} biểu mẫu lỗi"} ({ref}).'
-	)
-	return 1 if failed else 0
+	if unverified:
+		print(f'⚠ {unverified} Discussion chưa xác minh; {failed} biểu mẫu lỗi ({ref}).')
+	else:
+		print(
+			f'{"✅ GitHub chấp nhận mọi biểu mẫu" if not failed else f"❌ {failed} biểu mẫu lỗi"} ({ref}).'
+		)
+	return 1 if failed or unverified else 0
 
 
 if __name__ == '__main__':

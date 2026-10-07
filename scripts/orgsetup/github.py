@@ -56,7 +56,7 @@ def ghExists(endpoint):
 		raise
 
 
-def listRepos(only):
+def listRepos(only, includeArchived=False):
 	if only:
 		return [only]
 	# REST nhanh hơn gh repo list (GraphQL) gần một nửa; --paginate đọc đủ khi có hơn 100 repository.
@@ -65,7 +65,7 @@ def listRepos(only):
 		'--paginate',
 		f'orgs/{ORG}/repos?per_page=100&type=all',
 		'--jq',
-		'.[] | select(.archived | not) | .name',
+		'.[] | .name' if includeArchived else '.[] | select(.archived | not) | .name',
 	)
 	return sorted(output.split())
 

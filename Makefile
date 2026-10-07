@@ -93,7 +93,7 @@ versions: ## Báo công cụ trong mise.toml, action chỉ có trong workflow-te
 	$(PYTHON) scripts/check-tool-versions.py
 
 .PHONY: forms
-forms: ## Kiểm tra GitHub chấp nhận biểu mẫu Issue, Discussion: make forms REF=<branch> (mặc định main)
+forms: ## Kiểm tra Issue theo ref; Discussion chỉ xác minh trên nhánh mặc định, ref khác trả mã lỗi: make forms REF=<branch>
 	$(PYTHON) scripts/check-github-forms.py "$${REF:-main}"
 
 ##@ Đồng bộ git tại máy
@@ -123,6 +123,18 @@ release-pr: ## Chuẩn bị rồi mở Pull Request phát hành tại máy (khi 
 	$(PYTHON) scripts/release.py prepare --open-pr
 
 ##@ Quản trị tổ chức (cần GitHub CLI đã đăng nhập)
+
+.PHONY: org-import
+org-import: ## Lấy cài đặt hiện tại từ GitHub về github-settings.json; chỉ ghi local
+	$(PYTHON) scripts/org-setup.py import-settings
+
+.PHONY: org-settings-preview
+org-settings-preview: ## So cài đặt GitHub với github-settings.json, gồm trạng thái Actions và các endpoint bổ sung
+	$(PYTHON) scripts/org-setup.py local-settings
+
+.PHONY: org-settings-apply
+org-settings-apply: ## Áp dụng cài đặt API từ github-settings.json rồi đọc lại; mục chỉ sửa trên web được báo riêng
+	$(PYTHON) scripts/org-setup.py local-settings --apply
 
 .PHONY: org-preview
 org-preview: ## Xem trước việc áp dụng tệp, cài đặt, ruleset, team, nhãn lên mọi repository và cài đặt tổ chức

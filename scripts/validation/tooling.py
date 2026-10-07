@@ -77,7 +77,10 @@ def checkToolVersions():
 				f'package.json: devEngines.runtime.version là "{runtime.get("version")}", phải là "{wanted}" '
 				'theo .nvmrc'
 			)
-	pinned = re.compile(r'ruff==|pipx install ruff|actionlint@v|download-actionlint|shellcheck-v\d')
+	# Nhận phiên bản ghi trực tiếp; f-string đọc phiên bản từ mise.toml không phải nguồn phiên bản thứ hai.
+	pinned = re.compile(
+		r'ruff==v?\d|pipx install ruff|actionlint@v|download-actionlint|shellcheck-v\d'
+	)
 	# Không quét validate.py và test_*.py: các tệp này chứa chính các mẫu để so khớp.
 	sources = [
 		*repositoryWorkflows(),

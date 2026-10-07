@@ -4,6 +4,7 @@ import ast
 import json
 import re
 
+from orgsetup.configuration import readConfig
 from orgsetup.labels import inspectLabels
 
 from validation.common import (
@@ -32,6 +33,15 @@ GITHUB_DEFAULT_LABELS = (
 	'question',
 	'wontfix',
 )
+
+
+def checkGitHubSettings():
+	"""Nguồn cài đặt phải đúng hợp đồng API, không chấp nhận trường lạ hoặc tính năng mâu thuẫn."""
+	path = ROOT / 'github-settings.json'
+	try:
+		readConfig(ROOT)
+	except (OSError, ValueError, TypeError, KeyError) as exc:
+		error(path, f'cấu hình GitHub không hợp lệ: {exc}')
 
 
 def contributingSection(text, heading):
