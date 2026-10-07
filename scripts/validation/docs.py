@@ -123,6 +123,12 @@ def checkDocsMatchCode():
 
 def checkAdrIndex():
 	"""Bảng trong docs/adr/README.md phải liệt kê mọi ADR, cùng ngày và cùng trạng thái với từng tệp."""
+
+	def statusKey(value):
+		# Số ADR có thể là liên kết trong bảng; phần giải thích phạm vi thay thế chỉ có trong tệp ADR.
+		plain = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', value).strip()
+		return plain.split(' (', 1)[0] if 'thay thế' in plain.lower() else plain
+
 	folder = ROOT / 'docs' / 'adr'
 	indexPath = folder / 'README.md'
 	if not indexPath.exists():
@@ -152,12 +158,7 @@ def checkAdrIndex():
 		rowStatus, rowDate = rows[number]
 		if rowDate != date.group(1).strip():
 			error(indexPath, f'ADR {number}: ngày "{rowDate}" khác tệp ADR ({date.group(1)})')
-		superseded = 'thay thế' in status.group(1).lower()
-		if superseded != ('thay thế' in rowStatus.lower()) or (
-			superseded
-			and set(re.findall(r'\b\d{4}\b', rowStatus))
-			!= set(re.findall(r'\b\d{4}\b', status.group(1)))
-		):
+		if statusKey(rowStatus) != statusKey(status.group(1)):
 			error(
 				indexPath,
 				f'ADR {number}: trạng thái "{rowStatus}" khác tệp ADR ({status.group(1)})',
