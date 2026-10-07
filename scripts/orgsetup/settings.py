@@ -94,8 +94,8 @@ def repositorySettings(repo, discussions=False):
 	return wanted
 
 
-def updateSettings(endpoint, current, wanted, apply, what):
-	"""So cài đặt; --apply ghi phần khác, Discussions qua GraphQL sau khi xác minh ID repository."""
+def validateCurrentSettings(endpoint, current, wanted):
+	"""Kiểm tra mọi trường trước khi ghi, kể cả trước thao tác bỏ archive."""
 	if not isinstance(current, dict):
 		raise TypeError(f'{endpoint}: không đọc được object cài đặt')
 	for key, value in wanted.items():
@@ -104,6 +104,11 @@ def updateSettings(endpoint, current, wanted, apply, what):
 			and not (isinstance(value, str) and current[key] is None)
 		):
 			raise ValueError(f'{endpoint}: không đọc được cài đặt {key}')
+
+
+def updateSettings(endpoint, current, wanted, apply, what):
+	"""So cài đặt; --apply ghi phần khác, Discussions qua GraphQL sau khi xác minh ID repository."""
+	validateCurrentSettings(endpoint, current, wanted)
 	changes = {
 		key: value
 		for key, value in wanted.items()
@@ -132,17 +137,39 @@ def syncSettings(repos, apply, discussions):
 		# Quyền Actions không phụ thuộc cài đặt repository: đọc song song từ đầu, so và in sau cùng như cũ.
 		with ThreadPoolExecutor(max_workers=1) as pool:
 			actions = pool.submit(readActions, endpoint)
-			current = github.ghJson('api', f'repos/{github.ORG}/{repo}')
+			repositoryEndpoint = f'repos/{github.ORG}/{repo}'
+			current = github.ghJson('api', repositoryEndpoint)
+			wanted = repositorySettings(repo, discussions)
+			validateCurrentSettings(repositoryEndpoint, current, wanted)
+			archiveChanged = 'archived' in wanted and current['archived'] != wanted['archived']
+			archived = wanted.pop('archived', None)
+			if archiveChanged and not archived:
+				updateSettings(
+					repositoryEndpoint,
+					current,
+					{'archived': False},
+					apply,
+					'trạng thái archive',
+				)
+			# Bỏ archive trước Discussions và các cập nhật khác; archive sau topics, bảo mật, quyền Actions.
 			updateSettings(
-				f'repos/{github.ORG}/{repo}',
+				repositoryEndpoint,
 				current,
-				repositorySettings(repo, discussions),
+				wanted,
 				apply,
 				'cài đặt repository',
 			)
 			syncTopics(repo, current, apply)
 			syncSecurity(repo, current, apply)
 			syncActions(endpoint, ACTIONS_PERMISSIONS, 'enabled', apply, actions.result())
+			if archiveChanged and archived:
+				updateSettings(
+					repositoryEndpoint,
+					current,
+					{'archived': True},
+					apply,
+					'trạng thái archive',
+				)
 
 
 def syncTopics(repo, current, apply):

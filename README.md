@@ -162,7 +162,7 @@ make hooks
 
 Không dùng mise thì cài Node.js đúng bản trong `.nvmrc` (ví dụ `brew install node@24` rồi đưa `$(brew --prefix node@24)/bin` lên đầu `PATH`): `devEngines` của `package.json` làm npm báo `EBADDEVENGINES` và dừng khi Node.js khác bản này. Thư viện Node.js (Prettier) tự cài khi chạy kiểm tra lần đầu. Script và test chạy được với git ≥ 2.25 và bash ≥ 3.2 (bản mặc định của macOS). `make hooks` liên kết hook tới script; Windows chưa bật Developer Mode không cho tạo liên kết tượng trưng thì cài tệp gọi script thay thế. Git hook ([`scripts/git-hooks.py`](scripts/git-hooks.py)) chạy tự động:
 
-- `git commit`: Prettier, `ruff format`, `ruff check` trên đúng phần đã stage, dùng cấu hình trong Git index kể cả khi bản trên đĩa đã bị xóa; các tệp Python khác trong index cũng được xuất (chỉ để ruff nhận đúng gói khi xếp import, không kiểm tra); không xuất được nội dung đã stage hoặc kiểm tra lỗi thì không commit.
+- `git commit`: Prettier, `ruff format`, `ruff check` trên đúng phần đã stage, dùng cấu hình trong Git index kể cả khi bản trên đĩa đã bị xóa; tên tệp được đọc nguyên văn từ danh sách phân cách bằng NUL, giữ cả khoảng trắng đầu tên và ký tự xuống dòng; các tệp Python khác trong index cũng được xuất (chỉ để ruff nhận đúng gói khi xếp import, không kiểm tra); không xuất được nội dung đã stage hoặc kiểm tra lỗi thì không commit.
 - `git push` một branch: `make check` trên đúng nội dung được đẩy — commit hết hoặc `git stash -u` trước; lỗi thì không đẩy; chỉ đẩy tag thì bỏ qua.
 - `git pull` (cả `--rebase`): chạy song song `make org-preview` (so cài đặt trên GitHub với code), `make links`, `make versions` — chỉ báo, không chặn.
 
@@ -185,6 +185,8 @@ Hook `pre-commit` chạy Prettier, ruff trong thư mục tạm, nơi shim của 
 Validator kiểm tra kiểu dữ liệu của tên và mô tả biểu mẫu, lựa chọn, ID, `required`, `min_length` và các trường của `config.yml`; việc GitHub chấp nhận biểu mẫu Issue/Discussion được kiểm tra riêng bằng `make forms`. Nhãn `documentation` được cấu hình cho tệp Markdown, `docs/` và `specs/` trong labeler của repository và bản mẫu.
 
 `make quick` xét cả commit so với `origin/main`, thay đổi đã stage, chưa stage và tệp mới. Chỉ khi tất cả là tệp `scripts/test_*.py` còn tồn tại mới chạy tests được chọn; sửa nguồn, cấu hình, tài liệu, xóa tệp hoặc không đọc được Git thì chạy đầy đủ. Các nhóm kiểm tra khác và validator luôn chạy đầy đủ. Trước push vẫn bắt buộc `make check`.
+
+Các script liệt kê tệp từ Git đọc danh sách phân cách bằng NUL mà không chuẩn hóa ký tự xuống dòng trong tên; tệp có khoảng trắng hoặc ký tự CR trong tên vẫn được đưa vào kiểm tra shell, Go và liên kết Markdown.
 
 Prettier dùng cache theo nội dung trong `node_modules/.cache/prettier/`; khi thêm hoặc nâng plugin phải xóa cache này. Bộ chạy tests lưu thời gian trong `.cache/local-checks/test-times.json` để cân bằng nhóm, không lưu kết quả đạt/thất bại và không bỏ tests; chạy một phần (tên tệp test, `make quick`) giữ thời gian của các test khác, lượt chạy đầy đủ bỏ thời gian của test không còn. Cache thiếu, hỏng hoặc không ghi được vẫn chạy tests; test mới được phân nhóm với thời gian ước lượng. Số tiến trình giới hạn bởi CPU khả dụng, affinity và quota cgroup v2 tại `/sys/fs/cgroup/cpu.max`, tối đa theo giới hạn của script.
 

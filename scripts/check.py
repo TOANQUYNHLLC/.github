@@ -35,9 +35,8 @@ def shellScripts():
 		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z', '*.sh', '*.bash'],
 		cwd=ROOT,
 		capture_output=True,
-		text=True,
 		check=True,
-	).stdout
+	).stdout.decode('utf-8')
 	# -z: tên tệp nguyên văn (không -z thì git đặt tên có ký tự đặc biệt trong dấu nháy kèm mã escape).
 	return sorted(name for name in output.split('\0') if name and (ROOT / name).is_file())
 
@@ -182,12 +181,10 @@ def changedFiles():
 		['diff', '--name-only', '-z', 'HEAD'],
 		['ls-files', '--others', '--exclude-standard', '-z'],
 	):
-		result = subprocess.run(
-			['git', *arguments], cwd=ROOT, capture_output=True, text=True, check=False
-		)
+		result = subprocess.run(['git', *arguments], cwd=ROOT, capture_output=True, check=False)
 		if result.returncode:
 			return None
-		names.update(filter(None, result.stdout.split('\0')))
+		names.update(filter(None, result.stdout.decode('utf-8').split('\0')))
 	return names
 
 

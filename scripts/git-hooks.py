@@ -31,9 +31,12 @@ ZERO_SHA = '0' * 40
 
 
 def git(root, *args):
-	return subprocess.run(
-		['git', *args], cwd=root, capture_output=True, text=True, check=True
-	).stdout.strip()
+	"""Danh sách phân cách bằng NUL giữ nguyên tên tệp, không strip hoặc chuẩn hóa ký tự xuống dòng."""
+	nullSeparated = '-z' in args or '--null' in args
+	result = subprocess.run(
+		['git', *args], cwd=root, capture_output=True, text=not nullSeparated, check=True
+	)
+	return result.stdout.decode('utf-8') if nullSeparated else result.stdout.strip()
 
 
 def repositoryRoot():

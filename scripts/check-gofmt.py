@@ -14,7 +14,6 @@ def goFiles():
 	result = subprocess.run(
 		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z', '*.go'],
 		capture_output=True,
-		text=True,
 		check=False,
 	)
 	if result.returncode != 0:
@@ -22,17 +21,20 @@ def goFiles():
 	# -z: tên tệp nguyên văn; bỏ tệp đã xóa trên đĩa nhưng còn trong index.
 	return [
 		name
-		for name in result.stdout.split('\0')
+		for name in result.stdout.decode('utf-8').split('\0')
 		if name and not name.startswith('vendor/') and os.path.isfile(name)
 	]
 
 
 def runGofmt():
-	"""(tệp gofmt sẽ đổi định dạng, lỗi gofmt báo — ví dụ lỗi cú pháp kèm dòng, cột)."""
+	"""(tệp gofmt sẽ đổi định dạng, lỗi gofmt báo — ví dụ lỗi cú pháp kèm dòng, cột).
+	Dấu -- kết thúc tùy chọn để tên tệp bắt đầu bằng gạch ngang được đọc như đường dẫn."""
 	files = goFiles()
 	if not files:
 		return [], ''
-	result = subprocess.run(['gofmt', '-l', *files], capture_output=True, text=True, check=False)
+	result = subprocess.run(
+		['gofmt', '-l', '--', *files], capture_output=True, text=True, check=False
+	)
 	problem = result.stderr.strip()
 	if result.returncode and not problem:
 		problem = f'gofmt thoát mã {result.returncode}'
