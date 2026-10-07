@@ -13,7 +13,7 @@ make org-settings-apply
 
 - `make org-import`: đọc GitHub qua GitHub CLI đã đăng nhập, gồm repository đã archive; ghi nguyên tử tệp local sau khi đọc xong. Lỗi đọc cài đặt chính giữ nguyên tệp. Endpoint chưa đọc được được đánh dấu trong `unavailable`, không giữ giá trị cũ và không tự coi là tắt. Lệnh trả mã lỗi nếu còn mục chưa nhập.
 - `make org-settings-preview`: chỉ đọc GitHub, liệt kê các trường sẽ thay đổi theo nguồn local. Không thay đổi GitHub hay tệp local.
-- `make org-settings-apply`: đọc và xác minh mọi phạm vi trước khi ghi. `unavailable` còn dữ liệu, cấu hình sai hoặc lỗi đọc chặn việc ghi. Script gửi từng thay đổi qua API, đọc lại và trả mã lỗi khi trạng thái chưa khớp hoặc còn mục chỉ xử lý trên web. Cấu hình bảo mật đang gắn bất đồng bộ chưa được coi là đã hoàn tất.
+- `make org-settings-apply`: đọc và xác minh mọi phạm vi trước khi ghi. `unavailable` còn dữ liệu, cấu hình sai hoặc lỗi đọc chặn việc ghi. Nếu nguồn yêu cầu bỏ archive, thao tác này chạy trước các cập nhật của repository; nếu yêu cầu archive, thao tác này chạy sau cùng. Script gửi từng thay đổi qua API, đọc lại và trả mã lỗi khi trạng thái chưa khớp hoặc còn mục chỉ xử lý trên web. Cấu hình bảo mật đang gắn bất đồng bộ chưa được coi là đã hoàn tất.
 
 Việc áp dụng nhiều endpoint không phải một transaction: thay đổi đã thành công không tự hoàn tác khi endpoint sau thất bại. Khi GitHub đang xử lý bất đồng bộ, chạy lại lệnh xem trước để xác nhận trạng thái. Quyền cần thiết do từng endpoint quy định; quyền quản trị repository không thay thế quyền quản trị tổ chức.
 
@@ -52,7 +52,7 @@ Mỗi repository đã nhập có phần riêng; `local-settings` áp dụng các
 | Tương tác           | Giới hạn tương tác lâu dài, bỏ giới hạn và giới hạn tạo Pull Request                                                                                                      |
 | Topics              | Danh sách topics của từng repository đã nhập                                                                                                                              |
 
-`settings` và `org-settings` truyền thống đọc giá trị cài đặt từ nguồn JSON; lệnh `settings` vẫn giữ hành vi chỉ bật bảo mật, topics `.github` theo `CITATION.cff`, giữ trạng thái Actions. Dùng `local-settings` khi cần khôi phục đúng cấu hình đã nhập, gồm cả trạng thái tắt và topics theo JSON.
+`settings` và `org-settings` truyền thống đọc giá trị cài đặt từ nguồn JSON; lệnh `settings` vẫn giữ hành vi chỉ bật bảo mật, topics `.github` theo `CITATION.cff`, giữ trạng thái Actions. Cả `settings` và `local-settings` bật/tắt Discussions qua GraphQL sau khi xác minh ID repository; các cài đặt repository còn lại dùng REST. Dùng `local-settings` khi cần khôi phục đúng cấu hình đã nhập, gồm cả trạng thái tắt và topics theo JSON.
 
 ## 🌐 PHẦN CẦN CƠ CHẾ RIÊNG
 

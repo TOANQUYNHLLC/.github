@@ -400,6 +400,111 @@ class GitHubSettingsTest(unittest.TestCase):
 		)
 		self.assertEqual(plan[1][:3], ('repos/TOANQUYNHLLC/app', 'PATCH', {'has_issues': True}))
 
+	def testLegacySettingsToggleDiscussionsWithGraphql(self):
+		from orgsetup import settings
+
+		for enabled in (True, False):
+			with (
+				self.subTest(enabled=enabled),
+				mock.patch.object(
+					github,
+					'ghJson',
+					return_value={'full_name': 'TOANQUYNHLLC/app', 'node_id': 'REPO_ID'},
+				),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				settings.updateSettings(
+					'repos/TOANQUYNHLLC/app',
+					{'has_discussions': not enabled, 'has_issues': False},
+					{'has_discussions': enabled, 'has_issues': True},
+					True,
+					'cài đặt repository',
+				)
+			self.assertEqual(write.call_count, 2)
+			self.assertEqual(
+				write.call_args_list[0].args, ('api', '-X', 'POST', 'graphql', '--input', '-')
+			)
+			self.assertEqual(
+				json.loads(write.call_args_list[0].kwargs['stdin'])['variables']['input'],
+				{'repositoryId': 'REPO_ID', 'hasDiscussionsEnabled': enabled},
+			)
+			self.assertEqual(
+				write.call_args_list[1].args,
+				('api', '-X', 'PATCH', 'repos/TOANQUYNHLLC/app', '--input', '-'),
+			)
+			self.assertEqual(
+				json.loads(write.call_args_list[1].kwargs['stdin']), {'has_issues': True}
+			)
+
+	def testLegacyDiscussionsCannotWriteBeforeRepositoryIdentityIsVerified(self):
+		from orgsetup import settings
+
+		with (
+			mock.patch.object(
+				github,
+				'ghJson',
+				return_value={'full_name': 'TOANQUYNHLLC/other', 'node_id': 'OTHER_ID'},
+			),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+			self.assertRaises(ValueError),
+		):
+			settings.updateSettings(
+				'repos/TOANQUYNHLLC/app',
+				{'has_discussions': False, 'has_issues': False},
+				{'has_discussions': True, 'has_issues': True},
+				True,
+				'cài đặt repository',
+			)
+		write.assert_not_called()
+
+	def testArchiveTransitionKeepsRepositoryWritableDuringOtherUpdates(self):
+		for archive in (True, False):
+			with self.subTest(archive=archive), tempfile.TemporaryDirectory() as directory:
+				root, config = Path(directory), copy.deepcopy(self.config)
+				target = config['repositories']['.github']
+				target['settings']['archived'] = archive
+				permissionPath = 'actions/permissions/workflow'
+				target['endpoints'][permissionPath]['can_approve_pull_request_reviews'] = False
+				current = copy.deepcopy(self.config['repositories']['.github'])
+				current['settings']['archived'] = not archive
+				self.saveConfig(root, config)
+				archived = not archive
+				permissionStates = []
+
+				def writeSettings(
+					*args,
+					stdin=None,
+					permissionPath=permissionPath,
+					permissionStates=permissionStates,
+				):
+					nonlocal archived
+					body = json.loads(stdin)
+					if args[3] == 'repos/TOANQUYNHLLC/.github' and 'archived' in body:
+						archived = body['archived']
+					elif args[3] == f'repos/TOANQUYNHLLC/.github/{permissionPath}':
+						permissionStates.append(archived)
+
+				with (
+					mock.patch.object(github, 'ROOT', root),
+					mock.patch.object(
+						configuration,
+						'readScope',
+						side_effect=[
+							(config['organization'], {}),
+							(current, {}),
+							(config['organization'], {}),
+							(target, {}),
+						],
+					),
+					mock.patch.object(github, 'gh', side_effect=writeSettings),
+					contextlib.redirect_stdout(io.StringIO()),
+				):
+					self.assertEqual(configuration.syncConfiguredSettings(True), 0)
+				self.assertEqual(permissionStates, [False])
+				self.assertEqual(archived, archive)
+
 	def testNullableProfileDoesNotCauseLegacyPatch(self):
 		from orgsetup import settings
 
