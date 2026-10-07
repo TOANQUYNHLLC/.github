@@ -10,6 +10,8 @@ body:
           value: |
               Cảm ơn bạn đã dành thời gian báo lỗi cho dự án.
 
+              Lỗi tài liệu dùng mẫu **📝 Báo lỗi tài liệu**; lỗi workflow, job hoặc kiểm thử dùng mẫu **🧪 Lỗi CI hoặc kiểm thử**.
+
               > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Issue.
               > 🔐 Vấn đề bảo mật: **không** tạo Issue công khai — báo cáo riêng theo [chính sách bảo mật](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md).
 
@@ -70,6 +72,20 @@ body:
               - label: Chưa xác định
 
     - type: dropdown
+      id: frequency
+      attributes:
+          label: 🔁 TẦN SUẤT XẢY RA LỖI
+          description: Chọn theo những lần đã quan sát; ghi số lần thất bại trên số lần thử trong phần cách tái hiện nếu biết.
+          options:
+              - Mỗi lần thực hiện
+              - Thường xuyên
+              - Thỉnh thoảng
+              - Mới xảy ra một lần
+              - Chưa xác định
+      validations:
+          required: true
+
+    - type: dropdown
       id: priority
       attributes:
           label: 🔥 MỨC ĐỘ ƯU TIÊN
@@ -117,6 +133,12 @@ body:
       attributes:
           label: 💻 THIẾT BỊ, HỆ ĐIỀU HÀNH VÀ TRÌNH DUYỆT
           placeholder: 'Ví dụ: MacBook, macOS 15, Chrome 130'
+
+    - type: textarea
+      id: technicalDetails
+      attributes:
+          label: 🛠️ RUNTIME, DEPENDENCY VÀ CẤU HÌNH LIÊN QUAN
+          description: Nêu tên và phiên bản runtime/dependency, cấu hình tối thiểu có liên quan đến lỗi nếu biết. Chỉ dùng dữ liệu mẫu; loại bỏ secrets, dữ liệu cá nhân và thông tin y tế nhạy cảm.
 
     - type: input
       id: assistive-technology

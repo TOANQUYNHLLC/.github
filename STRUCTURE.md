@@ -29,6 +29,7 @@ Phần cấu trúc liên quan đến tài liệu cộng đồng và cấu hình 
 ├── .github/                           ← Thư mục cấu hình GitHub
 │   ├── ISSUE_TEMPLATE/
 │   │   ├── bug_report.yml             ← Form báo lỗi
+│   │   ├── documentation.yml          ← Form báo lỗi tài liệu
 │   │   ├── test_failure.yml           ← Form lỗi CI hoặc kiểm thử
 │   │   ├── feature_request.yml        ← Form đề xuất tính năng
 │   │   ├── question.yml               ← Form câu hỏi
@@ -107,6 +108,10 @@ Nhiều mẫu PR không tự tạo bộ chọn giống mẫu issue. Trên URL so
 ### MẪU THÔNG BÁO DISCUSSION
 
 `.github/DISCUSSION_TEMPLATE/announcements.yml` chuẩn hóa nội dung, phạm vi ảnh hưởng, thời điểm áp dụng và việc người sử dụng cần làm. Repository dùng mẫu phải bật Discussions và có category với slug `announcements`; tệp mẫu không tự tạo category hoặc thay đổi quyền đăng thông báo.
+
+### MẪU BÁO LỖI TÀI LIỆU
+
+`.github/ISSUE_TEMPLATE/documentation.yml` thu thập trang hoặc tệp tài liệu, vấn đề, nội dung mong đợi, lệnh/ví dụ không chạy và môi trường liên quan. Mẫu dùng nhãn `documentation`, `needs triage`; yêu cầu tài liệu mới dùng mẫu đề xuất tính năng. Mẫu báo lỗi chức năng có thêm tần suất xảy ra và thông tin runtime/dependency để chẩn đoán.
 
 ### MẪU LỖI KIỂM THỬ VÀ CHIA SẺ DEMO
 

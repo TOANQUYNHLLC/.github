@@ -23,6 +23,7 @@ Tạo Issue mới và chọn biểu mẫu phù hợp:
 | Biểu mẫu                   | Khi nào dùng                                                            |
 | -------------------------- | ----------------------------------------------------------------------- |
 | 🐛 Báo lỗi                 | Một chức năng chạy sai, không chạy hoặc hiển thị không đúng             |
+| 📝 Báo lỗi tài liệu        | Thông tin sai, lỗi thời, liên kết hỏng hoặc hướng dẫn không chạy        |
 | 🧪 Lỗi CI hoặc kiểm thử    | Workflow, job hoặc test thất bại liên tục hay lúc đạt lúc lỗi           |
 | ✨ Đề xuất tính năng       | Ý tưởng mới hoặc cải thiện chức năng, giao diện, hiệu năng, tài liệu    |
 | ❓ Câu hỏi hoặc cần hỗ trợ | Yêu cầu hỗ trợ cần theo dõi xử lý, hoặc repository chưa bật Discussions |
@@ -30,6 +31,8 @@ Tạo Issue mới và chọn biểu mẫu phù hợp:
 Câu hỏi hướng dẫn và trao đổi chung dùng mục Hỏi đáp trong Discussions của repository nếu đã bật. Ý tưởng chưa rõ phạm vi có thể trao đổi trong mục Ý tưởng trước khi tạo Issue đề xuất. Xem [hướng dẫn chọn kênh hỗ trợ](https://github.com/TOANQUYNHLLC/.github/blob/main/SUPPORT.md).
 
 Lỗi CI hoặc kiểm thử cần nêu workflow/job, test bị ảnh hưởng, kiểu thất bại, môi trường, lệnh tái hiện và liên kết lần chạy nếu có. Với lỗi lúc đạt lúc lỗi dù mã nguồn không đổi, ghi tần suất đã quan sát; không cần khẳng định nguyên nhân khi chưa xác định. Mẫu này dùng nhãn `tests`, `ci` và `needs triage`; các nhãn phải tồn tại trong từng repository sử dụng mẫu.
+
+Lỗi tài liệu dùng mẫu **📝 Báo lỗi tài liệu**, nêu trang hoặc tệp/mục bị ảnh hưởng, nội dung đang sai và nội dung hoặc kết quả mong đợi. Với lệnh hoặc ví dụ không chạy, bổ sung cách tái hiện, phiên bản và môi trường nếu biết. Đề xuất viết tài liệu mới dùng mẫu **✨ Đề xuất tính năng**. Mẫu lỗi tài liệu dùng nhãn `documentation` và `needs triage`; các nhãn phải tồn tại trong từng repository sử dụng mẫu.
 
 Demo, tình huống sử dụng và bài học triển khai có thể chia sẻ trong Discussions mục **Show and tell** nếu repository đã bật và có category với slug `show-and-tell`. Chỉ chia sẻ tài nguyên được phép công khai và đã loại bỏ thông tin nhạy cảm.
 
@@ -43,6 +46,7 @@ Một báo lỗi tốt gồm:
 - **Ví dụ tái hiện tối thiểu** bằng đoạn mã, cấu hình hoặc liên kết kèm cách chạy nếu có thể; chỉ dùng dữ liệu mẫu đã loại bỏ thông tin nhạy cảm.
 - **Kết quả mong đợi** và **kết quả thực tế**.
 - **Môi trường** (phát triển, kiểm thử, production), **thiết bị, hệ điều hành và trình duyệt**, **phiên bản hoặc commit**.
+- **Tần suất xảy ra lỗi**, **runtime, dependency và cấu hình liên quan** nếu biết; chọn **Chưa xác định** nếu chưa quan sát đủ.
 - **Phiên bản cuối còn hoạt động**, các cách đã thử cô lập nguyên nhân và cách xử lý tạm nếu biết. Chọn môi trường **Không áp dụng** hoặc **Chưa xác định** khi phù hợp.
 - Ảnh chụp màn hình hoặc log liên quan — **che** mọi thông tin cá nhân, dữ liệu bệnh nhân, mật khẩu và token trước khi đính kèm.
 
