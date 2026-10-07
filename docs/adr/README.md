@@ -2,6 +2,8 @@
 
 Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình được ghi thành một tệp ADR (Architecture Decision Record) để người đến sau hiểu **vì sao** dự án làm như vậy.
 
+`make check` đối chiếu ngày và trạng thái trong bảng với từng ADR, gồm trạng thái đề xuất, chấp nhận, thay thế toàn bộ hoặc một phần và số ADR thay thế. Phần giải thích phạm vi thay thế trong tệp ADR không cần lặp trong bảng.
+
 | Số                                            | Quyết định                                                                   | Trạng thái                    | Ngày       |
 | --------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------- | ---------- |
 | [0001](0001-tab-indentation.md)               | Thụt lề bằng tab; chỉ ngôn ngữ bắt buộc mới dùng dấu cách                    | Chấp nhận                     | 2026-10-03 |

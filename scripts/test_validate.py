@@ -1224,6 +1224,24 @@ class Holder:
 		)
 		self.assertFails('ADR 0001: trạng thái')
 
+	def testAdrIndexRejectsDifferentStatusKinds(self):
+		for original, replacement in (
+			('Chấp nhận', 'Đề xuất'),
+			('Đề xuất', 'Chấp nhận'),
+			('Bị thay thế một phần bởi 0016', 'Bị thay thế bởi 0016'),
+			('Bị thay thế một phần bởi 0016', 'Bị thay thế một phần bởi 0015'),
+		):
+			with self.subTest(original=original, replacement=replacement):
+				try:
+					self.editRegex(
+						'docs/adr/README.md',
+						rf'^(\| \[\d{{4}}\][^|]+\|[^|]+\|) {re.escape(original)} +\|',
+						rf'\1 {replacement} |',
+					)
+					self.assertFails('trạng thái')
+				finally:
+					self.tearDown()
+
 	def testAdrIndexAcceptsUnlinkedNumber(self):
 		# Mẫu ADR ghi "Bị thay thế bởi NNNN" không kèm liên kết; bảng có liên kết — vẫn khớp vì cùng số.
 		self.edit(

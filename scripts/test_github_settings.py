@@ -340,6 +340,58 @@ class GitHubSettingsTest(unittest.TestCase):
 			],
 		)
 
+	def testEnabledAlertsAreAppliedBeforeSecurityUpdatesRegardlessOfJsonOrder(self):
+		for updatesFirst in (False, True):
+			with self.subTest(updatesFirst=updatesFirst):
+				config = copy.deepcopy(self.config)
+				target = config['repositories']['.github']
+				endpoints = target['endpoints']
+				securityEndpoints = ['vulnerability-alerts', 'automated-security-fixes']
+				if updatesFirst:
+					securityEndpoints.reverse()
+				target['endpoints'] = {
+					**{key: {'enabled': True} for key in securityEndpoints},
+					**{
+						key: value
+						for key, value in endpoints.items()
+						if key not in securityEndpoints
+					},
+				}
+				current = copy.deepcopy(target)
+				for key in securityEndpoints:
+					current['endpoints'][key]['enabled'] = False
+				writes = []
+
+				def write(*args, current=current, writes=writes):
+					suffix = args[-1].rsplit('/', 1)[-1]
+					if (
+						suffix == 'automated-security-fixes'
+						and not current['endpoints']['vulnerability-alerts']['enabled']
+					):
+						raise RuntimeError('Dependabot alerts chưa bật')
+					writes.append(suffix)
+					current['endpoints'][suffix]['enabled'] = True
+
+				with tempfile.TemporaryDirectory() as directory:
+					root = Path(directory)
+					self.saveConfig(root, config)
+					with (
+						mock.patch.object(github, 'ROOT', root),
+						mock.patch.object(
+							configuration,
+							'readScope',
+							side_effect=lambda repo, config=config, current=current: (
+								copy.deepcopy(config['organization'] if repo is None else current),
+								{},
+							),
+						),
+						mock.patch.object(github, 'gh', side_effect=write),
+						contextlib.redirect_stdout(io.StringIO()),
+					):
+						self.assertEqual(configuration.syncConfiguredSettings(True), 0)
+				self.assertEqual(writes, ['vulnerability-alerts', 'automated-security-fixes'])
+				self.assertEqual(current, target)
+
 	def testRetentionAboveApiLimitStopsBeforeAnyMutation(self):
 		config = copy.deepcopy(self.config)
 		config['repositories']['.github']['endpoints'][

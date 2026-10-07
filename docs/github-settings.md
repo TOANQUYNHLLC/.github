@@ -17,6 +17,8 @@ make org-settings-apply
 
 Việc áp dụng nhiều endpoint không phải một transaction: thay đổi đã thành công không tự hoàn tác khi endpoint sau thất bại. Khi GitHub đang xử lý bất đồng bộ, chạy lại lệnh xem trước để xác nhận trạng thái. Quyền cần thiết do từng endpoint quy định; quyền quản trị repository không thay thế quyền quản trị tổ chức.
 
+Khi bật Dependabot, script bật alerts trước security updates; khi tắt, script tắt security updates trước alerts. Thứ tự này không phụ thuộc vị trí các endpoint trong JSON.
+
 Validator kiểm tra hợp đồng nguồn JSON và các tính năng phụ thuộc trong `make check`: Actions cấp repository cần được tổ chức cho phép; Dependabot security updates cần alerts; push protection cần secret scanning; Release bất biến cấp repository phải tuân thủ chính sách tổ chức. Discussions được cập nhật qua mutation GraphQL `updateRepository`.
 
 ## 🗂️ CẤU TRÚC NGUỒN

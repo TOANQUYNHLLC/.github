@@ -866,6 +866,8 @@ def syncConfiguredSettings(apply=False, verify=False):
 				if item[0] == 'actions/permissions'
 				else 1
 				if item[0] == 'automated-security-fixes' and item[1].get('enabled') is False
+				else 3
+				if item[0] == 'automated-security-fixes' and item[1].get('enabled') is True
 				else 2
 			),
 		)
