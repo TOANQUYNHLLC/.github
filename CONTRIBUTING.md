@@ -186,17 +186,19 @@ Chỉ force push bằng `--force-with-lease --force-if-includes` (git ≥ 2.30: 
 
 Các mẫu riêng giữ đầy đủ bố cục, checklist, hướng dẫn bảo mật và phần thông tin công ty của mẫu chung; bổ sung câu hỏi và checklist phù hợp với từng loại công việc.
 
-| Mẫu                                                                                                                    | Khi sử dụng                                                                               |
-| ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| [`feature.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/feature.md)             | Tính năng mới: hành vi, tiêu chí chấp nhận và kiểm thử                                    |
-| [`bugfix.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/bugfix.md)               | Sửa lỗi: cách tái hiện, nguyên nhân và kiểm thử hồi quy                                   |
-| [`release.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/release.md)             | Chuẩn bị phát hành: phiên bản, nội dung dành cho người dùng, triển khai và khôi phục      |
-| [`configuration.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/configuration.md) | Cấu hình, workflow hoặc hạ tầng: quyền, cài đặt ngoài Git, kiểm chứng và hoàn tác         |
-| [`documentation.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/documentation.md) | Tài liệu: đối chiếu code, kiểm tra liên kết, lệnh, ví dụ và nội dung hiển thị             |
-| [`hotfix.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/hotfix.md)               | Sửa lỗi khẩn cấp: ảnh hưởng đang xảy ra, phạm vi tối thiểu, tiêu chí phục hồi và hoàn tác |
-| [`refactor.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/refactor.md)           | Tái cấu trúc: hành vi cần giữ nguyên, quan hệ phụ thuộc và đối chiếu trước/sau            |
-| [`dependencies.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/dependencies.md)   | Dependency, công cụ hoặc action: phiên bản/SHA, tương thích, lockfile và bảo mật          |
-| [`testing.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/testing.md)             | Kiểm thử: hành vi cần chứng minh, fixtures/mocks, tính độc lập và ổn định                 |
+| Mẫu                                                                                                                    | Khi sử dụng                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| [`feature.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/feature.md)             | Tính năng mới: hành vi, tiêu chí chấp nhận và kiểm thử                                        |
+| [`bugfix.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/bugfix.md)               | Sửa lỗi: cách tái hiện, nguyên nhân và kiểm thử hồi quy                                       |
+| [`release.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/release.md)             | Chuẩn bị phát hành: phiên bản, nội dung dành cho người dùng, triển khai và khôi phục          |
+| [`configuration.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/configuration.md) | Cấu hình, workflow hoặc hạ tầng: quyền, cài đặt ngoài Git, kiểm chứng và hoàn tác             |
+| [`documentation.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/documentation.md) | Tài liệu: đối chiếu code, kiểm tra liên kết, lệnh, ví dụ và nội dung hiển thị                 |
+| [`hotfix.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/hotfix.md)               | Sửa lỗi khẩn cấp: ảnh hưởng đang xảy ra, phạm vi tối thiểu, tiêu chí phục hồi và hoàn tác     |
+| [`refactor.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/refactor.md)           | Tái cấu trúc: hành vi cần giữ nguyên, quan hệ phụ thuộc và đối chiếu trước/sau                |
+| [`dependencies.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/dependencies.md)   | Dependency, công cụ hoặc action: phiên bản/SHA, tương thích, lockfile và bảo mật              |
+| [`testing.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/testing.md)             | Kiểm thử: hành vi cần chứng minh, fixtures/mocks, tính độc lập và ổn định                     |
+| [`migration.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/migration.md)         | Migration schema/dữ liệu và backfill: thứ tự triển khai, tính toàn vẹn, chạy lại và khôi phục |
+| [`performance.md`](https://github.com/TOANQUYNHLLC/.github/blob/main/.github/PULL_REQUEST_TEMPLATE/performance.md)     | Tối ưu hiệu năng: môi trường đo, benchmark trước/sau, ngưỡng chấp nhận và đánh đổi tài nguyên |
 
 GitHub không tự tạo bộ chọn cho nhiều mẫu Pull Request. Trên URL so sánh nhánh của **repository đích**, thêm `?quick_pull=1&template=feature.md` để chọn mẫu tính năng; thay `feature.md` bằng tên tệp trong bảng để chọn loại công việc tương ứng. Nếu URL đã có tham số, thêm `&template=feature.md`. Không chọn mẫu riêng thì dùng mẫu chung.
 
