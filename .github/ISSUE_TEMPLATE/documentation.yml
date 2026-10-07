@@ -1,0 +1,81 @@
+name: 📝 Báo lỗi tài liệu
+description: Báo thông tin sai hoặc lỗi thời, liên kết hỏng, lệnh hoặc ví dụ trong tài liệu không chạy
+title: '[Tài liệu] '
+labels:
+    - documentation
+    - needs triage
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Dùng mẫu này khi tài liệu hiện có sai, lỗi thời hoặc khó làm theo. Đề xuất viết tài liệu mới dùng mẫu **✨ Đề xuất tính năng**; câu hỏi cần giải thích dùng kênh phù hợp theo [hướng dẫn hỗ trợ](https://github.com/TOANQUYNHLLC/.github/blob/main/SUPPORT.md).
+
+              > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào nội dung, liên kết, ảnh hoặc log.
+              > 🔐 Vấn đề bảo mật: **không** tạo Issue công khai — báo cáo riêng theo [chính sách bảo mật](https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md).
+
+    - type: input
+      id: repository
+      attributes:
+          label: 📁 DỰ ÁN / REPOSITORY
+      validations:
+          required: true
+
+    - type: input
+      id: location
+      attributes:
+          label: 📄 TRANG HOẶC TỆP TÀI LIỆU
+          description: Liên kết trang, hoặc đường dẫn tệp kèm mục/dòng liên quan. Loại bỏ thông tin nhạy cảm khỏi liên kết.
+      validations:
+          required: true
+
+    - type: textarea
+      id: problem
+      attributes:
+          label: ❌ NỘI DUNG ĐANG CÓ VẤN ĐỀ
+          description: Nêu thông tin sai, lỗi thời, không rõ, liên kết hỏng hoặc ví dụ không chạy; trích phần cần sửa nếu cần.
+      validations:
+          required: true
+
+    - type: textarea
+      id: expected
+      attributes:
+          label: ✅ NỘI DUNG HOẶC KẾT QUẢ MONG ĐỢI
+          description: Nội dung cần đúng hoặc rõ hơn như thế nào, hoặc kết quả lẽ ra nhận được khi làm theo hướng dẫn.
+      validations:
+          required: true
+
+    - type: textarea
+      id: reproduction
+      attributes:
+          label: 🔁 LỆNH, VÍ DỤ VÀ CÁCH TÁI HIỆN
+          description: Với hướng dẫn không chạy, nêu lệnh/các bước đã thử, kết quả thực tế và thông báo lỗi đã loại bỏ thông tin nhạy cảm. Để trống nếu không áp dụng.
+
+    - type: input
+      id: version
+      attributes:
+          label: 🏷️ PHIÊN BẢN HOẶC COMMIT
+          description: Phiên bản hoặc commit của tài liệu và sản phẩm liên quan, nếu biết.
+
+    - type: textarea
+      id: environment
+      attributes:
+          label: 🖥️ MÔI TRƯỜNG VÀ CẤU HÌNH LIÊN QUAN
+          description: Hệ điều hành, runtime, dependency và cấu hình mẫu nếu vấn đề phụ thuộc môi trường. Chỉ dùng dữ liệu mẫu đã loại bỏ thông tin nhạy cảm.
+
+    - type: textarea
+      id: references
+      attributes:
+          label: 🔗 THÔNG TIN THAM KHẢO
+          description: Liên kết code, tài liệu chính thức, ảnh minh họa hoặc đề xuất sửa giúp đối chiếu nội dung, nếu có.
+
+    - type: checkboxes
+      id: checklist
+      attributes:
+          label: ✅ CHECKLIST
+          options:
+              - label: Tôi đã tìm kiếm và không thấy Issue nào trùng lặp.
+                required: true
+              - label: Đây không phải báo cáo lỗ hổng bảo mật cần gửi riêng theo chính sách bảo mật.
+                required: true
+              - label: Tôi đã loại bỏ mật khẩu, khóa API, token, dữ liệu cá nhân và thông tin y tế nhạy cảm khỏi nội dung và tài nguyên đính kèm.
+                required: true
