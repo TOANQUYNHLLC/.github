@@ -54,7 +54,7 @@ Mỗi repository đã nhập có phần riêng; `local-settings` áp dụng các
 | Tương tác           | Giới hạn tương tác lâu dài, bỏ giới hạn và giới hạn tạo Pull Request                                                                                                      |
 | Topics              | Danh sách topics của từng repository đã nhập                                                                                                                              |
 
-`settings` và `org-settings` truyền thống đọc giá trị cài đặt từ nguồn JSON; lệnh `settings` vẫn giữ hành vi chỉ bật bảo mật, topics `.github` theo `CITATION.cff`, giữ trạng thái Actions. Cả `settings` và `local-settings` bật/tắt Discussions qua GraphQL sau khi xác minh ID repository; các cài đặt repository còn lại dùng REST. Dùng `local-settings` khi cần khôi phục đúng cấu hình đã nhập, gồm cả trạng thái tắt và topics theo JSON.
+`settings` và `org-settings` truyền thống đọc giá trị cài đặt từ nguồn JSON; lệnh `settings` vẫn giữ hành vi chỉ bật bảo mật, topics `.github` theo `CITATION.cff`, giữ trạng thái Actions. Khi nguồn yêu cầu đổi trạng thái archive, `settings` xác minh các trường cài đặt trước khi ghi, bỏ archive trước các cập nhật khác và archive sau topics, bảo mật, quyền Actions. Cả `settings` và `local-settings` bật/tắt Discussions qua GraphQL sau khi xác minh ID repository; các cài đặt repository còn lại dùng REST. Dùng `local-settings` khi cần khôi phục đúng cấu hình đã nhập, gồm cả trạng thái tắt và topics theo JSON.
 
 ## 🌐 PHẦN CẦN CƠ CHẾ RIÊNG
 

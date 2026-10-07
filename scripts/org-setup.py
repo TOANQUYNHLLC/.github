@@ -25,6 +25,7 @@ Lệnh (nên chạy theo thứ tự):
 		--discussions bật thêm GitHub Discussions.
 		Cài đặt thiếu trường/sai kiểu không được PATCH; quyền Actions và trạng thái bảo mật chưa đọc
 		được được cảnh báo và bỏ qua. Topics lấy từ keywords YAML hợp lệ của CITATION.cff.
+		Bỏ archive trước các cập nhật khác khi nguồn yêu cầu; archive sau topics, bảo mật và quyền Actions.
 	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json) và Protect Release
 		Tags (rulesets/protect-release-tags.json, ADR 0005); Protect Main của repository khác chỉ giữ
 		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository

@@ -660,6 +660,90 @@ class OrgSetupTest(unittest.TestCase):
 				)
 			write.assert_not_called()
 
+	def testSettingsArchiveTransitionsSurroundOtherUpdates(self):
+		base = 'repos/TOANQUYNHLLC/app'
+		for before, after, apply in (
+			(True, False, True),
+			(False, True, True),
+			(False, False, True),
+			(True, False, False),
+			(False, True, False),
+			(False, False, False),
+		):
+			state = {
+				'archived': before,
+				'has_discussions': False,
+				'description': 'Cũ',
+				'node_id': 'R_app',
+				'full_name': 'TOANQUYNHLLC/app',
+			}
+			events = []
+
+			def read(*args, state=state):
+				return dict(state)
+
+			def write(*args, stdin=None, state=state, events=events):
+				body = json.loads(stdin)
+				if args[3] == base and set(body) == {'archived'}:
+					state.update(body)
+					events.append('archive' if body['archived'] else 'unarchive')
+					return ''
+				if state['archived']:
+					raise RuntimeError('HTTP 403: repository đang archive')
+				if args[3] == 'graphql':
+					state['has_discussions'] = body['variables']['input']['hasDiscussionsEnabled']
+					events.append('discussions')
+				else:
+					state.update(body)
+					events.append('settings')
+				return ''
+
+			def remainingUpdate(*args, state=state, events=events, apply=apply):
+				if apply and state['archived']:
+					raise RuntimeError('HTTP 403: repository đang archive')
+				events.append('remaining')
+
+			with (
+				self.subTest(before=before, after=after, apply=apply),
+				mock.patch.object(
+					settings,
+					'repositorySettings',
+					return_value={'archived': after, 'has_discussions': True, 'description': 'Mới'},
+				),
+				mock.patch.object(settings, 'readActions', return_value=[]),
+				mock.patch.object(settings, 'syncTopics', side_effect=remainingUpdate),
+				mock.patch.object(settings, 'syncSecurity', side_effect=remainingUpdate),
+				mock.patch.object(settings, 'syncActions', side_effect=remainingUpdate),
+				mock.patch.object(github, 'ghJson', side_effect=read),
+				mock.patch.object(github, 'gh', side_effect=write) as request,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				settings.syncSettings(['app'], apply=apply, discussions=False)
+				self.assertEqual(state['archived'], after if apply else before)
+				self.assertEqual(state['has_discussions'], apply)
+				self.assertEqual(state['description'], 'Mới' if apply else 'Cũ')
+				if apply and before:
+					self.assertEqual(events[0], 'unarchive')
+				if apply and after:
+					self.assertEqual(events[-1], 'archive')
+				self.assertEqual(events.count('remaining'), 3)
+				if not apply:
+					request.assert_not_called()
+
+	def testSettingsRejectInvalidFieldsBeforeUnarchiving(self):
+		with (
+			mock.patch.object(
+				settings, 'repositorySettings', return_value={'archived': False, 'has_issues': True}
+			),
+			mock.patch.object(settings, 'readActions', return_value=[]),
+			mock.patch.object(github, 'ghJson', return_value={'archived': True}),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+			self.assertRaisesRegex(ValueError, 'has_issues'),
+		):
+			settings.syncSettings(['app'], apply=True, discussions=False)
+		write.assert_not_called()
+
 	def testCitationKeywordsUseYamlValues(self):
 		with (
 			tempfile.TemporaryDirectory() as folder,

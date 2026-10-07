@@ -94,6 +94,36 @@ class GitHooksTest(unittest.TestCase):
 			['git', *args], cwd=self.repo, capture_output=True, text=True, check=True
 		).stdout.strip()
 
+	def testStagedFilesKeepLeadingWhitespace(self):
+		names = [' có dấu cách.json']
+		if os.name != 'nt':
+			names.extend(
+				['\tcó tab.json', '\ncó xuống dòng.json', '\rcó CR.json', 'giữa\rcó CR.json']
+			)
+		for name in names:
+			with self.subTest(name=name):
+				path = self.repo / name
+				path.write_text('{}\n', encoding='utf-8')
+				self.git('add', '--', name)
+				try:
+					self.assertEqual(self.module.stagedFiles(self.repo), [name])
+				finally:
+					self.git('reset', '--', name)
+					path.unlink()
+
+	@unittest.skipUnless(
+		(ROOT / 'node_modules/.bin/prettier').exists(), 'cần Prettier (make tools)'
+	)
+	def testPreCommitChecksFileWithLeadingSpace(self):
+		path = self.repo / ' có dấu cách.json'
+		path.write_text('{"a":1}\n', encoding='utf-8')
+		self.git('add', '--', path.name)
+		path.write_text('{\n\t"a": 1\n}\n', encoding='utf-8')
+		with silenced():
+			self.assertEqual(self.module.preCommit(self.repo, []), 1)
+			self.git('add', '--', path.name)
+			self.assertEqual(self.module.preCommit(self.repo, []), 0)
+
 	def testToolEnvironmentPinsRepositoryVersions(self):
 		# Shim của mise ở thư mục tạm không thấy mise.toml, .nvmrc: hook ghim đúng phiên bản của repository; biến
 		# người dùng đã đặt được giữ nguyên.

@@ -5,6 +5,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 
 import contextlib
 import io
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -19,6 +20,31 @@ except ModuleNotFoundError:
 
 
 class GofmtTest(unittest.TestCase):
+	@unittest.skipUnless(shutil.which('gofmt'), 'Cần gofmt để kiểm tra tên tệp với công cụ thật')
+	def testLeadingHyphenFileIsChecked(self):
+		module = loadScript('check-gofmt')
+		with tempfile.TemporaryDirectory() as folder:
+			subprocess.run(['git', 'init', '-q'], cwd=folder, check=True)
+			path = Path(folder) / '-valid.go'
+			for content, expectedExit, expectedMessage in (
+				('package main\n\nfunc main() {}\n', 0, 'Mọi tệp Go đã chạy gofmt'),
+				('package main\nfunc main(){ }\n', 1, 'Các tệp chưa chạy gofmt'),
+				('package main\nfunc main( {\n', 1, 'gofmt không đọc được tệp Go'),
+			):
+				with self.subTest(content=content):
+					path.write_text(content, encoding='utf-8')
+					output = io.StringIO()
+					with (
+						contextlib.chdir(folder),
+						mock.patch.dict(module.os.environ, {'GITHUB_ACTIONS': ''}),
+						contextlib.redirect_stdout(output),
+					):
+						self.assertEqual(module.main(), expectedExit)
+					self.assertIn(expectedMessage, output.getvalue())
+					if expectedExit:
+						self.assertIn('-valid.go', output.getvalue())
+					self.assertNotIn('flag provided but not defined', output.getvalue())
+
 	def testFailedToolWithoutDiagnosticsIsNotAccepted(self):
 		module = loadScript('check-gofmt')
 		with (

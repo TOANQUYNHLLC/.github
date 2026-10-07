@@ -102,9 +102,8 @@ def textFiles():
 		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z', *PATTERNS],
 		cwd=ROOT,
 		capture_output=True,
-		text=True,
 		check=True,
-	).stdout
+	).stdout.decode('utf-8')
 	# -z: tên tệp có khoảng trắng; bỏ tệp đã xóa trên đĩa nhưng còn trong index.
 	return [ROOT / name for name in output.split('\0') if name and (ROOT / name).is_file()]
 

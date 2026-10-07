@@ -78,12 +78,15 @@ def markdownFiles():
 	result = subprocess.run(
 		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z', '*.md'],
 		capture_output=True,
-		text=True,
 		check=False,
 	)
 	if result.returncode == 0:
 		# -z: tên tệp nguyên văn (tên tiếng Việt không bị đặt trong dấu nháy); bỏ tệp đã xóa trên đĩa.
-		paths = [Path(name) for name in result.stdout.split('\0') if name and Path(name).is_file()]
+		paths = [
+			Path(name)
+			for name in result.stdout.decode('utf-8').split('\0')
+			if name and Path(name).is_file()
+		]
 	else:
 		paths = [path for path in Path('.').rglob('*.md') if 'node_modules' not in path.parts]
 	if Path.cwd().resolve() == SCRIPT_ROOT:

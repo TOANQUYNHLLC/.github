@@ -5,6 +5,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 
 import contextlib
 import io
+import os
 import re
 import subprocess
 import sys
@@ -109,7 +110,7 @@ class CheckTest(unittest.TestCase):
 
 		def run(command, *args, **kwargs):
 			key = next(key for key in outputs if key in command)
-			return subprocess.CompletedProcess(command, 0, outputs[key], '')
+			return subprocess.CompletedProcess(command, 0, outputs[key].encode('utf-8'), b'')
 
 		with mock.patch.object(module.subprocess, 'run', run):
 			self.assertEqual(
@@ -119,7 +120,7 @@ class CheckTest(unittest.TestCase):
 
 		def failing(command, *args, **kwargs):
 			code = 128 if 'origin/main...HEAD' in command else 0
-			return subprocess.CompletedProcess(command, code, '', 'fatal: bad revision')
+			return subprocess.CompletedProcess(command, code, b'', b'fatal: bad revision')
 
 		with mock.patch.object(module.subprocess, 'run', failing):
 			self.assertIsNone(module.changedFiles())
@@ -283,6 +284,48 @@ class CheckTest(unittest.TestCase):
 			subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
 			module.ROOT = root
 			self.assertEqual(module.shellScripts(), ['công cụ/cài đặt.sh'])
+
+	@unittest.skipIf(os.name == 'nt', 'Windows không hỗ trợ CR trong tên tệp')
+	def testGitFileListsKeepCarriageReturns(self):
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+			(root / 'initial.txt').write_text('Khởi tạo\n', encoding='utf-8')
+			subprocess.run(['git', 'add', 'initial.txt'], cwd=root, check=True)
+			subprocess.run(
+				[
+					'git',
+					'-c',
+					'user.name=test',
+					'-c',
+					'user.email=',
+					'-c',
+					'commit.gpgsign=false',
+					'commit',
+					'-qm',
+					'init',
+				],
+				cwd=root,
+				check=True,
+			)
+			subprocess.run(
+				['git', 'update-ref', 'refs/remotes/origin/main', 'HEAD'], cwd=root, check=True
+			)
+			for name in ('ghi\rchú.md', 'kiểm\rtra.sh', 'mã\rnguồn.go'):
+				(root / name).write_text('Nội dung\n', encoding='utf-8')
+			for script, function, expected in (
+				('check', 'shellScripts', ['kiểm\rtra.sh']),
+				('check-gofmt', 'goFiles', ['mã\rnguồn.go']),
+				('check-markdown-links', 'markdownFiles', [Path('ghi\rchú.md')]),
+				('check-external-links', 'textFiles', [root / 'ghi\rchú.md', root / 'initial.txt']),
+			):
+				module = loadScript(script)
+				module.ROOT = root
+				with self.subTest(script=script), contextlib.chdir(root):
+					self.assertCountEqual(getattr(module, function)(), expected)
+			module = loadScript('check')
+			module.ROOT = root
+			self.assertEqual(module.changedFiles(), {'ghi\rchú.md', 'kiểm\rtra.sh', 'mã\rnguồn.go'})
 
 	def testGroupsAreListedOnce(self):
 		# main, ensureTools, runGroup cùng dùng danh sách nhóm: liệt kê script shell (gọi git) chỉ một lần mỗi lượt.
