@@ -44,7 +44,9 @@ Phần cấu trúc liên quan đến tài liệu cộng đồng và cấu hình 
 │   │   ├── hotfix.md                  ← Mẫu PR sửa lỗi khẩn cấp
 │   │   ├── refactor.md                ← Mẫu PR tái cấu trúc
 │   │   ├── dependencies.md            ← Mẫu PR dependency, công cụ và action
-│   │   └── testing.md                 ← Mẫu PR kiểm thử
+│   │   ├── testing.md                 ← Mẫu PR kiểm thử
+│   │   ├── migration.md               ← Mẫu PR migration schema/dữ liệu và backfill
+│   │   └── performance.md             ← Mẫu PR tối ưu hiệu năng
 │   ├── DISCUSSION_TEMPLATE/
 │   │   ├── announcements.yml          ← Thông báo
 │   │   ├── general.yml                ← Thảo luận chung
@@ -100,7 +102,9 @@ Repository giữ mẫu chung và các mẫu riêng theo loại công việc. Cá
     ├── hotfix.md
     ├── refactor.md
     ├── dependencies.md
-    └── testing.md
+    ├── testing.md
+    ├── migration.md
+    └── performance.md
 ```
 
 Nhiều mẫu PR không tự tạo bộ chọn giống mẫu issue. Trên URL so sánh nhánh của repository đích, thêm `?quick_pull=1&template=feature.md`; thay `feature.md` bằng tên tệp mẫu tương ứng trong cây thư mục ở trên. Nếu URL đã có tham số, thêm `&template=feature.md`. Các mẫu cần được hợp nhất vào nhánh mặc định trước khi GitHub sử dụng. Xem [hướng dẫn chọn mẫu](CONTRIBUTING.md#-chọn-mẫu-pull-request).
