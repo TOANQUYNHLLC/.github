@@ -11,9 +11,9 @@ Ruleset đặt ở **cấp repository**: tổ chức dùng gói GitHub Free nên
 - Kiểm tra tự động bắt buộc thành công trên branch đã cập nhật với nhánh chính; code quality.
 - Commit phải có chữ ký (GPG hoặc SSH).
 - Cấm force push, cấm xóa; chặn tạo và cập nhật nhánh chính ngoài danh sách bỏ qua.
-- Danh sách bỏ qua: tài khoản của người quản trị ([`MAINTAINERS.md`](../MAINTAINERS.md)), chế độ **always** ([ADR 00000004](../docs/adr/00000004-protect-main-ruleset.md)).
+- Danh sách bỏ qua: tài khoản của người quản trị ([`MAINTAINERS.md`](../MAINTAINERS.md)), chế độ **always** ([ADR 00000004](../docs/adr/00000004-protect-main.md)).
 
-Mọi ruleset nhánh và tag — cấp repository và cấp tổ chức — có quy tắc **Require signed commits** (`required_signatures`, [ADR 00000007](../docs/adr/00000007-signed-commits-merge-methods.md)); `scripts/validate.py` báo lỗi khi thiếu. Push ruleset không nhận quy tắc này ([ADR 00000005](../docs/adr/00000005-org-push-ruleset.md)).
+Mọi ruleset nhánh và tag — cấp repository và cấp tổ chức — có quy tắc **Require signed commits** (`required_signatures`, [ADR 00000007](../docs/adr/00000007-signed-commits-merge-methods.md)); `scripts/validate.py` báo lỗi khi thiếu. Push ruleset không nhận quy tắc này ([ADR 00000005](../docs/adr/00000005-organization-protect-pushes.md)).
 
 ## 🏷️ PROTECT RELEASE TAGS
 
@@ -25,9 +25,9 @@ Mọi ruleset nhánh và tag — cấp repository và cấp tổ chức — có 
 
 Ba ruleset cho mọi repository (`~ALL`), cài trên web bằng import (**Active**) và được `make org-preview` đối chiếu với tệp — ruleset khác tệp thì import lại; chỉ được thực thi khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức):
 
-- [`org-protect-main.json`](org-protect-main.json) — **Organization Protect Main**: quy tắc của Protect Main, thêm **code scanning** như trên web: kết quả CodeQL của Pull Request không có cảnh báo mức `errors` hay cảnh báo bảo mật từ `high_or_higher` (`ORG_CODE_SCANNING_RULE` trong `scripts/orgsetup/rulesets.py`). Repository cần workflow CodeQL ([`workflow-templates/codeql.yml`](../workflow-templates/codeql.yml)) để có kết quả, nếu không Pull Request bị chặn khi gói Team thực thi ruleset.
-- [`org-protect-release-tags.json`](org-protect-release-tags.json) — **Organization Protect Release Tags**: cùng quy tắc với Protect Release Tags trên tag `Stable.v*`, `Beta.v*` và `v*`.
-- [`org-protect-pushes.json`](org-protect-pushes.json) — **Organization Protect Pushes**: push ruleset, xem [mục dưới](#-protect-pushes-cấp-tổ-chức).
+- [`organization-protect-main.json`](organization-protect-main.json) — **Organization Protect Main**: quy tắc của Protect Main, thêm **code scanning** như trên web: kết quả CodeQL của Pull Request không có cảnh báo mức `errors` hay cảnh báo bảo mật từ `high_or_higher` (`ORG_CODE_SCANNING_RULE` trong `scripts/orgsetup/rulesets.py`). Repository cần workflow CodeQL ([`workflow-templates/codeql.yml`](../workflow-templates/codeql.yml)) để có kết quả, nếu không Pull Request bị chặn khi gói Team thực thi ruleset.
+- [`organization-protect-release-tags.json`](organization-protect-release-tags.json) — **Organization Protect Release Tags**: cùng quy tắc với Protect Release Tags trên tag `Stable.v*`, `Beta.v*` và `v*`.
+- [`organization-protect-pushes.json`](organization-protect-pushes.json) — **Organization Protect Pushes**: push ruleset, xem [mục dưới](#-protect-pushes-cấp-tổ-chức).
 
 Khác với bản cấp repository:
 
@@ -36,12 +36,12 @@ Khác với bản cấp repository:
 - Không dùng actor loại `User` (import báo "contains an invalid actor"): danh sách bỏ qua là **chủ tổ chức** (`OrganizationAdmin`) — cùng người quản trị như bản cấp repository; không giới hạn người hủy phê duyệt.
 - Organization Protect Release Tags có thêm quy tắc kiểm tra bắt buộc với danh sách rỗng như trên web — quy tắc này không chặn gì, có thể xóa trên web rồi bỏ trong `orgTagRuleset()`.
 - Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `orgRulesets()` trong `scripts/orgsetup/rulesets.py` để đối chiếu với ruleset đang cài trên web; test bảo đảm tệp khớp `orgRulesets()` — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức.
-- Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `org-protect-main.json` → **Create**, lặp lại với `org-protect-release-tags.json` và `org-protect-pushes.json`. Ở gói Free, ghi ruleset cấp tổ chức qua REST (HTTP 403, dù token có quyền `admin:org`) lẫn GraphQL (`updateRepositoryRuleset`, `createRepositoryRuleset`) đều bị chặn, nên `python3 scripts/org-setup.py org-rulesets` chỉ so tệp với ruleset trên web (đọc qua GraphQL); `--apply` chỉ tạo, cập nhật được khi tổ chức dùng gói Team.
+- Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `organization-protect-main.json` → **Create**, lặp lại với `organization-protect-release-tags.json` và `organization-protect-pushes.json`. Ở gói Free, ghi ruleset cấp tổ chức qua REST (HTTP 403, dù token có quyền `admin:org`) lẫn GraphQL (`updateRepositoryRuleset`, `createRepositoryRuleset`) đều bị chặn, nên `python3 scripts/org-setup.py org-rulesets` chỉ so tệp với ruleset trên web (đọc qua GraphQL); `--apply` chỉ tạo, cập nhật được khi tổ chức dùng gói Team.
 - Danh sách ruleset được đọc hết các trang REST hoặc GraphQL trước khi đối chiếu. GraphQL kiểm tra trường và kiểu dữ liệu, lỗi từng trang, tên không trùng và `pageInfo` của ruleset, quy tắc, danh sách bỏ qua. Phản hồi thiếu, bị cắt hoặc có trạng thái phân trang mâu thuẫn được báo lỗi đọc; không kết luận ruleset đã đúng hay chưa có từ dữ liệu đó. Actor `DeployKey` được đối chiếu với ID `null` như REST; ID của `OrganizationAdmin` được chuẩn hóa vì API bỏ qua giá trị này.
 
 ## 📤 PROTECT PUSHES (CẤP TỔ CHỨC)
 
-Push ruleset ([ADR 00000005](../docs/adr/00000005-org-push-ruleset.md)) chặn ngay khi đẩy — trên mọi branch, kể cả branch chưa hợp nhất — những tệp không được có trong repository:
+Push ruleset ([ADR 00000005](../docs/adr/00000005-organization-protect-pushes.md)) chặn ngay khi đẩy — trên mọi branch, kể cả branch chưa hợp nhất — những tệp không được có trong repository:
 
 - Đường dẫn: `**/.env` và khóa SSH riêng (`id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`). `.env.*` không bị chặn vì `.env.example` được phép commit.
 - Đuôi: khóa, chứng chỉ, kho mật khẩu (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `*.ppk`, `*.kdbx`) và tệp cơ sở dữ liệu (`*.sqlite`, `*.sqlite3`, `*.db`).

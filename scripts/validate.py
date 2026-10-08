@@ -53,10 +53,11 @@ from validation.formatting import (
 	checkTabOnly,
 	checkText,
 )
-from validation.forms import FORM_LABELS, checkForm, checkIssueConfig
+from validation.forms import FORM_LABELS, ISSUE_FORM_NAMES, checkForm, checkIssueConfig
 from validation.repository import (
 	checkConventions,
 	checkDependabotCooldown,
+	checkFileNames,
 	checkGitHubSettings,
 	checkLabelUsage,
 	checkMaintainers,
@@ -153,6 +154,7 @@ def runChecks():
 	"""Chạy mọi kiểm tra, trả danh sách lỗi."""
 	errors.clear()
 	FORM_LABELS.clear()
+	ISSUE_FORM_NAMES.clear()
 	yamlCache.clear()
 	jsonCache.clear()
 	trackedCache.clear()
@@ -177,6 +179,7 @@ def runChecks():
 		checkAdrIndex,
 		checkRequiredFiles,
 		checkLabelUsage,
+		checkFileNames,
 	):
 		check()
 	return list(errors)

@@ -140,7 +140,7 @@ Workflow mẫu Node.js cài dependency bằng `npm ci`, đọc phiên bản Node
 | [`AGENTS.md`](AGENTS.md) · [`CLAUDE.md`](CLAUDE.md) · [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | Hướng dẫn cho AI coding agent và GitHub Copilot                                                                     |
 | [`.github/instructions/`](.github/instructions/)                                                                           | Hướng dẫn Copilot theo đường dẫn: mã Python, cấu hình GitHub và tài liệu                                            |
 | [`.github/agents/repository-reviewer.agent.md`](.github/agents/repository-reviewer.agent.md)                               | Agent Copilot rà soát ảnh hưởng toàn tổ chức và sự thống nhất giữa tài liệu với code, dùng công cụ đọc và tìm kiếm  |
-| [`specs/JobsGuideLine.md`](specs/JobsGuideLine.md)                                                                         | Yêu cầu chuẩn cho một đợt rà soát toàn dự án: phạm vi, cách kiểm chứng, điều kiện hoàn tất và nội dung Pull Request |
+| [`specs/jobs-guideline.md`](specs/jobs-guideline.md)                                                                       | Yêu cầu chuẩn cho một đợt rà soát toàn dự án: phạm vi, cách kiểm chứng, điều kiện hoàn tất và nội dung Pull Request |
 | [`CHANGELOG.md`](CHANGELOG.md)                                                                                             | Khung nội dung chuẩn bị phát hành                                                                                   |
 
 ---
@@ -187,7 +187,7 @@ make check
 
 Hook `pre-commit` chạy Prettier, ruff trong thư mục tạm, nơi shim của mise không thấy `mise.toml`, `.nvmrc`: hook ghim đúng phiên bản của dự án bằng `MISE_RUFF_VERSION`, `MISE_NODE_VERSION` (đọc từ hai tệp này) nên dùng đúng công cụ ở mọi máy, kể cả sau khi nâng phiên bản.
 
-Validator kiểm tra kiểu dữ liệu của tên và mô tả biểu mẫu, lựa chọn, ID, `required`, `min_length` và các trường của `config.yml`; việc GitHub chấp nhận biểu mẫu Issue/Discussion được kiểm tra riêng bằng `make forms`. Nhãn `documentation` được cấu hình cho tệp Markdown, `docs/` và `specs/` trong labeler của repository và bản mẫu.
+Validator kiểm tra kiểu dữ liệu của tên và mô tả biểu mẫu, tên biểu mẫu Issue không trùng nhau, lựa chọn, ID, `required`, `min_length` và các trường của `config.yml`; việc GitHub chấp nhận biểu mẫu Issue/Discussion được kiểm tra riêng bằng `make forms`. Trên ref khác nhánh mặc định, GitHub so `name` của biểu mẫu Issue với cả biểu mẫu trên nhánh mặc định: đổi tên tệp biểu mẫu mà giữ `name` thì `make forms REF=…` báo `Name must be unique` dù validator đạt — xác minh lại bằng `make forms` sau khi hợp nhất. Nhãn `documentation` được cấu hình cho tệp Markdown, `docs/` và `specs/` trong labeler của repository và bản mẫu.
 
 `make quick` xét cả commit so với `origin/main`, thay đổi đã stage, chưa stage và tệp mới. Chỉ khi tất cả là tệp `scripts/test_*.py` còn tồn tại mới chạy tests được chọn; sửa nguồn, cấu hình, tài liệu, xóa tệp hoặc không đọc được Git thì chạy đầy đủ. Các nhóm kiểm tra khác và validator luôn chạy đầy đủ. Trước push vẫn bắt buộc `make check`.
 
@@ -267,7 +267,7 @@ Khi cập nhật nội dung, cần bảo đảm:
 - Thông tin chính xác và phù hợp với định hướng của công ty.
 - Không công khai dữ liệu cá nhân, thông tin y tế hoặc thông tin nội bộ.
 - Không lưu trữ mật khẩu, mã truy cập, khóa API hoặc dữ liệu bảo mật.
-- Tài liệu khớp với code sau mỗi thay đổi ([ADR 00000013](docs/adr/00000013-docs-match-code.md)).
+- Mỗi thay đổi sửa luôn mọi chỗ liên quan; tài liệu khớp với code ([ADR 00000013](docs/adr/00000013-related-changes.md)).
 - `make check` chạy thành công trước khi đưa lên nhánh chính.
 - Nội dung dành cho người sử dụng được chuẩn bị trong [`CHANGELOG.md`](CHANGELOG.md) khi phát hành phiên bản.
 - Tuân thủ quy định pháp luật và các chính sách của GitHub.

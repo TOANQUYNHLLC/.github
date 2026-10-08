@@ -9,7 +9,7 @@ Commit có chữ ký đã xác minh cho biết ai thực sự tạo ra thay đ�
 
 ## ✅ QUYẾT ĐỊNH
 
-- Mọi ruleset nhánh và tag trong `rulesets/` — cấp repository và cấp tổ chức — có quy tắc `required_signatures`; `validate.py` báo lỗi khi thiếu. Push ruleset không nhận quy tắc này ([ADR 00000005](00000005-org-push-ruleset.md)).
+- Mọi ruleset nhánh và tag trong `rulesets/` — cấp repository và cấp tổ chức — có quy tắc `required_signatures`; `validate.py` báo lỗi khi thiếu. Push ruleset không nhận quy tắc này ([ADR 00000005](00000005-organization-protect-pushes.md)).
 - Ruleset và cài đặt cấp repository chỉ cho phép **Merge** và **Squash** (`allowed_merge_methods`, `allow_rebase_merge: false`).
 - Ruleset Organization Protect Main cho phép **Merge**, **Squash** và **Rebase**, áp dụng cho nhánh mặc định và `refs/heads/main` của mọi repository: `orgRuleset()` trong `scripts/orgsetup/rulesets.py` sinh bản này từ bản cấp repository rồi thêm `rebase` và `refs/heads/main`.
 - Người đóng góp ký commit bằng GPG hoặc SSH; rebase branch của mình lên nhánh chính tại máy vẫn được vì commit được ký lại bằng khóa của người viết.

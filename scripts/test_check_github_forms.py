@@ -180,7 +180,7 @@ class GithubFormsTest(unittest.TestCase):
 					module.templateData(name, '.github/DISCUSSION_TEMPLATE/ideas.yml')
 				# Issue vẫn được kiểm tra theo ref của trang.
 				self.assertEqual(
-					module.templateData(name, '.github/ISSUE_TEMPLATE/feature_request.yml'),
+					module.templateData(name, '.github/ISSUE_TEMPLATE/feature-request.yml'),
 					{'errors': [], 'inputs': [], 'valid': True},
 				)
 

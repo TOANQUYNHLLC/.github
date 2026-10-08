@@ -81,7 +81,7 @@ class ValidateTest(unittest.TestCase):
 	def testNestedYamlShapesAreReportedWithoutStoppingChecks(self):
 		cases = (
 			(
-				'.github/ISSUE_TEMPLATE/bug_report.yml',
+				'.github/ISSUE_TEMPLATE/bug-report.yml',
 				'name: a\ndescription: a\nbody: [42]\n',
 				'body',
 			),
@@ -136,7 +136,7 @@ class ValidateTest(unittest.TestCase):
 				self.tearDown()
 
 	def testFormFieldTypesAreReported(self):
-		path = self.repo / '.github/ISSUE_TEMPLATE/bug_report.yml'
+		path = self.repo / '.github/ISSUE_TEMPLATE/bug-report.yml'
 		for content in (
 			'body: [{type: input, attributes: []}]\n',
 			'body: [{type: input, id: [], attributes: {label: 42}}]\n',
@@ -206,7 +206,7 @@ class ValidateTest(unittest.TestCase):
 
 	def testUnknownFormKeysDoNotStopOtherChecks(self):
 		for name in (
-			'.github/ISSUE_TEMPLATE/bug_report.yml',
+			'.github/ISSUE_TEMPLATE/bug-report.yml',
 			'.github/DISCUSSION_TEMPLATE/ideas.yml',
 		):
 			with self.subTest(path=name):
@@ -800,19 +800,32 @@ class ValidateTest(unittest.TestCase):
 		self.assertFails('phải mã hóa UTF-16 LE có BOM')
 
 	def testSolutionMustHaveBom(self):
-		(self.repo / 'App.sln').write_bytes(b'Microsoft Visual Studio Solution File\r\n')
+		(self.repo / 'app.sln').write_bytes(b'Microsoft Visual Studio Solution File\r\n')
 		self.assertFails('thiếu BOM UTF-8')
 
 	def testSolutionWithBomCrlfIsValid(self):
-		(self.repo / 'App.sln').write_bytes(
+		(self.repo / 'app.sln').write_bytes(
 			b'\xef\xbb\xbfMicrosoft Visual Studio Solution File\r\n'
 		)
 		code, output = self.runValidate()
 		self.assertEqual(code, 0, output)
 
 	def testFsharpMustNotIndentWithTabs(self):
-		(self.repo / 'App.fs').write_text('let f x =\n\tx + 1\n', encoding='utf-8')
+		(self.repo / 'app.fs').write_text('let f x =\n\tx + 1\n', encoding='utf-8')
 		self.assertFails('phải thụt lề bằng 4 dấu cách')
+
+	def testFileNameMustBeKebabCase(self):
+		(self.repo / 'scripts/check_names.py').write_text('', encoding='utf-8')
+		self.assertFails('tên "check_names.py" phải viết kebab-case')
+
+	def testDirectoryNameReportedOnce(self):
+		folder = self.repo / 'docs/MyGuide'
+		folder.mkdir()
+		for name in ('a.md', 'b.md'):
+			(folder / name).write_text('# A\n', encoding='utf-8')
+		code, output = self.runValidate()
+		self.assertEqual(code, 1, output)
+		self.assertEqual(output.count('tên "MyGuide" phải viết kebab-case'), 1, output)
 
 	def testDartMustNotIndentWithTabs(self):
 		(self.repo / 'main.dart').write_text('void main() {\n\tprint(1);\n}\n', encoding='utf-8')
@@ -1295,12 +1308,12 @@ class Holder:
 		self.assertFails('color phải là mã hex 6 ký tự')
 
 	def testFormIdsMustBeUnique(self):
-		self.edit('.github/ISSUE_TEMPLATE/bug_report.yml', 'id: expected', 'id: description')
+		self.edit('.github/ISSUE_TEMPLATE/bug-report.yml', 'id: expected', 'id: description')
 		self.assertFails('id "description" bị trùng')
 
 	def testFormFieldsWithoutIdAreNotDuplicates(self):
 		# GitHub không bắt buộc id: hai trường đều không có id không phải là id trùng.
-		path = self.repo / '.github' / 'ISSUE_TEMPLATE' / 'bug_report.yml'
+		path = self.repo / '.github' / 'ISSUE_TEMPLATE' / 'bug-report.yml'
 		text = path.read_text(encoding='utf-8')
 		self.assertGreaterEqual(len(re.findall(r'^      id: .+\n', text, re.MULTILINE)), 2)
 		path.write_text(re.sub(r'^      id: .+\n', '', text, flags=re.MULTILINE), encoding='utf-8')
@@ -1539,9 +1552,9 @@ class Holder:
 		for name in (
 			'protect-main.json',
 			'protect-release-tags.json',
-			'org-protect-main.json',
-			'org-protect-release-tags.json',
-			'org-protect-pushes.json',
+			'organization-protect-main.json',
+			'organization-protect-release-tags.json',
+			'organization-protect-pushes.json',
 		):
 			with self.subTest(name=name):
 				(self.repo / 'rulesets' / name).unlink()
@@ -1563,8 +1576,16 @@ class Holder:
 
 	def testIssueFormUsesOnlyAcceptedKeys(self):
 		# GitHub từ chối cả biểu mẫu khi gặp khóa lạ, kể cả `type` dù tài liệu có nhắc tới.
-		self.edit('.github/ISSUE_TEMPLATE/bug_report.yml', 'labels:\n    - bug\n', 'type: Bug\n')
+		self.edit('.github/ISSUE_TEMPLATE/bug-report.yml', 'labels:\n    - bug\n', 'type: Bug\n')
 		self.assertFails('khóa "type" không được GitHub chấp nhận trong biểu mẫu Issue')
+
+	def testIssueFormNamesMustBeUnique(self):
+		self.edit(
+			'.github/ISSUE_TEMPLATE/question.yml',
+			'name: ❓ Câu hỏi hoặc cần hỗ trợ',
+			'name: 🐛 Báo lỗi',
+		)
+		self.assertFails('question.yml: name "🐛 Báo lỗi" trùng với bug-report.yml')
 
 	def testRealWorkflowMustNotUseDefaultBranch(self):
 		self.edit(
@@ -1601,7 +1622,7 @@ class Holder:
 		self.assertFails('ruleset phải áp dụng cho refs/tags/v*')
 
 	def testTagRulesetsMustProtectStableAndBeta(self):
-		for name in ('protect-release-tags.json', 'org-protect-release-tags.json'):
+		for name in ('protect-release-tags.json', 'organization-protect-release-tags.json'):
 			for channel in ('Stable', 'Beta'):
 				with self.subTest(name=name, channel=channel):
 					path = self.repo / 'rulesets' / name
@@ -1626,11 +1647,11 @@ class Holder:
 		self.assertFails('thiếu luật head-branch cho tiền tố "release/"')
 
 	def testOrgRulesetTargetsAllRepositories(self):
-		self.edit('rulesets/org-protect-main.json', '"~ALL"', '".github"')
+		self.edit('rulesets/organization-protect-main.json', '"~ALL"', '".github"')
 		self.assertFails('ruleset phải tên "Organization Protect Main" và nhắm mọi repository')
 
 	def testOrgTagRulesetTargetsAllRepositories(self):
-		self.edit('rulesets/org-protect-release-tags.json', '"~ALL"', '".github"')
+		self.edit('rulesets/organization-protect-release-tags.json', '"~ALL"', '".github"')
 		self.assertFails('nhắm ~ALL repository và refs/tags/v*')
 
 	def testEveryRulesetRequiresSignedCommits(self):
@@ -1640,12 +1661,14 @@ class Holder:
 		self.assertFails('protect-main.json: ruleset phải có quy tắc required_signatures')
 
 	def testOrgPushRulesetTargetsAllRepositories(self):
-		self.edit('rulesets/org-protect-pushes.json', '"target": "push"', '"target": "branch"')
+		self.edit(
+			'rulesets/organization-protect-pushes.json', '"target": "push"', '"target": "branch"'
+		)
 		self.assertFails('ruleset phải tên "Organization Protect Pushes", target "push"')
 
 	def testOrgRulesetMustNotUseUserActor(self):
 		self.editRegex(
-			'rulesets/org-protect-main.json',
+			'rulesets/organization-protect-main.json',
 			r'"actor_type": "OrganizationAdmin"',
 			'"actor_type": "User"',
 		)

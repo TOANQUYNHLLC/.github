@@ -15,7 +15,7 @@ Quy ước chỉ có ý nghĩa khi nhánh chính chỉ nhận thay đổi đã �
     - Kiểm tra tự động bắt buộc thành công trên branch đã cập nhật với nhánh chính; code quality; commit có chữ ký; cấm force push, cấm xóa.
 - Danh sách bỏ qua: hai tài khoản quản trị, chế độ **always** — tổ chức chỉ có hai người quản trị nên một người không thể tự phê duyệt Pull Request của mình. Quyền này chỉ dùng khi thật cần (`GOVERNANCE.md`).
 - Repository khác chỉ bắt buộc kiểm tra có job tương ứng (tiêu đề Pull Request, tên branch); `scripts/org-setup.py rulesets` áp dụng và so với ruleset trên GitHub.
-- Bản cấp tổ chức (`rulesets/org-*.json`) sinh từ bản cấp repository bằng `orgRulesets()` trong `scripts/orgsetup/rulesets.py`, dùng chủ tổ chức (`OrganizationAdmin`) làm danh sách bỏ qua, thêm code scanning và phương thức hợp nhất của cấp tổ chức ([ADR 00000007](00000007-signed-commits-merge-methods.md)); chỉ được thực thi khi tổ chức nâng lên gói Team.
+- Bản cấp tổ chức (`rulesets/organization-*.json`) sinh từ bản cấp repository bằng `orgRulesets()` trong `scripts/orgsetup/rulesets.py`, dùng chủ tổ chức (`OrganizationAdmin`) làm danh sách bỏ qua, thêm code scanning và phương thức hợp nhất của cấp tổ chức ([ADR 00000007](00000007-signed-commits-merge-methods.md)); chỉ được thực thi khi tổ chức nâng lên gói Team.
 
 ## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
 

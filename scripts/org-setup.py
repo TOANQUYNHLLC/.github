@@ -39,7 +39,7 @@ Lệnh (nên chạy theo thứ tự):
 	org-settings: cài đặt tổ chức (ORG_SETTINGS) và quyền GitHub Actions cấp tổ chức; mục chỉ đổi được
 		trên web (ORG_WEB_ONLY_SETTINGS) thì chỉ so và báo.
 	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Organization Protect Main, Organization Protect
-		Release Tags và Organization Protect Pushes (ADR 00000005) (rulesets/org-*.json) cho mọi
+		Release Tags và Organization Protect Pushes (ADR 00000005) (rulesets/organization-*.json) cho mọi
 		repository; cần token có quyền admin:org
 		(gh auth refresh -h github.com -s admin:org) và gói GitHub Team trở lên. Gói Free: REST API
 		trả HTTP 403 nên chỉ so tệp với ruleset trên web (đọc qua GraphQL) — tạo, sửa bằng import trên web.

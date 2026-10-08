@@ -8,5 +8,6 @@ Hướng dẫn theo loại tệp nằm trong [`instructions/`](instructions/): m
 
 - Nhận xét bằng tiếng Việt.
 - Ưu tiên lỗi mà `make check` không bắt được: logic sai, thay đổi ảnh hưởng mọi repository của tổ chức.
+- Tìm trong toàn repository những chỗ liên quan mà Pull Request chưa sửa (nơi gọi tới, test, danh sách phải khớp nhau, workflow mẫu, tên tệp cũ còn được nhắc).
 - Đối chiếu tài liệu với code của Pull Request (README, `AGENTS.md`, ADR, docstring, chú thích): chỉ ra mọi chỗ mô tả không còn đúng.
 - Cảnh báo khi Pull Request chứa mật khẩu, token, dữ liệu cá nhân hoặc thông tin y tế.
