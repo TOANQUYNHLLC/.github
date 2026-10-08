@@ -28,6 +28,17 @@ except ModuleNotFoundError:
 from orgsetup import files, github, labels, rulesets, settings, teams
 
 
+def teamFixture(team):
+	name, _, privacy, description = teams.TEAMS[team]
+	parent = teams.TEAM_PARENTS.get(team)
+	return {
+		'name': name,
+		'privacy': privacy,
+		'description': description,
+		'parent': {'slug': parent} if parent else None,
+	}
+
+
 class OrgSetupTest(unittest.TestCase):
 	def testInvalidPullRequestParametersStopBeforeWrites(self):
 		for key, value in (
@@ -893,8 +904,7 @@ class OrgSetupTest(unittest.TestCase):
 				if '/repos/' in path:
 					return value
 				team = path.rsplit('/', 1)[-1]
-				name, _, privacy, description = teams.TEAMS[team]
-				return {'name': name, 'privacy': privacy, 'description': description}
+				return teamFixture(team)
 
 			with (
 				self.subTest(value=value),
@@ -921,8 +931,7 @@ class OrgSetupTest(unittest.TestCase):
 				if '/repos/' in path:
 					return {'role_name': 'admin'}
 				team = path.rsplit('/', 1)[-1]
-				name, _, privacy, description = teams.TEAMS[team]
-				return {'name': name, 'privacy': privacy, 'description': description}
+				return teamFixture(team)
 
 			with (
 				self.subTest(membership=membership),
@@ -948,12 +957,156 @@ class OrgSetupTest(unittest.TestCase):
 					teams.syncTeams(['app'], apply=True)
 			write.assert_not_called()
 
-	def testMembershipWriteDistinguishesInvitationFromActiveMember(self):
-		teams.teamDetails = lambda team: {
-			'name': teams.TEAMS[team][0],
-			'description': teams.TEAMS[team][3],
-			'privacy': teams.TEAMS[team][2],
+	def testMalformedTeamParentStopsBeforeAnyWrite(self):
+		for parent in ('missing', '', [], {}, {'slug': ''}, {'slug': False}):
+
+			def read(*args, parent=parent):
+				team = args[-1].rsplit('/', 1)[-1]
+				details = teamFixture(team)
+				if team == 'engineering':
+					if parent == 'missing':
+						del details['parent']
+					else:
+						details['parent'] = parent
+				return details
+
+			with (
+				self.subTest(parent=parent),
+				mock.patch.object(github, 'ghJson', read),
+				mock.patch.object(github, 'gh') as write,
+				mock.patch.object(teams, 'teamRole', return_value='maintainer'),
+				mock.patch.object(teams, 'teamPermission', return_value='admin'),
+				self.assertRaisesRegex(RuntimeError, 'team cha'),
+			):
+				teams.syncTeams(['app'], apply=True)
+			write.assert_not_called()
+
+	def testInvalidTeamHierarchyStopsBeforeReadingOrWriting(self):
+		for parents in (
+			{'unknown': 'engineering'},
+			{'qa': 'unknown'},
+			{'qa': []},
+			{'qa': 'qa'},
+			{'engineering': 'qa', 'qa': 'engineering'},
+			{'qa': 'admins'},
+		):
+			with (
+				self.subTest(parents=parents),
+				mock.patch.object(teams, 'TEAM_PARENTS', parents),
+				mock.patch.object(github, 'ghJson') as read,
+				mock.patch.object(github, 'gh') as write,
+				self.assertRaises(ValueError),
+			):
+				teams.syncTeams(['app'], apply=True)
+			read.assert_not_called()
+			write.assert_not_called()
+
+	def testParentTeamsDoNotManageMembersOrRepositoryPermissions(self):
+		for team in ('engineering', 'creative'):
+			with (
+				self.subTest(team=team),
+				mock.patch.object(teams, 'teamDetails', side_effect=teamFixture),
+				mock.patch.object(teams, 'teamRole') as role,
+				mock.patch.object(teams, 'teamPermission') as permission,
+			):
+				self.assertEqual(teams.teamState(team, ['app'])[2:], ({}, [], []))
+			role.assert_not_called()
+			permission.assert_not_called()
+
+	def testTeamParentDriftPreviewAndApplyOnlyChangeParent(self):
+		for team, current in (
+			('qa', None),
+			('qa', {'slug': 'creative'}),
+			('engineering', {'slug': 'creative'}),
+		):
+			live = {team: teamFixture(team) for team in teams.TEAMS}
+			live[team]['parent'] = current
+			calls = []
+
+			def write(*args, stdin=None, calls=calls, live=live, team=team):
+				body = json.loads(stdin)
+				calls.append((args, body))
+				parent = body['parent_team_slug']
+				live[team]['parent'] = {'slug': parent} if parent else None
+
+			with (
+				self.subTest(team=team, current=current),
+				mock.patch.object(
+					teams, 'teamDetails', side_effect=lambda team, live=live: live[team]
+				),
+				mock.patch.object(teams, 'teamRole', return_value='maintainer'),
+				mock.patch.object(teams, 'teamPermission', return_value='admin'),
+				mock.patch.object(github, 'gh', side_effect=write),
+				contextlib.redirect_stdout(io.StringIO()) as output,
+			):
+				teams.syncTeams(['app'], apply=False)
+				self.assertEqual(calls, [])
+				self.assertIn('parent_team_slug', output.getvalue())
+				teams.syncTeams(['app'], apply=True)
+			self.assertEqual(len(calls), 1)
+			self.assertEqual(calls[0][0][2:4], ('PATCH', f'orgs/TOANQUYNHLLC/teams/{team}'))
+			self.assertEqual(calls[0][1], {'parent_team_slug': teams.TEAM_PARENTS.get(team)})
+			self.assertEqual(live[team]['parent'], teamFixture(team)['parent'])
+
+	def testUnconfirmedTeamParentStopsBeforeMembershipWrites(self):
+		live = {team: teamFixture(team) for team in teams.TEAMS}
+		live['qa']['parent'] = None
+		with (
+			mock.patch.object(teams, 'teamDetails', side_effect=lambda team: live[team]),
+			mock.patch.object(
+				teams,
+				'teamRole',
+				side_effect=lambda team, user: None if team == 'qa' else 'maintainer',
+			),
+			mock.patch.object(teams, 'teamPermission', return_value='admin'),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+			self.assertRaisesRegex(RuntimeError, 'chưa áp dụng đúng team cha'),
+		):
+			teams.syncTeams(['app'], apply=True)
+		self.assertFalse(
+			any('/teams/qa/memberships/' in str(call) for call in write.call_args_list)
+		)
+
+	def testCreateTeamHierarchyOrdersParentsBeforeChildren(self):
+		profiles = {
+			'qa': ('QA', None, 'closed', 'Kiểm thử'),
+			'engineering': ('Engineering', None, 'closed', 'Phát triển'),
 		}
+		live, calls = {}, []
+
+		def read(team):
+			if team not in live:
+				raise RuntimeError('Not Found (HTTP 404)')
+			return live[team]
+
+		def write(*args, stdin=None):
+			body = json.loads(stdin)
+			team = body['name'].lower()
+			parent = body.get('parent_team_slug')
+			if parent:
+				self.assertIn(parent, live)
+			calls.append((args, body))
+			live[team] = {**body, 'parent': {'slug': parent} if parent else None}
+
+		with (
+			mock.patch.object(teams, 'TEAMS', profiles),
+			mock.patch.object(teams, 'TEAM_PARENTS', {'qa': 'engineering'}),
+			mock.patch.object(teams, 'teamDetails', side_effect=read),
+			mock.patch.object(teams, 'teamRole') as role,
+			mock.patch.object(teams, 'teamPermission') as permission,
+			mock.patch.object(github, 'gh', side_effect=write),
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			teams.syncTeams(['app'], apply=True)
+		role.assert_not_called()
+		permission.assert_not_called()
+		self.assertEqual([body['name'] for _, body in calls], ['Engineering', 'QA'])
+		self.assertTrue(all(args[2:4] == ('POST', 'orgs/TOANQUYNHLLC/teams') for args, _ in calls))
+		self.assertEqual(calls[1][1]['parent_team_slug'], 'engineering')
+
+	def testMembershipWriteDistinguishesInvitationFromActiveMember(self):
+		teams.teamDetails = teamFixture
 		teams.teamRole = lambda team, user: None
 		teams.teamPermission = lambda team, repo: 'admin'
 		for state in ('pending', 'active'):
@@ -1518,10 +1671,7 @@ class OrgSetupTest(unittest.TestCase):
 	def testTeamsAlreadyCorrectAreNotWritten(self):
 		calls = []
 		github.ghExists = lambda endpoint: True
-		details = {
-			team: {'name': name, 'description': description, 'privacy': privacy}
-			for team, (name, _, privacy, description) in teams.TEAMS.items()
-		}
+		details = {team: teamFixture(team) for team in teams.TEAMS}
 		teams.teamDetails = lambda team: details[team]
 		teams.teamRole = lambda team, user: 'maintainer'
 		# Quyền cao hơn (admin) đã đủ cho mọi team — không hạ quyền.
@@ -1532,7 +1682,11 @@ class OrgSetupTest(unittest.TestCase):
 		output = io.StringIO()
 		with contextlib.redirect_stdout(output):
 			teams.syncTeams(['.github', 'app'], apply=True)
-		self.assertEqual(output.getvalue().count('✔ đủ người quản trị'), len(teams.TEAMS))
+		self.assertEqual(
+			output.getvalue().count('✔ đủ người quản trị'),
+			sum(permission is not None for _, permission, _, _ in teams.TEAMS.values()),
+		)
+		self.assertEqual(output.getvalue().count('✔ thông tin và cấu trúc team đã đúng'), 2)
 		self.assertEqual(calls, [])
 		# Chỉ ghi phần còn thiếu: một người chưa là maintainer, một repository chưa đủ quyền.
 		teams.teamRole = lambda team, user: (
@@ -1649,8 +1803,7 @@ class OrgSetupTest(unittest.TestCase):
 				if '/repos/' in path:
 					return {'role_name': 'admin'}
 				team = path.rsplit('/', 1)[-1]
-				name, _, privacy, description = teams.TEAMS[team]
-				return {'name': name, 'privacy': privacy, 'description': description}
+				return teamFixture(team)
 
 			with (
 				self.subTest(path=failingPath),
@@ -1838,9 +1991,8 @@ class OrgSetupTest(unittest.TestCase):
 		teams.teamRole = lambda team, user: 'maintainer'
 		teams.teamPermission = lambda team, repo: 'admin'
 		teams.teamDetails = lambda team: {
-			'name': teams.TEAMS[team][0],
+			**teamFixture(team),
 			'description': 'mô tả cũ' if team == 'qa' else teams.TEAMS[team][3],
-			'privacy': teams.TEAMS[team][2],
 		}
 		github.gh = lambda *args, **kwargs: calls.append((args, kwargs.get('stdin')))
 		with contextlib.redirect_stdout(io.StringIO()):
@@ -2083,7 +2235,9 @@ class OrgSetupTest(unittest.TestCase):
 		for slug, (name, permission, privacy, _) in teams.TEAMS.items():
 			self.assertIn(f'== team TOANQUYNHLLC/{slug}: chưa có', text)
 			self.assertIn(f'(xem trước) tạo team {name} ({privacy})', text)
-			self.assertIn(f'(xem trước) cấp {permission} TOANQUYNHLLC/app', text)
+			if permission is not None:
+				self.assertIn(f'(xem trước) cấp {permission} TOANQUYNHLLC/app', text)
+		self.assertNotIn('cấp None', text)
 		for user in teams.MAINTAINERS:
 			self.assertIn(f'(xem trước) thêm {user} (maintainer)', text)
 

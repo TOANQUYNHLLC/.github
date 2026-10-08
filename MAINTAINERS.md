@@ -13,9 +13,11 @@ Danh sách người quản trị các repository của **CÔNG TY TNHH TOÀN QU�
 
 ## 👪 TEAM CỦA TỔ CHỨC
 
-Mọi người quản trị ở bảng trên thuộc mọi team (vai trò maintainer). `python3 scripts/org-setup.py team` cấp quyền của từng team trên mọi repository và không hạ quyền đã cao hơn (danh sách trong `TEAMS` của `scripts/orgsetup/teams.py`).
+Người quản trị ở bảng trên được quản lý với vai trò maintainer trong các team có quyền repository ở bảng dưới. `python3 scripts/org-setup.py team` quản lý thông tin team, cấu trúc cha–con và cấp quyền trên mọi repository, giữ quyền đã cao hơn. Nguồn là `TEAMS` và `TEAM_PARENTS` trong [`scripts/orgsetup/teams.py`](scripts/orgsetup/teams.py).
 
-Lệnh đọc đầy đủ trạng thái trước khi ghi; thành viên chỉ được tính khi đã `active`. Nếu có lời mời đang `pending`, dữ liệu không đọc được hoặc quyền tùy chỉnh chưa xếp hạng được, lệnh dừng để kiểm tra trên GitHub. Khi gửi lời mời mới, phản hồi `pending` được báo là đang chờ chấp nhận, chưa xác nhận người đó đã là maintainer hoạt động.
+Engineering và Creative là hai team cha ở cấp cao nhất, cùng chế độ hiển thị `closed`; Admins là team độc lập, bí mật. Engineering chứa Maintainers, Developers và QA; Creative chứa Design và Marketing. Hai team cha có quyền `None` trong nguồn local: lệnh chỉ quản lý tên, mô tả, chế độ hiển thị và vị trí trong cấu trúc, giữ nguyên thành viên và quyền repository của chúng.
+
+Lệnh kiểm tra cấu trúc local, đọc đầy đủ trạng thái trước khi ghi và tạo team cha trước team con. Cấu trúc không được có chu trình; team cha và team con phải có chế độ hiển thị `closed`. Quan hệ dùng slug, được đọc lại sau khi tạo hoặc đổi team cha. Thành viên chỉ được tính khi đã `active`; lời mời `pending`, dữ liệu không đọc được hoặc quyền tùy chỉnh chưa xếp hạng được chặn đồng bộ. Lời mời mới được báo chờ chấp nhận cho đến khi GitHub xác nhận vai trò maintainer hoạt động. Cơ chế team lồng nhau xem [tài liệu GitHub](https://docs.github.com/en/rest/teams/teams#update-a-team).
 
 | Team                                                                                  | Quyền trên repository | Phụ trách                                                                       |
 | ------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------- |
