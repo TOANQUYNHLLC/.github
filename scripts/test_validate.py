@@ -1579,6 +1579,14 @@ class Holder:
 		self.edit('.github/ISSUE_TEMPLATE/bug-report.yml', 'labels:\n    - bug\n', 'type: Bug\n')
 		self.assertFails('khóa "type" không được GitHub chấp nhận trong biểu mẫu Issue')
 
+	def testIssueFormNamesMustBeUnique(self):
+		self.edit(
+			'.github/ISSUE_TEMPLATE/question.yml',
+			'name: ❓ Câu hỏi hoặc cần hỗ trợ',
+			'name: 🐛 Báo lỗi',
+		)
+		self.assertFails('question.yml: name "🐛 Báo lỗi" trùng với bug-report.yml')
+
 	def testRealWorkflowMustNotUseDefaultBranch(self):
 		self.edit(
 			'.github/workflows/validate.yml',

@@ -187,7 +187,7 @@ make check
 
 Hook `pre-commit` chạy Prettier, ruff trong thư mục tạm, nơi shim của mise không thấy `mise.toml`, `.nvmrc`: hook ghim đúng phiên bản của dự án bằng `MISE_RUFF_VERSION`, `MISE_NODE_VERSION` (đọc từ hai tệp này) nên dùng đúng công cụ ở mọi máy, kể cả sau khi nâng phiên bản.
 
-Validator kiểm tra kiểu dữ liệu của tên và mô tả biểu mẫu, lựa chọn, ID, `required`, `min_length` và các trường của `config.yml`; việc GitHub chấp nhận biểu mẫu Issue/Discussion được kiểm tra riêng bằng `make forms`. Nhãn `documentation` được cấu hình cho tệp Markdown, `docs/` và `specs/` trong labeler của repository và bản mẫu.
+Validator kiểm tra kiểu dữ liệu của tên và mô tả biểu mẫu, tên biểu mẫu Issue không trùng nhau, lựa chọn, ID, `required`, `min_length` và các trường của `config.yml`; việc GitHub chấp nhận biểu mẫu Issue/Discussion được kiểm tra riêng bằng `make forms`. Trên ref khác nhánh mặc định, GitHub so `name` của biểu mẫu Issue với cả biểu mẫu trên nhánh mặc định: đổi tên tệp biểu mẫu mà giữ `name` thì `make forms REF=…` báo `Name must be unique` dù validator đạt — xác minh lại bằng `make forms` sau khi hợp nhất. Nhãn `documentation` được cấu hình cho tệp Markdown, `docs/` và `specs/` trong labeler của repository và bản mẫu.
 
 `make quick` xét cả commit so với `origin/main`, thay đổi đã stage, chưa stage và tệp mới. Chỉ khi tất cả là tệp `scripts/test_*.py` còn tồn tại mới chạy tests được chọn; sửa nguồn, cấu hình, tài liệu, xóa tệp hoặc không đọc được Git thì chạy đầy đủ. Các nhóm kiểm tra khác và validator luôn chạy đầy đủ. Trước push vẫn bắt buộc `make check`.
 

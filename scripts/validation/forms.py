@@ -14,6 +14,8 @@ DISCUSSION_FORM_KEYS = {'title', 'labels', 'body'}
 
 
 FORM_LABELS = []
+# Tên biểu mẫu Issue → tệp đầu tiên dùng tên đó; GitHub từ chối biểu mẫu trùng tên ("Name must be unique").
+ISSUE_FORM_NAMES = {}
 
 
 def checkForm(path, required=('name', 'description', 'body')):
@@ -31,6 +33,14 @@ def checkForm(path, required=('name', 'description', 'body')):
 	if path.parent.name == 'ISSUE_TEMPLATE':
 		for key in sorted(set(form) - ISSUE_FORM_KEYS, key=str):
 			error(path, f'khóa "{key}" không được GitHub chấp nhận trong biểu mẫu Issue')
+		name = form.get('name')
+		if isinstance(name, str) and name.strip():
+			first = ISSUE_FORM_NAMES.setdefault(name, path)
+			if first != path:
+				error(
+					path,
+					f'name "{name}" trùng với {first.name} — GitHub yêu cầu tên biểu mẫu Issue khác nhau',
+				)
 	FORM_LABELS.extend((path, label) for label in configItems(path, form, 'labels', str))
 	ids = set()
 	for index, item in enumerate(configItems(path, form, 'body'), start=1):
