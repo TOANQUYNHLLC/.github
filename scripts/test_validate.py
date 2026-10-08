@@ -1227,10 +1227,13 @@ class Holder:
 		self.assertFails('ruff.toml: bắt buộc indent-width = 4 và indent-style = "tab"')
 
 	def testDevEnginesFollowsNvmrc(self):
-		# Nâng Node.js trong .nvmrc mà quên devEngines của package.json: báo lỗi.
-		(self.repo / '.nvmrc').write_text('26\n', encoding='utf-8')
+		# Nâng Node.js trong .nvmrc mà quên devEngines của package.json: báo lỗi. Đọc phiên bản đang dùng để test
+		# không hỏng khi dự án nâng Node.js.
+		current = (self.repo / '.nvmrc').read_text(encoding='utf-8').strip()
+		newer = str(int(current) + 2)
+		(self.repo / '.nvmrc').write_text(f'{newer}\n', encoding='utf-8')
 		self.assertFails(
-			'package.json: devEngines.runtime.version là "24", phải là "26" theo .nvmrc'
+			f'package.json: devEngines.runtime.version là "{current}", phải là "{newer}" theo .nvmrc'
 		)
 
 	def testNodeNotDeclaredInMise(self):
