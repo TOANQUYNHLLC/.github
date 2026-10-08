@@ -11,8 +11,20 @@ MAINTAINERS = ('nguyentrongtoandl', 'trongtoandl81')
 TEAM = 'maintainers'
 
 # Team của tổ chức: slug → (tên, quyền trên mọi repository, hiển thị, mô tả
-# khi tạo). Mọi team gồm mọi người trong MAINTAINERS với vai trò maintainer.
+# khi tạo). Quyền None: chỉ quản lý thông tin và cấu trúc, giữ nguyên thành viên và quyền.
 TEAMS = {
+	'engineering': (
+		'Engineering',
+		None,
+		'closed',
+		'Phát triển, kiểm thử và duy trì các sản phẩm phần mềm.',
+	),
+	'creative': (
+		'Creative',
+		None,
+		'closed',
+		'Thiết kế sản phẩm, thương hiệu và nội dung truyền thông.',
+	),
 	'admins': (
 		'Admins',
 		'admin',
@@ -29,6 +41,15 @@ TEAMS = {
 	'qa': ('QA', 'triage', 'closed', 'Quản lý issue, kiểm thử, xác nhận lỗi.'),
 	'design': ('Design', 'triage', 'closed', 'Thiết kế UI/UX, góp ý sản phẩm.'),
 	'marketing': ('Marketing', 'pull', 'closed', 'Website, bài viết, hình ảnh truyền thông.'),
+}
+
+# Slug team cha; team không có trong bảng này nằm ở cấp cao nhất.
+TEAM_PARENTS = {
+	TEAM: 'engineering',
+	'developers': 'engineering',
+	'qa': 'engineering',
+	'design': 'creative',
+	'marketing': 'creative',
 }
 
 # Thứ tự quyền để không hạ quyền đã cao hơn; khi đọc GitHub trả role_name (read, write), khi ghi nhận pull, push.
@@ -97,7 +118,7 @@ def teamPermission(team, repo):
 
 
 def teamDetails(team):
-	"""Tên, mô tả, chế độ hiển thị của team trên GitHub."""
+	"""Tên, mô tả, chế độ hiển thị và team cha trên GitHub."""
 	data = github.ghJson('api', f'orgs/{github.ORG}/teams/{team}')
 	if (
 		not isinstance(data, dict)
@@ -108,7 +129,51 @@ def teamDetails(team):
 		or not isinstance(data.get('description'), (str, type(None)))
 	):
 		raise RuntimeError(f'{team}: không đọc được tên, chế độ hiển thị hoặc mô tả team')
+	parentSlug(data, team)
 	return data
+
+
+def parentSlug(details, team):
+	"""Không coi trường parent bị thiếu hoặc sai kiểu là team ở cấp cao nhất."""
+	if 'parent' not in details:
+		raise RuntimeError(f'{team}: không đọc được team cha')
+	parent = details['parent']
+	if parent is None:
+		return None
+	if (
+		not isinstance(parent, dict)
+		or not isinstance(parent.get('slug'), str)
+		or not parent['slug']
+	):
+		raise RuntimeError(f'{team}: không đọc được slug của team cha')
+	return parent['slug']
+
+
+def teamOrder():
+	"""Kiểm tra cấu trúc local và xếp team cha trước team con, không phụ thuộc thứ tự khai báo."""
+	if set(TEAM_PARENTS) - set(TEAMS):
+		raise ValueError('TEAM_PARENTS chứa team con chưa khai báo trong TEAMS')
+	ordered, visiting = [], set()
+
+	def visit(team):
+		if team in visiting:
+			raise ValueError(f'{team}: cấu trúc team có chu trình')
+		if team in ordered:
+			return
+		visiting.add(team)
+		parent = TEAM_PARENTS.get(team)
+		if parent is not None:
+			if not isinstance(parent, str) or parent not in TEAMS:
+				raise ValueError(f'{team}: team cha chưa khai báo trong TEAMS')
+			if TEAMS[team][2] != 'closed' or TEAMS[parent][2] != 'closed':
+				raise ValueError(f'{team}: team cha và team con phải có privacy closed')
+			visit(parent)
+		visiting.remove(team)
+		ordered.append(team)
+
+	for team in TEAMS:
+		visit(team)
+	return ordered
 
 
 def teamState(team, repos):
@@ -123,6 +188,10 @@ def teamState(team, repos):
 		details, exists = {}, False
 	wanted = {'name': name, 'description': description, 'privacy': privacy}
 	drift = {key: value for key, value in wanted.items() if exists and details.get(key) != value}
+	if exists and parentSlug(details, team) != TEAM_PARENTS.get(team):
+		drift['parent_team_slug'] = TEAM_PARENTS.get(team)
+	if permission is None:
+		return exists, details, drift, [], []
 	if not exists:
 		return exists, details, drift, list(MAINTAINERS), list(repos)
 	# Vai trò từng người, quyền trên từng repository đọc cùng lúc — mỗi lần chờ GitHub gần một giây.
@@ -142,19 +211,23 @@ def teamState(team, repos):
 
 
 def syncTeams(repos, apply):
+	ordered = teamOrder()
 	# Đọc trạng thái các team song song — mỗi team vài lượt gọi gh, tuần tự thì hơn 20 giây; ghi vẫn tuần tự.
 	with ThreadPoolExecutor(max_workers=len(TEAMS)) as pool:
-		states = list(pool.map(lambda team: teamState(team, repos), TEAMS))
-	for (team, (name, permission, privacy, description)), state in zip(
-		TEAMS.items(), states, strict=True
-	):
+		states = list(pool.map(lambda team: teamState(team, repos), ordered))
+	for team, state in zip(ordered, states, strict=True):
+		name, permission, privacy, description = TEAMS[team]
 		exists, details, drift, users, missing = state
 		print(f'== team {github.ORG}/{team}: {"đã có" if exists else "chưa có"}')
-		if not users and not missing and not drift:
-			print(f'   ✔ đủ người quản trị, team có quyền {permission} {len(repos)} repository')
+		if exists and not users and not missing and not drift:
+			if permission is None:
+				print('   ✔ thông tin và cấu trúc team đã đúng; giữ nguyên thành viên và quyền')
+			else:
+				print(f'   ✔ đủ người quản trị, team có quyền {permission} {len(repos)} repository')
 			continue
 		for key, value in drift.items():
-			print(f'   {"" if apply else "(xem trước) "}{key}: {details.get(key)} → {value}')
+			current = parentSlug(details, team) if key == 'parent_team_slug' else details.get(key)
+			print(f'   {"" if apply else "(xem trước) "}{key}: {current} → {value}')
 		if drift and apply:
 			body = json.dumps(drift, ensure_ascii=False)
 			github.gh(
@@ -163,22 +236,30 @@ def syncTeams(repos, apply):
 		if not apply:
 			if not exists:
 				print(f'   (xem trước) tạo team {name} ({privacy})')
+				if parent := TEAM_PARENTS.get(team):
+					print(f'   (xem trước) đặt team cha {parent}')
 			for user in users:
 				print(f'   (xem trước) thêm {user} (maintainer)')
 			for repo in missing:
 				print(f'   (xem trước) cấp {permission} {github.ORG}/{repo}')
 			continue
 		if not exists:
+			body = {'name': name, 'privacy': privacy, 'description': description}
+			if parent := TEAM_PARENTS.get(team):
+				body['parent_team_slug'] = parent
 			github.gh(
 				'api',
+				'-X',
+				'POST',
 				f'orgs/{github.ORG}/teams',
-				'-f',
-				f'name={name}',
-				'-f',
-				f'privacy={privacy}',
-				'-f',
-				f'description={description}',
+				'--input',
+				'-',
+				stdin=json.dumps(body, ensure_ascii=False),
 			)
+		if (not exists or 'parent_team_slug' in drift) and parentSlug(
+			teamDetails(team), team
+		) != TEAM_PARENTS.get(team):
+			raise RuntimeError(f'{team}: GitHub chưa áp dụng đúng team cha')
 		for user in users:
 			data = github.ghJson(
 				'api',

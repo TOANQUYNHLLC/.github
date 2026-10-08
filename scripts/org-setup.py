@@ -30,8 +30,11 @@ Lệnh (nên chạy theo thứ tự):
 		Tags (rulesets/protect-release-tags.json, ADR 00000006); Protect Main của repository khác chỉ giữ
 		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
 		chưa có workflow kiểm tra bắt buộc — hợp nhất Pull Request của lệnh files trước.
-	team: tạo các team trong TEAMS (sửa tên, mô tả, chế độ hiển thị khác web), thêm người quản trị và cấp
-		quyền của từng team trên mọi repository (không hạ quyền đã cao hơn); đã đủ thì báo đã đúng.
+	team: quản lý thông tin trong TEAMS và cấu trúc team cha và team con trong TEAM_PARENTS,
+		tạo team cha trước team con,
+		đọc lại quan hệ sau khi ghi. Team có quyền None giữ nguyên thành viên và quyền repository;
+		các team có quyền cấu hình được thêm người quản trị và cấp quyền trên mọi repository
+		(không hạ quyền đã cao hơn); đã đủ thì báo đã đúng.
 		Lời mời đang chờ, dữ liệu sai hoặc quyền tùy chỉnh chưa xếp hạng được dừng trước khi ghi;
 		lời mời mới được báo chờ chấp nhận cho đến khi GitHub xác nhận maintainer active.
 	labels: tạo hoặc cập nhật màu, mô tả theo labels.yml (chỉ nhãn khác), đổi tên nhãn chỉ khác chữ hoa/thường;

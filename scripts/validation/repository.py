@@ -134,7 +134,7 @@ def checkConventions():
 
 def checkMaintainers():
 	"""Người quản trị trong MAINTAINERS.md khớp MAINTAINERS của scripts/orgsetup/teams.py (org-setup.py team thêm
-	họ vào mọi team)."""
+	họ vào các team có quyền repository được quản lý)."""
 	listing, source = ROOT / 'MAINTAINERS.md', ROOT / 'scripts' / 'orgsetup' / 'teams.py'
 	if not listing.exists() or not source.exists():
 		return
