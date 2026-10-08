@@ -127,7 +127,7 @@ Không áp dụng.
 - [ ] Tên branch, commit và tiêu đề Pull Request theo quy ước trong `CONTRIBUTING.md`.
 - [ ] Tôi đã bổ sung hoặc cập nhật kiểm thử khi cần thiết.
 - [ ] Tôi đã cập nhật tài liệu liên quan; nội dung phát hành trong `CHANGELOG.md` được cập nhật khi chuẩn bị phiên bản (nếu dự án có).
-- [ ] Mã nguồn, tests, ví dụ cấu hình và tài liệu liên quan đã thống nhất; nội dung lỗi thời đã được cập nhật hoặc xoá trong cùng thay đổi.
+- [ ] Tôi đã rà soát toàn bộ dự án và sửa mọi chỗ liên quan tới thay đổi; mã nguồn, tests, ví dụ cấu hình và tài liệu liên quan đã thống nhất, nội dung lỗi thời đã được cập nhật hoặc xoá trong cùng thay đổi.
 - [ ] Tôi đã kiểm tra khả năng tương thích với chức năng hiện có.
 - [ ] Tôi không đưa mật khẩu, khóa API, token truy cập hoặc thông tin bảo mật vào mã nguồn.
 - [ ] Tôi không đưa dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào repository.

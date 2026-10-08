@@ -59,7 +59,7 @@ Một báo lỗi tốt gồm:
 1. Cập nhật nhánh chính (`main`) và tạo branch mới, đặt tên theo quy ước bên dưới.
 2. Thực hiện thay đổi, giữ phạm vi nhỏ và tập trung vào một mục đích.
 3. Chạy formatter, lint và kiểm thử của dự án; bổ sung kiểm thử cho thay đổi.
-4. Kiểm tra mọi tài liệu liên quan (README, hướng dẫn, chú thích trong mã) còn khớp với code vừa sửa; chỗ nào không khớp thì sửa ngay trong cùng Pull Request. Khi chuẩn bị phiên bản, cập nhật nội dung phát hành trong `CHANGELOG.md` nếu dự án có tệp này.
+4. Rà soát toàn bộ dự án để tìm mọi chỗ liên quan tới thay đổi — code gọi tới, test, cấu hình, tài liệu (README, hướng dẫn), chú thích trong mã — và sửa ngay trong cùng Pull Request; tài liệu phải khớp với code vừa sửa. Khi chuẩn bị phiên bản, cập nhật nội dung phát hành trong `CHANGELOG.md` nếu dự án có tệp này.
 5. Đẩy branch lên GitHub, tạo Pull Request và điền đầy đủ biểu mẫu có sẵn.
 6. Phản hồi góp ý của người đánh giá; Pull Request chỉ được hợp nhất khi đã được phê duyệt và mọi kiểm tra tự động thành công.
 7. Xóa branch sau khi hợp nhất.
@@ -142,6 +142,7 @@ Closes #123
 - Nếu dự án có pre-commit hook (ví dụ `make hooks`), cài một lần để phát hiện lỗi định dạng ngay khi commit.
 - Không tắt quy tắc lint nếu không có lý do; khi buộc phải tắt, ghi chú lý do ngay tại chỗ.
 - Đặt tên biến, hàm, file bằng tiếng Anh, rõ nghĩa; chú thích giải thích **vì sao**, không lặp lại mã làm gì.
+- Tên file, thư mục theo quy ước của ngôn ngữ hoặc công cụ (`README.md`, `Makefile`, tên tệp trùng tên lớp của Java); nơi không có quy định thì viết kebab-case — chữ thường, nối từ bằng dấu gạch ngang (`appointment-booking.md`). Mỗi dự án dùng thống nhất một kiểu.
 - Không để lại mã chết, mã đã comment, `console.log` hoặc `print` dùng để gỡ lỗi.
 
 ---

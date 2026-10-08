@@ -9,6 +9,7 @@ applyTo: '**/*.md'
 - Viết tiếng Việt dạng NFC, tiêu đề Markdown viết hoa; chữ trên badge dùng tiếng Anh, hoa đầu mỗi từ.
 - Tài liệu mô tả trạng thái hiện tại và đủ để dùng độc lập; không ghi nhật ký phát triển, báo cáo rà soát, log kiểm tra hoặc số đo thử nghiệm.
 - Đối chiếu lệnh, đường dẫn, hàm, ví dụ và cấu hình với mã nguồn; cập nhật tài liệu trong cùng thay đổi khi hành vi thay đổi.
+- Tên tệp tài liệu mới viết kebab-case tiếng Anh (`github-settings.md`), trừ tên GitHub quy định (`README.md`, `SECURITY.md`…).
 - README liệt kê đủ lệnh Makefile, scripts và workflows. Giữ thông tin công ty, người liên hệ và bản quyền theo nguồn hiện có.
 - Tệp cộng đồng dùng chung và biểu mẫu cần liên kết phù hợp với nơi hiển thị; biểu mẫu và nội dung Release dùng URL tuyệt đối.
 - Mỗi chủ đề một ADR mô tả quyết định hiện hành; khi đổi quyết định, cập nhật ADR của chủ đề đó và mục lục theo [`docs/adr/README.md`](../../docs/adr/README.md).

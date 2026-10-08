@@ -23,15 +23,15 @@ Phần cấu trúc liên quan đến tài liệu cộng đồng và cấu hình 
 ├── SUPPORT.md                         ← Hướng dẫn hỗ trợ mặc định
 ├── ACCESSIBILITY.md                   ← Chính sách khả năng tiếp cận
 ├── specs/
-│   └── JobsGuideLine.md                ← Quy trình rà soát dự án
+│   └── jobs-guideline.md                ← Quy trình rà soát dự án
 ├── profile/
 │   └── README.md                      ← Giới thiệu trên trang tổ chức
 ├── .github/                           ← Thư mục cấu hình GitHub
 │   ├── ISSUE_TEMPLATE/
-│   │   ├── bug_report.yml             ← Form báo lỗi
+│   │   ├── bug-report.yml             ← Form báo lỗi
 │   │   ├── documentation.yml          ← Form báo lỗi tài liệu
-│   │   ├── test_failure.yml           ← Form lỗi CI hoặc kiểm thử
-│   │   ├── feature_request.yml        ← Form đề xuất tính năng
+│   │   ├── test-failure.yml           ← Form lỗi CI hoặc kiểm thử
+│   │   ├── feature-request.yml        ← Form đề xuất tính năng
 │   │   ├── question.yml               ← Form câu hỏi
 │   │   └── config.yml                 ← Cấu hình bộ mẫu issue
 │   ├── PULL_REQUEST_TEMPLATE.md       ← Mẫu PR mặc định
@@ -119,7 +119,7 @@ Nhiều mẫu PR không tự tạo bộ chọn giống mẫu issue. Trên URL so
 
 ### MẪU LỖI KIỂM THỬ VÀ CHIA SẺ DEMO
 
-`.github/ISSUE_TEMPLATE/test_failure.yml` thu thập workflow/job, test bị ảnh hưởng, kiểu thất bại, lần chạy, commit, môi trường và cách tái hiện. Mẫu dùng nhãn `tests`, `ci`, `needs triage`; các nhãn phải tồn tại ở từng repository sử dụng mẫu.
+`.github/ISSUE_TEMPLATE/test-failure.yml` thu thập workflow/job, test bị ảnh hưởng, kiểu thất bại, lần chạy, commit, môi trường và cách tái hiện. Mẫu dùng nhãn `tests`, `ci`, `needs triage`; các nhãn phải tồn tại ở từng repository sử dụng mẫu.
 
 `.github/DISCUSSION_TEMPLATE/show-and-tell.yml` thu thập demo, tình huống sử dụng, tài nguyên minh họa, cách thử và bài học triển khai. Repository dùng mẫu phải bật Discussions và có category với slug `show-and-tell`; mẫu không tự tạo danh mục. Mẫu cần được hợp nhất vào nhánh mặc định trước khi GitHub sử dụng. Chỉ chia sẻ tài nguyên được phép công khai.
 
@@ -129,7 +129,7 @@ Nhiều mẫu PR không tự tạo bộ chọn giống mẫu issue. Trên URL so
 | ------------------------------------------ | ------------------------------------------------------------ |
 | `README.md`                                | Giới thiệu repo `.github`; không thành README của repo khác  |
 | `STRUCTURE.md`                             | Tài liệu của repo; không tự xuất hiện ở repo khác            |
-| `specs/JobsGuideLine.md`                   | Quy trình rà soát của repo; không tự sao chép sang repo khác |
+| `specs/jobs-guideline.md`                  | Quy trình rà soát của repo; không tự sao chép sang repo khác |
 | `profile/README.md`                        | Giới thiệu tổ chức; không thành README dự án                 |
 | `LICENSE`                                  | Không tự cấp phép cho các repo khác                          |
 | `.github/CODEOWNERS`                       | Phân công người phụ trách trong repo.                        |
@@ -222,8 +222,8 @@ Lệnh `python3 scripts/org-setup.py files --repo <tên>` xem trước các tệ
 - `SECURITY.md`: kênh báo cáo lỗ hổng.
 - `SUPPORT.md`: kênh hỗ trợ.
 - `.github/PULL_REQUEST_TEMPLATE.md`: checklist PR.
-- `.github/ISSUE_TEMPLATE/bug_report.yml`: form báo lỗi.
-- `.github/ISSUE_TEMPLATE/feature_request.yml`: form yêu cầu tính năng.
+- `.github/ISSUE_TEMPLATE/bug-report.yml`: form báo lỗi.
+- `.github/ISSUE_TEMPLATE/feature-request.yml`: form yêu cầu tính năng.
 - `.github/ISSUE_TEMPLATE/config.yml`: cấu hình bộ mẫu issue.
 
 Thêm các file còn lại khi có nhu cầu thực tế. Quy ước được viết trong tài liệu không tự thực thi; kiểm tra tự động cần workflow hoặc công cụ tương ứng trong từng dự án.

@@ -10,7 +10,7 @@ tools: ['read', 'search']
 
 ## 🔎 PHẠM VI ĐÁNH GIÁ
 
-- Xác định các tệp được thay đổi và các nơi sử dụng chúng, bao gồm bản mẫu, scripts, tests và tài liệu liên quan.
+- Xác định các tệp được thay đổi và các nơi sử dụng chúng, bao gồm bản mẫu, scripts, tests và tài liệu liên quan; tìm trong toàn repository theo tên cũ và tên mới để chỉ ra chỗ liên quan chưa được sửa.
 - Kiểm tra khả năng ảnh hưởng đến repository khác của tổ chức: kế thừa tệp cộng đồng, workflow mẫu, đồng bộ nhãn, ruleset và quyền truy cập.
 - Với workflow, kiểm tra quyền, nguồn dữ liệu sự kiện, action đã ghim và script được gọi; chú ý workflow có quyền ghi xử lý Pull Request từ fork.
 - Với scripts đồng bộ GitHub, kiểm tra xử lý dữ liệu thiếu, lỗi API và điều kiện trước mỗi thao tác ghi.

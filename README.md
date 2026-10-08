@@ -140,7 +140,7 @@ Workflow mẫu Node.js cài dependency bằng `npm ci`, đọc phiên bản Node
 | [`AGENTS.md`](AGENTS.md) · [`CLAUDE.md`](CLAUDE.md) · [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | Hướng dẫn cho AI coding agent và GitHub Copilot                                                                     |
 | [`.github/instructions/`](.github/instructions/)                                                                           | Hướng dẫn Copilot theo đường dẫn: mã Python, cấu hình GitHub và tài liệu                                            |
 | [`.github/agents/repository-reviewer.agent.md`](.github/agents/repository-reviewer.agent.md)                               | Agent Copilot rà soát ảnh hưởng toàn tổ chức và sự thống nhất giữa tài liệu với code, dùng công cụ đọc và tìm kiếm  |
-| [`specs/JobsGuideLine.md`](specs/JobsGuideLine.md)                                                                         | Yêu cầu chuẩn cho một đợt rà soát toàn dự án: phạm vi, cách kiểm chứng, điều kiện hoàn tất và nội dung Pull Request |
+| [`specs/jobs-guideline.md`](specs/jobs-guideline.md)                                                                       | Yêu cầu chuẩn cho một đợt rà soát toàn dự án: phạm vi, cách kiểm chứng, điều kiện hoàn tất và nội dung Pull Request |
 | [`CHANGELOG.md`](CHANGELOG.md)                                                                                             | Khung nội dung chuẩn bị phát hành                                                                                   |
 
 ---
@@ -267,7 +267,7 @@ Khi cập nhật nội dung, cần bảo đảm:
 - Thông tin chính xác và phù hợp với định hướng của công ty.
 - Không công khai dữ liệu cá nhân, thông tin y tế hoặc thông tin nội bộ.
 - Không lưu trữ mật khẩu, mã truy cập, khóa API hoặc dữ liệu bảo mật.
-- Tài liệu khớp với code sau mỗi thay đổi ([ADR 00000013](docs/adr/00000013-docs-match-code.md)).
+- Mỗi thay đổi sửa luôn mọi chỗ liên quan; tài liệu khớp với code ([ADR 00000013](docs/adr/00000013-related-changes.md)).
 - `make check` chạy thành công trước khi đưa lên nhánh chính.
 - Nội dung dành cho người sử dụng được chuẩn bị trong [`CHANGELOG.md`](CHANGELOG.md) khi phát hành phiên bản.
 - Tuân thủ quy định pháp luật và các chính sách của GitHub.

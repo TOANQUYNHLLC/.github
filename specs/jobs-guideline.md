@@ -19,7 +19,7 @@ Mục tiêu là mã nguồn hoạt động đúng, cấu trúc rõ ràng và tà
 
 ## 🛠️ KIỂM TRA MÃ NGUỒN VÀ CẤU HÌNH
 
-- Kiểm tra imports, exports, kiểu dữ liệu, đường dẫn, tên biến, cấu hình và dependencies.
+- Kiểm tra imports, exports, kiểu dữ liệu, đường dẫn, tên biến, tên tệp, cấu hình và dependencies; tên tệp, thư mục theo một quy ước thống nhất.
 - Kiểm tra logic, giá trị mặc định, trường hợp biên, xử lý lỗi và quyền truy cập.
 - Kiểm tra luồng bất đồng bộ, quản lý tài nguyên, trạng thái dùng chung và nguy cơ xung đột.
 - Đối chiếu manifest, lockfile, phiên bản runtime, biến môi trường và cấu hình CI.
@@ -55,6 +55,7 @@ Mục tiêu là mã nguồn hoạt động đúng, cấu trúc rõ ràng và tà
 - Kiểm tra README, hướng dẫn cài đặt, phát triển, kiểm thử, triển khai, cấu hình, kiến trúc, docstring và chú thích liên quan.
 - Cập nhật hoặc xóa nội dung không còn khớp với mã nguồn, bao gồm tệp, lệnh, chức năng và cấu hình.
 - Kiểm tra lệnh, đường dẫn, ví dụ, liên kết và tên biến môi trường; không đưa secrets vào tài liệu.
+- Khi sửa bất cứ gì, rà soát toàn bộ dự án và sửa lại mọi chỗ liên quan — code gọi tới, tests, cấu hình, tài liệu — trong cùng thay đổi; tìm theo tên cũ, tên mới và từ khóa thay vì chỉ dựa vào kiểm tra tự động.
 - Mỗi khi thay đổi mã nguồn, cấu hình, dependencies, scripts, workflows hoặc hành vi của hệ thống, cập nhật tài liệu liên quan trong cùng thay đổi. Chỉ hoàn tất khi mã nguồn, tests, ví dụ cấu hình và tài liệu thống nhất.
 - Với ADR, đối chiếu quyết định đang áp dụng; khi thay đổi quyết định, cập nhật ADR của chủ đề đó và mục lục theo [`docs/adr/README.md`](../docs/adr/README.md).
 - Kiểm tra badge theo repository, tên workflow, branch, URL ảnh và đích liên kết; chỉ dùng badge có nguồn dữ liệu phù hợp với dự án.

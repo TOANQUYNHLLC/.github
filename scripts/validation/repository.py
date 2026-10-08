@@ -17,9 +17,35 @@ from validation.common import (
 	loadYaml,
 	readJsonObject,
 	readText,
+	trackedFiles,
 )
 from validation.forms import FORM_LABELS
 from validation.workflows import repositoryWorkflows, workflowJobs
+
+# Tên tệp, thư mục tự đặt: kebab-case (ADR 00000010). Tên do công cụ, GitHub quy định giữ nguyên: tên viết hoa
+# (README.md, CODEOWNERS, ISSUE_TEMPLATE/), test của unittest (test_*.py), gói Python (__init__.py), Makefile và tệp,
+# thư mục bắt đầu bằng dấu chấm (.gitignore, .github/).
+KEBAB_NAME = re.compile(r'[a-z0-9]+(?:-[a-z0-9]+)*')
+TOOL_NAME = re.compile(
+	r'[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*|test_[a-z0-9]+(?:_[a-z0-9]+)*|__init__|Makefile'
+)
+
+
+def checkFileNames():
+	"""Tệp và thư mục git quản lý đặt tên kebab-case, trừ tên do công cụ quy định."""
+	reported = set()
+	for path in trackedFiles():
+		for part in path.relative_to(ROOT).parts:
+			stem = part.split('.', 1)[0]
+			if part.startswith('.') or KEBAB_NAME.fullmatch(stem) or TOOL_NAME.fullmatch(stem):
+				continue
+			if part not in reported:
+				reported.add(part)
+				error(
+					path,
+					f'tên "{part}" phải viết kebab-case (chữ thường, số, nối bằng dấu gạch ngang) — ADR 00000010',
+				)
+
 
 # Nhãn mặc định GitHub tạo cho repository mới — bộ nhãn chuẩn phải có đủ để không mất nhãn quen thuộc.
 GITHUB_DEFAULT_LABELS = (
@@ -195,9 +221,9 @@ def checkRulesets():
 			configField(tagPath, rule, 'type', str) for rule in configItems(tagPath, tags, 'rules')
 		}:
 			error(tagPath, 'ruleset phải chặn creation, update, deletion của tag phát hành')
-	orgPath = ROOT / 'rulesets' / 'org-protect-main.json'
+	orgPath = ROOT / 'rulesets' / 'organization-protect-main.json'
 	if not orgPath.exists():
-		errors.append('thiếu tệp bắt buộc rulesets/org-protect-main.json')
+		errors.append('thiếu tệp bắt buộc rulesets/organization-protect-main.json')
 	else:
 		try:
 			org = readJsonObject(orgPath)
@@ -212,15 +238,15 @@ def checkRulesets():
 				'ruleset phải tên "Organization Protect Main" và nhắm mọi repository (~ALL)',
 			)
 	# Import ruleset cấp tổ chức báo "contains an invalid actor" với actor loại User.
-	for orgFile in sorted((ROOT / 'rulesets').glob('org-*.json')):
+	for orgFile in sorted((ROOT / 'rulesets').glob('organization-*.json')):
 		if re.search(r'"(actor_type|type)":\s*"User"', readText(orgFile)):
 			error(
 				orgFile,
 				'ruleset cấp tổ chức không dùng actor loại User — GitHub từ chối khi import',
 			)
-	orgTagPath = ROOT / 'rulesets' / 'org-protect-release-tags.json'
+	orgTagPath = ROOT / 'rulesets' / 'organization-protect-release-tags.json'
 	if not orgTagPath.exists():
-		errors.append('thiếu tệp bắt buộc rulesets/org-protect-release-tags.json')
+		errors.append('thiếu tệp bắt buộc rulesets/organization-protect-release-tags.json')
 	else:
 		try:
 			orgTags = readJsonObject(orgTagPath)
@@ -240,9 +266,9 @@ def checkRulesets():
 				'ruleset phải tên "Organization Protect Release Tags", nhắm ~ALL repository và refs/tags/v*, '
 				'refs/tags/Stable.v*, refs/tags/Beta.v*',
 			)
-	pushPath = ROOT / 'rulesets' / 'org-protect-pushes.json'
+	pushPath = ROOT / 'rulesets' / 'organization-protect-pushes.json'
 	if not pushPath.exists():
-		errors.append('thiếu tệp bắt buộc rulesets/org-protect-pushes.json')
+		errors.append('thiếu tệp bắt buộc rulesets/organization-protect-pushes.json')
 	else:
 		try:
 			pushes = readJsonObject(pushPath)

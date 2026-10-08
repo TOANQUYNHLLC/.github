@@ -57,6 +57,7 @@ from validation.forms import FORM_LABELS, checkForm, checkIssueConfig
 from validation.repository import (
 	checkConventions,
 	checkDependabotCooldown,
+	checkFileNames,
 	checkGitHubSettings,
 	checkLabelUsage,
 	checkMaintainers,
@@ -177,6 +178,7 @@ def runChecks():
 		checkAdrIndex,
 		checkRequiredFiles,
 		checkLabelUsage,
+		checkFileNames,
 	):
 		check()
 	return list(errors)

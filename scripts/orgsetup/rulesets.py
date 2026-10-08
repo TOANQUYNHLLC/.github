@@ -14,17 +14,17 @@ TAG_RULESET_FILE = github.ROOT / 'rulesets' / 'protect-release-tags.json'
 
 # Ruleset cấp tổ chức: tệp để import trên web, sinh từ bản cấp repository bằng orgRulesets(), để so với ruleset
 # đang cài trên web (lệnh org-rulesets so qua GraphQL khi REST API trả HTTP 403 ở gói Free).
-ORG_RULESET_FILE = github.ROOT / 'rulesets' / 'org-protect-main.json'
+ORG_RULESET_FILE = github.ROOT / 'rulesets' / 'organization-protect-main.json'
 
 ORG_RULESET_NAME = 'Organization Protect Main'
 
-ORG_TAG_RULESET_FILE = github.ROOT / 'rulesets' / 'org-protect-release-tags.json'
+ORG_TAG_RULESET_FILE = github.ROOT / 'rulesets' / 'organization-protect-release-tags.json'
 
 ORG_TAG_RULESET_NAME = 'Organization Protect Release Tags'
 
 # Push ruleset chặn tệp bí mật, cơ sở dữ liệu, tệp lớn (ADR 00000005): cấu hình này chỉ có bản cấp tổ chức —
 # GitHub chỉ áp dụng cho repository riêng tư, internal.
-ORG_PUSH_RULESET_FILE = github.ROOT / 'rulesets' / 'org-protect-pushes.json'
+ORG_PUSH_RULESET_FILE = github.ROOT / 'rulesets' / 'organization-protect-pushes.json'
 
 ORG_PUSH_RULESET_NAME = 'Organization Protect Pushes'
 
