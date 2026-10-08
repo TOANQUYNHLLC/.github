@@ -177,6 +177,30 @@ class MarkdownLinksTest(unittest.TestCase):
 				[],
 			)
 
+	def testRootRelativeLinksResolveFromRepositoryRoot(self):
+		# GitHub hiểu liên kết bắt đầu bằng / là tính từ gốc repository, không phải gốc ổ đĩa.
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder).resolve()
+			(root / 'docs').mkdir()
+			(root / 'docs' / 'x.md').write_text('# X\n', encoding='utf-8')
+			source = root / 'docs' / 'guide.md'
+			text = '[a](/docs/x.md) [b](/docs/x.md#x) [c](/docs/missing.md) [d](/docs/x.md#y)'
+			self.assertEqual(
+				module.findBrokenLinks(source, text, root=root),
+				[
+					'liên kết hỏng: /docs/missing.md',
+					'liên kết hỏng: /docs/x.md#y — không có tiêu đề tương ứng',
+				],
+			)
+			# main() lấy gốc repository từ Git, kể cả khi chạy trong thư mục con.
+			source.write_text('[a](/docs/x.md#x)\n', encoding='utf-8')
+			subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+			with contextlib.chdir(root / 'docs'), contextlib.redirect_stdout(io.StringIO()):
+				self.assertEqual(module.main(), 0)
+				source.write_text('[a](/docs/missing.md)\n', encoding='utf-8')
+				self.assertEqual(module.main(), 1)
+
 	def testUnreadableMarkdownReturnsFailure(self):
 		module = loadScript('check-markdown-links')
 		with tempfile.TemporaryDirectory() as folder:

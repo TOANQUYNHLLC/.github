@@ -44,9 +44,10 @@ def headingAnchors(path):
 	return anchors
 
 
-def findBrokenLinks(path, text, anchorsCache=None):
-	"""Thông báo cho từng liên kết nội bộ hỏng trong nội dung Markdown của path. anchorsCache chỉ dùng trong
-	một lượt kiểm tra; lượt mới tạo bộ đệm mới để nhận thay đổi trên đĩa."""
+def findBrokenLinks(path, text, anchorsCache=None, root=None):
+	"""Thông báo cho từng liên kết nội bộ hỏng trong nội dung Markdown của path. Liên kết bắt đầu bằng / tính từ
+	root (gốc repository, như GitHub); mặc định là thư mục hiện tại. anchorsCache chỉ dùng trong một lượt kiểm
+	tra; lượt mới tạo bộ đệm mới để nhận thay đổi trên đĩa."""
 	if anchorsCache is None:
 		anchorsCache = {}
 	messages = []
@@ -57,7 +58,10 @@ def findBrokenLinks(path, text, anchorsCache=None):
 		# Liên kết có thể mã hóa phần trăm (khoảng trắng %20, chữ có dấu trong tên tệp hay mục #…).
 		target = urllib.parse.unquote(target)
 		fragment = urllib.parse.unquote(fragment) if fragment else fragment
-		destination = path.parent / target if target else path
+		if target.startswith('/'):
+			destination = (root or Path('.')) / target.lstrip('/')
+		else:
+			destination = path.parent / target if target else path
 		if not destination.exists():
 			messages.append(f'liên kết hỏng: {target}')
 		elif fragment and destination.suffix == '.md':
@@ -97,12 +101,21 @@ def markdownFiles():
 	return [path for path in paths if not path.resolve().is_relative_to(SCRIPT_ROOT)]
 
 
+def repositoryRoot():
+	"""Gốc repository Git chứa thư mục hiện tại; ngoài Git thì dùng thư mục hiện tại."""
+	result = subprocess.run(
+		['git', 'rev-parse', '--show-toplevel'], capture_output=True, text=True, check=False
+	)
+	return Path(result.stdout.strip()) if result.returncode == 0 else Path('.')
+
+
 def main():
 	broken = 0
 	anchorsCache = {}
+	root = repositoryRoot()
 	for path in sorted(markdownFiles()):
 		try:
-			messages = findBrokenLinks(path, path.read_text(encoding='utf-8'), anchorsCache)
+			messages = findBrokenLinks(path, path.read_text(encoding='utf-8'), anchorsCache, root)
 		except (OSError, UnicodeError) as exc:
 			messages = [f'không đọc được Markdown: {exc}']
 		for message in messages:
