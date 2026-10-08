@@ -124,6 +124,32 @@ class GitHooksTest(unittest.TestCase):
 			self.git('add', '--', path.name)
 			self.assertEqual(self.module.preCommit(self.repo, []), 0)
 
+	@unittest.skipUnless(
+		(ROOT / 'node_modules/.bin/prettier').exists(), 'cần Prettier (make tools)'
+	)
+	def testOptionLikeFileCannotSkipPrettierChecks(self):
+		(self.repo / '--version').write_text('Tệp kiểm thử\n', encoding='utf-8')
+		path = self.repo / 'a.json'
+		path.write_text('{"a":1}\n', encoding='utf-8')
+		self.git('add', '--', '--version', path.name)
+		with silenced():
+			self.assertEqual(self.module.preCommit(self.repo, []), 1)
+			path.write_text('{\n\t"a": 1\n}\n', encoding='utf-8')
+			self.git('add', '--', path.name)
+			self.assertEqual(self.module.preCommit(self.repo, []), 0)
+
+	@unittest.skipUnless(
+		(ROOT / 'node_modules/.bin/prettier').exists() and shutil.which('ruff'),
+		'cần Prettier (make tools) và ruff (mise install)',
+	)
+	def testLeadingHyphenPythonFileIsChecked(self):
+		path = self.repo / '-tool.py'
+		for content, expected in (('value=1\n', 1), ('value = 1\n', 0)):
+			with self.subTest(content=content), silenced():
+				path.write_text(content, encoding='utf-8')
+				self.git('add', '--', path.name)
+				self.assertEqual(self.module.preCommit(self.repo, []), expected)
+
 	def testToolEnvironmentPinsRepositoryVersions(self):
 		# Shim của mise ở thư mục tạm không thấy mise.toml, .nvmrc: hook ghim đúng phiên bản của repository; biến
 		# người dùng đã đặt được giữ nguyên.

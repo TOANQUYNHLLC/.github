@@ -77,6 +77,6 @@ Mỗi repository đã nhập có phần riêng; `local-settings` áp dụng các
 - [Self-hosted runner groups](https://docs.github.com/en/rest/actions/self-hosted-runner-groups)
 - [Code security configurations](https://docs.github.com/en/rest/code-security/configurations)
 - [Organization interaction limits](https://docs.github.com/en/rest/interactions/orgs)
-- [Code scanning default setup](https://docs.github.com/en/rest/code-scanning/code-scanning#update-default-setup-configuration)
-- [UpdateRepositoryInput của GraphQL](https://docs.github.com/en/graphql/reference/repos#updaterepositoryinput)
+- [Code scanning default setup](https://docs.github.com/en/rest/code-scanning/code-scanning#update-a-code-scanning-default-setup-configuration)
+- [UpdateRepositoryInput của GraphQL](https://docs.github.com/en/graphql/reference/repos#input-object-updaterepositoryinput)
 - [OpenAPI chính thức của GitHub](https://github.com/github/rest-api-description)

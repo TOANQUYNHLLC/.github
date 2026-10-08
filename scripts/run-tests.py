@@ -114,7 +114,8 @@ def runWorker(ids, timingPath):
 
 
 def timedShard(ids):
-	"""Chạy một nhóm test trong tiến trình riêng; trả (mã thoát, số test, đầu ra, thời gian từng test)."""
+	"""Chạy một nhóm test trong tiến trình riêng; đếm theo báo cáo cuối của unittest trên stderr.
+	Trả (mã thoát, số test, đầu ra, thời gian từng test); log tự in trong test không thay báo cáo cuối."""
 	with tempfile.TemporaryDirectory() as folder:
 		path = Path(folder) / 'times.json'
 		result = subprocess.run(
@@ -125,12 +126,12 @@ def timedShard(ids):
 			check=False,
 		)
 		output = result.stdout + result.stderr
-		ran = re.search(r'^Ran (\d+) tests?', output, re.MULTILINE)
+		reports = re.findall(r'^Ran (\d+) tests? in [0-9.]+s$', result.stderr, re.MULTILINE)
 		try:
 			timings = json.loads(path.read_text(encoding='utf-8'))
 		except (OSError, ValueError):
 			timings = {}
-		return result.returncode, int(ran.group(1)) if ran else 0, output, timings
+		return result.returncode, int(reports[-1]) if reports else 0, output, timings
 
 
 def testIds(suite):

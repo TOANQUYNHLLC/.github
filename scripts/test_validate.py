@@ -494,6 +494,26 @@ class ValidateTest(unittest.TestCase):
 		self.edit('README.md', '## 🎯 MỤC ĐÍCH', '## 🎯 Mục đích')
 		self.assertFails('tiêu đề phải viết hoa')
 
+	def testIndentedAtxHeadingsMustBeUppercase(self):
+		path = self.repo / 'example.md'
+		for indent in range(4):
+			for separator in (' ', '\t'):
+				with self.subTest(indent=indent, separator=separator):
+					path.write_text(f'{" " * indent}##{separator}Mục đích\n', encoding='utf-8')
+					self.assertFails('example.md: dòng 1: tiêu đề phải viết hoa')
+					path.write_text(f'{" " * indent}##{separator}MỤC ĐÍCH\n', encoding='utf-8')
+					code, output = self.runValidate()
+					self.assertEqual(code, 0, output)
+
+	def testNonHeadingsDoNotRequireUppercase(self):
+		path = self.repo / 'example.md'
+		path.write_text(
+			'    ## Mục đích\n\n####### Mục đích\n\n##Mục đích\n\n\\## Mục đích\n',
+			encoding='utf-8',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
+
 	def testSecurityEmailTemplateMatchesLink(self):
 		self.edit('SECURITY.md', '- **Mô tả vấn đề:**', '- **Mô tả lỗi:**')
 		self.assertFails('nội dung liên kết email khác mẫu')
@@ -855,6 +875,26 @@ class ValidateTest(unittest.TestCase):
 		self.edit('scripts/release.py', 'def releaseNotes(', 'def release_notes(')
 		self.assertFails('tên hàm "release_notes" phải viết camelCase tiếng Anh')
 
+	def testClassNamesMustBePascalCase(self):
+		path = self.repo / 'example.py'
+		for className in ('bad_class', 'badClass', 'BAD_CLASS'):
+			with self.subTest(className=className):
+				path.write_text(
+					f'import unittest\n\nclass {className}(unittest.TestCase):\n\tpass\n',
+					encoding='utf-8',
+				)
+				self.assertFails(f'tên lớp "{className}" phải viết PascalCase tiếng Anh')
+		path.write_text('class OuterClass:\n\tclass bad_nested:\n\t\tpass\n', encoding='utf-8')
+		self.assertFails('tên lớp "bad_nested" phải viết PascalCase tiếng Anh')
+
+	def testPascalCaseClassNamesAreAllowed(self):
+		path = self.repo / 'example.py'
+		for className in ('CustomClass', 'HTTPHandler', '_InternalClass'):
+			with self.subTest(className=className):
+				path.write_text(f'class {className}:\n\tpass\n', encoding='utf-8')
+				code, output = self.runValidate()
+				self.assertEqual(code, 0, output)
+
 	def testNamesInNestedScopesAreChecked(self):
 		path = self.repo / 'scripts' / 'test_nested.py'
 		path.write_text(
@@ -883,6 +923,41 @@ class ValidateTest(unittest.TestCase):
 		)
 		self.edit('scripts/release.py', 'changelogPath = ROOT', 'changelog_path = ROOT')
 		self.assertFails('tên biến "changelog_path" phải viết camelCase tiếng Anh')
+
+	def testImportAliasesMustFollowVariableNames(self):
+		path = self.repo / 'example.py'
+		for code in ('import os as bad_alias\n', 'from os import path as bad_alias\n'):
+			with self.subTest(code=code):
+				path.write_text(code, encoding='utf-8')
+				self.assertFails('tên biến "bad_alias" phải viết camelCase tiếng Anh')
+
+	def testPatternCaptureNamesMustFollowVariableNames(self):
+		path = self.repo / 'example.py'
+		for pattern in (
+			'bad_capture',
+			'[bad_capture]',
+			'[*bad_capture]',
+			'{"key": item, **bad_capture}',
+			'[item] as bad_capture',
+		):
+			with self.subTest(pattern=pattern):
+				path.write_text(f'match value:\n\tcase {pattern}:\n\t\tpass\n', encoding='utf-8')
+				self.assertFails('tên biến "bad_capture" phải viết camelCase tiếng Anh')
+
+	def testImportAndPatternBindingsAcceptConventionalNames(self):
+		path = self.repo / 'example.py'
+		for code in (
+			'import os as customOs\nfrom os import path as PATH_ALIAS\n',
+			'from unittest import TestCase as CustomCase\nfrom os import get_exec_path\n',
+			'from os import get_exec_path as get_exec_path\n',
+			'match value:\n\tcase [firstItem, *remainingItems] as result:\n\t\tpass\n',
+			'match value:\n\tcase {"key": item, **remainingItems}:\n\t\tpass\n',
+			'match value:\n\tcase Point(external_name=validName):\n\t\tpass\n\tcase _:\n\t\tpass\n',
+		):
+			with self.subTest(code=code):
+				path.write_text(code, encoding='utf-8')
+				exitCode, output = self.runValidate()
+				self.assertEqual(exitCode, 0, output)
 
 	def testLibraryDefinedNamesAreAllowed(self):
 		# Tên do Python, thư viện quy định không phải tên tự đặt: __init__, __all__, phương thức ghi đè lớp cha
@@ -1181,6 +1256,22 @@ class Holder:
 			'.well-known/security.txt', r'^Expires: .+$', 'Expires: 2099-01-01T00:00:00.000Z'
 		)
 		self.assertFails('Expires vượt quá 1 năm')
+
+	def testChangelogCodeExamplesAreLiteral(self):
+		path = self.repo / 'CHANGELOG.md'
+		original = path.read_text(encoding='utf-8')
+		for fence in ('~~~', '````'):
+			with self.subTest(fence=fence):
+				example = (
+					f'{fence}md\n## [CHƯA PHÁT HÀNH](example.md)\n'
+					f'## [CHƯA PHÁT HÀNH](example.md)\n{fence}\n\n'
+				)
+				path.write_text(
+					original.replace('## [CHƯA PHÁT HÀNH]', example + '## [CHƯA PHÁT HÀNH]', 1),
+					encoding='utf-8',
+				)
+				code, output = self.runValidate()
+				self.assertEqual(code, 0, output)
 
 	def testChangelogVersionsNotDuplicated(self):
 		path = self.repo / 'CHANGELOG.md'

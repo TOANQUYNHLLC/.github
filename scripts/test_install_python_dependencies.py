@@ -75,6 +75,60 @@ class PythonDependenciesTest(unittest.TestCase):
 		)
 		self.assertEqual(len(self.module.dependencyCommands(self.project)), 1)
 
+	def testNonPackagePoetrySkipsProjectInstallAndKeepsRequirements(self):
+		for extra in (
+			'',
+			'[build-system]\nrequires = ["poetry-core"]\nbuild-backend = "poetry.core.masonry.api"\n',
+			'[project]\ndependencies = ["requests"]\n',
+		):
+			with self.subTest(extra=extra):
+				(self.project / 'pyproject.toml').write_text(
+					'[tool.poetry]\npackage-mode = false\n' + extra, encoding='utf-8'
+				)
+				(self.project / 'requirements.txt').write_text('requests\n', encoding='utf-8')
+				(self.project / 'requirements-dev.txt').write_text('pytest\n', encoding='utf-8')
+
+				def install(command, **kwargs):
+					if '-e' in command:
+						raise subprocess.CalledProcessError(1, command)
+					return subprocess.CompletedProcess(command, 0)
+
+				with (
+					mock.patch.object(self.module.Path, 'cwd', return_value=self.project),
+					mock.patch.object(self.module.subprocess, 'run', side_effect=install) as run,
+					contextlib.redirect_stderr(io.StringIO()),
+				):
+					self.assertEqual(self.module.main(), 0)
+				commands = [call.args[0] for call in run.call_args_list]
+				self.assertEqual(
+					[command[-1] for command in commands[:2]],
+					[
+						'requirements.txt',
+						'requirements-dev.txt',
+					],
+				)
+				self.assertEqual(commands[-1][-1], 'pytest')
+				self.assertTrue(any(value.startswith('ruff==') for value in commands[-1]))
+				self.assertFalse(any('-e' in command for command in commands))
+
+	def testInvalidPoetryModeStopsBeforeAnyInstallation(self):
+		for contents in (
+			'[tool]\npoetry = true\n',
+			'[tool]\npoetry = []\n',
+			'[tool.poetry]\npackage-mode = "false"\n',
+			'[tool.poetry]\npackage-mode = 0\n',
+		):
+			with self.subTest(contents=contents):
+				(self.project / 'pyproject.toml').write_text(contents, encoding='utf-8')
+				with (
+					mock.patch.object(self.module.Path, 'cwd', return_value=self.project),
+					mock.patch.object(self.module.subprocess, 'run') as run,
+					contextlib.redirect_stderr(io.StringIO()) as output,
+				):
+					self.assertEqual(self.module.main(), 1)
+				self.assertIn('poetry', output.getvalue())
+				run.assert_not_called()
+
 	def testMalformedManifestStopsBeforeAnyInstallation(self):
 		(self.project / 'pyproject.toml').write_text('[project\n', encoding='utf-8')
 		with (
