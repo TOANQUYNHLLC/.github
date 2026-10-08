@@ -1,6 +1,6 @@
 # 0017. NGUỒN CÀI ĐẶT GITHUB Ở LOCAL
 
-- **Trạng thái:** Đề xuất
+- **Trạng thái:** Chấp nhận
 - **Ngày:** 2026-10-07
 
 ## 📌 BỐI CẢNH

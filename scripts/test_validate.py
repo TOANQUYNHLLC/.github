@@ -1324,6 +1324,18 @@ class Holder:
 		):
 			with self.subTest(original=original, replacement=replacement):
 				try:
+					if original == 'Đề xuất':
+						# Bảng thật có thể không còn ADR đề xuất: đưa ADR 0001 về Đề xuất ở cả tệp lẫn bảng.
+						self.edit(
+							'docs/adr/0001-tab-indentation.md',
+							'- **Trạng thái:** Chấp nhận',
+							'- **Trạng thái:** Đề xuất',
+						)
+						self.editRegex(
+							'docs/adr/README.md',
+							r'^(\| \[0001\][^|]+\|[^|]+\|) Chấp nhận +\|',
+							r'\1 Đề xuất |',
+						)
 					self.editRegex(
 						'docs/adr/README.md',
 						rf'^(\| \[\d{{4}}\][^|]+\|[^|]+\|) {re.escape(original)} +\|',
