@@ -150,9 +150,12 @@ Workflow mẫu Node.js cài dependency bằng `npm ci`, đọc phiên bản Node
 Cài công cụ đúng phiên bản trong [`mise.toml`](mise.toml) và [`.nvmrc`](.nvmrc) — ruff, ShellCheck, actionlint, Node.js cùng phiên bản với CI (CI dùng Python có sẵn của runner, script cần ≥ 3.11) — rồi cài git hook:
 
 ```bash
+mise trust
 mise install
 make hooks
 ```
+
+mise chỉ đọc `mise.toml` sau khi được tin cậy (`mise trust`) và chỉ đưa công cụ lên `PATH` khi shell đã kích hoạt mise (`mise activate` trong tệp cấu hình shell, xem [hướng dẫn của mise](https://mise.jdx.dev/getting-started.html)). Thiếu một trong hai bước, lệnh dùng công cụ cài sẵn của máy: Node.js khác bản trong `.nvmrc` làm `make check` dừng với lỗi `EBADDEVENGINES`.
 
 **Dev Container, Codespaces** ([`.devcontainer/`](.devcontainer/)) tự làm các bước trên:
 
