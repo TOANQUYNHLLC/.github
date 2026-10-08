@@ -9,14 +9,32 @@
 		}
 	},
 	"bypass_actors": [
-		{ "actor_id": 107941543, "actor_type": "User", "bypass_mode": "always" },
-		{ "actor_id": 108377655, "actor_type": "User", "bypass_mode": "always" }
+		{
+			"actor_id": 107941543,
+			"actor_type": "User",
+			"bypass_mode": "always"
+		},
+		{
+			"actor_id": 108377655,
+			"actor_type": "User",
+			"bypass_mode": "always"
+		}
 	],
 	"rules": [
-		{ "type": "creation" },
-		{ "type": "update" },
-		{ "type": "deletion" },
-		{ "type": "non_fast_forward" },
-		{ "type": "required_signatures" }
+		{
+			"type": "creation"
+		},
+		{
+			"type": "update"
+		},
+		{
+			"type": "deletion"
+		},
+		{
+			"type": "non_fast_forward"
+		},
+		{
+			"type": "required_signatures"
+		}
 	]
 }

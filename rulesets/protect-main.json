@@ -2,17 +2,40 @@
 	"name": "Protect Main",
 	"target": "branch",
 	"enforcement": "active",
-	"conditions": { "ref_name": { "exclude": [], "include": ["~DEFAULT_BRANCH"] } },
+	"conditions": {
+		"ref_name": {
+			"exclude": [],
+			"include": ["~DEFAULT_BRANCH"]
+		}
+	},
 	"bypass_actors": [
-		{ "actor_id": 107941543, "actor_type": "User", "bypass_mode": "always" },
-		{ "actor_id": 108377655, "actor_type": "User", "bypass_mode": "always" }
+		{
+			"actor_id": 107941543,
+			"actor_type": "User",
+			"bypass_mode": "always"
+		},
+		{
+			"actor_id": 108377655,
+			"actor_type": "User",
+			"bypass_mode": "always"
+		}
 	],
 	"rules": [
-		{ "type": "deletion" },
-		{ "type": "non_fast_forward" },
-		{ "type": "creation" },
-		{ "type": "update" },
-		{ "type": "required_signatures" },
+		{
+			"type": "deletion"
+		},
+		{
+			"type": "non_fast_forward"
+		},
+		{
+			"type": "creation"
+		},
+		{
+			"type": "update"
+		},
+		{
+			"type": "required_signatures"
+		},
 		{
 			"type": "pull_request",
 			"parameters": {
@@ -23,8 +46,14 @@
 				"dismissal_restriction": {
 					"enabled": true,
 					"allowed_actors": [
-						{ "id": 107941543, "type": "User" },
-						{ "id": 108377655, "type": "User" }
+						{
+							"id": 107941543,
+							"type": "User"
+						},
+						{
+							"id": 108377655,
+							"type": "User"
+						}
 					]
 				},
 				"require_last_push_approval": true,
@@ -43,13 +72,30 @@
 						"context": "Liên kết, biểu mẫu, nhãn, cấu hình định dạng và mẫu email",
 						"integration_id": 15368
 					},
-					{ "context": "Định dạng (Prettier, ruff)", "integration_id": 15368 },
-					{ "context": "Shell script và workflow", "integration_id": 15368 },
-					{ "context": "Kiểm tra tiêu đề Pull Request", "integration_id": 15368 },
-					{ "context": "Kiểm tra tên branch", "integration_id": 15368 }
+					{
+						"context": "Định dạng (Prettier, ruff)",
+						"integration_id": 15368
+					},
+					{
+						"context": "Shell script và workflow",
+						"integration_id": 15368
+					},
+					{
+						"context": "Kiểm tra tiêu đề Pull Request",
+						"integration_id": 15368
+					},
+					{
+						"context": "Kiểm tra tên branch",
+						"integration_id": 15368
+					}
 				]
 			}
 		},
-		{ "type": "code_quality", "parameters": { "severity": "all" } }
+		{
+			"type": "code_quality",
+			"parameters": {
+				"severity": "all"
+			}
+		}
 	]
 }
