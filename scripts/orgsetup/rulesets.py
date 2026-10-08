@@ -16,17 +16,17 @@ TAG_RULESET_FILE = github.ROOT / 'rulesets' / 'protect-release-tags.json'
 # đang cài trên web (lệnh org-rulesets so qua GraphQL khi REST API trả HTTP 403 ở gói Free).
 ORG_RULESET_FILE = github.ROOT / 'rulesets' / 'org-protect-main.json'
 
-ORG_RULESET_NAME = 'Protect Main (Organization)'
+ORG_RULESET_NAME = 'Organization Protect Main'
 
 ORG_TAG_RULESET_FILE = github.ROOT / 'rulesets' / 'org-protect-release-tags.json'
 
-ORG_TAG_RULESET_NAME = 'Protect Release Tags (Organization)'
+ORG_TAG_RULESET_NAME = 'Organization Protect Release Tags'
 
 # Push ruleset chặn tệp bí mật, cơ sở dữ liệu, tệp lớn (ADR 00000005): cấu hình này chỉ có bản cấp tổ chức —
 # GitHub chỉ áp dụng cho repository riêng tư, internal.
 ORG_PUSH_RULESET_FILE = github.ROOT / 'rulesets' / 'org-protect-pushes.json'
 
-ORG_PUSH_RULESET_NAME = 'Protect Pushes (Organization)'
+ORG_PUSH_RULESET_NAME = 'Organization Protect Pushes'
 
 # Import cấp tổ chức không nhận actor loại User ("contains an invalid actor"): bỏ qua là chủ tổ chức (actor_id
 # bị bỏ qua) — cùng người quản trị; ruleset trên web tắt giới hạn hủy phê duyệt.
@@ -49,7 +49,7 @@ ORG_CODE_SCANNING_RULE = {
 
 ORG_REPOSITORIES = {'exclude': [], 'include': ['~ALL'], 'protected': False}
 
-# Protect Main (Organization) áp dụng thêm nhánh main của mọi repository, kể cả repository có nhánh mặc định khác (ADR 00000007).
+# Organization Protect Main áp dụng thêm nhánh main của mọi repository, kể cả repository có nhánh mặc định khác (ADR 00000007).
 ORG_EXTRA_BRANCH = 'refs/heads/main'
 
 

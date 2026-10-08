@@ -9,7 +9,7 @@ Quy tắc chung cấm đưa mật khẩu, khóa, dữ liệu cá nhân và hồ 
 
 ## ✅ QUYẾT ĐỊNH
 
-- Ruleset cấp tổ chức **Protect Pushes (Organization)** trong `rulesets/org-protect-pushes.json`: target `push`, nhắm `~ALL` repository, danh sách bỏ qua là chủ tổ chức (`OrganizationAdmin`, **always**).
+- Ruleset cấp tổ chức **Organization Protect Pushes** trong `rulesets/org-protect-pushes.json`: target `push`, nhắm `~ALL` repository, danh sách bỏ qua là chủ tổ chức (`OrganizationAdmin`, **always**).
 - Quy tắc:
     - Chặn đường dẫn `**/.env` và khóa SSH riêng (`id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`); không chặn `.env.*` vì `.env.example` được phép commit.
     - Chặn đuôi khóa, chứng chỉ, kho mật khẩu (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `*.ppk`, `*.kdbx`) và tệp cơ sở dữ liệu (`*.sqlite`, `*.sqlite3`, `*.db`).

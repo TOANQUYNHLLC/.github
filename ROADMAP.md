@@ -16,7 +16,7 @@ Với mỗi repository mới, người quản trị chạy [`scripts/org-setup.p
 - [ ] `python3 scripts/org-setup.py settings --apply --repo <tên>` — cho phép Merge, Squash, tắt Rebase; tự xóa branch; bật Dependabot alerts và security updates, secret scanning, push protection, báo cáo lỗ hổng riêng tư, Release bất biến; quyền GitHub Actions.
 - [ ] `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — ruleset **Protect Release Tags** từ [`protect-release-tags.json`](rulesets/protect-release-tags.json) và **Protect Main** từ [`protect-main.json`](rulesets/protect-main.json), Protect Main chỉ giữ kiểm tra bắt buộc mà repository có job tương ứng.
 - [ ] `python3 scripts/org-setup.py labels --apply --repo <tên>` — bộ nhãn chuẩn.
-- [ ] Thêm workflow CodeQL từ [`workflow-templates/codeql.yml`](workflow-templates/codeql.yml) (**Actions → New workflow**, sửa danh sách ngôn ngữ theo dự án): ruleset Protect Main (Organization) bắt buộc kết quả code scanning của CodeQL khi tổ chức dùng gói Team.
+- [ ] Thêm workflow CodeQL từ [`workflow-templates/codeql.yml`](workflow-templates/codeql.yml) (**Actions → New workflow**, sửa danh sách ngôn ngữ theo dự án): ruleset Organization Protect Main bắt buộc kết quả code scanning của CodeQL khi tổ chức dùng gói Team.
 - [ ] `python3 scripts/org-setup.py team --apply --repo <tên>` — cấp quyền cho các team (**maintainers** quyền **Maintain** để `CODEOWNERS` có hiệu lực).
 
 ---
@@ -33,7 +33,7 @@ GitHub không có API cho các mục này — người quản trị làm trên w
 
 - [ ] Bật GitHub Discussions cho các repository khác khi cần (`python3 scripts/org-setup.py settings --apply --repo <tên> --discussions`); `.github` đã bật, biểu mẫu có sẵn trong [`.github/DISCUSSION_TEMPLATE/`](.github/DISCUSSION_TEMPLATE/).
 - [ ] Khi nâng lên gói **Team**: ruleset cấp tổ chức được thực thi — cân nhắc ADR mới để bỏ ruleset cấp repository trùng lặp.
-- [ ] Xóa quy tắc kiểm tra bắt buộc rỗng (không chặn gì) của **Protect Release Tags (Organization)** trên web, rồi bỏ khỏi `orgTagRuleset()` trong [`scripts/orgsetup/rulesets.py`](scripts/orgsetup/rulesets.py) và sinh lại tệp.
+- [ ] Xóa quy tắc kiểm tra bắt buộc rỗng (không chặn gì) của **Organization Protect Release Tags** trên web, rồi bỏ khỏi `orgTagRuleset()` trong [`scripts/orgsetup/rulesets.py`](scripts/orgsetup/rulesets.py) và sinh lại tệp.
 - [ ] Code security configuration **GitHub recommended** (**Organization settings → Advanced Security → Configurations**): đã có nhưng chưa gắn repository nào và chưa là mặc định cho repository mới — đây là cách GitHub khuyên dùng thay cho bật từng tính năng (`org-setup.py settings`). Lưu ý cấu hình này bật code scanning default setup: cần bật GitHub Actions và không dùng chung với workflow CodeQL (advanced setup) của repository.
 - [ ] Quét bí mật theo mẫu tùy chỉnh (non-provider patterns) và kiểm tra bí mật còn hiệu lực (validity checks): cần gói **GitHub Secret Protection**.
 
