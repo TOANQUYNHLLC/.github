@@ -7,6 +7,7 @@ Chỉ lấy trường nằm trong danh sách cho phép; không lưu toàn bộ p
 import json
 import re
 import tempfile
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import quote
@@ -14,6 +15,8 @@ from urllib.parse import quote
 from orgsetup import github, resources
 
 CONFIG_NAME = 'github-settings.json'
+# printWidth của .prettierrc.json: tệp nhập về phải giữ đúng định dạng Prettier để make check không báo lỗi.
+PRINT_WIDTH = 100
 BOOL = bool
 STRING = str
 ORG_FIELDS = {
@@ -621,6 +624,60 @@ def validateDependencies(config):
 			raise ValueError(f'{repo}: tổ chức đang bắt buộc Release bất biến')
 
 
+def displayWidth(line):
+	"""Độ rộng dòng theo cách Prettier đo: tab đầu dòng rộng 4 (tabWidth), ký tự Đông Á rộng 2."""
+	return sum(
+		4 if character == '\t' else 2 if unicodedata.east_asian_width(character) in 'WF' else 1
+		for character in line
+	)
+
+
+def inlineJson(value):
+	"""Một dòng như Prettier in mảng; None khi Prettier luôn tách dòng: object không rỗng (tệp luôn mở rộng
+	object), hoặc mảng từ hai phần tử mà mọi phần tử là mảng có hơn một phần tử."""
+	if isinstance(value, dict):
+		return None if value else '{}'
+	if not isinstance(value, list):
+		return json.dumps(value, ensure_ascii=False)
+	if len(value) > 1 and all(isinstance(item, list) and len(item) > 1 for item in value):
+		return None
+	items = [inlineJson(item) for item in value]
+	return None if None in items else f'[{", ".join(items)}]'
+
+
+def jsonText(data):
+	"""JSON thụt tab như Prettier định dạng tệp này: object không rỗng luôn mở rộng; mảng gộp một dòng khi
+	inlineJson cho phép và vừa PRINT_WIDTH, còn lại mỗi phần tử một dòng."""
+	lines = []
+
+	def emit(value, depth, prefix, suffix):
+		indent = '\t' * depth
+		if isinstance(value, dict) and value:
+			lines.append(f'{indent}{prefix}{{')
+			for index, (key, item) in enumerate(value.items()):
+				keyText = json.dumps(key, ensure_ascii=False)
+				emit(item, depth + 1, f'{keyText}: ', ',' if index < len(value) - 1 else '')
+			lines.append(f'{indent}}}{suffix}')
+			return
+		if isinstance(value, list) and value:
+			inline = inlineJson(value)
+			if (
+				inline is not None
+				and displayWidth(f'{indent}{prefix}{inline}{suffix}') <= PRINT_WIDTH
+			):
+				lines.append(f'{indent}{prefix}{inline}{suffix}')
+				return
+			lines.append(f'{indent}{prefix}[')
+			for index, item in enumerate(value):
+				emit(item, depth + 1, '', ',' if index < len(value) - 1 else '')
+			lines.append(f'{indent}]{suffix}')
+			return
+		lines.append(f'{indent}{prefix}{json.dumps(value, ensure_ascii=False)}{suffix}')
+
+	emit(data, 0, '', '')
+	return '\n'.join(lines) + '\n'
+
+
 def importSettings():
 	"""GET GitHub → ghi nguyên tử một tệp local sau khi hoàn tất đọc; không gửi mutation GitHub."""
 	previous = readConfig()
@@ -654,7 +711,7 @@ def importSettings():
 			delete=False,
 		) as output:
 			temporary = Path(output.name)
-			output.write(json.dumps(config, ensure_ascii=False, indent='\t') + '\n')
+			output.write(jsonText(config))
 		temporary.replace(path)
 	finally:
 		if temporary is not None:
