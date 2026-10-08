@@ -1255,6 +1255,27 @@ class OrgSetupTest(unittest.TestCase):
 		for source, ruleset in rulesets.orgRulesets():
 			self.assertEqual(json.loads(source.read_text(encoding='utf-8')), ruleset, source.name)
 
+	def testOrgProtectMainAllowsRebaseOnlyAtOrganizationLevel(self):
+		# ADR 0018: bản cấp tổ chức cho phép thêm Rebase và áp dụng cả refs/heads/main; bản cấp repository vẫn chỉ
+		# Merge, Squash trên nhánh mặc định (ADR 0006).
+		def mergeMethods(ruleset):
+			return next(
+				rule['parameters']['allowed_merge_methods']
+				for rule in ruleset['rules']
+				if rule['type'] == 'pull_request'
+			)
+
+		organization = rulesets.orgRuleset()
+		self.assertEqual(mergeMethods(organization), ['merge', 'squash', 'rebase'])
+		self.assertEqual(
+			organization['conditions']['ref_name']['include'],
+			['~DEFAULT_BRANCH', 'refs/heads/main'],
+		)
+		for repo in ('.github', 'app'):
+			repository = rulesets.rulesetFor(repo)
+			self.assertEqual(mergeMethods(repository), ['merge', 'squash'])
+			self.assertEqual(repository['conditions']['ref_name']['include'], ['~DEFAULT_BRANCH'])
+
 	def testOrgCodeScanningRuleMatchesGraphql(self):
 		# Dạng GraphQL trả về cho quy tắc code scanning trên web phải khớp quy tắc trong tệp cấp tổ chức.
 		node = {

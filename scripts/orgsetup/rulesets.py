@@ -49,6 +49,9 @@ ORG_CODE_SCANNING_RULE = {
 
 ORG_REPOSITORIES = {'exclude': [], 'include': ['~ALL'], 'protected': False}
 
+# Protect Main (Organization) áp dụng thêm nhánh main của mọi repository, kể cả repository có nhánh mặc định khác (ADR 0018).
+ORG_EXTRA_BRANCH = 'refs/heads/main'
+
 
 def rulesetFor(repo):
 	"""Ruleset Protect Main cho repository: repository khác chỉ giữ kiểm tra bắt buộc có job tương ứng."""
@@ -351,13 +354,18 @@ def graphqlVisible(ruleset):
 
 def orgRuleset():
 	"""Protect Main cho mọi repository ở cấp tổ chức: như Protect Main của repository khác (chỉ giữ kiểm tra
-	bắt buộc có ở mọi repository; giữ code_quality), nhắm ~ALL repository; thêm code scanning như web."""
+	bắt buộc có ở mọi repository; giữ code_quality), nhắm ~ALL repository; thêm code scanning như web. Khác bản
+	cấp repository (ADR 0018): áp dụng cả refs/heads/main ngoài nhánh mặc định và cho phép thêm Rebase."""
 	ruleset = rulesetFor('app')
 	ruleset['name'] = ORG_RULESET_NAME
 	ruleset['conditions'] = {
-		'ref_name': {'exclude': [], 'include': ['~DEFAULT_BRANCH']},
+		'ref_name': {'exclude': [], 'include': ['~DEFAULT_BRANCH', ORG_EXTRA_BRANCH]},
 		'repository_name': dict(ORG_REPOSITORIES),
 	}
+	for rule in ruleset['rules']:
+		if rule['type'] == 'pull_request':
+			methods = rule['parameters']['allowed_merge_methods']
+			rule['parameters']['allowed_merge_methods'] = [*methods, 'rebase']
 	ruleset['rules'].append(dict(ORG_CODE_SCANNING_RULE))
 	return orgActors(ruleset)
 
