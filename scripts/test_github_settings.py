@@ -101,6 +101,48 @@ class GitHubSettingsTest(unittest.TestCase):
 			self.assertEqual(captured['unavailable'], unavailable)
 			self.assertNotIn('actions/permissions', captured['organization']['endpoints'])
 
+	def testImportWritesPrettierFormattedJson(self):
+		# make check chạy Prettier trên github-settings.json: tệp vừa nhập phải đúng định dạng đó ngay, không cần
+		# make format. Tệp trong repository đã qua Prettier nên là mẫu chuẩn.
+		path = configuration.github.ROOT / configuration.CONFIG_NAME
+		self.assertEqual(configuration.jsonText(json.loads(path.read_text())), path.read_text())
+		self.assertEqual(
+			configuration.jsonText({'short': ['a', 'b'], 'empty': [], 'object': {}}),
+			'{\n\t"short": ["a", "b"],\n\t"empty": [],\n\t"object": {}\n}\n',
+		)
+		# Vượt printWidth (tab rộng 4) hoặc mảng gồm các mảng nhiều phần tử: mỗi phần tử một dòng.
+		self.assertEqual(
+			configuration.jsonText({'long': ['x' * 45, 'y' * 45]}),
+			f'{{\n\t"long": [\n\t\t"{"x" * 45}",\n\t\t"{"y" * 45}"\n\t]\n}}\n',
+		)
+		self.assertEqual(
+			configuration.jsonText(
+				{'pairs': [['a', 'b'], ['c', 'd']], 'mixed': [['a', 'b'], ['c']]}
+			),
+			'{\n\t"pairs": [\n\t\t["a", "b"],\n\t\t["c", "d"]\n\t],\n\t"mixed": [["a", "b"], ["c"]]\n}\n',
+		)
+		with tempfile.TemporaryDirectory() as directory:
+			root = Path(directory)
+			self.saveConfig(root, self.config)
+			with (
+				mock.patch.object(github, 'ROOT', root),
+				mock.patch.object(github, 'listRepos', return_value=['.github']),
+				mock.patch.object(
+					configuration,
+					'readScope',
+					side_effect=lambda repo: (
+						(self.config['organization'], {})
+						if repo is None
+						else (self.config['repositories'][repo], {})
+					),
+				),
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				self.assertEqual(configuration.importSettings(), 0)
+			written = (root / configuration.CONFIG_NAME).read_text(encoding='utf-8')
+			self.assertEqual(written, configuration.jsonText(json.loads(written)))
+			self.assertIn('\t"organization_name": "TOANQUYNHLLC",\n', written)
+
 	def testUnknownKeysAndSelectedListsAreRejectedBeforeWriting(self):
 		for mutate in (
 			lambda config: config['organization']['settings'].update(

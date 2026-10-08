@@ -41,7 +41,7 @@ EXPIRY_NOTICE_DAYS = 30
 
 
 def checkLinks(path, text):
-	for message in markdownLinks.findBrokenLinks(path, text, anchorsCache):
+	for message in markdownLinks.findBrokenLinks(path, text, anchorsCache, ROOT):
 		error(path, message)
 
 

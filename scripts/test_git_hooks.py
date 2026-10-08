@@ -191,7 +191,7 @@ class GitHooksTest(unittest.TestCase):
 	def testPrePushRunsMakeCheckOnPushedHead(self):
 		# Đẩy đúng HEAD, thư mục làm việc sạch: chạy make check, lỗi thì chặn.
 		head = self.git('rev-parse', 'HEAD')
-		line = f'refs/heads/main {head} refs/heads/main {self.module.ZERO_SHA}'
+		line = f'refs/heads/main {head} refs/heads/main {"0" * 40}'
 		self.assertEqual(self.prePush([line]), (0, True))
 		self.assertEqual(self.prePush([line], makeCode=2), (1, True))
 
@@ -250,16 +250,14 @@ class GitHooksTest(unittest.TestCase):
 				'GIT_CONFIG_VALUE_0': 'no',
 			},
 		):
-			result = self.prePush(
-				[f'refs/heads/main {head} refs/heads/main {self.module.ZERO_SHA}']
-			)
+			result = self.prePush([f'refs/heads/main {head} refs/heads/main {"0" * 40}'])
 		self.assertEqual(result, (1, False))
 
 	def testPrePushBlocksWhatMakeCheckCannotSee(self):
 		# make check kiểm tra thư mục làm việc: còn thay đổi chưa commit, hoặc đẩy branch khác HEAD thì chặn mà
 		# không chạy make check; chỉ đẩy tag hoặc xóa branch thì bỏ qua.
 		head = self.git('rev-parse', 'HEAD')
-		zero = self.module.ZERO_SHA
+		zero = '0' * 40
 		self.assertEqual(
 			self.prePush([f'refs/heads/other {"a" * 40} refs/heads/other {zero}']), (1, False)
 		)
@@ -296,7 +294,7 @@ class GitHooksTest(unittest.TestCase):
 			self.assertIn('MISE_NODE_VERSION', environment)
 
 	def testPushedBranchesSkipsTagsAndDeletions(self):
-		zero = self.module.ZERO_SHA
+		zero = '0' * 40
 		lines = [
 			f'refs/heads/main {"a" * 40} refs/heads/main {"b" * 40}',
 			f'refs/tags/v1 {"c" * 40} refs/tags/v1 {zero}',
@@ -304,6 +302,12 @@ class GitHooksTest(unittest.TestCase):
 		]
 		self.assertEqual(self.module.pushedBranches(lines), [('refs/heads/main', 'a' * 40)])
 		self.assertEqual(self.module.pushedBranches(lines[1:]), [])
+		# Repository SHA-256: mã băm 64 ký tự, xóa branch vẫn có sha cục bộ toàn số 0.
+		sha256Lines = [
+			f'refs/heads/main {"a" * 64} refs/heads/main {"b" * 64}',
+			f'(delete) {"0" * 64} refs/heads/old {"d" * 64}',
+		]
+		self.assertEqual(self.module.pushedBranches(sha256Lines), [('refs/heads/main', 'a' * 64)])
 
 	def testOldPythonIsReportedBeforeRunningHooks(self):
 		# Ứng dụng giao diện trên macOS gọi hook bằng Python 3.9 của hệ thống: báo rõ phiên bản cần, thoát mã 1,

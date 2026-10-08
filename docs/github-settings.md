@@ -11,7 +11,7 @@ make org-settings-preview
 make org-settings-apply
 ```
 
-- `make org-import`: đọc GitHub qua GitHub CLI đã đăng nhập, gồm repository đã archive; ghi nguyên tử tệp local sau khi đọc xong. Lỗi đọc cài đặt chính giữ nguyên tệp. Endpoint chưa đọc được được đánh dấu trong `unavailable`, không giữ giá trị cũ và không tự coi là tắt. Lệnh trả mã lỗi nếu còn mục chưa nhập.
+- `make org-import`: đọc GitHub qua GitHub CLI đã đăng nhập, gồm repository đã archive; ghi nguyên tử tệp local sau khi đọc xong, đúng định dạng Prettier nên `make check` không cần `make format`. Lỗi đọc cài đặt chính giữ nguyên tệp. Endpoint chưa đọc được được đánh dấu trong `unavailable`, không giữ giá trị cũ và không tự coi là tắt. Lệnh trả mã lỗi nếu còn mục chưa nhập.
 - `make org-settings-preview`: chỉ đọc GitHub, liệt kê các trường sẽ thay đổi theo nguồn local. Không thay đổi GitHub hay tệp local.
 - `make org-settings-apply`: đọc và xác minh mọi phạm vi trước khi ghi. `unavailable` còn dữ liệu, cấu hình sai hoặc lỗi đọc chặn việc ghi. Nếu nguồn yêu cầu bỏ archive, thao tác này chạy trước các cập nhật của repository; nếu yêu cầu archive, thao tác này chạy sau cùng. Script gửi từng thay đổi qua API, đọc lại và trả mã lỗi khi trạng thái chưa khớp hoặc còn mục chỉ xử lý trên web. Cấu hình bảo mật đang gắn bất đồng bộ chưa được coi là đã hoàn tất.
 

@@ -27,7 +27,6 @@ SCRIPT = Path(__file__).resolve()
 PRETTIER = SCRIPT.parents[1] / 'node_modules' / '.bin' / 'prettier'
 # Cấu hình định dạng chép vào thư mục tạm cùng nội dung đã stage để Prettier, ruff đọc đúng như ở repository.
 FORMAT_CONFIGS = ('.prettierrc.json', '.prettierignore', '.gitignore', '.editorconfig', 'ruff.toml')
-ZERO_SHA = '0' * 40
 
 
 def git(root, *args):
@@ -137,11 +136,12 @@ def preCommit(root, args):
 
 def pushedBranches(lines):
 	"""Ref branch được cập nhật trong lần đẩy (bỏ tag và xóa branch); mỗi dòng git đưa vào pre-push có dạng
-	"<ref cục bộ> <sha cục bộ> <ref đích> <sha đích>"."""
+	"<ref cục bộ> <sha cục bộ> <ref đích> <sha đích>". Xóa branch có sha cục bộ toàn số 0 — 40 ký tự với SHA-1,
+	64 ký tự với repository SHA-256."""
 	branches = []
 	for line in lines:
 		parts = line.split()
-		if len(parts) == 4 and parts[1] != ZERO_SHA and parts[2].startswith('refs/heads/'):
+		if len(parts) == 4 and parts[1].strip('0') and parts[2].startswith('refs/heads/'):
 			branches.append((parts[2], parts[1]))
 	return branches
 
