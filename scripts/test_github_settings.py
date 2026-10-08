@@ -43,6 +43,8 @@ def baselineConfig():
 	]
 	repository['settings']['archived'] = False
 	for scope in (organization, repository):
+		for suffix in configuration.SELECTED_ENDPOINTS:
+			scope['endpoints'].pop(suffix, None)
 		scope['endpoints']['actions/permissions/workflow'] = {
 			'default_workflow_permissions': 'read',
 			'can_approve_pull_request_reviews': True,
@@ -73,6 +75,272 @@ def baselineConfig():
 
 
 class GitHubSettingsTest(unittest.TestCase):
+	def testSelectedListsAreReadOnlyWhenActiveAndFailuresRemainUnavailable(self):
+		for active, fail in ((False, False), (True, False), (True, True)):
+			organization = copy.deepcopy(self.config['organization'])
+			if active:
+				organization['endpoints']['actions/permissions'].update(
+					enabled_repositories='selected', allowed_actions='selected'
+				)
+				organization['endpoints']['actions/permissions/repositories'] = {
+					'selected_repositories': []
+				}
+				organization['endpoints']['actions/permissions/selected-actions'] = {
+					'github_owned_allowed': False,
+					'verified_allowed': False,
+					'patterns_allowed': [],
+				}
+			data = dict(organization['settings'], **organization['web_settings'], login=github.ORG)
+
+			def read(path, suffix, fields, fail=fail, organization=organization):
+				if fail and suffix == 'actions/permissions/selected-actions':
+					raise RuntimeError('HTTP 403')
+				return organization['endpoints'][suffix]
+
+			with (
+				self.subTest(active=active, fail=fail),
+				mock.patch.object(github, 'ghJson', return_value=data),
+				mock.patch.object(configuration, 'readEndpoint', side_effect=read) as reader,
+				mock.patch.object(
+					resources, 'readRunnerGroups', return_value=organization['runner_groups']
+				),
+				mock.patch.object(
+					resources,
+					'installedApps',
+					return_value=organization['web_settings']['installed_apps'],
+				),
+				mock.patch.object(
+					configuration,
+					'readSecurityDefaults',
+					return_value=organization['security_configurations'],
+				),
+			):
+				captured, unavailable = configuration.readScope()
+			calls = {call.args[1] for call in reader.call_args_list}
+			self.assertEqual('actions/permissions/repositories' in calls, active)
+			self.assertEqual('actions/permissions/selected-actions' in calls, active)
+			if fail:
+				self.assertEqual(
+					unavailable,
+					{'orgs/TOANQUYNHLLC/actions/permissions/selected-actions': 'HTTP 403'},
+				)
+				self.assertNotIn('actions/permissions/selected-actions', captured['endpoints'])
+			else:
+				self.assertEqual(unavailable, {})
+				self.assertEqual(captured['endpoints'], organization['endpoints'])
+
+	def testSelectedRepositoryIdsMustResolveBeforeAnyMutation(self):
+		config = copy.deepcopy(self.config)
+		config['organization']['endpoints']['settings/immutable-releases'] = {
+			'enforced_repositories': 'selected'
+		}
+		config['organization']['endpoints']['settings/immutable-releases/repositories'] = {
+			'selected_repositories': ['TOANQUYNHLLC/missing']
+		}
+		self.saveConfig(github.ROOT, config)
+		with (
+			mock.patch.object(
+				configuration, 'readScope', return_value=(self.config['organization'], {})
+			),
+			mock.patch.object(
+				resources, 'repositoryIds', side_effect=ValueError('Không đọc được repository')
+			),
+			mock.patch.object(github, 'gh') as write,
+			self.assertRaises(ValueError),
+		):
+			configuration.syncConfiguredSettings(True)
+		write.assert_not_called()
+
+	def testSelectedListOrderingDoesNotCreateDrift(self):
+		plan = []
+		with mock.patch.object(resources, 'repositoryIds') as resolve:
+			configuration.selectedEndpointChanges(
+				plan,
+				'orgs/TOANQUYNHLLC',
+				'actions/permissions/repositories',
+				{'selected_repositories': ['TOANQUYNHLLC/app', 'TOANQUYNHLLC/.github']},
+				{'selected_repositories': ['TOANQUYNHLLC/.github', 'TOANQUYNHLLC/app']},
+			)
+		resolve.assert_not_called()
+		self.assertEqual(plan, [])
+
+	def testSelectedImmutableReleasesPreventConflictingRepositorySettings(self):
+		config = copy.deepcopy(self.config)
+		config['organization']['endpoints']['settings/immutable-releases'] = {
+			'enforced_repositories': 'selected'
+		}
+		config['organization']['endpoints']['settings/immutable-releases/repositories'] = {
+			'selected_repositories': ['TOANQUYNHLLC/.github']
+		}
+		config['repositories']['.github']['endpoints']['immutable-releases'] = {'enabled': False}
+		self.saveConfig(github.ROOT, config)
+		with self.assertRaisesRegex(ValueError, 'Release bất biến'):
+			configuration.readConfig()
+		config['organization']['endpoints']['settings/immutable-releases/repositories'][
+			'selected_repositories'
+		] = []
+		self.saveConfig(github.ROOT, config)
+		self.assertEqual(configuration.readConfig(), config)
+
+	def testSelectedActionsAreImportedWithCompletePolicy(self):
+		policy = {
+			'github_owned_allowed': True,
+			'verified_allowed': False,
+			'patterns_allowed': ['actions/*', 'TOANQUYNHLLC/*'],
+		}
+		fields = {'github_owned_allowed': bool, 'verified_allowed': bool, 'patterns_allowed': list}
+		with mock.patch.object(github, 'ghJson', return_value=policy):
+			self.assertEqual(
+				configuration.readEndpoint(
+					'repos/TOANQUYNHLLC/.github/actions/permissions/selected-actions',
+					'actions/permissions/selected-actions',
+					fields,
+				),
+				policy,
+			)
+		for invalid in (
+			{'github_owned_allowed': True},
+			dict(policy, patterns_allowed=['actions/*', 'actions/*']),
+		):
+			with (
+				mock.patch.object(github, 'ghJson', return_value=invalid),
+				self.assertRaises(ValueError),
+			):
+				configuration.readEndpoint(
+					'repos/TOANQUYNHLLC/.github/actions/permissions/selected-actions',
+					'actions/permissions/selected-actions',
+					fields,
+				)
+
+	def testSelectedRepositoriesImportNamesAndRejectIncompleteIdentity(self):
+		fields = {'selected_repositories': list}
+		path = 'orgs/TOANQUYNHLLC/actions/permissions/repositories'
+		items = [
+			{'id': 99, 'full_name': 'TOANQUYNHLLC/app'},
+			{'id': 100, 'full_name': 'TOANQUYNHLLC/.github'},
+		]
+		with mock.patch.object(resources, 'readCollection', return_value=items):
+			self.assertEqual(
+				configuration.readEndpoint(path, 'actions/permissions/repositories', fields),
+				{'selected_repositories': ['TOANQUYNHLLC/.github', 'TOANQUYNHLLC/app']},
+			)
+		for invalid in (
+			[{'id': True, 'full_name': 'TOANQUYNHLLC/app'}],
+			[items[0], items[0]],
+			[{'id': 99, 'full_name': 'other/app'}],
+		):
+			with (
+				mock.patch.object(resources, 'readCollection', return_value=invalid),
+				self.assertRaises(ValueError),
+			):
+				configuration.readEndpoint(path, 'actions/permissions/repositories', fields)
+
+	def testSelectedPolicyValidatesCompanionListsBeforeWriting(self):
+		config = copy.deepcopy(self.config)
+		config['organization']['endpoints']['actions/permissions'].update(
+			enabled_repositories='selected', allowed_actions='selected'
+		)
+		config['organization']['endpoints'].update(
+			{
+				'actions/permissions/repositories': {
+					'selected_repositories': ['TOANQUYNHLLC/.github']
+				},
+				'actions/permissions/selected-actions': {
+					'github_owned_allowed': True,
+					'verified_allowed': False,
+					'patterns_allowed': [],
+				},
+			}
+		)
+		self.saveConfig(github.ROOT, config)
+		self.assertEqual(configuration.readConfig(), config)
+		for suffix in ('actions/permissions/repositories', 'actions/permissions/selected-actions'):
+			invalid = copy.deepcopy(config)
+			del invalid['organization']['endpoints'][suffix]
+			self.saveConfig(github.ROOT, invalid)
+			with (
+				self.subTest(suffix=suffix),
+				mock.patch.object(github, 'gh') as write,
+				self.assertRaises(ValueError),
+			):
+				configuration.syncConfiguredSettings(True)
+			write.assert_not_called()
+
+	def testApplySelectedPolicyResolvesIdsAndConfirmsReadBack(self):
+		wanted = copy.deepcopy(self.config)
+		endpoints = wanted['organization']['endpoints']
+		endpoints['actions/permissions'].update(
+			enabled_repositories='selected', allowed_actions='selected'
+		)
+		endpoints['settings/immutable-releases']['enforced_repositories'] = 'selected'
+		for suffix in (
+			'actions/permissions/repositories',
+			'settings/immutable-releases/repositories',
+		):
+			endpoints[suffix] = {'selected_repositories': ['TOANQUYNHLLC/.github']}
+		endpoints['actions/permissions/selected-actions'] = {
+			'github_owned_allowed': True,
+			'verified_allowed': False,
+			'patterns_allowed': ['actions/*'],
+		}
+		self.saveConfig(github.ROOT, wanted)
+		with (
+			mock.patch.object(
+				configuration,
+				'readScope',
+				side_effect=[
+					(self.config['organization'], {}),
+					(self.config['repositories']['.github'], {}),
+					(wanted['organization'], {}),
+					(wanted['repositories']['.github'], {}),
+				],
+			),
+			mock.patch.object(resources, 'repositoryIds', return_value=[99]),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			self.assertEqual(configuration.syncConfiguredSettings(True), 0)
+		calls = {call.args[3]: json.loads(call.kwargs['stdin']) for call in write.call_args_list}
+		self.assertEqual(
+			calls['orgs/TOANQUYNHLLC/actions/permissions/repositories'],
+			{'selected_repository_ids': [99]},
+		)
+		self.assertEqual(
+			calls['orgs/TOANQUYNHLLC/settings/immutable-releases/repositories'],
+			{'selected_repository_ids': [99]},
+		)
+		self.assertEqual(
+			calls['orgs/TOANQUYNHLLC/actions/permissions/selected-actions'],
+			endpoints['actions/permissions/selected-actions'],
+		)
+		paths = [call.args[3] for call in write.call_args_list]
+		self.assertLess(
+			paths.index('orgs/TOANQUYNHLLC/actions/permissions'),
+			paths.index('orgs/TOANQUYNHLLC/actions/permissions/repositories'),
+		)
+		self.assertLess(
+			paths.index('orgs/TOANQUYNHLLC/settings/immutable-releases'),
+			paths.index('orgs/TOANQUYNHLLC/settings/immutable-releases/repositories'),
+		)
+
+	def testRepositoryOutsideSelectedOrganizationCannotEnableActions(self):
+		config = copy.deepcopy(self.config)
+		endpoints = config['organization']['endpoints']
+		endpoints['actions/permissions'].update(
+			enabled_repositories='selected', allowed_actions='all'
+		)
+		endpoints['actions/permissions/repositories'] = {'selected_repositories': []}
+		config['repositories']['.github']['endpoints']['actions/permissions'].update(
+			enabled=True, allowed_actions='all'
+		)
+		self.saveConfig(github.ROOT, config)
+		with (
+			mock.patch.object(github, 'gh') as write,
+			self.assertRaisesRegex(ValueError, 'Actions'),
+		):
+			configuration.syncConfiguredSettings(True)
+		write.assert_not_called()
+
 	def setUp(self):
 		# Mọi lần đọc nguồn cài đặt trong test (readConfig() không truyền root) dùng bản cố định.
 		self.config = baselineConfig()

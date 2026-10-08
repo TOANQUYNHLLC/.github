@@ -29,6 +29,102 @@ from orgsetup import files, github, labels, rulesets, settings, teams
 
 
 class OrgSetupTest(unittest.TestCase):
+	def testInvalidPullRequestParametersStopBeforeWrites(self):
+		for key, value in (
+			('require d_review_thread_resolution', True),
+			('required_review_thread_resolution', 'true'),
+			('required_approving_review_count', True),
+		):
+			wanted = rulesets.rulesetFor('.github')
+			parameters = next(
+				rule['parameters'] for rule in wanted['rules'] if rule['type'] == 'pull_request'
+			)
+			parameters[key] = value
+			with (
+				self.subTest(key=key, value=value),
+				mock.patch.object(
+					rulesets, 'rulesetsFor', return_value=[(rulesets.RULESET_FILE, wanted)]
+				),
+				mock.patch.object(github, 'ghList', return_value=[]),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+				self.assertRaisesRegex(ValueError, 'pull_request'),
+			):
+				rulesets.syncRulesets(['.github'], apply=True)
+			write.assert_not_called()
+
+	def testOrganizationRulesetRenameUpdatesExistingId(self):
+		wanted = rulesets.orgRulesets()
+		oldNames = [
+			'Protect Main (Organization)',
+			'Protect Release Tags (Organization)',
+			'Protect Pushes (Organization)',
+		]
+		listing = [{'name': name, 'id': index + 1} for index, name in enumerate(oldNames)]
+
+		def read(*args):
+			index = int(args[-1].rsplit('/', 1)[-1]) - 1
+			return dict(wanted[index][1], name=oldNames[index], id=index + 1)
+
+		with (
+			mock.patch.object(github, 'ghList', return_value=listing),
+			mock.patch.object(github, 'ghJson', side_effect=read),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			rulesets.syncOrgRulesets(apply=True)
+		self.assertEqual(len(write.call_args_list), 3)
+		for index, call in enumerate(write.call_args_list):
+			self.assertEqual(call.args[2], 'PUT')
+			self.assertTrue(call.args[3].endswith(f'/{index + 1}'))
+			self.assertEqual(json.loads(call.kwargs['stdin'])['name'], wanted[index][1]['name'])
+
+	def testAmbiguousOrganizationRulesetRenameStopsBeforeWrites(self):
+		with (
+			mock.patch.object(
+				github,
+				'ghList',
+				return_value=[
+					{'name': 'Protect Main (Organization)', 'id': 1},
+					{'name': 'Organization Protect Main', 'id': 2},
+				],
+			),
+			mock.patch.object(github, 'ghJson') as read,
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+			self.assertRaisesRegex(ValueError, 'ruleset'),
+		):
+			rulesets.syncOrgRulesets(apply=True)
+		read.assert_not_called()
+		write.assert_not_called()
+
+	def testGraphqlReportsExistingOrganizationRulesetNames(self):
+		wanted = rulesets.orgRulesets()
+		oldNames = [
+			'Protect Main (Organization)',
+			'Protect Release Tags (Organization)',
+			'Protect Pushes (Organization)',
+		]
+		nodes = [dict(item, name=name) for (_, item), name in zip(wanted, oldNames, strict=True)]
+		data = [
+			{
+				'data': {
+					'organization': {
+						'rulesets': {'nodes': nodes, 'pageInfo': {'hasNextPage': False}}
+					}
+				}
+			}
+		]
+		with (
+			mock.patch.object(github, 'ghJson', return_value=data),
+			mock.patch.object(rulesets, 'graphqlRuleset', side_effect=rulesets.graphqlVisible),
+			contextlib.redirect_stdout(io.StringIO()) as output,
+		):
+			rulesets.compareOrgRulesets()
+		self.assertNotIn('chưa có ruleset', output.getvalue())
+		for name in oldNames:
+			self.assertIn(name, output.getvalue())
+
 	def testDefaultBranchSpecialCharactersAreEncoded(self):
 		# Git nhận #, &, %, / trong tên nhánh; URL phải giữ nguyên ref thay vì hiểu thành fragment/query.
 		with (

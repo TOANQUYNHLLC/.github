@@ -1635,7 +1635,11 @@ class Holder:
 
 	def testTagRulesetMustBlockDeletion(self):
 		# Thiếu deletion nhưng vẫn còn quy tắc khác — luật phải bắt được.
-		self.edit('rulesets/protect-release-tags.json', '\t\t{ "type": "deletion" },\n', '')
+		path = self.repo / 'rulesets/protect-release-tags.json'
+		data = json.loads(path.read_text(encoding='utf-8'))
+		self.assertTrue(any(rule['type'] == 'deletion' for rule in data['rules']))
+		data['rules'] = [rule for rule in data['rules'] if rule['type'] != 'deletion']
+		path.write_text(json.dumps(data, ensure_ascii=False, indent='\t') + '\n', encoding='utf-8')
 		self.assertFails('ruleset phải chặn creation, update, deletion')
 
 	def testLabelerLabelsMustExistInLabels(self):
@@ -1655,10 +1659,20 @@ class Holder:
 		self.assertFails('nhắm ~ALL repository và refs/tags/v*')
 
 	def testEveryRulesetRequiresSignedCommits(self):
-		self.editRegex(
-			'rulesets/protect-main.json', r'^\t\t\{ "type": "required_signatures" \},\n', ''
-		)
+		path = self.repo / 'rulesets/protect-main.json'
+		data = json.loads(path.read_text(encoding='utf-8'))
+		self.assertTrue(any(rule['type'] == 'required_signatures' for rule in data['rules']))
+		data['rules'] = [rule for rule in data['rules'] if rule['type'] != 'required_signatures']
+		path.write_text(json.dumps(data, ensure_ascii=False, indent='\t') + '\n', encoding='utf-8')
 		self.assertFails('protect-main.json: ruleset phải có quy tắc required_signatures')
+
+	def testInvalidPullRequestParameterIsReported(self):
+		self.edit(
+			'rulesets/protect-main.json',
+			'"required_review_thread_resolution"',
+			'"require d_review_thread_resolution"',
+		)
+		self.assertFails('pull_request')
 
 	def testOrgPushRulesetTargetsAllRepositories(self):
 		self.edit(

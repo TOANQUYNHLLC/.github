@@ -156,7 +156,7 @@ def repositoryIds(names):
 			raise ValueError('Không đọc được ID các repository của tổ chức')
 		lookup[item['full_name']] = item['id']
 	if any(name not in lookup for name in names):
-		raise ValueError('Nhóm runner chọn repository chưa có hoặc tài khoản chưa đọc được')
+		raise ValueError('Danh sách chọn repository chưa có hoặc tài khoản chưa đọc được')
 	return [lookup[name] for name in names]
 
 

@@ -133,6 +133,10 @@ FORK_FIELDS = dict.fromkeys(
 	BOOL,
 )
 COMMON_ENDPOINTS = {
+	'actions/permissions/selected-actions': (
+		'PUT',
+		{'github_owned_allowed': BOOL, 'verified_allowed': BOOL, 'patterns_allowed': list},
+	),
 	'actions/permissions/workflow': ('PUT', WORKFLOW_FIELDS),
 	'actions/permissions/artifact-and-log-retention': ('PUT', {'days': int}),
 	'actions/permissions/fork-pr-contributor-approval': (
@@ -157,6 +161,8 @@ COMMON_ENDPOINTS = {
 }
 ORG_ENDPOINTS = {
 	**COMMON_ENDPOINTS,
+	'actions/permissions/repositories': ('PUT', {'selected_repositories': list}),
+	'settings/immutable-releases/repositories': ('PUT', {'selected_repositories': list}),
 	'actions/oidc/customization/sub': (
 		'PUT',
 		{'include_claim_keys': list, 'use_immutable_subject': BOOL},
@@ -202,6 +208,38 @@ REPO_ENDPOINTS = {
 		},
 	),
 }
+
+# Các danh sách chỉ có hiệu lực khi chính sách cha dùng selected; không nhập giá trị đang bị API ẩn.
+SELECTED_ENDPOINTS = {
+	'actions/permissions/selected-actions': ('actions/permissions', 'allowed_actions'),
+	'actions/permissions/repositories': ('actions/permissions', 'enabled_repositories'),
+	'settings/immutable-releases/repositories': (
+		'settings/immutable-releases',
+		'enforced_repositories',
+	),
+}
+
+
+def validateSelectedEndpoint(value, suffix):
+	"""Danh sách được nhập đủ và không trùng; nguồn local dùng tên repository thuộc đúng tổ chức."""
+	if suffix == 'actions/permissions/selected-actions':
+		fields = COMMON_ENDPOINTS[suffix][1]
+		checkFields(value, fields, suffix)
+		if set(value) != set(fields):
+			raise ValueError(f'{suffix}: thiếu chính sách allowed actions')
+		items = value['patterns_allowed']
+	else:
+		checkFields(value, {'selected_repositories': list}, suffix)
+		items = value['selected_repositories']
+		if any(
+			not re.fullmatch(rf'{re.escape(github.ORG)}/[A-Za-z0-9_.-]+', name)
+			or name.rsplit('/', 1)[-1] in ('.', '..')
+			for name in items
+		):
+			raise ValueError(f'{suffix}: repository không thuộc tổ chức hoặc tên không hợp lệ')
+	if any(not item.strip() for item in items) or len(items) != len(set(items)):
+		raise ValueError(f'{suffix}: danh sách trống tên hoặc có phần tử trùng')
+	return value
 
 
 def checkFields(data, fields, path, partial=False):
@@ -256,10 +294,28 @@ def readEndpoint(path, suffix, fields):
 	"""404 chỉ biểu diễn tắt cho Dependabot alerts, theo hợp đồng API của endpoint này."""
 	if suffix == 'vulnerability-alerts':
 		return {'enabled': github.ghExists(path)}
+	if suffix in SELECTED_ENDPOINTS and suffix.endswith('/repositories'):
+		items = resources.readCollection(path, 'repositories')
+		ids = set()
+		for item in items:
+			if (
+				not isinstance(item, dict)
+				or type(item.get('id')) is not int
+				or item['id'] <= 0
+				or item['id'] in ids
+				or not isinstance(item.get('full_name'), str)
+			):
+				raise ValueError(f'{path}: thiếu danh tính repository hoặc ID trùng')
+			ids.add(item['id'])
+		return validateSelectedEndpoint(
+			{'selected_repositories': sorted(item['full_name'] for item in items)}, suffix
+		)
 	data = github.ghJson('api', path)
 	if suffix == 'actions/oidc/customization/sub' and 'use_default' not in fields and data is None:
 		return {}
 	selected = selectFields(data, fields, path)
+	if suffix in SELECTED_ENDPOINTS:
+		return validateSelectedEndpoint(selected, suffix)
 	if suffix == 'actions/oidc/customization/sub':
 		validateOidc(selected, 'use_default' not in fields)
 		return selected
@@ -284,17 +340,6 @@ def readEndpoint(path, suffix, fields):
 		raise ValueError(f'{path}: thiếu allowed_actions khi Actions đang bật')
 	if suffix == 'interaction-limits' and data.get('expires_at') is not None:
 		raise ValueError(f'{path}: chưa hỗ trợ khôi phục giới hạn có thời gian hết hạn')
-	if suffix == 'actions/permissions' and selected.get('allowed_actions') == 'selected':
-		raise ValueError(
-			f'{path}: cần xuất thêm danh sách allowed-actions trước khi quản lý chế độ selected'
-		)
-	if (
-		selected.get('enabled_repositories') == 'selected'
-		or selected.get('enforced_repositories') == 'selected'
-	):
-		raise ValueError(
-			f'{path}: cần xuất thêm danh sách repository trước khi quản lý chế độ selected'
-		)
 	return selected
 
 
@@ -360,7 +405,25 @@ def readScope(repo=None):
 			return suffix, None, 'API thiếu hoặc sai dữ liệu; không suy đoán giá trị'
 
 	with ThreadPoolExecutor(max_workers=6) as pool:
-		for suffix, value, problem in pool.map(read, definitions.items()):
+		for suffix, value, problem in pool.map(
+			read,
+			(
+				(suffix, fields)
+				for suffix, fields in definitions.items()
+				if suffix not in SELECTED_ENDPOINTS
+			),
+		):
+			if problem:
+				unavailable[f'{base}/{suffix}'] = problem
+			else:
+				scope['endpoints'][suffix] = value
+		selected = [
+			(suffix, definitions[suffix])
+			for suffix, (parent, selector) in SELECTED_ENDPOINTS.items()
+			if suffix in definitions
+			and scope['endpoints'].get(parent, {}).get(selector) == 'selected'
+		]
+		for suffix, value, problem in pool.map(read, selected):
 			if problem:
 				unavailable[f'{base}/{suffix}'] = problem
 			else:
@@ -531,6 +594,9 @@ def readConfig(root=None):
 			if suffix == 'actions/oidc/customization/sub':
 				validateOidc(value, organization)
 				continue
+			if suffix in SELECTED_ENDPOINTS:
+				validateSelectedEndpoint(value, suffix)
+				continue
 			checkFields(
 				value, definitions[suffix][1], suffix, partial=suffix == 'interaction-limits'
 			)
@@ -545,12 +611,14 @@ def readConfig(root=None):
 				and 'allowed_actions' not in value
 			):
 				raise ValueError(f'{CONFIG_NAME}: cần khai báo allowed_actions khi bật Actions')
-			if (
-				value.get('allowed_actions') == 'selected'
-				or value.get('enabled_repositories') == 'selected'
-				or value.get('enforced_repositories') == 'selected'
-			):
-				raise ValueError(f'{CONFIG_NAME}: chưa hỗ trợ danh sách selected tại {suffix}')
+		for suffix, (parent, selector) in SELECTED_ENDPOINTS.items():
+			if suffix not in definitions:
+				continue
+			selected = scope['endpoints'].get(parent, {}).get(selector) == 'selected'
+			if selected != (suffix in scope['endpoints']):
+				raise ValueError(
+					f'{CONFIG_NAME}: {suffix} phải đi cùng chính sách {selector}=selected'
+				)
 		if organization and 'runner_groups' in scope:
 			resources.validateRunnerGroups(scope['runner_groups'])
 		if 'security' in scope:
@@ -607,6 +675,18 @@ def validateDependencies(config):
 		):
 			raise ValueError(f'{repo}: không bật Actions khi tổ chức tắt Actions')
 		if (
+			endpoints.get('actions/permissions', {}).get('enabled') is True
+			and organization.get('actions/permissions', {}).get('enabled_repositories')
+			== 'selected'
+			and f'{github.ORG}/{repo}'
+			not in organization.get('actions/permissions/repositories', {}).get(
+				'selected_repositories', []
+			)
+		):
+			raise ValueError(
+				f'{repo}: Actions chưa được cho phép trong danh sách repository của tổ chức'
+			)
+		if (
 			endpoints.get('automated-security-fixes', {}).get('enabled') is True
 			and endpoints.get('vulnerability-alerts', {}).get('enabled') is False
 		):
@@ -622,6 +702,37 @@ def validateDependencies(config):
 			== 'all'
 		):
 			raise ValueError(f'{repo}: tổ chức đang bắt buộc Release bất biến')
+		if (
+			endpoints.get('immutable-releases', {}).get('enabled') is False
+			and organization.get('settings/immutable-releases', {}).get('enforced_repositories')
+			== 'selected'
+			and f'{github.ORG}/{repo}'
+			in organization.get('settings/immutable-releases/repositories', {}).get(
+				'selected_repositories', []
+			)
+		):
+			raise ValueError(f'{repo}: tổ chức đang bắt buộc Release bất biến cho repository này')
+
+
+def selectedEndpointChanges(plan, base, suffix, current, wanted):
+	"""Đặt chính sách cha trước danh sách con; so danh sách như tập hợp, giải tên thành ID trước mọi lần ghi."""
+	old, target = dict(current or {}), dict(wanted)
+	key = (
+		'patterns_allowed'
+		if suffix == 'actions/permissions/selected-actions'
+		else 'selected_repositories'
+	)
+	target[key] = sorted(target[key])
+	if key in old:
+		old[key] = sorted(old[key])
+	if old == target:
+		return
+	body = (
+		target
+		if key == 'patterns_allowed'
+		else {'selected_repository_ids': resources.repositoryIds(target[key])}
+	)
+	plan.append((f'{base}/{suffix}', 'PUT', body, target))
 
 
 def displayWidth(line):
@@ -920,7 +1031,7 @@ def syncConfiguredSettings(apply=False, verify=False):
 			wanted['endpoints'].items(),
 			key=lambda item: (
 				0
-				if item[0] == 'actions/permissions'
+				if item[0] in ('actions/permissions', 'settings/immutable-releases')
 				else 1
 				if item[0] == 'automated-security-fixes' and item[1].get('enabled') is False
 				else 3
@@ -929,6 +1040,11 @@ def syncConfiguredSettings(apply=False, verify=False):
 			),
 		)
 		for suffix, target in ordered:
+			if suffix in SELECTED_ENDPOINTS:
+				selectedEndpointChanges(
+					plan, base, suffix, current['endpoints'].get(suffix), target
+				)
+				continue
 			if suffix not in current['endpoints']:
 				raise ValueError(
 					f'{base}/{suffix}: endpoint không áp dụng được; dừng trước khi ghi'

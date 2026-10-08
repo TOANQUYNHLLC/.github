@@ -28,6 +28,25 @@ ORG_PUSH_RULESET_FILE = github.ROOT / 'rulesets' / 'organization-protect-pushes.
 
 ORG_PUSH_RULESET_NAME = 'Organization Protect Pushes'
 
+# Nhận diện tên vẫn đang được dùng trên GitHub để cập nhật đúng ID khi đổi tên, không tạo ruleset trùng.
+ORG_RULESET_ALIASES = {
+	ORG_RULESET_NAME: 'Protect Main (Organization)',
+	ORG_TAG_RULESET_NAME: 'Protect Release Tags (Organization)',
+	ORG_PUSH_RULESET_NAME: 'Protect Pushes (Organization)',
+}
+
+PULL_REQUEST_FIELDS = {
+	'required_approving_review_count': int,
+	'dismiss_stale_reviews_on_push': bool,
+	'require_code_owner_review': bool,
+	'require_last_push_approval': bool,
+	'required_review_thread_resolution': bool,
+	'require_extra_approval_for_unattributed_changes': bool,
+	'required_reviewers': list,
+	'dismissal_restriction': dict,
+	'allowed_merge_methods': list,
+}
+
 # Import cấp tổ chức không nhận actor loại User ("contains an invalid actor"): bỏ qua là chủ tổ chức (actor_id
 # bị bỏ qua) — cùng người quản trị; ruleset trên web tắt giới hạn hủy phê duyệt.
 ORG_BYPASS_ACTORS = [{'actor_id': 1, 'actor_type': 'OrganizationAdmin', 'bypass_mode': 'always'}]
@@ -135,6 +154,25 @@ def rulesetSummary(ruleset):
 			raise ValueError('ruleset: rules phải chứa các object có type không trống')
 		if 'parameters' in rule and not isinstance(rule['parameters'], dict):
 			raise ValueError('ruleset: parameters phải là object')
+		if rule['type'] == 'pull_request':
+			parameters = rule.get('parameters', {})
+			if set(parameters) - set(PULL_REQUEST_FIELDS):
+				raise ValueError('ruleset: pull_request có tham số không được hỗ trợ')
+			for key, value in parameters.items():
+				if type(value) is not PULL_REQUEST_FIELDS[key]:
+					raise ValueError(f'ruleset: pull_request.{key} sai kiểu')
+			count = parameters.get('required_approving_review_count')
+			if count is not None and count < 0:
+				raise ValueError(
+					'ruleset: pull_request.required_approving_review_count không được âm'
+				)
+			methods = parameters.get('allowed_merge_methods')
+			if methods is not None and (
+				not methods
+				or any(method not in ('merge', 'squash', 'rebase') for method in methods)
+				or len(methods) != len(set(methods))
+			):
+				raise ValueError('ruleset: pull_request.allowed_merge_methods không hợp lệ')
 	return {
 		'name': ruleset.get('name'),
 		'target': ruleset.get('target'),
@@ -167,27 +205,35 @@ def readRulesetIds(endpoint):
 	return existing
 
 
-def readRulesetChanges(endpoint, existing, wanted):
+def readRulesetChanges(endpoint, existing, wanted, names=None):
 	"""Đọc chi tiết song song, kiểm tra toàn bộ trước khi trả các thay đổi theo thứ tự tệp nguồn."""
 	summaries = [rulesetSummary(ruleset) for _, ruleset in wanted]
-	paths = [
-		f'{endpoint}/{existing[ruleset["name"]]}' if ruleset['name'] in existing else None
-		for _, ruleset in wanted
-	]
+	listedNames = [(names or {}).get(ruleset['name'], ruleset['name']) for _, ruleset in wanted]
+	paths = [f'{endpoint}/{existing[name]}' if name in existing else None for name in listedNames]
 	with ThreadPoolExecutor(max_workers=max(1, len(paths))) as pool:
 		lives = list(pool.map(lambda path: github.ghJson('api', path) if path else None, paths))
 	changes = []
-	for (_, ruleset), summary, path, live in zip(wanted, summaries, paths, lives, strict=True):
+	for name, summary, path, live in zip(listedNames, summaries, paths, lives, strict=True):
 		if path is None:
 			changes.append(True)
 			continue
 		current = rulesetSummary(live)
-		if current['name'] != ruleset['name']:
+		if current['name'] != name:
 			raise ValueError(f'{path}: name không khớp danh sách ruleset')
-		if type(live.get('id')) is not int or live['id'] != existing[ruleset['name']]:
+		if type(live.get('id')) is not int or live['id'] != existing[name]:
 			raise ValueError(f'{path}: id không khớp danh sách ruleset')
 		changes.append(current != summary)
 	return changes
+
+
+def organizationRulesetNames(existing):
+	"""Ghép tên local với tên trên GitHub; hai tên cùng tồn tại thì yêu cầu giải quyết trùng trước khi ghi."""
+	names = {}
+	for name, alias in ORG_RULESET_ALIASES.items():
+		if name in existing and alias in existing:
+			raise ValueError(f'ruleset: cả "{name}" và "{alias}" đang tồn tại; chưa thể chọn ID')
+		names[name] = alias if alias in existing else name
+	return names
 
 
 # GraphQL đọc được ruleset cấp tổ chức ở gói Free; không có update_allows_fetch_and_merge (bỏ fragment
@@ -521,6 +567,7 @@ def compareOrgRulesets():
 				if ruleset['name'] in live:
 					raise ValueError(f'ruleset: tên {ruleset["name"]} trùng trong GraphQL')
 				live[ruleset['name']] = ruleset
+		names = organizationRulesetNames(live)
 	except (RuntimeError, KeyError, ValueError, TypeError) as exc:
 		print(f'   ⚠ không đọc được qua GraphQL: {exc}')
 		print(
@@ -529,12 +576,15 @@ def compareOrgRulesets():
 		return
 	for source, ruleset in orgRulesets():
 		name, path = ruleset['name'], source.relative_to(github.ROOT)
-		if name not in live:
+		liveName = names[name]
+		if liveName not in live:
 			print(f'   ✘ chưa có ruleset "{name}" — import {path} tại {how}')
-		elif rulesetSummary(live[name]) == rulesetSummary(graphqlVisible(ruleset)):
+		elif rulesetSummary(live[liveName]) == rulesetSummary(graphqlVisible(ruleset)):
 			print(f'   ✔ ruleset "{name}" đã đúng')
 		else:
-			print(f'   ✘ ruleset "{name}" khác {path} — sửa trên web hoặc xóa rồi import lại')
+			before, after = rulesetSummary(live[liveName]), rulesetSummary(graphqlVisible(ruleset))
+			fields = ', '.join(key for key in after if before[key] != after[key])
+			print(f'   ✘ ruleset "{liveName}" khác {path}: {fields} — sửa ruleset hiện có trên web')
 
 
 def syncOrgRulesets(apply):
@@ -547,10 +597,12 @@ def syncOrgRulesets(apply):
 		compareOrgRulesets()
 		return
 	wanted = orgRulesets()
-	changes = readRulesetChanges(f'orgs/{github.ORG}/rulesets', existing, wanted)
+	names = organizationRulesetNames(existing)
+	changes = readRulesetChanges(f'orgs/{github.ORG}/rulesets', existing, wanted, names)
 	for (source, ruleset), changed in zip(wanted, changes, strict=True):
 		name = ruleset['name']
-		action = 'cập nhật' if name in existing else 'tạo'
+		liveName = names[name]
+		action = 'cập nhật' if liveName in existing else 'tạo'
 		if not changed:
 			print(f'   ✔ ruleset "{name}" đã đúng')
 			continue
@@ -559,8 +611,8 @@ def syncOrgRulesets(apply):
 			continue
 		body = json.dumps(ruleset, ensure_ascii=False)
 		try:
-			if name in existing:
-				path = f'orgs/{github.ORG}/rulesets/{existing[name]}'
+			if liveName in existing:
+				path = f'orgs/{github.ORG}/rulesets/{existing[liveName]}'
 				github.gh('api', '-X', 'PUT', path, '--input', '-', stdin=body)
 			else:
 				github.gh(
