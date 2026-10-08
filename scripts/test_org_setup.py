@@ -1207,7 +1207,7 @@ class OrgSetupTest(unittest.TestCase):
 	def testRepositorySettingsMergeOverrides(self):
 		own = settings.repositorySettings('.github')
 		other = settings.repositorySettings('app')
-		# Không Rebase (ADR 0006) là chính sách; bật/tắt Discussions là giá trị nhập từ GitHub, chỉ cần được gộp.
+		# Không Rebase (ADR 0007) là chính sách; bật/tắt Discussions là giá trị nhập từ GitHub, chỉ cần được gộp.
 		self.assertFalse(own['allow_rebase_merge'])
 		self.assertEqual(
 			own, dict(settings.REPOSITORY_SETTINGS, **settings.REPOSITORY_OVERRIDES['.github'])
@@ -1256,7 +1256,7 @@ class OrgSetupTest(unittest.TestCase):
 			self.assertEqual(json.loads(source.read_text(encoding='utf-8')), ruleset, source.name)
 
 	def testOrgProtectMainAllowsRebaseOnlyAtOrganizationLevel(self):
-		# ADR 0006: bản cấp tổ chức cho phép thêm Rebase và áp dụng cả refs/heads/main; bản cấp repository vẫn chỉ
+		# ADR 0007: bản cấp tổ chức cho phép thêm Rebase và áp dụng cả refs/heads/main; bản cấp repository vẫn chỉ
 		# Merge, Squash trên nhánh mặc định.
 		def mergeMethods(ruleset):
 			return next(

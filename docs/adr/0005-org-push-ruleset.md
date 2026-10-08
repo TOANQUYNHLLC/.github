@@ -1,4 +1,4 @@
-# 0007. PUSH RULESET PROTECT PUSHES CẤP TỔ CHỨC
+# 0005. PUSH RULESET PROTECT PUSHES CẤP TỔ CHỨC
 
 - **Trạng thái:** Chấp nhận
 - **Ngày:** 2026-10-03
