@@ -1,4 +1,4 @@
-# NNNN. TIÊU ĐỀ QUYẾT ĐỊNH
+# NNNNNNNN. TIÊU ĐỀ QUYẾT ĐỊNH
 
 - **Trạng thái:** Đề xuất | Chấp nhận
 - **Ngày:** YYYY-MM-DD

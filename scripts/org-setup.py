@@ -16,7 +16,7 @@ Lệnh (nên chạy theo thứ tự):
 		và tệp định dạng, phiên bản (.nvmrc, .python-version) theo ngôn ngữ repository dùng. Không ghi đè tệp đã có.
 		Dữ liệu nhánh hoặc cây Git sai dừng trước khi ghi; thư mục trùng tên manifest không chọn ngôn ngữ;
 		repository chưa có commit được bỏ qua; commit lỗi thì xóa branch vừa tạo.
-	settings: cài đặt repository (REPOSITORY_SETTINGS: Merge và Squash, tắt Rebase — ADR 0007, auto-merge,
+	settings: cài đặt repository (REPOSITORY_SETTINGS: Merge và Squash, tắt Rebase — ADR 00000007, auto-merge,
 		Update branch, sign-off khi commit trên web, tắt Wiki và Projects; phần riêng trong
 		REPOSITORY_OVERRIDES, topics của .github lấy từ CITATION.cff); Discussions qua GraphQL sau khi
 		xác minh ID repository; bật Dependabot alerts, secret
@@ -27,7 +27,7 @@ Lệnh (nên chạy theo thứ tự):
 		được được cảnh báo và bỏ qua. Topics lấy từ keywords YAML hợp lệ của CITATION.cff.
 		Bỏ archive trước các cập nhật khác khi nguồn yêu cầu; archive sau topics, bảo mật và quyền Actions.
 	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json) và Protect Release
-		Tags (rulesets/protect-release-tags.json, ADR 0006); Protect Main của repository khác chỉ giữ
+		Tags (rulesets/protect-release-tags.json, ADR 00000006); Protect Main của repository khác chỉ giữ
 		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
 		chưa có workflow kiểm tra bắt buộc — hợp nhất Pull Request của lệnh files trước.
 	team: tạo các team trong TEAMS (sửa tên, mô tả, chế độ hiển thị khác web), thêm người quản trị và cấp
@@ -39,7 +39,7 @@ Lệnh (nên chạy theo thứ tự):
 	org-settings: cài đặt tổ chức (ORG_SETTINGS) và quyền GitHub Actions cấp tổ chức; mục chỉ đổi được
 		trên web (ORG_WEB_ONLY_SETTINGS) thì chỉ so và báo.
 	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Protect Main (Organization), Protect Release
-		Tags (Organization) và Protect Pushes (Organization, ADR 0005) (rulesets/org-*.json) cho mọi
+		Tags (Organization) và Protect Pushes (Organization, ADR 00000005) (rulesets/org-*.json) cho mọi
 		repository; cần token có quyền admin:org
 		(gh auth refresh -h github.com -s admin:org) và gói GitHub Team trở lên. Gói Free: REST API
 		trả HTTP 403 nên chỉ so tệp với ruleset trên web (đọc qua GraphQL) — tạo, sửa bằng import trên web.

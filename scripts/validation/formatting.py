@@ -1,5 +1,5 @@
 """Định dạng từng loại tệp: mã hóa, xuống dòng, thụt lề; danh sách đuôi tệp khớp .editorconfig, .gitattributes
-(ADR 0001, 0002)."""
+(ADR 00000001, 00000002)."""
 
 import re
 import unicodedata

@@ -1,19 +1,19 @@
 # 🛡️ RULESET BẢO VỆ NHÁNH CHÍNH VÀ TAG PHÁT HÀNH
 
-Mỗi repository của tổ chức có hai [ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets): **Protect Main** cho nhánh chính ([`protect-main.json`](protect-main.json)) và **Protect Release Tags** cho tag phát hành `Stable.v*`, `Beta.v*` và `v*` ([`protect-release-tags.json`](protect-release-tags.json), [ADR 0006](../docs/adr/0006-protect-release-tags.md), [ADR 0012](../docs/adr/0012-monthly-releases.md)), để các quy tắc trong [`CONTRIBUTING.md`](../CONTRIBUTING.md) được GitHub thực thi. Ruleset **không** tự áp dụng từ repository này — người quản trị import trên web hoặc chạy `python3 scripts/org-setup.py rulesets --apply`.
+Mỗi repository của tổ chức có hai [ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets): **Protect Main** cho nhánh chính ([`protect-main.json`](protect-main.json)) và **Protect Release Tags** cho tag phát hành `Stable.v*`, `Beta.v*` và `v*` ([`protect-release-tags.json`](protect-release-tags.json), [ADR 00000006](../docs/adr/00000006-protect-release-tags.md), [ADR 00000012](../docs/adr/00000012-monthly-releases.md)), để các quy tắc trong [`CONTRIBUTING.md`](../CONTRIBUTING.md) được GitHub thực thi. Ruleset **không** tự áp dụng từ repository này — người quản trị import trên web hoặc chạy `python3 scripts/org-setup.py rulesets --apply`.
 
 Ruleset đặt ở **cấp repository**: tổ chức dùng gói GitHub Free nên ruleset cấp tổ chức (**Organization settings → Repository → Rulesets**) không được thực thi; **push ruleset** (chặn tệp theo đường dẫn, đuôi, kích thước) chỉ dùng được cho repository riêng tư hoặc internal. Gói Free cũng không thực thi ruleset trên repository **riêng tư** — `org-setup.py` cảnh báo và bỏ qua thay vì dừng.
 
 ## ⚙️ QUY TẮC CỦA PROTECT MAIN
 
 - Mọi thay đổi phải qua Pull Request, có ít nhất **1** phê duyệt của người trong `CODEOWNERS`; phê duyệt cũ bị hủy khi có commit mới; cần phê duyệt lại sau lần đẩy cuối; chỉ người quản trị được hủy phê duyệt.
-- Mọi góp ý phải được giải quyết; cho phép **Merge** và **Squash**; không cho phép **Rebase** vì commit tạo lại mất chữ ký ([ADR 0007](../docs/adr/0007-signed-commits-merge-methods.md)).
+- Mọi góp ý phải được giải quyết; cho phép **Merge** và **Squash**; không cho phép **Rebase** vì commit tạo lại mất chữ ký ([ADR 00000007](../docs/adr/00000007-signed-commits-merge-methods.md)).
 - Kiểm tra tự động bắt buộc thành công trên branch đã cập nhật với nhánh chính; code quality.
 - Commit phải có chữ ký (GPG hoặc SSH).
 - Cấm force push, cấm xóa; chặn tạo và cập nhật nhánh chính ngoài danh sách bỏ qua.
-- Danh sách bỏ qua: tài khoản của người quản trị ([`MAINTAINERS.md`](../MAINTAINERS.md)), chế độ **always** ([ADR 0004](../docs/adr/0004-protect-main-ruleset.md)).
+- Danh sách bỏ qua: tài khoản của người quản trị ([`MAINTAINERS.md`](../MAINTAINERS.md)), chế độ **always** ([ADR 00000004](../docs/adr/00000004-protect-main-ruleset.md)).
 
-Mọi ruleset nhánh và tag — cấp repository và cấp tổ chức — có quy tắc **Require signed commits** (`required_signatures`, [ADR 0007](../docs/adr/0007-signed-commits-merge-methods.md)); `scripts/validate.py` báo lỗi khi thiếu. Push ruleset không nhận quy tắc này ([ADR 0005](../docs/adr/0005-org-push-ruleset.md)).
+Mọi ruleset nhánh và tag — cấp repository và cấp tổ chức — có quy tắc **Require signed commits** (`required_signatures`, [ADR 00000007](../docs/adr/00000007-signed-commits-merge-methods.md)); `scripts/validate.py` báo lỗi khi thiếu. Push ruleset không nhận quy tắc này ([ADR 00000005](../docs/adr/00000005-org-push-ruleset.md)).
 
 ## 🏷️ PROTECT RELEASE TAGS
 
@@ -32,7 +32,7 @@ Ba ruleset cho mọi repository (`~ALL`), cài trên web bằng import (**Active
 Khác với bản cấp repository:
 
 - Chỉ giữ các kiểm tra bắt buộc có ở mọi repository (tiêu đề Pull Request, tên branch) — như Protect Main của repository khác; vẫn có `code_quality`.
-- Protect Main (Organization) cho phép thêm **Rebase** và áp dụng cả `refs/heads/main` ngoài nhánh mặc định ([ADR 0007](../docs/adr/0007-signed-commits-merge-methods.md)); ruleset và cài đặt cấp repository vẫn không cho Rebase.
+- Protect Main (Organization) cho phép thêm **Rebase** và áp dụng cả `refs/heads/main` ngoài nhánh mặc định ([ADR 00000007](../docs/adr/00000007-signed-commits-merge-methods.md)); ruleset và cài đặt cấp repository vẫn không cho Rebase.
 - Không dùng actor loại `User` (import báo "contains an invalid actor"): danh sách bỏ qua là **chủ tổ chức** (`OrganizationAdmin`) — cùng người quản trị như bản cấp repository; không giới hạn người hủy phê duyệt.
 - Protect Release Tags (Organization) có thêm quy tắc kiểm tra bắt buộc với danh sách rỗng như trên web — quy tắc này không chặn gì, có thể xóa trên web rồi bỏ trong `orgTagRuleset()`.
 - Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `orgRulesets()` trong `scripts/orgsetup/rulesets.py` để đối chiếu với ruleset đang cài trên web; test bảo đảm tệp khớp `orgRulesets()` — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức.
@@ -41,7 +41,7 @@ Khác với bản cấp repository:
 
 ## 📤 PROTECT PUSHES (CẤP TỔ CHỨC)
 
-Push ruleset ([ADR 0005](../docs/adr/0005-org-push-ruleset.md)) chặn ngay khi đẩy — trên mọi branch, kể cả branch chưa hợp nhất — những tệp không được có trong repository:
+Push ruleset ([ADR 00000005](../docs/adr/00000005-org-push-ruleset.md)) chặn ngay khi đẩy — trên mọi branch, kể cả branch chưa hợp nhất — những tệp không được có trong repository:
 
 - Đường dẫn: `**/.env` và khóa SSH riêng (`id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`). `.env.*` không bị chặn vì `.env.example` được phép commit.
 - Đuôi: khóa, chứng chỉ, kho mật khẩu (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `*.ppk`, `*.kdbx`) và tệp cơ sở dữ liệu (`*.sqlite`, `*.sqlite3`, `*.db`).

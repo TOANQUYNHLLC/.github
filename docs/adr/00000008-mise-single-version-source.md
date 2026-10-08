@@ -1,4 +1,4 @@
-# 0008. MISE.TOML LÀ NGUỒN PHIÊN BẢN CÔNG CỤ DUY NHẤT
+# 00000008. MISE.TOML LÀ NGUỒN PHIÊN BẢN CÔNG CỤ DUY NHẤT
 
 - **Trạng thái:** Chấp nhận
 - **Ngày:** 2026-10-03

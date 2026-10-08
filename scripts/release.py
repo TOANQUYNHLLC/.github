@@ -242,7 +242,7 @@ def prepareRelease(version, date, openPullRequest=False, channel='Stable'):
 	if openPullRequest and not onCleanMain():
 		return 1
 	if version is None:
-		# Số thứ tự dùng chung mọi tag của tháng (ADR 0012): thiếu tag mới trên origin thì chọn trùng số đã phát
+		# Số thứ tự dùng chung mọi tag của tháng (ADR 00000012): thiếu tag mới trên origin thì chọn trùng số đã phát
 		# hành. onCleanMain() đã tải tag khi mở Pull Request; còn lại tải ở đây, lỗi thì dừng.
 		if not openPullRequest and not fetchTags():
 			return 1

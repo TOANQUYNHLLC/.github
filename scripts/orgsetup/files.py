@@ -55,7 +55,7 @@ def filterDependabot(template, rootNames):
 
 
 def pythonVersion():
-	"""Phiên bản Python trong mise.toml — nguồn duy nhất (ADR 0008), cũng là .python-version cấp cho repository
+	"""Phiên bản Python trong mise.toml — nguồn duy nhất (ADR 00000008), cũng là .python-version cấp cho repository
 	khác (workflow mẫu Python CI đọc tệp này)."""
 	text = (github.ROOT / 'mise.toml').read_text(encoding='utf-8')
 	return str(tomllib.loads(text)['tools']['python'])

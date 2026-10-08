@@ -9,7 +9,7 @@ from orgsetup import files, github
 
 RULESET_FILE = github.ROOT / 'rulesets' / 'protect-main.json'
 
-# Ruleset tag: chặn tạo, dời, xóa tag phát hành Stable.v*, Beta.v* và v* ngoài danh sách bỏ qua (ADR 0006, ADR 0012).
+# Ruleset tag: chặn tạo, dời, xóa tag phát hành Stable.v*, Beta.v* và v* ngoài danh sách bỏ qua (ADR 00000006, ADR 00000012).
 TAG_RULESET_FILE = github.ROOT / 'rulesets' / 'protect-release-tags.json'
 
 # Ruleset cấp tổ chức: tệp để import trên web, sinh từ bản cấp repository bằng orgRulesets(), để so với ruleset
@@ -22,7 +22,7 @@ ORG_TAG_RULESET_FILE = github.ROOT / 'rulesets' / 'org-protect-release-tags.json
 
 ORG_TAG_RULESET_NAME = 'Protect Release Tags (Organization)'
 
-# Push ruleset chặn tệp bí mật, cơ sở dữ liệu, tệp lớn (ADR 0005): cấu hình này chỉ có bản cấp tổ chức —
+# Push ruleset chặn tệp bí mật, cơ sở dữ liệu, tệp lớn (ADR 00000005): cấu hình này chỉ có bản cấp tổ chức —
 # GitHub chỉ áp dụng cho repository riêng tư, internal.
 ORG_PUSH_RULESET_FILE = github.ROOT / 'rulesets' / 'org-protect-pushes.json'
 
@@ -49,7 +49,7 @@ ORG_CODE_SCANNING_RULE = {
 
 ORG_REPOSITORIES = {'exclude': [], 'include': ['~ALL'], 'protected': False}
 
-# Protect Main (Organization) áp dụng thêm nhánh main của mọi repository, kể cả repository có nhánh mặc định khác (ADR 0007).
+# Protect Main (Organization) áp dụng thêm nhánh main của mọi repository, kể cả repository có nhánh mặc định khác (ADR 00000007).
 ORG_EXTRA_BRANCH = 'refs/heads/main'
 
 
@@ -355,7 +355,7 @@ def graphqlVisible(ruleset):
 def orgRuleset():
 	"""Protect Main cho mọi repository ở cấp tổ chức: như Protect Main của repository khác (chỉ giữ kiểm tra
 	bắt buộc có ở mọi repository; giữ code_quality), nhắm ~ALL repository; thêm code scanning như web. Khác bản
-	cấp repository (ADR 0007): áp dụng cả refs/heads/main ngoài nhánh mặc định và cho phép thêm Rebase."""
+	cấp repository (ADR 00000007): áp dụng cả refs/heads/main ngoài nhánh mặc định và cho phép thêm Rebase."""
 	ruleset = rulesetFor('app')
 	ruleset['name'] = ORG_RULESET_NAME
 	ruleset['conditions'] = {

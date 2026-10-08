@@ -1,4 +1,4 @@
-# 0010. TÊN TỰ ĐẶT VIẾT CAMELCASE TIẾNG ANH; CÚ PHÁP CỦA NGÔN NGỮ GIỮ NGUYÊN
+# 00000010. TÊN TỰ ĐẶT VIẾT CAMELCASE TIẾNG ANH; CÚ PHÁP CỦA NGÔN NGỮ GIỮ NGUYÊN
 
 - **Trạng thái:** Chấp nhận
 - **Ngày:** 2026-10-03

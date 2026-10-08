@@ -1,4 +1,4 @@
-"""Cấu hình công cụ: Prettier, ruff, EditorConfig, phiên bản công cụ (ADR 0008), extension VS Code, Dev
+"""Cấu hình công cụ: Prettier, ruff, EditorConfig, phiên bản công cụ (ADR 00000008), extension VS Code, Dev
 Container."""
 
 import json
@@ -47,7 +47,7 @@ EDITORCONFIG_STANDARD = (
 
 
 def checkToolVersions():
-	"""Phiên bản công cụ chỉ ở mise.toml; Node.js chỉ ở .nvmrc (ADR 0008). Công cụ trong mise.toml (trừ Python, Node.js)
+	"""Phiên bản công cụ chỉ ở mise.toml; Node.js chỉ ở .nvmrc (ADR 00000008). Công cụ trong mise.toml (trừ Python, Node.js)
 	khớp danh sách check-tool-versions.py theo dõi bản mới."""
 	mise = readText(ROOT / 'mise.toml') if (ROOT / 'mise.toml').exists() else ''
 	tools = set(re.findall(r'^([a-z-]+) = "[^"]+"$', mise.split('[settings]')[0], re.MULTILINE))
@@ -100,7 +100,9 @@ def checkToolVersions():
 	for path in sorted(path for path in sources if path.exists()):
 		for number, line in enumerate(readText(path).split('\n'), start=1):
 			if pinned.search(line):
-				error(path, f'dòng {number}: phiên bản công cụ phải lấy từ mise.toml (ADR 0008)')
+				error(
+					path, f'dòng {number}: phiên bản công cụ phải lấy từ mise.toml (ADR 00000008)'
+				)
 
 
 def checkFormatConfig():
@@ -241,7 +243,7 @@ def checkDevcontainerPins():
 		if not tag or tag == 'latest':
 			error(path, f'"{reference}" phải ghim phiên bản chính (ví dụ :1), không dùng latest')
 	# Dev Container dùng Python của image (MISE_DISABLE_TOOLS=python): image ghim đúng bản Python của mise.toml để
-	# container chạy script như máy cục bộ (ADR 0008).
+	# container chạy script như máy cục bộ (ADR 00000008).
 	if image and '/devcontainers/python:' in image:
 		mise = ROOT / 'mise.toml'
 		try:

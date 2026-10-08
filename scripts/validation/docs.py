@@ -1,5 +1,5 @@
 """Tài liệu: liên kết, tiêu đề, huy hiệu, email, security.txt, CHANGELOG.md, bảng ADR; tài liệu khớp code
-(ADR 0013)."""
+(ADR 00000013)."""
 
 import builtins
 import re
@@ -22,7 +22,7 @@ from validation.workflows import repositoryWorkflows
 
 # Email liên hệ chung của công ty — mọi tài liệu phải dùng đúng địa chỉ này.
 COMPANY_EMAIL = 'toanquynhvn@gmail.com'
-# Tag phát hành: Stable.vYYYY.MM.DDXXXX, Beta.vYYYY.MM.DDXXXX (ADR 0012) và tag vYYYY.MM.Stable đã phát hành.
+# Tag phát hành: Stable.vYYYY.MM.DDXXXX, Beta.vYYYY.MM.DDXXXX (ADR 00000012) và tag vYYYY.MM.Stable đã phát hành.
 RELEASE_TAG = re.compile(
 	r'(Stable|Beta)\.v[0-9]{4}\.(0[1-9]|1[0-2])\.[0-9]{6}|v[0-9]{4}\.(0[1-9]|1[0-2])\.Stable'
 )
@@ -33,6 +33,8 @@ EMAIL = re.compile(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-
 ADR_SECTIONS = ('BỐI CẢNH', 'QUYẾT ĐỊNH', 'PHƯƠNG ÁN ĐÃ CÂN NHẮC', 'HỆ QUẢ')
 # Trạng thái của ADR: ADR chỉ mô tả quyết định hiện hành, đổi quyết định thì cập nhật chính ADR đó.
 ADR_STATUSES = ('Đề xuất', 'Chấp nhận')
+# Tên tệp ADR: số gồm 8 chữ số, tên tiếng Anh nối bằng dấu gạch ngang.
+ADR_FILE = re.compile(r'\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*\.md')
 # Đường dẫn trong tài liệu bắt đầu bằng các thư mục này phải có thật trong repository.
 DOC_PATH = re.compile(
 	r'`((?:scripts|shell|docs|rulesets|workflow-templates|repository-templates|\.devcontainer|\.github/workflows)/'
@@ -133,13 +135,18 @@ def checkAdrIndex():
 	rows = {
 		number: (status.strip(), date.strip())
 		for number, status, date in re.findall(
-			r'^\| \[(\d{4})\]\([^)]+\) +\|[^|]+\|([^|]+)\|([^|]+)\|$',
+			r'^\| \[(\d{8})\]\([^)]+\) +\|[^|]+\|([^|]+)\|([^|]+)\|$',
 			readText(indexPath),
 			re.MULTILINE,
 		)
 	}
-	for path in sorted(folder.glob('[0-9][0-9][0-9][0-9]-*.md')):
-		number = path.name[:4]
+	for path in sorted(folder.glob('*.md')):
+		if path.name in ('README.md', 'template.md'):
+			continue
+		if not ADR_FILE.fullmatch(path.name):
+			error(path, 'tên tệp ADR phải có dạng NNNNNNNN-short-title.md (số gồm 8 chữ số)')
+			continue
+		number = path.name[:8]
 		text = readText(path)
 		status = re.search(r'^- \*\*Trạng thái:\*\* (.+)$', text, re.MULTILINE)
 		date = re.search(r'^- \*\*Ngày:\*\* (.+)$', text, re.MULTILINE)

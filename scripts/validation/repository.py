@@ -159,8 +159,8 @@ def checkRulesets():
 			name = job.get('name')
 			if isinstance(name, str):
 				jobs.add(name)
-	# Mọi ruleset nhánh, tag (cấp repository, cấp tổ chức) bắt buộc commit có chữ ký (ADR 0007); push
-	# ruleset không nhận quy tắc này (ADR 0005).
+	# Mọi ruleset nhánh, tag (cấp repository, cấp tổ chức) bắt buộc commit có chữ ký (ADR 00000007); push
+	# ruleset không nhận quy tắc này (ADR 00000005).
 	for rulesetPath in sorted((ROOT / 'rulesets').glob('*.json')):
 		try:
 			data = readJsonObject(rulesetPath)
@@ -187,7 +187,7 @@ def checkRulesets():
 		refName = configField(tagPath, conditions, 'ref_name', dict)
 		include = configItems(tagPath, refName, 'include', str)
 		if tags.get('name') != 'Protect Release Tags' or tags.get('target') != 'tag':
-			error(tagPath, 'ruleset phải tên "Protect Release Tags", target "tag" (ADR 0006)')
+			error(tagPath, 'ruleset phải tên "Protect Release Tags", target "tag" (ADR 00000006)')
 		for pattern in ('refs/tags/v*', 'refs/tags/Stable.v*', 'refs/tags/Beta.v*'):
 			if pattern not in include:
 				error(tagPath, f'ruleset phải áp dụng cho {pattern} (tag phát hành)')
@@ -257,7 +257,7 @@ def checkRulesets():
 		):
 			error(
 				pushPath,
-				'ruleset phải tên "Protect Pushes (Organization)", target "push" và nhắm ~ALL repository (ADR 0005)',
+				'ruleset phải tên "Protect Pushes (Organization)", target "push" và nhắm ~ALL repository (ADR 00000005)',
 			)
 	for rule in configItems(path, ruleset, 'rules'):
 		parameters = configField(path, rule, 'parameters', dict)

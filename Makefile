@@ -5,7 +5,7 @@
 # Yêu cầu: Node.js (theo .nvmrc), Python ≥ 3.11 (mise.toml), ruby, git, ruff, shellcheck, actionlint
 # Cài đúng phiên bản trong mise.toml và .nvmrc: mise install; thư viện Node.js tự cài khi chạy kiểm tra.
 # Các nhóm kiểm tra khai báo một nơi trong scripts/check.py — workflow validate.yml gọi cùng script; logic nhiều
-# bước nằm trong scripts/, shell/ (có test), Makefile chỉ gọi lệnh (ADR 0009).
+# bước nằm trong scripts/, shell/ (có test), Makefile chỉ gọi lệnh (ADR 00000009).
 # Tương thích GNU Make ≥ 3.81 (bản mặc định của macOS): không dùng .ONESHELL, .SHELLFLAGS, !=.
 
 # ------------------------------------------------------------------------------

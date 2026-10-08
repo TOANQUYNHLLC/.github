@@ -1,4 +1,4 @@
-# 0002. XUỐNG DÒNG LF; CHỈ LOẠI TỆP BẮT BUỘC MỚI DÙNG CRLF
+# 00000002. XUỐNG DÒNG LF; CHỈ LOẠI TỆP BẮT BUỘC MỚI DÙNG CRLF
 
 - **Trạng thái:** Chấp nhận
 - **Ngày:** 2026-10-03

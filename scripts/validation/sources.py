@@ -1,4 +1,4 @@
-"""Quy ước mã nguồn: tên hàm/biến camelCase, lớp PascalCase (ADR 0010); script ưu tiên Python (ADR 0009)."""
+"""Quy ước mã nguồn: tên hàm/biến camelCase, lớp PascalCase (ADR 00000010); script ưu tiên Python (ADR 00000009)."""
 
 import ast
 import hashlib
@@ -7,11 +7,11 @@ import re
 
 from validation.common import decodeText, error, readBytes
 
-# Đuôi tệp script ngoài Python ở bất kỳ đâu — phải ghi lý do không dùng Python (ADR 0009); trong scripts/ thì mọi
+# Đuôi tệp script ngoài Python ở bất kỳ đâu — phải ghi lý do không dùng Python (ADR 00000009); trong scripts/ thì mọi
 # tệp không phải Python (kể cả .js) đều phải ghi.
 SCRIPT_SUFFIXES = ('.sh', '.bash', '.zsh', '.rb', '.pl', '.ps1')
 NOT_PYTHON_REASON = 'Không viết bằng Python vì:'
-# Tên tự đặt trong mã Python (ADR 0010): hàm, tham số camelCase (setUp, tearDown của unittest cũng khớp);
+# Tên tự đặt trong mã Python (ADR 00000010): hàm, tham số camelCase (setUp, tearDown của unittest cũng khớp);
 # biến không dùng snake_case — camelCase, hằng số UPPER_CASE, hoặc PascalCase khi giữ một lớp.
 FUNCTION_NAME = re.compile(r'_?[a-z][a-zA-Z0-9]*')
 CLASS_NAME = re.compile(r'_?[A-Z][a-zA-Z0-9]*')
@@ -173,7 +173,7 @@ nameResults = {}
 
 
 def checkNames(path, text):
-	"""Tên lớp PascalCase; hàm/tham số camelCase; biến không dùng snake_case (ADR 0010)."""
+	"""Tên lớp PascalCase; hàm/tham số camelCase; biến không dùng snake_case (ADR 00000010)."""
 	key = hashlib.sha256(text.encode('utf-8')).hexdigest()
 	if key not in nameResults:
 		nameResults[key] = nameProblems(text)
@@ -183,7 +183,7 @@ def checkNames(path, text):
 		return
 	for line, kind, name in problems:
 		convention = 'PascalCase' if kind == 'tên lớp' else 'camelCase'
-		error(path, f'dòng {line}: {kind} "{name}" phải viết {convention} tiếng Anh (ADR 0010)')
+		error(path, f'dòng {line}: {kind} "{name}" phải viết {convention} tiếng Anh (ADR 00000010)')
 
 
 def checkScriptLanguage(path):
@@ -193,7 +193,7 @@ def checkScriptLanguage(path):
 		error(
 			path,
 			f'script không viết bằng Python — thêm dòng "{NOT_PYTHON_REASON} <lý do>" ở đầu tệp, '
-			'nêu vì sao ngôn ngữ này xử lý tốt hơn; nếu không, viết bằng Python (ADR 0009)',
+			'nêu vì sao ngôn ngữ này xử lý tốt hơn; nếu không, viết bằng Python (ADR 00000009)',
 		)
 
 

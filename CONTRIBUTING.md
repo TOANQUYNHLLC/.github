@@ -225,7 +225,7 @@ Các mẫu cần có trên nhánh mặc định của repository nguồn trướ
 
 - Ưu tiên **Squash and merge**: toàn bộ Pull Request thành một commit trên `main`, tiêu đề commit là tiêu đề Pull Request.
 - Dùng **Merge** khi cần giữ các commit riêng của Pull Request; khi đó mọi commit phải theo quy ước commit.
-- Không có **Rebase and merge**: GitHub tạo lại commit mà không ký được nên commit trên `main` mất chữ ký (ADR 0007 của repository `.github`). Rebase branch của bạn lên nhánh chính tại máy vẫn được.
+- Không có **Rebase and merge**: GitHub tạo lại commit mà không ký được nên commit trên `main` mất chữ ký (ADR 00000007 của repository `.github`). Rebase branch của bạn lên nhánh chính tại máy vẫn được.
 - Chỉ hợp nhất khi đã được phê duyệt, mọi kiểm tra tự động thành công và mọi góp ý đã được giải quyết.
 - Xóa branch sau khi hợp nhất.
 

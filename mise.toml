@@ -1,6 +1,6 @@
-# Phiên bản công cụ — nguồn duy nhất (ADR 0008). ruff, ShellCheck, actionlint dùng ở máy cục bộ, Dev Container và CI
+# Phiên bản công cụ — nguồn duy nhất (ADR 00000008). ruff, ShellCheck, actionlint dùng ở máy cục bộ, Dev Container và CI
 # (jdx/mise-action); Python chỉ cho máy cục bộ — CI dùng python3 của runner, Dev Container dùng Python của image
-# ghim cùng bản này (ADR 0008).
+# ghim cùng bản này (ADR 00000008).
 # Cài mise (https://mise.jdx.dev) rồi chạy: mise install
 # Node.js lấy từ .nvmrc (dùng chung với actions/setup-node); thư viện Node.js ghi trong package.json.
 [tools]
