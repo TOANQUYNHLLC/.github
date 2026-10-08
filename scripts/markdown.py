@@ -1,25 +1,28 @@
-"""Bỏ nội dung mã trong Markdown để các kiểm tra liên kết, tiêu đề và thụt lề dùng cùng cách đọc."""
+"""Bỏ nội dung mã trong Markdown để các kiểm tra liên kết, tiêu đề, thụt lề và parser nội dung phát hành
+dùng cùng cách đọc khối mã."""
 
 import re
 
-FENCE = re.compile(r'^[ \t]*(`{3,}|~{3,})([^\n]*)$')
+FENCE = re.compile(r'^ {0,3}(`{3,}|~{3,})([^\n]*)$')
 CODE_DELIMITER = re.compile(r'`+|\n[ \t]*\n')
 
 
 def withoutCodeBlocks(text):
-	"""Giữ số dòng; khối mã chỉ đóng bằng cùng dấu và ít nhất bằng số dấu mở, không kèm chữ.
+	"""Giữ số dòng; hàng rào mở/đóng thụt tối đa 3 dấu cách, không nhận tab hoặc mã thụt lề.
+	Khối mã chỉ đóng bằng cùng dấu và ít nhất bằng số dấu mở; phía sau chỉ nhận dấu cách ASCII hoặc tab.
 	Khối chưa đóng kéo dài đến cuối tệp. Dấu backtick trong phần ngôn ngữ không mở khối backtick."""
 	lines = text.split('\n')
 	fence = ''
 	for index, line in enumerate(lines):
-		match = FENCE.fullmatch(line)
+		# CR trong CRLF là kết thúc dòng, không phải phần chữ theo sau hàng rào.
+		match = FENCE.fullmatch(line.removesuffix('\r'))
 		if fence:
 			lines[index] = ''
 			if (
 				match
 				and match[1][0] == fence[0]
 				and len(match[1]) >= len(fence)
-				and not match[2].strip()
+				and not match[2].strip(' \t')
 			):
 				fence = ''
 		elif match and (match[1][0] == '~' or '`' not in match[2]):

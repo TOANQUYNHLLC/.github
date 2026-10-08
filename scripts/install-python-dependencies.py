@@ -3,8 +3,9 @@
 Chạy: python .org/scripts/install-python-dependencies.py sau khi checkout repository của tổ chức vào .org/.
 Ruff lấy phiên bản trong mise.toml của tổ chức. Cài requirements nếu có, rồi cài package của dự án khi có
 setup.py/setup.cfg, build-system, dependencies/dynamic của project hoặc cấu hình Poetry. pyproject.toml chỉ
-chứa cấu hình công cụ hoặc metadata không được coi là package cần cài. Dependency cho tests bổ sung bằng
-requirements-dev.txt hoặc chỉnh workflow theo extras/nhóm phụ thuộc của dự án.
+chứa cấu hình công cụ hoặc metadata không được coi là package cần cài. Poetry đặt package-mode = false thì
+bỏ bước cài chính dự án; dependency cần xuất ra requirements hoặc cài bằng workflow riêng. Dependency cho
+tests bổ sung bằng requirements-dev.txt hoặc chỉnh workflow theo extras/nhóm phụ thuộc của dự án.
 """
 
 import configparser
@@ -40,12 +41,19 @@ def dependencyCommands(projectRoot):
 	tool = data.get('tool', {})
 	if not isinstance(project, dict) or not isinstance(tool, dict):
 		raise TypeError('pyproject.toml: project và tool phải là bảng TOML')
+	poetry = tool.get('poetry', {})
+	if not isinstance(poetry, dict):
+		raise TypeError('pyproject.toml: tool.poetry phải là bảng TOML')
+	packageMode = poetry.get('package-mode', True)
+	if not isinstance(packageMode, bool):
+		raise TypeError('pyproject.toml: tool.poetry.package-mode phải là boolean')
 	commands = [
 		[sys.executable, '-m', 'pip', 'install', '-r', name]
 		for name in ('requirements.txt', 'requirements-dev.txt')
 		if (projectRoot / name).is_file()
 	]
-	if (
+	# Chế độ không đóng gói của Poetry không cho xây/cài chính dự án, dù vẫn có build-system hoặc dependencies.
+	if packageMode and (
 		hasLegacyPackage(projectRoot)
 		or 'build-system' in data
 		or 'dependencies' in project

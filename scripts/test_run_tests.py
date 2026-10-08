@@ -180,6 +180,28 @@ class RunTestsTest(unittest.TestCase):
 		self.assertTrue(ids)
 		self.assertTrue(all(test.startswith('test_conventions.') for test in ids))
 
+	def testShardCountIgnoresSummariesPrintedByTests(self):
+		module = loadScript('run-tests')
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			(root / 'run-tests.py').write_text(
+				Path(module.__file__).read_text(encoding='utf-8'), encoding='utf-8'
+			)
+			(root / 'test_summary_output.py').write_text(
+				'import sys, unittest\n'
+				'class SummaryOutput(unittest.TestCase):\n'
+				'\tdef testOutput(self):\n'
+				'\t\tprint("Ran 99 tests in 0.1s")\n'
+				'\t\tprint("Ran 88 tests in 0.1s", file=sys.stderr)\n',
+				encoding='utf-8',
+			)
+			module.SCRIPTS = root
+			ids = ['test_summary_output.SummaryOutput.testOutput']
+			code, ran, output, timings = module.timedShard(ids)
+			self.assertEqual(code, 0, output)
+			self.assertEqual(ran, 1, output)
+			self.assertEqual(sorted(timings), ids)
+
 	def testShardReportsCountAndFailure(self):
 		# Nhóm đạt: mã thoát 0 và đếm đúng số test; test không tồn tại: mã thoát khác 0 để cả lượt báo lỗi.
 		module = loadScript('run-tests')

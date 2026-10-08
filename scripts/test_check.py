@@ -145,6 +145,44 @@ class CheckTest(unittest.TestCase):
 			self.assertEqual(run.call_count, len(commands))
 		self.assertEqual(module.checkGroups()['content'], commands)
 
+	def testPythonCommandsUseRunningInterpreter(self):
+		module = loadScript('check')
+		with (
+			mock.patch.object(module.sys, 'executable', '/selected/python'),
+			mock.patch.object(module, 'shellScripts', return_value=[]),
+		):
+			groups = module.checkGroups()
+		for name in ('content', 'conventions'):
+			for command in groups[name]:
+				self.assertEqual(command[0], '/selected/python')
+
+	@unittest.skipIf(os.name == 'nt', 'Tệp gọi shell trong PATH chỉ chạy trên POSIX')
+	def testSelectedInterpreterWorksWhenPathPythonIsUnusable(self):
+		# Trình thông dịch chạy check.py hợp lệ nhưng python3 trong PATH có thể cũ hoặc không chạy được.
+		# Các script con phải vẫn chạy bằng chính trình thông dịch đã được người dùng chọn.
+		module = loadScript('check')
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			module.ROOT = root
+			(root / 'scripts').mkdir()
+			for name in ('validate.py', 'run-tests.py', 'conventions.py'):
+				(root / 'scripts' / name).write_text(
+					'import sys\nprint(sys.executable)\n', encoding='utf-8'
+				)
+			binPath = root / 'bin'
+			binPath.mkdir()
+			unusablePython = binPath / 'python3'
+			unusablePython.write_text('#!/bin/sh\nexit 97\n', encoding='utf-8')
+			unusablePython.chmod(0o755)
+			output = io.StringIO()
+			with (
+				mock.patch.object(module, 'shellScripts', return_value=[]),
+				mock.patch.dict(os.environ, PATH=str(binPath)),
+				contextlib.redirect_stdout(output),
+			):
+				self.assertTrue(module.runGroups(['content', 'conventions']), output.getvalue())
+			self.assertEqual(output.getvalue().splitlines().count(sys.executable), 4)
+
 	def testMinimumPythonDeclaredConsistently(self):
 		# requires-python của pyproject.toml (ruff đọc khi chạy ngoài check.py) phải trùng --target-version mà
 		# check.py, git hook truyền cho ruff và phiên bản check.py chặn — lệch thì VS Code và make check báo khác nhau.
@@ -273,6 +311,73 @@ class CheckTest(unittest.TestCase):
 				contextlib.redirect_stderr(io.StringIO()),
 			):
 				self.assertEqual(module.runCommand('audit', ['npm', 'audit'])[0], expected, case)
+
+	def testAuditVulnerabilityReportCannotBeMistakenForNetworkError(self):
+		module = loadScript('check')
+		for title in (
+			'ENOTFOUND',
+			'EAI_AGAIN',
+			'ETIMEDOUT',
+			'ECONNREFUSED',
+			'ECONNRESET',
+			'ENETUNREACH',
+			'request to https://registry.example failed',
+			'npm warn audit request to https://registry.example failed, reason: ECONNRESET',
+		):
+			for colored in (False, True):
+				with self.subTest(title=title, colored=colored):
+					header = '# npm audit report'
+					if colored:
+						header = f'\x1b[37m{header}\x1b[39m'
+					output = (
+						'npm warn audit request to https://registry.example failed, reason: ECONNRESET\n'
+						f'{header}\n\nexample  *\nSeverity: high\n'
+						f'{title} - https://example.com/advisory\n1 high severity vulnerability\n'
+					)
+					result = subprocess.CompletedProcess([], 1, output)
+					with mock.patch.object(module.subprocess, 'run', return_value=result):
+						passed, actual = module.runCommand('audit', ['npm', 'audit'])
+					self.assertFalse(passed)
+					self.assertEqual(actual, output)
+
+	def testAuditRegistryHttpErrorIsNotAConnectionFailure(self):
+		module = loadScript('check')
+		for status in (400, 401, 403, 404, 429, 500, 503):
+			with self.subTest(status=status):
+				output = (
+					'npm warn audit request to https://registry.example failed, '
+					f'reason: {status} Registry Error\n'
+					'npm error audit endpoint returned an error\n'
+				)
+				result = subprocess.CompletedProcess([], 1, output)
+				with mock.patch.object(module.subprocess, 'run', return_value=result):
+					passed, actual = module.runCommand('audit', ['npm', 'audit'])
+				self.assertFalse(passed)
+				self.assertEqual(actual, output)
+
+	def testAuditRecognizedNetworkDiagnosticsOnlyWarn(self):
+		module = loadScript('check')
+		for code in (
+			'ENOTFOUND',
+			'EAI_AGAIN',
+			'ETIMEDOUT',
+			'ECONNREFUSED',
+			'ECONNRESET',
+			'ENETUNREACH',
+		):
+			for prefix in (
+				'npm warn audit request to https://registry.example failed, reason:',
+				'npm error code',
+				'npm ERR! code',
+			):
+				with self.subTest(code=code, prefix=prefix):
+					output = f'\x1b[33m{prefix}\x1b[39m {code}\n'
+					result = subprocess.CompletedProcess([], 1, output)
+					with mock.patch.object(module.subprocess, 'run', return_value=result):
+						passed, actual = module.runCommand('audit', ['npm', 'audit'])
+					self.assertTrue(passed)
+					self.assertIn('Bỏ qua audit', actual)
+					self.assertTrue(actual.startswith(output))
 
 	def testShellScriptsKeepSpecialNames(self):
 		# Script shell ở bất kỳ thư mục nào, tên có dấu vẫn được shellcheck kiểm tra.

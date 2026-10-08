@@ -19,6 +19,89 @@ except ModuleNotFoundError:
 
 
 class MarkdownLinksTest(unittest.TestCase):
+	def testOverIndentedFenceDoesNotHideFollowingLinksOrHeadings(self):
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'README.md'
+			for indent in ('    ', '\t', '   \t'):
+				with self.subTest(indent=indent):
+					text = f'{indent}~~~md\n{indent}example\n\n## REAL\n\n[x](missing.md)\n'
+					path.write_text(text, encoding='utf-8')
+					self.assertEqual(module.headingAnchors(path), {'real'})
+					self.assertEqual(
+						module.findBrokenLinks(path, text), ['liên kết hỏng: missing.md']
+					)
+
+	def testOverIndentedFenceCannotCloseCodeBlock(self):
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'README.md'
+			for validIndent in ('', ' ', '  ', '   '):
+				for indent in ('    ', '\t', '   \t'):
+					with self.subTest(validIndent=validIndent, indent=indent):
+						text = (
+							f'{validIndent}```md\n{indent}```\n## FAKE\n[x](missing.md)\n'
+							f'{validIndent}```\n## REAL\n'
+						)
+						path.write_text(text, encoding='utf-8')
+						self.assertEqual(module.headingAnchors(path), {'real'})
+						self.assertEqual(module.findBrokenLinks(path, text), [])
+
+	def testUnicodeWhitespaceCannotCloseCodeBlock(self):
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'README.md'
+			for fence in ('```', '~~~'):
+				for suffix in ('\u00a0', '\u2003', '\u202f', '\v', '\f'):
+					with self.subTest(fence=fence, suffix=suffix):
+						text = (
+							f'{fence}md\n{fence}{suffix}\n## FAKE\n[x](missing.md)\n'
+							f'{fence} \t\n## REAL\n[x](actually_missing.md)\n'
+						)
+						path.write_text(text, encoding='utf-8')
+						self.assertEqual(module.headingAnchors(path), {'real'})
+						self.assertEqual(
+							module.findBrokenLinks(path, text),
+							['liên kết hỏng: actually_missing.md'],
+						)
+
+	def testClosingFenceAcceptsAsciiWhitespaceAndCrLf(self):
+		module = loadScript('markdown')
+		for ending in ('\n', '\r\n'):
+			for fence in ('```', '~~~'):
+				for suffix in ('', ' ', '\t', ' \t '):
+					with self.subTest(ending=ending, fence=fence, suffix=suffix):
+						text = ending.join(
+							(f'{fence}md', '## FAKE', f'{fence}{suffix}', '## REAL', '')
+						)
+						self.assertEqual(
+							module.withoutCodeBlocks(text), '\n' * 3 + f'## REAL{ending}'
+						)
+
+	def testAtxHeadingsAcceptClosingMarkersAndIndentation(self):
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'README.md'
+			text = '# TITLE #\n\n  ## CHILD ###\n\n   ### TITLE\n\n#\tTAB\t##\n'
+			path.write_text(text, encoding='utf-8')
+			self.assertEqual(module.headingAnchors(path), {'title', 'child', 'title-1', 'tab'})
+			self.assertEqual(
+				module.findBrokenLinks(path, '[a](#title) [b](#child) [c](#title-1) [d](#tab)'),
+				[],
+			)
+
+	def testAtxHeadingMarkersKeepLiteralHashesAndRejectInvalidHeadings(self):
+		module = loadScript('check-markdown-links')
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'README.md'
+			text = (
+				'####### TOO MANY\n\n#NOSPACE\n\n    # CODE\n\n'
+				'# LITERAL#\n\n## TRAILING ### WORD\n\n### ESCAPED \\###\n\n'
+				'~~~md\n # FENCED #\n~~~\n'
+			)
+			path.write_text(text, encoding='utf-8')
+			self.assertEqual(module.headingAnchors(path), {'literal', 'trailing--word', 'escaped-'})
+
 	def testEscapedBackticksDoNotHideRealLinks(self):
 		module = loadScript('check-markdown-links')
 		with tempfile.TemporaryDirectory() as folder:

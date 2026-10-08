@@ -27,11 +27,14 @@ def headingSlug(title):
 
 
 def headingAnchors(path):
-	"""Anchor của mọi tiêu đề Markdown trong tệp; tiêu đề trùng thêm hậu tố -1, -2…."""
+	"""Anchor của tiêu đề ATX (dấu #), chấp nhận thụt từ 0 đến 3 dấu cách và dấu # đóng tùy chọn.
+	Tiêu đề trùng thêm hậu tố -1, -2…; không phân tích toàn bộ cú pháp GFM."""
 	text = withoutCodeBlocks(path.read_text(encoding='utf-8'))
 	seen, anchors = {}, set()
-	for match in re.finditer(r'^#{1,6} (.+)$', text, re.MULTILINE):
-		original = slug = headingSlug(match.group(1))
+	for match in re.finditer(r'^ {0,3}#{1,6}(?:[ \t]+|$)(.*)$', text, re.MULTILINE):
+		# Dấu # cuối chỉ đóng tiêu đề khi đứng sau khoảng trắng, không bị escape; còn lại là nội dung.
+		title = re.sub(r'(?:^|[ \t]+)#+[ \t]*$', '', match.group(1))
+		original = slug = headingSlug(title)
 		# Hậu tố sinh cho tiêu đề trước cũng giữ chỗ: A, A, A-1 → a, a-1, a-1-1.
 		while slug in seen:
 			seen[original] += 1

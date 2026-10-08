@@ -10,6 +10,7 @@ import io
 import json
 import re
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -2007,17 +2008,26 @@ class OrgSetupTest(unittest.TestCase):
 			re.findall(r'^kết quả (\S+)$', output.getvalue(), re.MULTILINE), list(module.COMMANDS)
 		)
 		self.assertIn('❌ gh lỗi', output.getvalue())
-		# make check gọi test qua make: tắt thông báo thư mục của make lồng nhau để chỉ so lệnh.
-		self.assertEqual(
-			subprocess.run(
-				['make', '--no-print-directory', '-n', 'org-preview'],
-				cwd=ROOT,
-				capture_output=True,
-				text=True,
-				check=True,
-			).stdout.strip(),
-			'python3 scripts/org-setup.py preview',
-		)
+		# Chọn PYTHON rõ ràng để MAKEFLAGS của make cha không đổi trường hợp mặc định đang kiểm thử.
+		# Kiểm tra cả trình thông dịch tùy chọn; tắt thông báo thư mục để chỉ so lệnh.
+		for pythonCommand in ('python3', sys.executable):
+			with self.subTest(pythonCommand=pythonCommand):
+				self.assertEqual(
+					subprocess.run(
+						[
+							'make',
+							'--no-print-directory',
+							'-n',
+							'org-preview',
+							f'PYTHON={pythonCommand}',
+						],
+						cwd=ROOT,
+						capture_output=True,
+						text=True,
+						check=True,
+					).stdout.strip(),
+					f'{pythonCommand} scripts/org-setup.py preview',
+				)
 
 	def testPreviewChecksLoginOnce(self):
 		# Chưa đăng nhập GitHub CLI: dừng trước khi chạy lệnh nào, báo một lần.

@@ -1,4 +1,4 @@
-"""Quy ước mã nguồn: tên tự đặt camelCase (ADR 0010), script ưu tiên Python (ADR 0009)."""
+"""Quy ước mã nguồn: tên hàm/biến camelCase, lớp PascalCase (ADR 0010); script ưu tiên Python (ADR 0009)."""
 
 import ast
 import hashlib
@@ -14,6 +14,7 @@ NOT_PYTHON_REASON = 'Không viết bằng Python vì:'
 # Tên tự đặt trong mã Python (ADR 0010): hàm, tham số camelCase (setUp, tearDown của unittest cũng khớp);
 # biến không dùng snake_case — camelCase, hằng số UPPER_CASE, hoặc PascalCase khi giữ một lớp.
 FUNCTION_NAME = re.compile(r'_?[a-z][a-zA-Z0-9]*')
+CLASS_NAME = re.compile(r'_?[A-Z][a-zA-Z0-9]*')
 VARIABLE_NAME = re.compile(r'_?[A-Za-z][A-Za-z0-9]*|[A-Z][A-Z0-9_]*|_')
 # Tên do Python quy định (__init__, __enter__, __all__…) — không phải tên tự đặt.
 DUNDER_NAME = re.compile(r'__\w+__')
@@ -103,7 +104,8 @@ def libraryMethods(nodes):
 
 
 def nameProblems(text):
-	"""(dòng, loại, tên) của mọi tên tự đặt sai quy ước trong mã Python; None khi mã không hợp lệ. Tên do Python,
+	"""(dòng, loại, tên) sai quy ước: lớp PascalCase, hàm/tham số camelCase, biến không dùng snake_case;
+	kể cả bí danh import và tên được gán trong match/case. None khi mã không hợp lệ. Tên do Python,
 	thư viện quy định (__init__, phương thức ghi đè lớp cha của thư viện) không xét."""
 	try:
 		tree = ast.parse(text)
@@ -121,6 +123,8 @@ def nameProblems(text):
 	required = libraryMethods(nodes)
 	problems = []
 	for node in nodes:
+		if isinstance(node, ast.ClassDef) and not CLASS_NAME.fullmatch(node.name):
+			problems.append((node.lineno, 'tên lớp', node.name))
 		# Phương thức ghi đè lớp cha của thư viện: cả tên lẫn tham số theo chữ ký thư viện quy định.
 		if node in required:
 			continue
@@ -144,12 +148,23 @@ def nameProblems(text):
 				)
 				if argument and not FUNCTION_NAME.fullmatch(argument.arg)
 			)
-		elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
-			if not VARIABLE_NAME.fullmatch(node.id) and not DUNDER_NAME.fullmatch(node.id):
-				problems.append((node.lineno, 'tên biến', node.id))
-		elif isinstance(node, ast.ExceptHandler) and node.name:
-			if not VARIABLE_NAME.fullmatch(node.name):
-				problems.append((node.lineno, 'tên biến', node.name))
+		# Các tên được gán không phải lúc nào cũng là ast.Name: bí danh import và biến của pattern
+		# được lưu dưới dạng chuỗi. Giữ tên import nguyên bản và thuộc tính pattern do thư viện quy định.
+		boundName = None
+		if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store):
+			boundName = node.id
+		elif isinstance(node, (ast.ExceptHandler, ast.MatchAs, ast.MatchStar)):
+			boundName = node.name
+		elif isinstance(node, ast.MatchMapping):
+			boundName = node.rest
+		elif isinstance(node, ast.alias) and node.asname != node.name:
+			boundName = node.asname
+		if (
+			boundName
+			and not VARIABLE_NAME.fullmatch(boundName)
+			and not DUNDER_NAME.fullmatch(boundName)
+		):
+			problems.append((node.lineno, 'tên biến', boundName))
 	return problems
 
 
@@ -158,7 +173,7 @@ nameResults = {}
 
 
 def checkNames(path, text):
-	"""Tên hàm, tham số tự đặt viết camelCase tiếng Anh; biến không dùng snake_case (ADR 0010)."""
+	"""Tên lớp PascalCase; hàm/tham số camelCase; biến không dùng snake_case (ADR 0010)."""
 	key = hashlib.sha256(text.encode('utf-8')).hexdigest()
 	if key not in nameResults:
 		nameResults[key] = nameProblems(text)
@@ -167,7 +182,8 @@ def checkNames(path, text):
 		error(path, 'Python không hợp lệ (lỗi cú pháp)')
 		return
 	for line, kind, name in problems:
-		error(path, f'dòng {line}: {kind} "{name}" phải viết camelCase tiếng Anh (ADR 0010)')
+		convention = 'PascalCase' if kind == 'tên lớp' else 'camelCase'
+		error(path, f'dòng {line}: {kind} "{name}" phải viết {convention} tiếng Anh (ADR 0010)')
 
 
 def checkScriptLanguage(path):

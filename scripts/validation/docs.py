@@ -208,9 +208,9 @@ def checkBadges(path, text):
 
 
 def checkHeadings(path, text):
-	"""Phong cách thống nhất của repository: mọi tiêu đề Markdown viết hoa."""
+	"""Tiêu đề ATX, kể cả thụt lề từ 0 đến 3 dấu cách và phân cách bằng tab, phải viết hoa."""
 	for number, line in enumerate(withoutCodeBlocks(text).split('\n'), start=1):
-		heading = re.match(r'#{1,6} (.+)', line)
+		heading = re.match(r' {0,3}#{1,6}(?:[ \t]+|$)(.*)', line)
 		title = re.sub(r'`[^`]*`|\[[^\]]*\]\([^)]*\)', '', heading.group(1)) if heading else ''
 		if heading and title != title.upper():
 			error(path, f'dòng {number}: tiêu đề phải viết hoa — "{heading.group(1)}"')
@@ -257,6 +257,8 @@ def checkSecurityTxt(path, text):
 
 
 def checkChangelog(path, text):
+	# Tiêu đề và liên kết trong ví dụ mã là nội dung nguyên văn, không phải cấu trúc của CHANGELOG.
+	text = withoutCodeBlocks(text)
 	versions = re.findall(r'^## \[([^\]]+)\]', text, re.MULTILINE)
 	if not versions or versions[0] != 'CHƯA PHÁT HÀNH':
 		error(path, 'mục đầu tiên phải là "## [CHƯA PHÁT HÀNH]"')

@@ -7,6 +7,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -327,26 +328,31 @@ class SyncTest(unittest.TestCase):
 	def testMakeVariablesReachScriptsUnparsedByShell(self):
 		# TAG, REF đi qua biến môi trường như BRANCH: ký tự đặc biệt của shell không thành lệnh; thiếu TAG thì báo
 		# rõ thay vì lỗi tiếng Anh của argparse; REF mặc định main.
-		def recipe(*arguments):
+		# PYTHON truyền từ make cha qua MAKEFLAGS không được thay đổi trường hợp test mặc định.
+		def recipe(*arguments, pythonCommand='python3'):
 			return subprocess.run(
-				['make', '--no-print-directory', '-n', *arguments],
+				['make', '--no-print-directory', '-n', f'PYTHON={pythonCommand}', *arguments],
 				cwd=ROOT,
 				capture_output=True,
 				text=True,
 				check=False,
 			)
 
-		self.assertEqual(
-			recipe('release-notes', 'TAG=x; echo chèn').stdout.splitlines(),
-			['python3 scripts/release.py notes "$TAG"'],
-		)
+		for pythonCommand in ('python3', sys.executable):
+			with self.subTest(pythonCommand=pythonCommand):
+				self.assertEqual(
+					recipe(
+						'release-notes', 'TAG=x; echo chèn', pythonCommand=pythonCommand
+					).stdout.splitlines(),
+					[f'{pythonCommand} scripts/release.py notes "$TAG"'],
+				)
+				self.assertEqual(
+					recipe('forms', pythonCommand=pythonCommand).stdout.splitlines(),
+					[f'{pythonCommand} scripts/check-github-forms.py "${{REF:-main}}"'],
+				)
 		missing = recipe('release-notes')
 		self.assertNotEqual(missing.returncode, 0)
 		self.assertIn('Thiếu TAG', missing.stderr)
-		self.assertEqual(
-			recipe('forms').stdout.splitlines(),
-			['python3 scripts/check-github-forms.py "${REF:-main}"'],
-		)
 
 	def testDivergedBranchIsNotMergedAutomatically(self):
 		# Branch ở máy và trên origin cùng có commit mới: chỉ tua nhanh — dừng, không tự tạo merge commit (git

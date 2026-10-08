@@ -105,7 +105,8 @@ def preCommit(root, args):
 		failed = False
 		environment = toolEnvironment()
 		if PRETTIER.exists():
-			command = [str(PRETTIER), '--check', '--ignore-unknown', *files]
+			# Tên như --version phải được đọc như đường dẫn, không được thay đổi tùy chọn kiểm tra.
+			command = [str(PRETTIER), '--check', '--ignore-unknown', '--', *files]
 			failed |= (
 				subprocess.run(command, cwd=folder, env=environment, check=False).returncode != 0
 			)
@@ -117,9 +118,9 @@ def preCommit(root, args):
 			failed = True
 		elif python:
 			for command in (
-				['ruff', 'format', '--check', *python],
+				['ruff', 'format', '--check', '--', *python],
 				# Như nhóm format của check.py: Python ≥ 3.11 (tomllib, datetime.UTC).
-				['ruff', 'check', '--target-version', 'py311', *python],
+				['ruff', 'check', '--target-version', 'py311', '--', *python],
 			):
 				failed |= (
 					subprocess.run(command, cwd=folder, env=environment, check=False).returncode

@@ -1,6 +1,6 @@
 {
 	"name": "Python CI — TOÀN QUỲNH",
-	"description": "Cài requirements và package khai báo bằng pyproject.toml/setup.py, kiểm tra bằng Ruff theo mise.toml của tổ chức và chạy pytest. Python lấy từ .python-version.",
+	"description": "Cài requirements nếu có và package khi có cấu hình đóng gói, kiểm tra bằng Ruff theo mise.toml của tổ chức và chạy pytest khi có tệp trong tests/. Python lấy từ .python-version.",
 	"iconName": "python-ci",
 	"categories": ["Continuous integration", "Python"],
 	"filePatterns": ["pyproject.toml$", "requirements.txt$", "setup.py$", "setup.cfg$"]

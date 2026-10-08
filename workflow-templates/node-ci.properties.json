@@ -1,6 +1,6 @@
 {
 	"name": "Node.js CI — TOÀN QUỲNH",
-	"description": "Cài thư viện bằng npm ci, chạy lint, kiểm thử và build. Phiên bản Node lấy từ .nvmrc.",
+	"description": "Cài thư viện bằng npm ci, chạy lint, kiểm thử và build khi có script tương ứng. Phiên bản Node lấy từ .nvmrc.",
 	"iconName": "node-ci",
 	"categories": ["Continuous integration", "JavaScript", "TypeScript", "npm"],
 	"filePatterns": ["package.json$"]

@@ -6,6 +6,7 @@ Chạy:
 	python3 scripts/check.py tools        # chỉ kiểm tra đã cài đủ công cụ (cài thư viện Node.js nếu thiếu, sai phiên bản)
 Mỗi nhóm khớp một job của workflow validate.yml (content, format, lint) hoặc một workflow Pull Request
 (conventions: branch-name.yml, pr-title.yml; audit: dependency-review.yml). CodeQL không chạy tại máy.
+Các script Python con dùng cùng trình thông dịch đang chạy check.py, kể cả khi chọn PYTHON qua Makefile.
 """
 
 import functools
@@ -22,9 +23,11 @@ ROOT = Path(__file__).resolve().parents[1]
 NPM_INSTALL = ('npm', 'install', '--include=dev', '--no-audit', '--no-fund')
 # Công cụ nhóm cần mà không đứng đầu lệnh: validate.py đọc YAML bằng Ruby và liệt kê tệp bằng git.
 INDIRECT_TOOLS = {'content': ('ruby', 'git'), 'conventions': ('git',)}
-# Lỗi kết nối mạng của npm: audit không chạy được thì chỉ cảnh báo, không chặn (lỗ hổng thật vẫn chặn).
+# Chỉ nhận mã mạng trong chẩn đoán kết nối của npm; tên advisory hoặc lỗi HTTP không đủ để bỏ qua audit.
 NETWORK_ERROR = re.compile(
-	r'ENOTFOUND|EAI_AGAIN|ETIMEDOUT|ECONNREFUSED|ECONNRESET|ENETUNREACH|request to https?://\S+ failed'
+	r'^npm (?:warn audit request to https?://\S+ failed, reason: [^\r\n]*|(?:error|ERR!) code )'
+	r'\b(?:ENOTFOUND|EAI_AGAIN|ETIMEDOUT|ECONNREFUSED|ECONNRESET|ENETUNREACH)\b',
+	re.MULTILINE,
 )
 
 
@@ -57,8 +60,8 @@ def checkGroups():
 	trình (liệt kê script shell bằng git) — main, ensureTools, runGroup cùng dùng."""
 	return {
 		'content': [
-			['python3', 'scripts/validate.py'],
-			['python3', 'scripts/run-tests.py'],
+			[sys.executable, 'scripts/validate.py'],
+			[sys.executable, 'scripts/run-tests.py'],
 		],
 		'format': [
 			# --no: chỉ dùng Prettier đã cài theo package.json, không tự tải bản mới nhất.
@@ -83,8 +86,8 @@ def checkGroups():
 			['actionlint', *workflowFiles()],
 		],
 		'conventions': [
-			['python3', 'scripts/conventions.py', 'branch'],
-			['python3', 'scripts/conventions.py', 'title'],
+			[sys.executable, 'scripts/conventions.py', 'branch'],
+			[sys.executable, 'scripts/conventions.py', 'title'],
 		],
 		'audit': [['npm', 'audit', '--audit-level=high']],
 	}
@@ -127,15 +130,21 @@ def ensureTools(groups):
 
 
 def runCommand(name, command):
-	"""Chạy một lệnh kiểm tra, trả (đạt hay không, đầu ra). audit mất mạng thì cảnh báo và tính là đạt."""
+	"""Chạy một lệnh kiểm tra, trả (đạt hay không, đầu ra). audit mất kết nối thì chỉ cảnh báo;
+	nếu đã có báo cáo lỗ hổng, giữ mã thoát lỗi dù đầu ra có chẩn đoán mạng."""
 	result = subprocess.run(
 		command, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, check=False
 	)
 	output = result.stdout
-	if name == 'audit' and result.returncode != 0 and NETWORK_ERROR.search(output):
-		return True, output + (
-			'⚠️  Bỏ qua audit: không kết nối được máy chủ npm — chạy lại make audit khi có mạng.\n'
-		)
+	if name == 'audit' and result.returncode != 0:
+		# FORCE_COLOR có thể khiến cả chẩn đoán và tiêu đề báo cáo chứa mã màu dù đầu ra đi qua pipe.
+		plainOutput = re.sub(r'\x1b\[[0-9;]*m', '', output)
+		if NETWORK_ERROR.search(plainOutput) and not re.search(
+			r'^# npm audit report\b', plainOutput, re.MULTILINE
+		):
+			return True, output + (
+				'⚠️  Bỏ qua audit: không kết nối được máy chủ npm — chạy lại make audit khi có mạng.\n'
+			)
 	return result.returncode == 0, output
 
 

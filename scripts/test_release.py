@@ -552,6 +552,51 @@ class ReleaseTest(unittest.TestCase):
 						self.assertEqual('--prerelease' in command, version.startswith('Beta.'))
 						self.assertIn('--generate-notes' if generated else '--notes-file', command)
 
+	def testReleaseNotesFileIsClosedBeforeCliReadsAndAlwaysRemoved(self):
+		# Windows không cho CLI mở lại NamedTemporaryFile đang mở với chế độ xóa mặc định.
+		originalTemporaryFile = tempfile.NamedTemporaryFile
+		with tempfile.TemporaryDirectory() as folder:
+			path = Path(folder) / 'CHANGELOG.md'
+			version = 'Stable.v2099.02.040001'
+			path.write_text(f'## [{version}]\n\n- Nội dung phát hành.\n', encoding='utf-8')
+			for failure in (False, True):
+				openedFiles, notesPaths = {}, []
+
+				def temporaryFile(*args, openedFiles=openedFiles, **kwargs):
+					file = originalTemporaryFile(*args, **kwargs)
+					openedFiles[Path(file.name)] = file
+					return file
+
+				def create(
+					command,
+					openedFiles=openedFiles,
+					notesPaths=notesPaths,
+					failure=failure,
+					**kwargs,
+				):
+					notesPath = Path(command[command.index('--notes-file') + 1])
+					notesPaths.append(notesPath)
+					if notesPath in openedFiles and not openedFiles[notesPath].closed:
+						raise PermissionError('Windows: tệp nội dung vẫn đang mở')
+					self.assertEqual(notesPath.read_text(encoding='utf-8'), '- Nội dung phát hành.')
+					if failure:
+						raise subprocess.CalledProcessError(1, command, stderr='GitHub từ chối')
+					return subprocess.CompletedProcess(command, 0)
+
+				with (
+					self.subTest(failure=failure),
+					mock.patch.object(self.module.tempfile, 'NamedTemporaryFile', temporaryFile),
+					mock.patch.object(self.module.subprocess, 'run', create),
+					contextlib.redirect_stdout(io.StringIO()),
+				):
+					if failure:
+						with self.assertRaises(subprocess.CalledProcessError):
+							self.module.createRelease(version, path, False)
+					else:
+						self.assertEqual(self.module.createRelease(version, path, False), 0)
+				self.assertEqual(len(notesPaths), 1)
+				self.assertFalse(notesPaths[0].exists())
+
 	def testReleaseBranchCreateFailureStopsBeforePullRequest(self):
 		# GitHub từ chối tạo branch (thiếu quyền, branch trùng tên vừa tạo): báo lỗi, không commit, không mở PR.
 		calls = []
@@ -769,6 +814,68 @@ class ReleaseTest(unittest.TestCase):
 			r'^## \[((?:v|Stable\.v|Beta\.v)[^\]]+)\]', changelog, re.MULTILINE
 		):
 			self.assertTrue(self.module.releaseNotes(changelog, version), version)
+
+	def testReleaseNotesPreserveFencedExamples(self):
+		version = 'Stable.v2099.02.010001'
+		for opening, closing in (('```', '```'), ('~~~', '~~~'), ('````', '`````'), ('~~~', '')):
+			with self.subTest(opening=opening, closing=closing):
+				notes = (
+					f'- Nội dung dành cho người dùng.\n\n{opening}md\n'
+					'## [VÍ DỤ]\n<p align="center">Minh họa</p>\n---'
+				)
+				if closing:
+					notes += f'\n{closing}\n\n- Phần cuối cần giữ.'
+				changelog = f'## [{version}]\n\n{notes}\n'
+				if closing:
+					changelog += '\n---\n\n<p align="center">© 2099</p>\n'
+				self.assertEqual(self.module.releaseNotes(changelog, version), notes)
+				self.assertIsNone(self.module.releaseNotes(changelog, 'VÍ DỤ'))
+
+	def testReleaseNotesKeepOverIndentedClosingFenceLiteral(self):
+		version = 'Stable.v2099.02.010001'
+		for indent in ('    ', '\t', '   \t'):
+			with self.subTest(indent=indent):
+				notes = (
+					f'- Nội dung mới.\n\n```md\n{indent}```\n'
+					'## [VÍ DỤ]\n<p align="center">Minh họa</p>\n```\n\n- Phần cuối.'
+				)
+				changelog = f'## [{version}]\n\n{notes}\n\n---\n'
+				self.assertEqual(self.module.releaseNotes(changelog, version), notes)
+				self.assertIsNone(self.module.releaseNotes(changelog, 'VÍ DỤ'))
+
+	def testReleaseNotesKeepUnicodeWhitespaceAfterFenceLiteral(self):
+		version = 'Stable.v2099.02.010001'
+		for fence in ('```', '~~~'):
+			for suffix in ('\u00a0', '\u2003', '\u202f', '\v', '\f'):
+				with self.subTest(fence=fence, suffix=suffix):
+					notes = (
+						f'- Nội dung mới.\n\n{fence}md\n{fence}{suffix}\n'
+						f'## [VÍ DỤ]\n<p align="center">Minh họa</p>\n{fence}\n\n- Phần cuối.'
+					)
+					changelog = f'## [{version}]\n\n{notes}\n\n---\n'
+					self.assertEqual(self.module.releaseNotes(changelog, version), notes)
+					self.assertIsNone(self.module.releaseNotes(changelog, 'VÍ DỤ'))
+
+	def testPreparationKeepsFullFencedNotesAndRealFooter(self):
+		notes = (
+			'### ✨ THÊM\n\n- Mục mới.\n\n~~~md\n'
+			'## [VÍ DỤ]\n<p align="center">Minh họa</p>\n---\n~~~\n\n- Phần cuối.'
+		)
+		changelog = RELEASE_FIXTURE.replace('### ✨ THÊM\n\n- Mục mới.', notes)
+		with tempfile.TemporaryDirectory() as folder:
+			clone = self.releaseClone(folder)
+			path = clone / 'CHANGELOG.md'
+			path.write_text(changelog, encoding='utf-8')
+			self.assertEqual(self.module.unreleasedNotes(changelog), notes)
+			with contextlib.redirect_stdout(io.StringIO()):
+				self.assertEqual(
+					self.module.prepareRelease('Stable.v2099.02.010001', '2099-02-01'), 0
+				)
+			prepared = path.read_text(encoding='utf-8')
+			self.assertEqual(self.module.unreleasedNotes(prepared), '')
+			self.assertEqual(self.module.releaseNotes(prepared, 'Stable.v2099.02.010001'), notes)
+			self.assertIsNone(self.module.releaseNotes(prepared, 'v2099.01.Stable'))
+			self.assertTrue(prepared.endswith('---\n\n<p align="center">© 2099</p>\n'))
 
 	def testMissingVersionReturnsNone(self):
 		self.assertIsNone(self.module.releaseNotes(RELEASE_FIXTURE, 'v1999.01.Stable'))

@@ -36,6 +36,7 @@ from datetime import date as CalendarDate
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from markdown import withoutCodeBlocks
 from orgsetup import github
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,16 +61,36 @@ RELEASE_VERSION = re.compile(
 MONTH_TAG = re.compile(r'v[0-9]{4}\.(0[1-9]|1[0-2])\.(Stable|Beta)')
 
 
+def changelogSyntax(changelog):
+	"""Ẩn khối mã để tìm mốc phiên bản, giữ nguyên vị trí ký tự khi cắt nội dung từ bản gốc."""
+	return '\n'.join(
+		line if visible else ' ' * len(line)
+		for line, visible in zip(
+			changelog.split('\n'), withoutCodeBlocks(changelog).split('\n'), strict=True
+		)
+	)
+
+
+def trimReleaseBody(body):
+	"""Bỏ đường phân cách cuối mục nếu ở ngoài khối mã; giữ nguyên các dòng của ví dụ."""
+	body = body.strip()
+	separator = re.search(r'(^|\n)---$', changelogSyntax(body))
+	return body[: separator.start()].strip() if separator else body
+
+
 def releaseNotes(changelog, version):
 	"""Nội dung dưới tiêu đề ## [version] tới tiêu đề phiên bản kế tiếp; None nếu không có."""
-	headings = list(VERSION_HEADING.finditer(changelog))
+	syntax = changelogSyntax(changelog)
+	headings = list(VERSION_HEADING.finditer(syntax))
 	for index, heading in enumerate(headings):
 		if heading.group('name') != version:
 			continue
 		end = headings[index + 1].start() if index + 1 < len(headings) else len(changelog)
+		footer = re.search(r'^<p align="center">', syntax[heading.end() : end], re.MULTILINE)
+		if footer:
+			end = heading.end() + footer.start()
 		body = changelog[heading.end() : end]
-		body = re.split(r'^<p align="center">', body, flags=re.MULTILINE)[0]
-		return re.sub(r'(^|\n)---$', '', body.strip()).strip() or None
+		return trimReleaseBody(body) or None
 	return None
 
 
@@ -78,24 +99,24 @@ def unreleasedNotes(changelog):
 
 	Chuỗi rỗng nếu trống; None nếu sai dạng.
 	"""
-	match = UNRELEASED.search(changelog)
+	match = UNRELEASED.search(changelogSyntax(changelog))
 	if not match:
 		return None
-	return re.sub(r'(^|\n)---$', '', match.group('body').strip()).strip()
+	return trimReleaseBody(changelog[match.start('body') : match.end('body')])
 
 
 def cutRelease(changelog, version, date):
 	"""CHANGELOG mới: mục CHƯA PHÁT HÀNH trống so sánh từ version, nội dung chuyển sang ## [version] để
 	release.yml đọc khi gắn tag. Mục của các phiên bản trước bị bỏ: lịch sử phát hành nằm ở GitHub Release,
 	CHANGELOG.md không tích luỹ nhật ký thay đổi; chân trang giữ nguyên."""
-	match = UNRELEASED.search(changelog)
+	match = UNRELEASED.search(changelogSyntax(changelog))
 	base, notes = match.group('base'), unreleasedNotes(changelog)
 	section = (
 		f'## [CHƯA PHÁT HÀNH]({base}/compare/{version}...HEAD)\n\n---\n\n'
 		f'## [{version}]({base}/releases/tag/{version}) — {date}\n\n{notes}\n\n---\n\n'
 	)
 	rest = changelog[match.end() :]
-	footer = re.search(r'^<p align="center">', rest, re.MULTILINE)
+	footer = re.search(r'^<p align="center">', changelogSyntax(rest), re.MULTILINE)
 	return changelog[: match.start()] + section + (rest[footer.start() :] if footer else '')
 
 
@@ -493,10 +514,11 @@ def createRelease(tag, changelogPath, allowGeneratedNotes):
 		command += ['--repo', os.environ['GITHUB_REPOSITORY']]
 	if notes:
 		print(f'Dùng nội dung mục [{tag}] trong {changelogPath.name}.')
-		with tempfile.NamedTemporaryFile('w', encoding='utf-8', suffix='.md') as file:
-			file.write(notes)
-			file.flush()
-			subprocess.run([*command, '--notes-file', file.name], check=True)
+		# Đóng tệp trước khi gh mở lại: Windows khóa NamedTemporaryFile đang mở với chế độ xóa mặc định.
+		with tempfile.TemporaryDirectory() as folder:
+			notesPath = Path(folder) / 'release-notes.md'
+			notesPath.write_text(notes, encoding='utf-8')
+			subprocess.run([*command, '--notes-file', str(notesPath)], check=True)
 		return 0
 	if not allowGeneratedNotes:
 		reportMessage(
