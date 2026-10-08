@@ -39,9 +39,15 @@ class ValidateTest(unittest.TestCase):
 				'trường cài đặt không hợp lệ',
 			),
 			(
-				lambda data: data['repositories']['.github']['endpoints'][
-					'actions/permissions'
-				].update(enabled=True, allowed_actions='all'),
+				# Ghi cả trạng thái của tổ chức: nguồn cài đặt thật đổi sau mỗi lần make org-import.
+				lambda data: (
+					data['organization']['endpoints']['actions/permissions'].update(
+						enabled_repositories='none'
+					),
+					data['repositories']['.github']['endpoints']['actions/permissions'].update(
+						enabled=True, allowed_actions='all'
+					),
+				),
 				'không bật Actions khi tổ chức tắt Actions',
 			),
 		):

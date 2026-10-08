@@ -10,16 +10,78 @@ from pathlib import Path
 from unittest import mock
 
 try:
-	from testsupport import loadScript
+	from testsupport import ROOT, loadScript
 except ModuleNotFoundError:
-	from scripts.testsupport import loadScript
+	from scripts.testsupport import ROOT, loadScript
 
 from orgsetup import configuration, github, resources
 
 
+def baselineConfig():
+	"""Nguồn cài đặt cố định cho test: cấu trúc trường lấy từ github-settings.json thật (theo kịp hợp đồng API),
+	giá trị mà các test giả định được ghim tại đây. Tệp thật đổi sau mỗi lần make org-import — bật Actions, thêm
+	repository… — nên test không được dựa vào giá trị của nó."""
+	config = configuration.readConfig(ROOT)
+	organization, repository = config['organization'], config['repositories']['.github']
+	config['repositories'], config['unavailable'] = {'.github': repository}, {}
+	organization['settings']['blog'] = 'https://toanquynh.com'
+	organization['web_settings']['two_factor_requirement_enabled'] = True
+	organization['runner_groups'] = [
+		{
+			'settings': {
+				'name': 'Default',
+				'visibility': 'all',
+				'allows_public_repositories': False,
+				'restricted_to_workflows': False,
+				'selected_workflows': [],
+			},
+			'default': True,
+			'inherited': False,
+			'workflow_restrictions_read_only': False,
+			'selected_repositories': [],
+		}
+	]
+	repository['settings']['archived'] = False
+	for scope in (organization, repository):
+		scope['endpoints']['actions/permissions/workflow'] = {
+			'default_workflow_permissions': 'read',
+			'can_approve_pull_request_reviews': True,
+		}
+	organization['endpoints'].update(
+		{
+			'actions/permissions': {'enabled_repositories': 'none', 'sha_pinning_required': False},
+			'actions/oidc/customization/sub': {},
+			'settings/immutable-releases': {'enforced_repositories': 'all'},
+		}
+	)
+	repository['endpoints'].update(
+		{
+			'actions/permissions': {'enabled': False, 'sha_pinning_required': False},
+			'actions/oidc/customization/sub': {'use_default': True, 'use_immutable_subject': True},
+			'vulnerability-alerts': {'enabled': True},
+			'automated-security-fixes': {'enabled': True},
+			'immutable-releases': {'enabled': True},
+		}
+	)
+	repository['security'] = {
+		'secret_scanning': 'enabled',
+		'secret_scanning_push_protection': 'enabled',
+		'secret_scanning_non_provider_patterns': 'disabled',
+	}
+	configuration.validateDependencies(config)
+	return config
+
+
 class GitHubSettingsTest(unittest.TestCase):
 	def setUp(self):
-		self.config = configuration.readConfig()
+		# Mọi lần đọc nguồn cài đặt trong test (readConfig() không truyền root) dùng bản cố định.
+		self.config = baselineConfig()
+		folder = tempfile.TemporaryDirectory()
+		self.addCleanup(folder.cleanup)
+		self.saveConfig(Path(folder.name), self.config)
+		patcher = mock.patch.object(github, 'ROOT', Path(folder.name))
+		patcher.start()
+		self.addCleanup(patcher.stop)
 
 	def saveConfig(self, root, config):
 		(root / configuration.CONFIG_NAME).write_text(json.dumps(config), encoding='utf-8')
@@ -104,7 +166,7 @@ class GitHubSettingsTest(unittest.TestCase):
 	def testImportWritesPrettierFormattedJson(self):
 		# make check chạy Prettier trên github-settings.json: tệp vừa nhập phải đúng định dạng đó ngay, không cần
 		# make format. Tệp trong repository đã qua Prettier nên là mẫu chuẩn.
-		path = configuration.github.ROOT / configuration.CONFIG_NAME
+		path = ROOT / configuration.CONFIG_NAME
 		self.assertEqual(configuration.jsonText(json.loads(path.read_text())), path.read_text())
 		self.assertEqual(
 			configuration.jsonText({'short': ['a', 'b'], 'empty': [], 'object': {}}),
@@ -764,6 +826,10 @@ class GitHubSettingsTest(unittest.TestCase):
 				self.subTest(observed=observed),
 				mock.patch.object(
 					settings, 'ORG_WEB_ONLY_SETTINGS', {'installed_apps': ['example']}
+				),
+				# settings đọc nguồn cài đặt thật lúc import: ghim về bản cố định của test.
+				mock.patch.object(
+					settings, 'ORG_SETTINGS', self.config['organization']['settings']
 				),
 				mock.patch.object(settings, 'readActions', return_value=[]),
 				mock.patch.object(settings, 'syncActions'),
