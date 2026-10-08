@@ -1256,8 +1256,8 @@ class OrgSetupTest(unittest.TestCase):
 			self.assertEqual(json.loads(source.read_text(encoding='utf-8')), ruleset, source.name)
 
 	def testOrgProtectMainAllowsRebaseOnlyAtOrganizationLevel(self):
-		# ADR 0018: bản cấp tổ chức cho phép thêm Rebase và áp dụng cả refs/heads/main; bản cấp repository vẫn chỉ
-		# Merge, Squash trên nhánh mặc định (ADR 0006).
+		# ADR 0006: bản cấp tổ chức cho phép thêm Rebase và áp dụng cả refs/heads/main; bản cấp repository vẫn chỉ
+		# Merge, Squash trên nhánh mặc định.
 		def mergeMethods(ruleset):
 			return next(
 				rule['parameters']['allowed_merge_methods']

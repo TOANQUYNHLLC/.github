@@ -5,7 +5,7 @@
 
 ## 📌 BỐI CẢNH
 
-GitHub Release, nội dung phát hành và liên kết so sánh phiên bản đều dựa vào tag phát hành: `Stable.v*`, `Beta.v*` ([ADR 0014](0014-release-sequence.md)) và các tag `v*` đã phát hành. Protect Main chỉ bảo vệ nhánh: người có quyền ghi vẫn tạo, dời hoặc xóa được tag, khiến Release đã công bố trỏ tới mã khác lúc phát hành.
+GitHub Release, nội dung phát hành và liên kết so sánh phiên bản đều dựa vào tag phát hành: `Stable.v*`, `Beta.v*` ([ADR 0012](0012-monthly-releases.md)) và các tag `v*` đã phát hành. Protect Main chỉ bảo vệ nhánh: người có quyền ghi vẫn tạo, dời hoặc xóa được tag, khiến Release đã công bố trỏ tới mã khác lúc phát hành.
 
 ## ✅ QUYẾT ĐỊNH
 

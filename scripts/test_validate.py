@@ -1320,17 +1320,12 @@ class Holder:
 		self.edit(
 			'docs/adr/0001-tab-indentation.md',
 			'- **Trạng thái:** Chấp nhận',
-			'- **Trạng thái:** Bị thay thế bởi [0002](0002-line-endings.md)',
+			'- **Trạng thái:** Đề xuất',
 		)
 		self.assertFails('ADR 0001: trạng thái')
 
 	def testAdrIndexRejectsDifferentStatusKinds(self):
-		for original, replacement in (
-			('Chấp nhận', 'Đề xuất'),
-			('Đề xuất', 'Chấp nhận'),
-			('Bị thay thế một phần bởi 0016', 'Bị thay thế bởi 0016'),
-			('Bị thay thế một phần bởi 0016', 'Bị thay thế một phần bởi 0015'),
-		):
+		for original, replacement in (('Chấp nhận', 'Đề xuất'), ('Đề xuất', 'Chấp nhận')):
 			with self.subTest(original=original, replacement=replacement):
 				try:
 					if original == 'Đề xuất':
@@ -1354,8 +1349,8 @@ class Holder:
 				finally:
 					self.tearDown()
 
-	def testAdrIndexAcceptsUnlinkedNumber(self):
-		# Mẫu ADR ghi "Bị thay thế bởi NNNN" không kèm liên kết; bảng có liên kết — vẫn khớp vì cùng số.
+	def testAdrStatusIsProposedOrAccepted(self):
+		# Mỗi chủ đề một ADR mô tả quyết định hiện hành: không có trạng thái "bị thay thế", kể cả khi bảng khớp tệp.
 		self.edit(
 			'docs/adr/0001-tab-indentation.md',
 			'- **Trạng thái:** Chấp nhận',
@@ -1364,10 +1359,9 @@ class Holder:
 		self.editRegex(
 			'docs/adr/README.md',
 			r'^(\| \[0001\][^|]+\|[^|]+\|) Chấp nhận +\|',
-			r'\1 Bị thay thế bởi [0002](0002-line-endings.md) |',
+			r'\1 Bị thay thế bởi 0002 |',
 		)
-		code, output = self.runValidate()
-		self.assertEqual(code, 0, output)
+		self.assertFails('0001-tab-indentation.md: trạng thái phải là Đề xuất hoặc Chấp nhận')
 
 	def testChangelogLinksMustBeAbsolute(self):
 		self.edit(
@@ -1512,7 +1506,7 @@ class Holder:
 			self.assertIn(f'"{reference}" phải ghim phiên bản chính', output)
 
 	def testDevcontainerPythonMustMatchMise(self):
-		# Dev Container dùng Python của image (ADR 0016): tag không ghim bản Python hoặc khác mise.toml đều bị báo.
+		# Dev Container dùng Python của image (ADR 0008): tag không ghim bản Python hoặc khác mise.toml đều bị báo.
 		wanted = tomllib.loads((self.repo / 'mise.toml').read_text(encoding='utf-8'))['tools'][
 			'python'
 		]

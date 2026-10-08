@@ -241,7 +241,7 @@ def checkDevcontainerPins():
 		if not tag or tag == 'latest':
 			error(path, f'"{reference}" phải ghim phiên bản chính (ví dụ :1), không dùng latest')
 	# Dev Container dùng Python của image (MISE_DISABLE_TOOLS=python): image ghim đúng bản Python của mise.toml để
-	# container chạy script như máy cục bộ (ADR 0016).
+	# container chạy script như máy cục bộ (ADR 0008).
 	if image and '/devcontainers/python:' in image:
 		mise = ROOT / 'mise.toml'
 		try:

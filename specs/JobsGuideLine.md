@@ -56,7 +56,7 @@ Mục tiêu là mã nguồn hoạt động đúng, cấu trúc rõ ràng và tà
 - Cập nhật hoặc xóa nội dung không còn khớp với mã nguồn, bao gồm tệp, lệnh, chức năng và cấu hình.
 - Kiểm tra lệnh, đường dẫn, ví dụ, liên kết và tên biến môi trường; không đưa secrets vào tài liệu.
 - Mỗi khi thay đổi mã nguồn, cấu hình, dependencies, scripts, workflows hoặc hành vi của hệ thống, cập nhật tài liệu liên quan trong cùng thay đổi. Chỉ hoàn tất khi mã nguồn, tests, ví dụ cấu hình và tài liệu thống nhất.
-- Với ADR, đối chiếu quyết định đang áp dụng; khi thay đổi quyết định, thêm ADR mới và cập nhật trạng thái, mục lục theo [`docs/adr/README.md`](../docs/adr/README.md).
+- Với ADR, đối chiếu quyết định đang áp dụng; khi thay đổi quyết định, cập nhật ADR của chủ đề đó và mục lục theo [`docs/adr/README.md`](../docs/adr/README.md).
 - Kiểm tra badge theo repository, tên workflow, branch, URL ảnh và đích liên kết; chỉ dùng badge có nguồn dữ liệu phù hợp với dự án.
 - Đối chiếu checklist trong biểu mẫu Pull Request với quy tắc đóng góp và yêu cầu đồng bộ tài liệu.
 
