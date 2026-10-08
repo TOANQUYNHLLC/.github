@@ -389,10 +389,12 @@ class OrgSetupTest(unittest.TestCase):
 			'allowed_actions': 'all',
 			'sha_pinning_required': True,
 		}
+		# Giá trị mong muốn ghi rõ: nguồn cài đặt thật đổi sau mỗi lần make org-import.
+		wanted = {'allowed_actions': 'all', 'sha_pinning_required': False}
 		with mock.patch.object(github, 'gh') as write, contextlib.redirect_stdout(io.StringIO()):
 			settings.syncActions(
 				'permissions',
-				settings.ORG_ACTIONS_PERMISSIONS,
+				wanted,
 				'enabled_repositories',
 				True,
 				[current, dict(settings.WORKFLOW_PERMISSIONS)],
@@ -1205,8 +1207,12 @@ class OrgSetupTest(unittest.TestCase):
 	def testRepositorySettingsMergeOverrides(self):
 		own = settings.repositorySettings('.github')
 		other = settings.repositorySettings('app')
+		# Không Rebase (ADR 0006) là chính sách; bật/tắt Discussions là giá trị nhập từ GitHub, chỉ cần được gộp.
 		self.assertFalse(own['allow_rebase_merge'])
-		self.assertTrue(own['has_discussions'])
+		self.assertEqual(
+			own, dict(settings.REPOSITORY_SETTINGS, **settings.REPOSITORY_OVERRIDES['.github'])
+		)
+		self.assertIn('has_discussions', own)
 		self.assertNotIn('has_discussions', other)
 		self.assertNotIn('homepage', other)
 		self.assertTrue(settings.repositorySettings('app', discussions=True)['has_discussions'])
@@ -1862,7 +1868,9 @@ class OrgSetupTest(unittest.TestCase):
 		# Cài đặt đổi được qua API thì PATCH phần khác; mục chỉ đổi trên web chỉ được báo, không ghi.
 		current = dict(settings.ORG_SETTINGS, **settings.ORG_WEB_ONLY_SETTINGS)
 		current['blog'] = 'https://cu.example'
-		current['two_factor_requirement_enabled'] = False
+		# Trên web khác nguồn cài đặt, dù nguồn (đổi sau mỗi lần make org-import) đang bật hay tắt 2FA.
+		wanted = settings.ORG_WEB_ONLY_SETTINGS['two_factor_requirement_enabled']
+		current['two_factor_requirement_enabled'] = not wanted
 		readings = [
 			{
 				'enabled_repositories': 'all',
@@ -1886,7 +1894,7 @@ class OrgSetupTest(unittest.TestCase):
 			):
 				settings.syncOrgSettings(apply)
 			text = output.getvalue()
-			self.assertIn('two_factor_requirement_enabled: False ≠ True', text)
+			self.assertIn(f'two_factor_requirement_enabled: {not wanted} ≠ {wanted}', text)
 			self.assertIn('quyền GitHub Actions đã đúng', text)
 			if apply:
 				self.assertEqual(

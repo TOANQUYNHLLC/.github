@@ -39,9 +39,15 @@ class ValidateTest(unittest.TestCase):
 				'trường cài đặt không hợp lệ',
 			),
 			(
-				lambda data: data['repositories']['.github']['endpoints'][
-					'actions/permissions'
-				].update(enabled=True, allowed_actions='all'),
+				# Ghi cả trạng thái của tổ chức: nguồn cài đặt thật đổi sau mỗi lần make org-import.
+				lambda data: (
+					data['organization']['endpoints']['actions/permissions'].update(
+						enabled_repositories='none'
+					),
+					data['repositories']['.github']['endpoints']['actions/permissions'].update(
+						enabled=True, allowed_actions='all'
+					),
+				),
 				'không bật Actions khi tổ chức tắt Actions',
 			),
 		):
@@ -1221,10 +1227,13 @@ class Holder:
 		self.assertFails('ruff.toml: bắt buộc indent-width = 4 và indent-style = "tab"')
 
 	def testDevEnginesFollowsNvmrc(self):
-		# Nâng Node.js trong .nvmrc mà quên devEngines của package.json: báo lỗi.
-		(self.repo / '.nvmrc').write_text('26\n', encoding='utf-8')
+		# Nâng Node.js trong .nvmrc mà quên devEngines của package.json: báo lỗi. Đọc phiên bản đang dùng để test
+		# không hỏng khi dự án nâng Node.js.
+		current = (self.repo / '.nvmrc').read_text(encoding='utf-8').strip()
+		newer = str(int(current) + 2)
+		(self.repo / '.nvmrc').write_text(f'{newer}\n', encoding='utf-8')
 		self.assertFails(
-			'package.json: devEngines.runtime.version là "24", phải là "26" theo .nvmrc'
+			f'package.json: devEngines.runtime.version là "{current}", phải là "{newer}" theo .nvmrc'
 		)
 
 	def testNodeNotDeclaredInMise(self):
