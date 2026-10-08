@@ -1627,7 +1627,7 @@ class Holder:
 
 	def testOrgRulesetTargetsAllRepositories(self):
 		self.edit('rulesets/org-protect-main.json', '"~ALL"', '".github"')
-		self.assertFails('ruleset phải tên "Protect Main (Organization)" và nhắm mọi repository')
+		self.assertFails('ruleset phải tên "Organization Protect Main" và nhắm mọi repository')
 
 	def testOrgTagRulesetTargetsAllRepositories(self):
 		self.edit('rulesets/org-protect-release-tags.json', '"~ALL"', '".github"')
@@ -1641,7 +1641,7 @@ class Holder:
 
 	def testOrgPushRulesetTargetsAllRepositories(self):
 		self.edit('rulesets/org-protect-pushes.json', '"target": "push"', '"target": "branch"')
-		self.assertFails('ruleset phải tên "Protect Pushes (Organization)", target "push"')
+		self.assertFails('ruleset phải tên "Organization Protect Pushes", target "push"')
 
 	def testOrgRulesetMustNotUseUserActor(self):
 		self.editRegex(

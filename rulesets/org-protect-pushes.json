@@ -1,5 +1,5 @@
 {
-	"name": "Protect Pushes (Organization)",
+	"name": "Organization Protect Pushes",
 	"target": "push",
 	"enforcement": "active",
 	"conditions": {

@@ -1305,9 +1305,9 @@ class OrgSetupTest(unittest.TestCase):
 		self.assertNotIn('code_scanning', [r['type'] for r in rulesets.rulesetFor('app')['rules']])
 
 	def testCompareOrgRulesetsViaGraphql(self):
-		# Dạng GraphQL trả về cho Protect Release Tags (Organization) trên web.
+		# Dạng GraphQL trả về cho Organization Protect Release Tags trên web.
 		node = {
-			'name': 'Protect Release Tags (Organization)',
+			'name': 'Organization Protect Release Tags',
 			'target': 'TAG',
 			'enforcement': 'ACTIVE',
 			'conditions': {

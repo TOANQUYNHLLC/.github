@@ -1,5 +1,5 @@
 {
-	"name": "Protect Release Tags (Organization)",
+	"name": "Organization Protect Release Tags",
 	"target": "tag",
 	"enforcement": "active",
 	"conditions": {

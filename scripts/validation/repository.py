@@ -206,10 +206,10 @@ def checkRulesets():
 		conditions = configField(orgPath, org, 'conditions', dict)
 		repositoryName = configField(orgPath, conditions, 'repository_name', dict)
 		repositories = configItems(orgPath, repositoryName, 'include', str)
-		if org.get('name') != 'Protect Main (Organization)' or '~ALL' not in repositories:
+		if org.get('name') != 'Organization Protect Main' or '~ALL' not in repositories:
 			error(
 				orgPath,
-				'ruleset phải tên "Protect Main (Organization)" và nhắm mọi repository (~ALL)',
+				'ruleset phải tên "Organization Protect Main" và nhắm mọi repository (~ALL)',
 			)
 	# Import ruleset cấp tổ chức báo "contains an invalid actor" với actor loại User.
 	for orgFile in sorted((ROOT / 'rulesets').glob('org-*.json')):
@@ -230,14 +230,14 @@ def checkRulesets():
 		repositoryName = configField(orgTagPath, conditions, 'repository_name', dict)
 		refName = configField(orgTagPath, conditions, 'ref_name', dict)
 		if (
-			orgTags.get('name') != 'Protect Release Tags (Organization)'
+			orgTags.get('name') != 'Organization Protect Release Tags'
 			or '~ALL' not in configItems(orgTagPath, repositoryName, 'include', str)
 			or not {'refs/tags/v*', 'refs/tags/Stable.v*', 'refs/tags/Beta.v*'}
 			<= set(configItems(orgTagPath, refName, 'include', str))
 		):
 			error(
 				orgTagPath,
-				'ruleset phải tên "Protect Release Tags (Organization)", nhắm ~ALL repository và refs/tags/v*, '
+				'ruleset phải tên "Organization Protect Release Tags", nhắm ~ALL repository và refs/tags/v*, '
 				'refs/tags/Stable.v*, refs/tags/Beta.v*',
 			)
 	pushPath = ROOT / 'rulesets' / 'org-protect-pushes.json'
@@ -251,13 +251,13 @@ def checkRulesets():
 		conditions = configField(pushPath, pushes, 'conditions', dict)
 		repositoryName = configField(pushPath, conditions, 'repository_name', dict)
 		if (
-			pushes.get('name') != 'Protect Pushes (Organization)'
+			pushes.get('name') != 'Organization Protect Pushes'
 			or pushes.get('target') != 'push'
 			or '~ALL' not in configItems(pushPath, repositoryName, 'include', str)
 		):
 			error(
 				pushPath,
-				'ruleset phải tên "Protect Pushes (Organization)", target "push" và nhắm ~ALL repository (ADR 00000005)',
+				'ruleset phải tên "Organization Protect Pushes", target "push" và nhắm ~ALL repository (ADR 00000005)',
 			)
 	for rule in configItems(path, ruleset, 'rules'):
 		parameters = configField(path, rule, 'parameters', dict)
