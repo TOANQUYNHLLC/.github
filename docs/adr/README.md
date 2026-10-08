@@ -11,7 +11,7 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0003](0003-branch-and-commit-conventions.md) | Tên branch tiếng Anh; commit, tiêu đề Pull Request theo Conventional Commits | Chấp nhận                     | 2026-10-03 |
 | [0004](0004-protect-main-ruleset.md)          | Ruleset Protect Main bảo vệ nhánh chính                                      | Chấp nhận                     | 2026-10-03 |
 | [0005](0005-protect-release-tags.md)          | Ruleset Protect Release Tags cho tag phát hành                               | Chấp nhận                     | 2026-10-03 |
-| [0006](0006-signed-commits-no-rebase.md)      | Commit có chữ ký trên nhánh chính và tag; không hợp nhất bằng Rebase         | Chấp nhận                     | 2026-10-03 |
+| [0006](0006-signed-commits-no-rebase.md)      | Commit có chữ ký trên nhánh chính và tag; không hợp nhất bằng Rebase         | Bị thay thế một phần bởi 0018 | 2026-10-03 |
 | [0007](0007-org-push-ruleset.md)              | Push ruleset Protect Pushes cấp tổ chức                                      | Chấp nhận                     | 2026-10-03 |
 | [0008](0008-mise-single-version-source.md)    | `mise.toml` là nguồn phiên bản công cụ duy nhất                              | Bị thay thế một phần bởi 0016 | 2026-10-03 |
 | [0009](0009-checks-as-scripts.md)             | Mọi kiểm tra là script trong `scripts/`, ưu tiên Python, chạy được tại máy   | Chấp nhận                     | 2026-10-03 |
@@ -23,6 +23,7 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [0015](0015-developer-shell-scripts.md)       | Script tiện ích cho người phát triển nằm trong `shell/`                      | Chấp nhận                     | 2026-10-05 |
 | [0016](0016-devcontainer-python-image.md)     | Image Dev Container ghim đúng bản Python của `mise.toml`                     | Chấp nhận                     | 2026-10-06 |
 | [0017](0017-local-github-settings.md)         | Nguồn cài đặt GitHub ở local                                                 | Chấp nhận                     | 2026-10-07 |
+| [0018](0018-org-protect-main-rebase.md)       | Protect Main cấp tổ chức cho phép Rebase và áp dụng cả nhánh `main`          | Chấp nhận                     | 2026-10-08 |
 
 ## ✍️ CÁCH THÊM ADR
 

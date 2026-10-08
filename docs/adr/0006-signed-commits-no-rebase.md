@@ -1,6 +1,6 @@
 # 0006. COMMIT CÓ CHỮ KÝ TRÊN NHÁNH CHÍNH VÀ TAG; KHÔNG HỢP NHẤT BẰNG REBASE
 
-- **Trạng thái:** Chấp nhận
+- **Trạng thái:** Bị thay thế một phần bởi 0018 (phương thức hợp nhất của Protect Main cấp tổ chức)
 - **Ngày:** 2026-10-03
 
 ## 📌 BỐI CẢNH
