@@ -84,7 +84,7 @@ def checkFile(file):
 		and file.parent != ROOT / '.github'
 	):
 		error(file, 'phải nằm trong thư mục .github/ để GitHub nhận diện')
-	# Script ưu tiên Python; ngôn ngữ khác chỉ khi xử lý việc đó tốt hơn, ghi lý do ở đầu tệp (ADR 0009).
+	# Script ưu tiên Python; ngôn ngữ khác chỉ khi xử lý việc đó tốt hơn, ghi lý do ở đầu tệp (ADR 00000009).
 	if (file.parent == ROOT / 'scripts' and file.suffix != '.py') or file.suffix in SCRIPT_SUFFIXES:
 		checkScriptLanguage(file)
 	if file.suffix in BINARY_SUFFIXES:

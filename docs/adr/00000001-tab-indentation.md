@@ -1,4 +1,4 @@
-# 0001. THỤT LỀ BẰNG TAB; CHỈ NGÔN NGỮ BẮT BUỘC MỚI DÙNG DẤU CÁCH
+# 00000001. THỤT LỀ BẰNG TAB; CHỈ NGÔN NGỮ BẮT BUỘC MỚI DÙNG DẤU CÁCH
 
 - **Trạng thái:** Chấp nhận
 - **Ngày:** 2026-10-03

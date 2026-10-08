@@ -1,11 +1,11 @@
-# 0005. RULESET PROTECT RELEASE TAGS CHO TAG PHÁT HÀNH
+# 00000006. RULESET PROTECT RELEASE TAGS CHO TAG PHÁT HÀNH
 
 - **Trạng thái:** Chấp nhận
 - **Ngày:** 2026-10-03
 
 ## 📌 BỐI CẢNH
 
-GitHub Release, nội dung phát hành và liên kết so sánh phiên bản đều dựa vào tag phát hành: `Stable.v*`, `Beta.v*` ([ADR 0014](0014-release-sequence.md)) và các tag `v*` đã phát hành. Protect Main chỉ bảo vệ nhánh: người có quyền ghi vẫn tạo, dời hoặc xóa được tag, khiến Release đã công bố trỏ tới mã khác lúc phát hành.
+GitHub Release, nội dung phát hành và liên kết so sánh phiên bản đều dựa vào tag phát hành: `Stable.v*`, `Beta.v*` ([ADR 00000012](00000012-monthly-releases.md)) và các tag `v*` đã phát hành. Protect Main chỉ bảo vệ nhánh: người có quyền ghi vẫn tạo, dời hoặc xóa được tag, khiến Release đã công bố trỏ tới mã khác lúc phát hành.
 
 ## ✅ QUYẾT ĐỊNH
 
@@ -21,5 +21,5 @@ GitHub Release, nội dung phát hành và liên kết so sánh phiên bản đ�
 
 ## ⚖️ HỆ QUẢ
 
-- Người đóng góp không phải người quản trị không tạo được tag phát hành; phát hành do người quản trị thực hiện ([ADR 0012](0012-monthly-releases.md)).
+- Người đóng góp không phải người quản trị không tạo được tag phát hành; phát hành do người quản trị thực hiện ([ADR 00000012](00000012-monthly-releases.md)).
 - Release đính kèm tệp phải tạo bản nháp, tải tệp lên rồi mới phát hành.

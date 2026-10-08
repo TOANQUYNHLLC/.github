@@ -1318,56 +1318,61 @@ class Holder:
 
 	def testAdrIndexMatchesStatus(self):
 		self.edit(
-			'docs/adr/0001-tab-indentation.md',
+			'docs/adr/00000001-tab-indentation.md',
 			'- **Trạng thái:** Chấp nhận',
-			'- **Trạng thái:** Bị thay thế bởi [0002](0002-line-endings.md)',
+			'- **Trạng thái:** Đề xuất',
 		)
-		self.assertFails('ADR 0001: trạng thái')
+		self.assertFails('ADR 00000001: trạng thái')
 
 	def testAdrIndexRejectsDifferentStatusKinds(self):
-		for original, replacement in (
-			('Chấp nhận', 'Đề xuất'),
-			('Đề xuất', 'Chấp nhận'),
-			('Bị thay thế một phần bởi 0016', 'Bị thay thế bởi 0016'),
-			('Bị thay thế một phần bởi 0016', 'Bị thay thế một phần bởi 0015'),
-		):
+		for original, replacement in (('Chấp nhận', 'Đề xuất'), ('Đề xuất', 'Chấp nhận')):
 			with self.subTest(original=original, replacement=replacement):
 				try:
 					if original == 'Đề xuất':
-						# Bảng thật có thể không còn ADR đề xuất: đưa ADR 0001 về Đề xuất ở cả tệp lẫn bảng.
+						# Bảng thật có thể không còn ADR đề xuất: đưa ADR 00000001 về Đề xuất ở cả tệp lẫn bảng.
 						self.edit(
-							'docs/adr/0001-tab-indentation.md',
+							'docs/adr/00000001-tab-indentation.md',
 							'- **Trạng thái:** Chấp nhận',
 							'- **Trạng thái:** Đề xuất',
 						)
 						self.editRegex(
 							'docs/adr/README.md',
-							r'^(\| \[0001\][^|]+\|[^|]+\|) Chấp nhận +\|',
+							r'^(\| \[00000001\][^|]+\|[^|]+\|) Chấp nhận +\|',
 							r'\1 Đề xuất |',
 						)
 					self.editRegex(
 						'docs/adr/README.md',
-						rf'^(\| \[\d{{4}}\][^|]+\|[^|]+\|) {re.escape(original)} +\|',
+						rf'^(\| \[\d{{8}}\][^|]+\|[^|]+\|) {re.escape(original)} +\|',
 						rf'\1 {replacement} |',
 					)
 					self.assertFails('trạng thái')
 				finally:
 					self.tearDown()
 
-	def testAdrIndexAcceptsUnlinkedNumber(self):
-		# Mẫu ADR ghi "Bị thay thế bởi NNNN" không kèm liên kết; bảng có liên kết — vẫn khớp vì cùng số.
+	def testAdrFileNameUsesEightDigits(self):
+		for name in ('0015-thu.md', '000000015-thu.md', '00000015_thu.md', '00000015-Thu.md'):
+			with self.subTest(name=name):
+				(self.repo / 'docs' / 'adr' / name).write_text(
+					'# THỬ\n\n- **Trạng thái:** Đề xuất\n- **Ngày:** 2026-10-08\n', encoding='utf-8'
+				)
+				self.assertFails(
+					f'docs/adr/{name}: tên tệp ADR phải có dạng NNNNNNNN-short-title.md'
+				)
+				self.tearDown()
+
+	def testAdrStatusIsProposedOrAccepted(self):
+		# Mỗi chủ đề một ADR mô tả quyết định hiện hành: không có trạng thái "bị thay thế", kể cả khi bảng khớp tệp.
 		self.edit(
-			'docs/adr/0001-tab-indentation.md',
+			'docs/adr/00000001-tab-indentation.md',
 			'- **Trạng thái:** Chấp nhận',
 			'- **Trạng thái:** Bị thay thế bởi 0002',
 		)
 		self.editRegex(
 			'docs/adr/README.md',
-			r'^(\| \[0001\][^|]+\|[^|]+\|) Chấp nhận +\|',
-			r'\1 Bị thay thế bởi [0002](0002-line-endings.md) |',
+			r'^(\| \[00000001\][^|]+\|[^|]+\|) Chấp nhận +\|',
+			r'\1 Bị thay thế bởi 0002 |',
 		)
-		code, output = self.runValidate()
-		self.assertEqual(code, 0, output)
+		self.assertFails('0001-tab-indentation.md: trạng thái phải là Đề xuất hoặc Chấp nhận')
 
 	def testChangelogLinksMustBeAbsolute(self):
 		self.edit(
@@ -1446,16 +1451,19 @@ class Holder:
 
 	def testAdrNeedsEverySection(self):
 		self.editRegex(
-			'docs/adr/0001-tab-indentation.md', r'^## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC\n\n(?:.+\n)+\n', ''
+			'docs/adr/00000001-tab-indentation.md',
+			r'^## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC\n\n(?:.+\n)+\n',
+			'',
 		)
 		self.assertFails('0001-tab-indentation.md: ADR phải có đủ các mục theo thứ tự')
 
 	def testAdrIndexListsEveryAdr(self):
-		# Số 9999 không trùng ADR thật nào — test không phải sửa mỗi khi thêm ADR.
-		(self.repo / 'docs' / 'adr' / '9999-thu.md').write_text(
-			'# 9999. THỬ\n\n- **Trạng thái:** Đề xuất\n- **Ngày:** 2026-09-27\n', encoding='utf-8'
+		# Số 99999999 không trùng ADR thật nào — test không phải sửa mỗi khi thêm ADR.
+		(self.repo / 'docs' / 'adr' / '99999999-thu.md').write_text(
+			'# 99999999. THỬ\n\n- **Trạng thái:** Đề xuất\n- **Ngày:** 2026-09-27\n',
+			encoding='utf-8',
 		)
-		self.assertFails('bảng thiếu ADR 9999')
+		self.assertFails('bảng thiếu ADR 99999999')
 
 	def testTomlMustIndentWithTabs(self):
 		self.edit('mise.toml', '[tools]\n', '[tools]\n    ')
@@ -1512,7 +1520,7 @@ class Holder:
 			self.assertIn(f'"{reference}" phải ghim phiên bản chính', output)
 
 	def testDevcontainerPythonMustMatchMise(self):
-		# Dev Container dùng Python của image (ADR 0016): tag không ghim bản Python hoặc khác mise.toml đều bị báo.
+		# Dev Container dùng Python của image (ADR 00000008): tag không ghim bản Python hoặc khác mise.toml đều bị báo.
 		wanted = tomllib.loads((self.repo / 'mise.toml').read_text(encoding='utf-8'))['tools'][
 			'python'
 		]

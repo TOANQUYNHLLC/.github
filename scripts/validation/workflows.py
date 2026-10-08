@@ -1,4 +1,4 @@
-"""Workflow GitHub Actions và workflow mẫu: ghim SHA, quyền, mỗi bước một lệnh (ADR 0009)."""
+"""Workflow GitHub Actions và workflow mẫu: ghim SHA, quyền, mỗi bước một lệnh (ADR 00000009)."""
 
 import json
 import re
@@ -67,7 +67,9 @@ def checkWorkflowStep(path, step, location):
 		error(path, f'cấu trúc {location}.run phải là chuỗi')
 		return
 	if '\n' in run.strip():
-		error(path, f'{location}: lệnh nhiều dòng — tách thành script trong scripts/ (ADR 0009)')
+		error(
+			path, f'{location}: lệnh nhiều dòng — tách thành script trong scripts/ (ADR 00000009)'
+		)
 	if '${{' in run:
 		error(
 			path,
@@ -81,7 +83,8 @@ def checkWorkflowStep(path, step, location):
 		r'\b(python3?|node|ruby|perl|bash|sh)\s+-(c|e)\b', run
 	):
 		error(
-			path, f'{location}: mã nhúng trong YAML — viết thành script trong scripts/ (ADR 0009)'
+			path,
+			f'{location}: mã nhúng trong YAML — viết thành script trong scripts/ (ADR 00000009)',
 		)
 
 
@@ -101,7 +104,7 @@ def checkWorkflow(path, text):
 		if re.match(r"^\s*(?:-\s+)?[\"']?run[\"']?:\s*[|>]", line):
 			error(
 				path,
-				f'dòng {number}: lệnh nhiều dòng — tách thành script trong scripts/, mỗi bước gọi một lệnh (ADR 0009)',
+				f'dòng {number}: lệnh nhiều dòng — tách thành script trong scripts/, mỗi bước gọi một lệnh (ADR 00000009)',
 			)
 		if re.match(r'^\s+[a-z-]+: write\s*$', line):
 			error(path, f'dòng {number}: quyền ghi cần chú thích lý do (# …)')

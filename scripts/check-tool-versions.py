@@ -1,5 +1,5 @@
 """Báo công cụ trong mise.toml và action chỉ có trong workflow-templates/ có bản phát hành mới hơn — Dependabot
-chưa cập nhật mise.toml (ADR 0008) và chỉ quét .github/workflows/.
+chưa cập nhật mise.toml (ADR 00000008) và chỉ quét .github/workflows/.
 
 Chạy: python3 scripts/check-tool-versions.py
 Đọc bản phát hành mới nhất trên GitHub; dùng GH_TOKEN (workflow links.yml đặt sẵn) hoặc token của GitHub CLI đã

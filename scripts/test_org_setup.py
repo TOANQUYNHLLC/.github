@@ -1174,7 +1174,7 @@ class OrgSetupTest(unittest.TestCase):
 		self.assertIn('hard_tabs = true', planned['rustfmt.toml'])
 		# Workflow mẫu đọc phiên bản từ tệp này: Node.js CI (.nvmrc), Python CI (.python-version).
 		self.assertEqual(planned['.nvmrc'], (ROOT / '.nvmrc').read_text(encoding='utf-8'))
-		# .python-version sinh từ mise.toml (nguồn phiên bản duy nhất, ADR 0008).
+		# .python-version sinh từ mise.toml (nguồn phiên bản duy nhất, ADR 00000008).
 		mise = (ROOT / 'mise.toml').read_text(encoding='utf-8')
 		python = re.search(r'^python = "(.+)"$', mise, re.MULTILINE).group(1)
 		self.assertEqual(planned['.python-version'], f'{python}\n')
@@ -1207,7 +1207,7 @@ class OrgSetupTest(unittest.TestCase):
 	def testRepositorySettingsMergeOverrides(self):
 		own = settings.repositorySettings('.github')
 		other = settings.repositorySettings('app')
-		# Không Rebase (ADR 0006) là chính sách; bật/tắt Discussions là giá trị nhập từ GitHub, chỉ cần được gộp.
+		# Không Rebase (ADR 00000007) là chính sách; bật/tắt Discussions là giá trị nhập từ GitHub, chỉ cần được gộp.
 		self.assertFalse(own['allow_rebase_merge'])
 		self.assertEqual(
 			own, dict(settings.REPOSITORY_SETTINGS, **settings.REPOSITORY_OVERRIDES['.github'])
@@ -1256,8 +1256,8 @@ class OrgSetupTest(unittest.TestCase):
 			self.assertEqual(json.loads(source.read_text(encoding='utf-8')), ruleset, source.name)
 
 	def testOrgProtectMainAllowsRebaseOnlyAtOrganizationLevel(self):
-		# ADR 0018: bản cấp tổ chức cho phép thêm Rebase và áp dụng cả refs/heads/main; bản cấp repository vẫn chỉ
-		# Merge, Squash trên nhánh mặc định (ADR 0006).
+		# ADR 00000007: bản cấp tổ chức cho phép thêm Rebase và áp dụng cả refs/heads/main; bản cấp repository vẫn chỉ
+		# Merge, Squash trên nhánh mặc định.
 		def mergeMethods(ruleset):
 			return next(
 				rule['parameters']['allowed_merge_methods']

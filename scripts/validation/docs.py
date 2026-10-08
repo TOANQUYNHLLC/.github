@@ -1,5 +1,5 @@
 """Tài liệu: liên kết, tiêu đề, huy hiệu, email, security.txt, CHANGELOG.md, bảng ADR; tài liệu khớp code
-(ADR 0013)."""
+(ADR 00000013)."""
 
 import builtins
 import re
@@ -22,7 +22,7 @@ from validation.workflows import repositoryWorkflows
 
 # Email liên hệ chung của công ty — mọi tài liệu phải dùng đúng địa chỉ này.
 COMPANY_EMAIL = 'toanquynhvn@gmail.com'
-# Tag phát hành: Stable.vYYYY.MM.DDXXXX, Beta.vYYYY.MM.DDXXXX (ADR 0014) và tag vYYYY.MM.Stable đã phát hành.
+# Tag phát hành: Stable.vYYYY.MM.DDXXXX, Beta.vYYYY.MM.DDXXXX (ADR 00000012) và tag vYYYY.MM.Stable đã phát hành.
 RELEASE_TAG = re.compile(
 	r'(Stable|Beta)\.v[0-9]{4}\.(0[1-9]|1[0-2])\.[0-9]{6}|v[0-9]{4}\.(0[1-9]|1[0-2])\.Stable'
 )
@@ -31,6 +31,10 @@ EMAIL = re.compile(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-
 
 # Mục bắt buộc của mỗi ADR, theo thứ tự (docs/adr/template.md).
 ADR_SECTIONS = ('BỐI CẢNH', 'QUYẾT ĐỊNH', 'PHƯƠNG ÁN ĐÃ CÂN NHẮC', 'HỆ QUẢ')
+# Trạng thái của ADR: ADR chỉ mô tả quyết định hiện hành, đổi quyết định thì cập nhật chính ADR đó.
+ADR_STATUSES = ('Đề xuất', 'Chấp nhận')
+# Tên tệp ADR: số gồm 8 chữ số, tên tiếng Anh nối bằng dấu gạch ngang.
+ADR_FILE = re.compile(r'\d{8}-[a-z0-9]+(?:-[a-z0-9]+)*\.md')
 # Đường dẫn trong tài liệu bắt đầu bằng các thư mục này phải có thật trong repository.
 DOC_PATH = re.compile(
 	r'`((?:scripts|shell|docs|rulesets|workflow-templates|repository-templates|\.devcontainer|\.github/workflows)/'
@@ -122,13 +126,8 @@ def checkDocsMatchCode():
 
 
 def checkAdrIndex():
-	"""Bảng trong docs/adr/README.md phải liệt kê mọi ADR, cùng ngày và cùng trạng thái với từng tệp."""
-
-	def statusKey(value):
-		# Số ADR có thể là liên kết trong bảng; phần giải thích phạm vi thay thế chỉ có trong tệp ADR.
-		plain = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', value).strip()
-		return plain.split(' (', 1)[0] if 'thay thế' in plain.lower() else plain
-
+	"""Bảng trong docs/adr/README.md phải liệt kê mọi ADR, cùng ngày và cùng trạng thái với từng tệp. Mỗi chủ đề
+	một ADR mô tả quyết định hiện hành nên trạng thái chỉ là Đề xuất hoặc Chấp nhận."""
 	folder = ROOT / 'docs' / 'adr'
 	indexPath = folder / 'README.md'
 	if not indexPath.exists():
@@ -136,13 +135,18 @@ def checkAdrIndex():
 	rows = {
 		number: (status.strip(), date.strip())
 		for number, status, date in re.findall(
-			r'^\| \[(\d{4})\]\([^)]+\) +\|[^|]+\|([^|]+)\|([^|]+)\|$',
+			r'^\| \[(\d{8})\]\([^)]+\) +\|[^|]+\|([^|]+)\|([^|]+)\|$',
 			readText(indexPath),
 			re.MULTILINE,
 		)
 	}
-	for path in sorted(folder.glob('[0-9][0-9][0-9][0-9]-*.md')):
-		number = path.name[:4]
+	for path in sorted(folder.glob('*.md')):
+		if path.name in ('README.md', 'template.md'):
+			continue
+		if not ADR_FILE.fullmatch(path.name):
+			error(path, 'tên tệp ADR phải có dạng NNNNNNNN-short-title.md (số gồm 8 chữ số)')
+			continue
+		number = path.name[:8]
 		text = readText(path)
 		status = re.search(r'^- \*\*Trạng thái:\*\* (.+)$', text, re.MULTILINE)
 		date = re.search(r'^- \*\*Ngày:\*\* (.+)$', text, re.MULTILINE)
@@ -155,10 +159,12 @@ def checkAdrIndex():
 		if number not in rows:
 			error(indexPath, f'bảng thiếu ADR {number}')
 			continue
+		if status.group(1).strip() not in ADR_STATUSES:
+			error(path, f'trạng thái phải là {" hoặc ".join(ADR_STATUSES)}')
 		rowStatus, rowDate = rows[number]
 		if rowDate != date.group(1).strip():
 			error(indexPath, f'ADR {number}: ngày "{rowDate}" khác tệp ADR ({date.group(1)})')
-		if statusKey(rowStatus) != statusKey(status.group(1)):
+		if rowStatus != status.group(1).strip():
 			error(
 				indexPath,
 				f'ADR {number}: trạng thái "{rowStatus}" khác tệp ADR ({status.group(1)})',

@@ -33,7 +33,7 @@ NETWORK_ERROR = re.compile(
 
 def shellScripts():
 	"""Mọi script shell git quản lý, ở bất kỳ thư mục nào — script ưu tiên Python, shell chỉ khi xử lý tốt hơn
-	và có ghi lý do (ADR 0009)."""
+	và có ghi lý do (ADR 00000009)."""
 	output = subprocess.run(
 		['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z', '*.sh', '*.bash'],
 		cwd=ROOT,
