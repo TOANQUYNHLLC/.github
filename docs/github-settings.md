@@ -41,31 +41,45 @@ Mỗi repository đã nhập có phần riêng; `local-settings` áp dụng các
 
 ## 🔧 PHẠM VI API ĐƯỢC QUẢN LÝ
 
-| Nhóm                | Nội dung                                                                                                                                                                  |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Actions             | Bật/tắt ở tổ chức và repository; ghim SHA khi API trả trường này; quyền mặc định `GITHUB_TOKEN`; duyệt workflow từ fork; chạy workflow của fork riêng tư ở phạm vi hỗ trợ |
-| OIDC                | Template subject, dùng mặc định hoặc template tổ chức, claim tùy chỉnh và chế độ immutable subject; bỏ tiền tố subject do GitHub tự sinh                                  |
-| Nhóm runner         | Tạo hoặc sửa nhóm do tổ chức quản lý, phạm vi repository, quyền chạy ở repository công khai và giới hạn workflow; không đăng ký runner hay xóa nhóm ngoài nguồn           |
-| Lưu dữ liệu Actions | Số ngày giữ checks, trạng thái commit, log và artifact theo API; tuân thủ mức tối đa GitHub cho phép                                                                      |
-| Bảo mật repository  | Dependabot alerts/security updates, secret scanning và tính năng có trường PATCH hợp lệ, push protection, báo cáo lỗ hổng riêng tư ở repository công khai                 |
-| Cấu hình bảo mật    | Đổi phạm vi mặc định của cấu hình có sẵn; gắn hoặc tháo cấu hình theo tên. ID được đọc lại lúc lập kế hoạch                                                               |
-| Code scanning       | Cấu hình default setup qua API; workflow CodeQL riêng vẫn được quản lý bằng tệp workflow, cần tránh bật hai cách thiết lập chồng nhau                                     |
-| Release             | Chính sách Release bất biến cấp tổ chức và bật/tắt cấp repository trong phạm vi GitHub cho phép                                                                           |
-| Tương tác           | Giới hạn tương tác lâu dài, bỏ giới hạn và giới hạn tạo Pull Request                                                                                                      |
-| Topics              | Danh sách topics của từng repository đã nhập                                                                                                                              |
+| Nhóm                | Nội dung                                                                                                                                                                                  |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Actions             | Bật/tắt ở tổ chức và repository; danh sách repository được chọn; actions và reusable workflows được phép; ghim SHA khi API trả trường này; quyền mặc định `GITHUB_TOKEN`; chính sách fork |
+| OIDC                | Template subject, dùng mặc định hoặc template tổ chức, claim tùy chỉnh và chế độ immutable subject; bỏ tiền tố subject do GitHub tự sinh                                                  |
+| Nhóm runner         | Tạo hoặc sửa nhóm do tổ chức quản lý, phạm vi repository, quyền chạy ở repository công khai và giới hạn workflow; không đăng ký runner hay xóa nhóm ngoài nguồn                           |
+| Lưu dữ liệu Actions | Số ngày giữ checks, trạng thái commit, log và artifact theo API; tuân thủ mức tối đa GitHub cho phép                                                                                      |
+| Bảo mật repository  | Dependabot alerts/security updates, secret scanning và tính năng có trường PATCH hợp lệ, push protection, báo cáo lỗ hổng riêng tư ở repository công khai                                 |
+| Cấu hình bảo mật    | Đổi phạm vi mặc định của cấu hình có sẵn; gắn hoặc tháo cấu hình theo tên. ID được đọc lại lúc lập kế hoạch                                                                               |
+| Code scanning       | Cấu hình default setup qua API; workflow CodeQL riêng vẫn được quản lý bằng tệp workflow, cần tránh bật hai cách thiết lập chồng nhau                                                     |
+| Release             | Chính sách Release bất biến cấp tổ chức, gồm danh sách repository được chọn, và bật/tắt cấp repository trong phạm vi GitHub cho phép                                                      |
+| Tương tác           | Giới hạn tương tác lâu dài, bỏ giới hạn và giới hạn tạo Pull Request                                                                                                                      |
+| Topics              | Danh sách topics của từng repository đã nhập                                                                                                                                              |
 
 `settings` và `org-settings` truyền thống đọc giá trị cài đặt từ nguồn JSON; lệnh `settings` vẫn giữ hành vi chỉ bật bảo mật, topics `.github` theo `CITATION.cff`, giữ trạng thái Actions. Khi nguồn yêu cầu đổi trạng thái archive, `settings` xác minh các trường cài đặt trước khi ghi, bỏ archive trước các cập nhật khác và archive sau topics, bảo mật, quyền Actions. Cả `settings` và `local-settings` bật/tắt Discussions qua GraphQL sau khi xác minh ID repository; các cài đặt repository còn lại dùng REST. Dùng `local-settings` khi cần khôi phục đúng cấu hình đã nhập, gồm cả trạng thái tắt và topics theo JSON.
+
+## 🎯 CHÍNH SÁCH SELECTED
+
+Các danh sách chỉ được nhập khi chính sách cha là `selected`; đổi sang chế độ này trong local phải khai báo đủ endpoint đi kèm. Danh sách rỗng có nghĩa là không chọn phần tử nào, không phải bỏ qua cài đặt.
+
+| Chính sách cha                                                    | Endpoint đi kèm trong `endpoints`          | Dữ liệu local                                                  |
+| ----------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------- |
+| `actions/permissions.enabled_repositories` của tổ chức            | `actions/permissions/repositories`         | `selected_repositories`: tên đầy đủ như `TOANQUYNHLLC/.github` |
+| `actions/permissions.allowed_actions` của tổ chức hoặc repository | `actions/permissions/selected-actions`     | `github_owned_allowed`, `verified_allowed`, `patterns_allowed` |
+| `settings/immutable-releases.enforced_repositories` của tổ chức   | `settings/immutable-releases/repositories` | `selected_repositories`: tên đầy đủ thuộc tổ chức              |
+
+Script đọc hết các trang danh sách, kiểm tra tên và ID, giải tên repository thành ID trước khi ghi. Khi áp dụng, chính sách cha được đặt trước danh sách con rồi đọc lại cả hai. Thứ tự phần tử không tạo khác biệt cấu hình. Validator chặn việc bật Actions cho repository ngoài danh sách tổ chức và tắt Release bất biến cho repository nằm trong phạm vi bắt buộc.
 
 ## 🌐 PHẦN CẦN CƠ CHẾ RIÊNG
 
 - Các mục `web_settings` như yêu cầu 2FA, tên nhánh mặc định cấp tổ chức và một số quyền thành viên không có endpoint ghi được script hỗ trợ. Các cờ bảo mật “enabled for new repositories” trong REST cũ chỉ được đọc để đối chiếu; chính sách mới dùng code security configurations.
-- Khi Actions tắt, GitHub có thể không trả `allowed_actions`. Tệp chỉ lưu trường thực sự đọc được; không thể khôi phục một giá trị bị ẩn. Chế độ `selected` của Actions hoặc Release bất biến cần thêm danh sách phạm vi, chưa được script nhập/áp dụng và sẽ báo chưa xác minh thay vì bỏ mất danh sách.
+- Khi Actions tắt, GitHub có thể không trả `allowed_actions`. Tệp chỉ lưu trường thực sự đọc được; không thể khôi phục một giá trị bị ẩn. Danh sách của chế độ `selected` chỉ được đọc khi chế độ này có hiệu lực; lỗi đọc danh sách chặn áp dụng, không tự coi danh sách là rỗng.
 - Định nghĩa cấu hình bảo mật tùy chỉnh không được xuất thành tài nguyên tạo mới. Cấu hình do GitHub quản lý được giải theo tên; script quản lý phạm vi và liên kết, không sao chép định nghĩa của GitHub.
 - OIDC tổ chức trả `null` được lưu thành object rỗng, nghĩa là chưa tùy chỉnh. API không có thao tác DELETE để trở về trạng thái này; nếu local yêu cầu rỗng nhưng web đã có template, script báo mục cần xử lý thay vì giả định đã xóa. Repository đặt `use_default: false` có thể dùng template tổ chức mà không cần khai báo claim riêng. Thay đổi subject phải khớp với chính sách tin cậy của dịch vụ cloud.
 - Nhóm runner mặc định hoặc do enterprise quản lý phải tồn tại sẵn; script không tạo lại nhóm mặc định, sửa nhóm kế thừa hay vượt quyền sửa giới hạn workflow. Danh sách `selected_repositories` chỉ dùng khi `visibility` là `selected`, phải nằm trong tổ chức và được tài khoản hiện tại đọc thấy.
 - Ruleset, labels, team và quyền team dùng các nguồn hiện có trong [`rulesets/`](../rulesets/), [`labels.yml`](../labels.yml), [`teams.py`](../scripts/orgsetup/teams.py). Nhập cài đặt không ghi đè các nguồn này; đối chiếu bằng `make org-preview`, áp dụng bằng các lệnh `rulesets`, `org-rulesets`, `labels`, `team` của [`org-setup.py`](../scripts/org-setup.py). Ruleset cấp tổ chức phụ thuộc quyền và gói GitHub; không có API vượt qua giới hạn gói.
 - `organization.web_settings.installed_apps` chỉ lưu tên GitHub Apps đã cài để đối chiếu, không lưu quyền của từng installation, token hay tài khoản cài đặt. Việc cài hoặc gỡ Apps vẫn cần luồng quản trị riêng.
 - OAuth Apps, billing, SSO, webhook có thông tin xác thực, credentials của runner, deploy key và secrets cần cơ chế quản trị riêng. API không cho đọc lại giá trị secrets hoặc khóa riêng. Webhook, environments, custom properties, Pages và variables chưa được bộ nhập này quản lý. Không coi tệp JSON là bản sao toàn bộ trang Settings hoặc bản khôi phục mọi tài nguyên của tài khoản.
+
+Các nhóm chưa được bộ nhập quản lý có thể có API riêng; điều đó khác với mục GitHub không công bố API ghi. Khả năng đổi cài đặt từ local phụ thuộc đồng thời vào hợp đồng mà script hỗ trợ, quyền tài khoản và gói dịch vụ. Việc định dạng tệp, tạo Pull Request hoặc thấy nguồn local hợp lệ không chứng minh cài đặt trên web đã được áp dụng.
 
 ## 📚 TÀI LIỆU GITHUB
 

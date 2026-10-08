@@ -6,6 +6,7 @@ import re
 
 from orgsetup.configuration import readConfig
 from orgsetup.labels import inspectLabels
+from orgsetup.rulesets import rulesetSummary
 
 from validation.common import (
 	ROOT,
@@ -192,6 +193,10 @@ def checkRulesets():
 			data = readJsonObject(rulesetPath)
 		except json.JSONDecodeError:
 			continue
+		try:
+			rulesetSummary(data)
+		except (ValueError, TypeError) as exc:
+			error(rulesetPath, f'cấu trúc ruleset không hợp lệ: {exc}')
 		if data.get('target') == 'push':
 			continue
 		if 'required_signatures' not in {

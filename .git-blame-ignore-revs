@@ -2,3 +2,5 @@
 # GitHub tự đọc tệp này. Trên máy: git config blame.ignoreRevsFile .git-blame-ignore-revs (make hooks đã làm).
 # Thêm commit: ghi SHA đầy đủ kèm một dòng chú thích phía trên.
 # Chỉ ghi commit CHỈ đổi định dạng — commit có cả thay đổi logic sẽ làm git blame gán sai tác giả.
+# Định dạng hai ruleset cấp repository theo Prettier.
+2f4ab82137795bb954ec800b7a4e9358c5438079
