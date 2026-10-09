@@ -1,6 +1,6 @@
 # 🧭 BẢN GHI QUYẾT ĐỊNH KIẾN TRÚC
 
-Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình được ghi thành một tệp ADR (Architecture Decision Record) để người đến sau hiểu **vì sao** dự án làm như vậy. Mỗi chủ đề có đúng một ADR, mô tả quyết định đang áp dụng; lịch sử thay đổi nằm trong git.
+ADR (Architecture Decision Record) mô tả các quyết định về quy ước, công cụ và vận hành của repository. Mỗi chủ đề có một tài liệu hoàn chỉnh gồm bối cảnh, quyết định, lựa chọn và hệ quả. Mã ADR là định danh dùng để tham chiếu giữa code và tài liệu.
 
 `make check` đối chiếu ngày và trạng thái trong bảng với từng ADR; trạng thái là **Đề xuất** hoặc **Chấp nhận**.
 
@@ -20,9 +20,12 @@ Mỗi quyết định quan trọng về quy ước, công cụ hoặc quy trình
 | [00000012](00000012-monthly-releases.md)              | Phát hành hằng tháng từ `CHANGELOG.md`; phiên bản theo ngày và số thứ tự                              | Chấp nhận  | 2026-10-03 |
 | [00000013](00000013-related-changes.md)               | Mỗi thay đổi sửa luôn mọi chỗ liên quan; tài liệu khớp với code                                       | Chấp nhận  | 2026-10-08 |
 | [00000014](00000014-local-github-settings.md)         | Nguồn cài đặt GitHub ở local                                                                          | Chấp nhận  | 2026-10-07 |
+| [00000015](00000015-github-sync-verification.md)      | Xác minh cài đặt, team, ruleset và mã lỗi khi đồng bộ thất bại                                        | Đề xuất    | 2026-10-08 |
 
-## ✍️ CÁCH THÊM, CẬP NHẬT ADR
+## ✍️ QUY TẮC BIÊN SOẠN
 
-1. Chủ đề mới: chép [`template.md`](template.md) thành `NNNNNNNN-short-title.md` (số kế tiếp gồm 8 chữ số; tên tiếng Anh, nối bằng dấu gạch ngang), thêm dòng vào bảng trên.
-2. Đổi quyết định của chủ đề đã có: cập nhật chính ADR đó — bối cảnh, quyết định, phương án đã cân nhắc, hệ quả — để ADR chỉ mô tả quyết định hiện hành; cập nhật tên trong bảng nếu cần.
-3. Chỉ ghi điều kiểm chứng được. ADR trong Pull Request ghi **Đề xuất**; khi người quản trị duyệt, đổi thành **Chấp nhận** trước khi hợp nhất.
+Dùng [mẫu ADR](template.md) cho chủ đề mới; tên tệp có dạng `NNNNNNNN-short-title.md`, số định danh kế tiếp gồm 8 chữ số và mô tả tiếng Anh dùng kebab-case. Mục lục phải khớp ngày, trạng thái và chủ đề trong tệp.
+
+Khi quyết định thay đổi, viết lại ADR của chủ đề đó thành một mô tả thống nhất. ADR trình bày quyết định và lý do, không nối tiếp các mục thêm/sửa hoặc ghi diễn biến phát triển. Chỉ mô tả điều kiểm chứng được.
+
+Trạng thái **Đề xuất** dùng cho quyết định đang chờ duyệt. Người quản trị xác nhận **Chấp nhận** trước khi hợp nhất. Ngày và trạng thái là thông tin của quyết định, không phải nhật ký sửa tài liệu.

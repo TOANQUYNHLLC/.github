@@ -44,7 +44,7 @@ Mục tiêu là mã nguồn hoạt động đúng, cấu trúc rõ ràng và tà
 - Giữ thông báo vận hành, cảnh báo và lỗi cần thiết; kiểm tra để không lộ dữ liệu nhạy cảm.
 - Dọn tệp tạm, bản sao không còn dùng, ghi chú thử nghiệm và báo cáo rà soát không thuộc tài liệu sản phẩm.
 - Xử lý TODO/FIXME thuộc phạm vi; mục còn giá trị phải mô tả rõ việc cần làm.
-- Tài liệu mô tả hiện trạng, không chứa nhật ký sửa lỗi, diễn biến phát triển, log kiểm tra hoặc số đo thử nghiệm.
+- Viết tài liệu thành mô tả hoàn chỉnh theo chủ đề và hiện trạng, không nối tiếp các mục thêm/sửa, nhật ký sửa lỗi, diễn biến phát triển, log kiểm tra hoặc số đo thử nghiệm.
 - `CHANGELOG.md` dùng để chuẩn bị nội dung dành cho người sử dụng khi phát hành, theo quy ước trong [`AGENTS.md`](../AGENTS.md).
 - Giữ nguyên lịch sử Git và thông tin bản quyền.
 
@@ -57,7 +57,7 @@ Mục tiêu là mã nguồn hoạt động đúng, cấu trúc rõ ràng và tà
 - Kiểm tra lệnh, đường dẫn, ví dụ, liên kết và tên biến môi trường; không đưa secrets vào tài liệu.
 - Khi sửa bất cứ gì, rà soát toàn bộ dự án và sửa lại mọi chỗ liên quan — code gọi tới, tests, cấu hình, tài liệu — trong cùng thay đổi; tìm theo tên cũ, tên mới và từ khóa thay vì chỉ dựa vào kiểm tra tự động.
 - Mỗi khi thay đổi mã nguồn, cấu hình, dependencies, scripts, workflows hoặc hành vi của hệ thống, cập nhật tài liệu liên quan trong cùng thay đổi. Chỉ hoàn tất khi mã nguồn, tests, ví dụ cấu hình và tài liệu thống nhất.
-- Với ADR, đối chiếu quyết định đang áp dụng; khi thay đổi quyết định, cập nhật ADR của chủ đề đó và mục lục theo [`docs/adr/README.md`](../docs/adr/README.md).
+- README hướng dẫn bắt đầu; tài liệu chuyên đề mô tả vận hành và giới hạn. Với ADR, đối chiếu quyết định đang áp dụng và trình bày thống nhất bối cảnh, quyết định, lựa chọn, hệ quả; khi thay đổi quyết định, cập nhật ADR của chủ đề đó và mục lục theo [`docs/adr/README.md`](../docs/adr/README.md).
 - Kiểm tra badge theo repository, tên workflow, branch, URL ảnh và đích liên kết; chỉ dùng badge có nguồn dữ liệu phù hợp với dự án.
 - Đối chiếu checklist trong biểu mẫu Pull Request với quy tắc đóng góp và yêu cầu đồng bộ tài liệu.
 

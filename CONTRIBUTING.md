@@ -59,7 +59,7 @@ Một báo lỗi tốt gồm:
 1. Cập nhật nhánh chính (`main`) và tạo branch mới, đặt tên theo quy ước bên dưới.
 2. Thực hiện thay đổi, giữ phạm vi nhỏ và tập trung vào một mục đích.
 3. Chạy formatter, lint và kiểm thử của dự án; bổ sung kiểm thử cho thay đổi.
-4. Rà soát toàn bộ dự án để tìm mọi chỗ liên quan tới thay đổi — code gọi tới, test, cấu hình, tài liệu (README, hướng dẫn), chú thích trong mã — và sửa ngay trong cùng Pull Request; tài liệu phải khớp với code vừa sửa. Khi chuẩn bị phiên bản, cập nhật nội dung phát hành trong `CHANGELOG.md` nếu dự án có tệp này.
+4. Rà soát toàn bộ dự án để tìm mọi chỗ liên quan tới thay đổi — code gọi tới, test, cấu hình, tài liệu (README, hướng dẫn), chú thích trong mã — và sửa ngay trong cùng Pull Request; tài liệu phải khớp với code vừa sửa và trình bày hoàn chỉnh theo chủ đề, không nối tiếp nhật ký thêm/sửa. Khi chuẩn bị phiên bản, cập nhật nội dung phát hành trong `CHANGELOG.md` nếu dự án có tệp này.
 5. Đẩy branch lên GitHub, tạo Pull Request và điền đầy đủ biểu mẫu có sẵn.
 6. Phản hồi góp ý của người đánh giá; Pull Request chỉ được hợp nhất khi đã được phê duyệt và mọi kiểm tra tự động thành công.
 7. Xóa branch sau khi hợp nhất.

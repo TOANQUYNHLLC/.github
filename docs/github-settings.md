@@ -1,8 +1,10 @@
 # ⚙️ CÀI ĐẶT GITHUB TỪ LOCAL
 
-[`github-settings.json`](../github-settings.json) là nguồn cài đặt của tổ chức và từng repository. [`configuration.py`](../scripts/orgsetup/configuration.py) chỉ đọc, ghi các trường đã khai báo; không lưu phản hồi API thô, billing email, token, giá trị secrets hoặc khóa.
+[github-settings.json](../github-settings.json) là nguồn cài đặt tổ chức và repository. [configuration.py](../scripts/orgsetup/configuration.py) và [resources.py](../scripts/orgsetup/resources.py) khai báo hợp đồng API, kiểm tra nguồn và lập kế hoạch áp dụng. Tệp local chỉ lưu trường được hỗ trợ, không lưu phản hồi API thô, billing email, token, secrets hoặc khóa.
 
-## 📥 NHẬP VÀ ÁP DỤNG
+## 📥 NHẬP, XEM TRƯỚC VÀ ÁP DỤNG
+
+GitHub CLI cần đăng nhập bằng tài khoản có quyền theo từng endpoint. Quyền quản trị repository không thay thế quyền quản trị tổ chức.
 
 ```sh
 make org-import
@@ -11,15 +13,17 @@ make org-settings-preview
 make org-settings-apply
 ```
 
-- `make org-import`: đọc GitHub qua GitHub CLI đã đăng nhập, gồm repository đã archive; ghi nguyên tử tệp local sau khi đọc xong, đúng định dạng Prettier nên `make check` không cần `make format`. Lỗi đọc cài đặt chính giữ nguyên tệp. Endpoint chưa đọc được được đánh dấu trong `unavailable`, không giữ giá trị cũ và không tự coi là tắt. Lệnh trả mã lỗi nếu còn mục chưa nhập.
-- `make org-settings-preview`: chỉ đọc GitHub, liệt kê các trường sẽ thay đổi theo nguồn local. Không thay đổi GitHub hay tệp local.
-- `make org-settings-apply`: đọc và xác minh mọi phạm vi trước khi ghi. `unavailable` còn dữ liệu, cấu hình sai hoặc lỗi đọc chặn việc ghi. Nếu nguồn yêu cầu bỏ archive, thao tác này chạy trước các cập nhật của repository; nếu yêu cầu archive, thao tác này chạy sau cùng. Script gửi từng thay đổi qua API, đọc lại và trả mã lỗi khi trạng thái chưa khớp hoặc còn mục chỉ xử lý trên web. Cấu hình bảo mật đang gắn bất đồng bộ chưa được coi là đã hoàn tất.
+| Lệnh                        | Hành vi                                                                                                        |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `make org-import`           | Đọc cài đặt, kể cả repository archive, rồi ghi nguyên tử nguồn local theo định dạng Prettier; không sửa GitHub |
+| `make org-settings-preview` | Đọc GitHub và lập danh sách khác biệt theo nguồn local                                                         |
+| `make org-settings-apply`   | Xác minh mọi phạm vi trước khi ghi, áp dụng tuần tự và đọc lại để xác nhận                                     |
 
-Việc áp dụng nhiều endpoint không phải một transaction: thay đổi đã thành công không tự hoàn tác khi endpoint sau thất bại. Khi GitHub đang xử lý bất đồng bộ, chạy lại lệnh xem trước để xác nhận trạng thái. Quyền cần thiết do từng endpoint quy định; quyền quản trị repository không thay thế quyền quản trị tổ chức.
+Lỗi đọc metadata chính giữ nguyên tệp khi nhập. Endpoint chưa đọc được ghi vào `unavailable`, không giữ giá trị cũ hoặc suy đoán trạng thái tắt. Lệnh nhập trả mã lỗi nếu còn mục chưa đọc được; nguồn có `unavailable` chặn áp dụng.
 
-Khi bật Dependabot, script bật alerts trước security updates; khi tắt, script tắt security updates trước alerts. Thứ tự này không phụ thuộc vị trí các endpoint trong JSON.
+Với repository riêng tư, `security_and_analysis` thiếu hoặc `null` được đánh dấu chưa đọc được; các phần khác vẫn có thể nhập. Repository công khai thiếu trường này hoặc phản hồi sai kiểu là lỗi metadata chính. Tính năng bảo mật bị ẩn không được ghi thành trạng thái tắt.
 
-Validator kiểm tra hợp đồng nguồn JSON và các tính năng phụ thuộc trong `make check`: Actions cấp repository cần được tổ chức cho phép; Dependabot security updates cần alerts; push protection cần secret scanning; Release bất biến cấp repository phải tuân thủ chính sách tổ chức. Discussions được cập nhật qua mutation GraphQL `updateRepository`.
+Ghi nhiều endpoint không phải transaction: thao tác thành công không tự hoàn tác khi bước sau thất bại. Trạng thái đang xử lý bất đồng bộ, gồm liên kết cấu hình bảo mật, chưa được coi là hoàn tất. Sau khi GitHub xử lý xong, chạy lại xem trước để xác nhận.
 
 ## 🗂️ CẤU TRÚC NGUỒN
 
@@ -35,9 +39,9 @@ Validator kiểm tra hợp đồng nguồn JSON và các tính năng phụ thu�
 | `organization.runner_groups`                | Quyền nhóm runner, workflow và repository được chọn; dùng tên repository, giải ID khi áp dụng                                              |
 | `repositories.<tên>.security_configuration` | Tên cấu hình bảo mật cần gắn; `null` là không gắn                                                                                          |
 | `web_settings`                              | Giá trị chỉ đối chiếu, không ghi qua lệnh này; gồm mục không có API ghi được hỗ trợ và cờ bảo mật REST cũ                                  |
-| `unavailable`                               | Các endpoint chưa đọc được; phải nhập lại thành công trước khi áp dụng                                                                     |
+| `unavailable`                               | Endpoint hoặc trường metadata chưa đọc được; phải nhập lại thành công trước khi áp dụng                                                    |
 
-Mỗi repository đã nhập có phần riêng; `local-settings` áp dụng các phần này và phần tổ chức, không áp dụng `repository_defaults` cho repository mới chưa nhập. Sau khi tạo repository mới, nhập lại hoặc dùng các lệnh thiết lập repository truyền thống. Chỉ nhập những repository tài khoản hiện tại đọc được; danh sách API không chứng minh có quyền nhìn thấy toàn bộ repository riêng tư.
+Tên repository không được trùng khi bỏ qua hoa/thường. `local-settings` quản lý tổ chức và các repository đã khai báo, không dùng `repository_defaults` cho repository mới chưa nhập. Sau khi tạo repository, nhập lại hoặc dùng các lệnh thiết lập riêng. Danh sách nhập chỉ gồm repository tài khoản hiện tại đọc được, không chứng minh tài khoản thấy toàn bộ repository riêng tư.
 
 ## 🔧 PHẠM VI API ĐƯỢC QUẢN LÝ
 
@@ -54,11 +58,25 @@ Mỗi repository đã nhập có phần riêng; `local-settings` áp dụng các
 | Tương tác           | Giới hạn tương tác lâu dài, bỏ giới hạn và giới hạn tạo Pull Request                                                                                                                      |
 | Topics              | Danh sách topics của từng repository đã nhập                                                                                                                                              |
 
-`settings` và `org-settings` truyền thống đọc giá trị cài đặt từ nguồn JSON; lệnh `settings` vẫn giữ hành vi chỉ bật bảo mật, topics `.github` theo `CITATION.cff`, giữ trạng thái Actions. Khi nguồn yêu cầu đổi trạng thái archive, `settings` xác minh các trường cài đặt trước khi ghi, bỏ archive trước các cập nhật khác và archive sau topics, bảo mật, quyền Actions. Cả `settings` và `local-settings` bật/tắt Discussions qua GraphQL sau khi xác minh ID repository; các cài đặt repository còn lại dùng REST. Dùng `local-settings` khi cần khôi phục đúng cấu hình đã nhập, gồm cả trạng thái tắt và topics theo JSON.
+## ✅ XÁC MINH VÀ THỨ TỰ ÁP DỤNG
+
+Luồng đọc xác minh `login` của tổ chức hoặc `full_name` của repository theo endpoint, không phân biệt hoa/thường. Thiếu danh tính hoặc chuyển hướng tới tài nguyên khác dừng lệnh; nguồn không tự đổi owner hoặc tên. Quy tắc cũng áp dụng khi giải ID cho Discussions, cấu hình bảo mật và nhánh mặc định dùng bởi `files`, `rulesets`.
+
+Metadata được xác minh trước khi đọc song song các endpoint độc lập. Với `local-settings`, tổ chức được đọc và kiểm tra trước; kế hoạch tổ chức sai thì dừng trước khi đọc repository. Các repository được đọc song song có giới hạn rồi lập kế hoạch theo thứ tự nguồn. Mọi lần đọc và xác minh hoàn tất trước thao tác ghi đầu tiên.
+
+Khi bỏ archive, script thực hiện trước các cập nhật khác của repository; khi archive, thực hiện sau cùng. Dependabot alerts được bật trước security updates và tắt sau security updates, không phụ thuộc thứ tự endpoint trong JSON. Discussions dùng GraphQL `updateRepository`; các trường repository khác dùng REST.
+
+Khi đổi `merge_commit_message` hoặc `squash_merge_commit_message`, request gửi kèm tiêu đề tương ứng lấy từ nguồn hoặc trạng thái đã xác minh. Thiếu tiêu đề hợp lệ chặn ghi; phần xem trước chỉ liệt kê giá trị thực sự đổi.
+
+`local-settings` đọc lại trạng thái sau áp dụng bằng dữ liệu mới. Các trường chính do `settings`, `org-settings` ghi cũng được đọc lại, kiểm tra kiểu và đối chiếu trước khi báo thành công; gồm Discussions và archive. Chuỗi rỗng và `null` của trường văn bản rỗng được coi là tương đương. `settings` dùng metadata đã xác nhận cho các bước topics và bảo mật phụ thuộc.
+
+`settings` dùng `repository_defaults` và phần riêng từng repository nhưng giữ hành vi thiết lập: chỉ bật bảo mật, giữ trạng thái Actions và lấy topics `.github` từ `CITATION.cff`. Dùng `local-settings` để áp dụng đúng trạng thái nhập, gồm giá trị tắt và topics từ JSON.
+
+Validator kiểm tra hợp đồng và phụ thuộc: Actions repository cần được tổ chức cho phép; security updates cần alerts; push protection cần secret scanning; Release bất biến phải tuân thủ chính sách tổ chức.
 
 ## 🎯 CHÍNH SÁCH SELECTED
 
-Các danh sách chỉ được nhập khi chính sách cha là `selected`; đổi sang chế độ này trong local phải khai báo đủ endpoint đi kèm. Danh sách rỗng có nghĩa là không chọn phần tử nào, không phải bỏ qua cài đặt.
+Danh sách con chỉ được nhập khi chính sách cha là `selected`. Nguồn đổi sang chế độ này phải khai báo endpoint đi kèm. Danh sách rỗng có nghĩa không chọn phần tử nào.
 
 | Chính sách cha                                                    | Endpoint đi kèm trong `endpoints`          | Dữ liệu local                                                  |
 | ----------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------- |
@@ -66,21 +84,48 @@ Các danh sách chỉ được nhập khi chính sách cha là `selected`; đổ
 | `actions/permissions.allowed_actions` của tổ chức hoặc repository | `actions/permissions/selected-actions`     | `github_owned_allowed`, `verified_allowed`, `patterns_allowed` |
 | `settings/immutable-releases.enforced_repositories` của tổ chức   | `settings/immutable-releases/repositories` | `selected_repositories`: tên đầy đủ thuộc tổ chức              |
 
-Script đọc hết các trang danh sách, kiểm tra tên và ID, giải tên repository thành ID trước khi ghi. Khi áp dụng, chính sách cha được đặt trước danh sách con rồi đọc lại cả hai. Thứ tự phần tử không tạo khác biệt cấu hình. Validator chặn việc bật Actions cho repository ngoài danh sách tổ chức và tắt Release bất biến cho repository nằm trong phạm vi bắt buộc.
+Script đọc đủ các trang, giải tên thành ID đã xác minh, ghi chính sách cha trước danh sách con rồi đọc lại cả hai. ID chỉ dùng trong request, không lưu vào nguồn. Tên và ID phải hợp lệ, không trùng; nhiều tên trỏ cùng ID bị coi là mơ hồ và chặn ghi.
 
-## 🌐 PHẦN CẦN CƠ CHẾ RIÊNG
+Phản hồi REST phân trang cần ít nhất một trang; một trang chứa danh sách rỗng là hợp lệ. Thiếu trang hoặc sai kiểu không được coi là chưa có tài nguyên. [ghList()](../scripts/orgsetup/github.py) áp dụng cùng hợp đồng khi đọc nhãn và ruleset; cơ chế bao trang theo [GitHub CLI](https://cli.github.com/manual/gh_api).
 
-- Các mục `web_settings` như yêu cầu 2FA, tên nhánh mặc định cấp tổ chức và một số quyền thành viên không có endpoint ghi được script hỗ trợ. Các cờ bảo mật “enabled for new repositories” trong REST cũ chỉ được đọc để đối chiếu; chính sách mới dùng code security configurations.
-- Khi Actions tắt, GitHub có thể không trả `allowed_actions`. Tệp chỉ lưu trường thực sự đọc được; không thể khôi phục một giá trị bị ẩn. Danh sách của chế độ `selected` chỉ được đọc khi chế độ này có hiệu lực; lỗi đọc danh sách chặn áp dụng, không tự coi danh sách là rỗng.
-- Định nghĩa cấu hình bảo mật tùy chỉnh không được xuất thành tài nguyên tạo mới. Cấu hình do GitHub quản lý được giải theo tên; script quản lý phạm vi và liên kết, không sao chép định nghĩa của GitHub.
-- OIDC tổ chức trả `null` được lưu thành object rỗng, nghĩa là chưa tùy chỉnh. API không có thao tác DELETE để trở về trạng thái này; nếu local yêu cầu rỗng nhưng web đã có template, script báo mục cần xử lý thay vì giả định đã xóa. Repository đặt `use_default: false` có thể dùng template tổ chức mà không cần khai báo claim riêng. Thay đổi subject phải khớp với chính sách tin cậy của dịch vụ cloud.
-- Nhóm runner mặc định hoặc do enterprise quản lý phải tồn tại sẵn; script không tạo lại nhóm mặc định, sửa nhóm kế thừa hay vượt quyền sửa giới hạn workflow. Danh sách `selected_repositories` chỉ dùng khi `visibility` là `selected`, phải nằm trong tổ chức và được tài khoản hiện tại đọc thấy.
-- Ruleset, labels, team và quyền team dùng các nguồn hiện có trong [`rulesets/`](../rulesets/), [`labels.yml`](../labels.yml), [`teams.py`](../scripts/orgsetup/teams.py). Nhập cài đặt không ghi đè các nguồn này; đối chiếu bằng `make org-preview`, áp dụng bằng các lệnh `rulesets`, `org-rulesets`, `labels`, `team` của [`org-setup.py`](../scripts/org-setup.py). Ruleset cấp tổ chức phụ thuộc quyền và gói GitHub; không có API vượt qua giới hạn gói.
-- Team cha–con dùng `TEAM_PARENTS` và thông tin trong `TEAMS`; quan hệ lưu bằng slug và được đọc lại sau khi tạo hoặc đổi team cha. Team có quyền `None` chỉ quản lý thông tin và vị trí trong cấu trúc, giữ nguyên thành viên và quyền repository. Cấu trúc và phạm vi quản lý xem [`MAINTAINERS.md`](../MAINTAINERS.md).
-- `organization.web_settings.installed_apps` chỉ lưu tên GitHub Apps đã cài để đối chiếu, không lưu quyền của từng installation, token hay tài khoản cài đặt. Việc cài hoặc gỡ Apps vẫn cần luồng quản trị riêng.
-- OAuth Apps, billing, SSO, webhook có thông tin xác thực, credentials của runner, deploy key và secrets cần cơ chế quản trị riêng. API không cho đọc lại giá trị secrets hoặc khóa riêng. Webhook, environments, custom properties, Pages và variables chưa được bộ nhập này quản lý. Không coi tệp JSON là bản sao toàn bộ trang Settings hoặc bản khôi phục mọi tài nguyên của tài khoản.
+Danh mục repository và cấu hình bảo mật dùng chung trong một lượt lập kế hoạch khi cần giải ID; danh sách chọn rỗng không cần đọc danh mục repository. Discussions và liên kết bảo mật có thể dùng chung danh tính mới nếu đủ `full_name`, ID REST và Node ID GraphQL. Dữ liệu thiếu ID không được cache; cache không giữ giữa lượt xem trước, áp dụng và xác nhận.
 
-Các nhóm chưa được bộ nhập quản lý có thể có API riêng; điều đó khác với mục GitHub không công bố API ghi. Khả năng đổi cài đặt từ local phụ thuộc đồng thời vào hợp đồng mà script hỗ trợ, quyền tài khoản và gói dịch vụ. Việc định dạng tệp, tạo Pull Request hoặc thấy nguồn local hợp lệ không chứng minh cài đặt trên web đã được áp dụng.
+Topics, ngôn ngữ CodeQL và các danh sách chọn được so theo nội dung. Topics được chuẩn hóa chữ thường như [GitHub lưu](https://docs.github.com/en/rest/repos/repos#replace-all-repository-topics). Thay đổi thứ tự hoặc topics trùng không tạo thao tác ghi; nguồn và payload được giữ nguyên. Thứ tự claim OIDC vẫn có ý nghĩa khi đối chiếu.
+
+## 🏃 NHÓM RUNNER
+
+Nguồn quản lý thông tin nhóm, quyền repository và giới hạn workflow, không đăng ký runner hoặc xóa nhóm ngoài nguồn. Nhóm mặc định và nhóm enterprise phải tồn tại sẵn; script không tạo lại nhóm mặc định, sửa nhóm kế thừa hoặc vượt quyền sửa.
+
+`selected_repositories` chỉ dùng khi `visibility: selected`, gồm tên repository thuộc tổ chức mà tài khoản đọc được. Danh sách repository của các nhóm selected được đọc song song có giới hạn, xác minh đầy đủ và sắp xếp kết quả theo tên. Nhóm all/private không đọc danh sách chọn; lỗi ở một nhóm làm tài nguyên nhóm runner chưa nhập được, không trả dữ liệu một phần để áp dụng.
+
+Danh sách repository và workflow được so theo nội dung. Workflow chỉ được gửi khi `restricted_to_workflows` bật; request bật giới hạn hoặc đổi danh sách gửi đủ cờ và `selected_workflows`.
+
+Khi tắt giới hạn, danh sách lưu sẵn được giữ. Yêu cầu đồng thời đổi danh sách bị chặn vì API bỏ qua trường khi cờ tắt. Tạo nhóm với cờ tắt chỉ nhận danh sách rỗng; nhóm đã có danh sách vẫn được nhập và chỉnh các cài đặt khác.
+
+## 🛡️ CẤU HÌNH BẢO MẬT VÀ OIDC
+
+Cấu hình bảo mật được giải theo tên; script quản lý phạm vi mặc định và liên kết, không tạo bản sao định nghĩa tùy chỉnh. Phạm vi mặc định phải khớp tên, ID và `target_type` trong danh mục đã xác minh. Dữ liệu thiếu hoặc mâu thuẫn được đánh dấu chưa đọc được; kế hoạch đổi phạm vi sai loại chặn mọi lần ghi.
+
+Code scanning default setup và workflow CodeQL advanced setup cần được chọn phù hợp để tránh thiết lập chồng nhau. Quyền, loại repository và gói dịch vụ quyết định tính năng bảo mật có thể dùng.
+
+OIDC chỉ lưu trường có thể ghi, bỏ subject prefix do GitHub sinh. Tổ chức trả `null` được lưu thành object rỗng, thể hiện chưa tùy chỉnh. API không có DELETE để trở về trạng thái này; nguồn yêu cầu rỗng trong khi GitHub có template được báo là mục cần xử lý. Repository có `use_default: false` có thể dùng template tổ chức mà không khai báo claim riêng. Subject phải khớp chính sách tin cậy của dịch vụ cloud.
+
+## 🌐 GIỚI HẠN VÀ CƠ CHẾ RIÊNG
+
+| Nhóm                                                       | Phạm vi xử lý                                                                                                                      |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `web_settings`                                             | Chỉ đối chiếu; gồm yêu cầu 2FA, tên nhánh mặc định tổ chức, quyền thành viên và cờ bảo mật REST không có hợp đồng ghi trong script |
+| Actions bị tắt                                             | Chỉ lưu trường API trả; không suy đoán `allowed_actions` bị ẩn hoặc danh sách selected chưa đọc được                               |
+| GitHub Apps                                                | Chỉ lưu tên đã cài trong `installed_apps`; cài/gỡ và quyền installation dùng luồng riêng                                           |
+| Ruleset, team, nhãn                                        | Dùng nguồn và lệnh riêng; xem [ruleset](../rulesets/README.md), [team](../MAINTAINERS.md) và [labels.yml](../labels.yml)           |
+| OAuth, billing, SSO, credentials, secrets, deploy key      | Cơ chế quản trị riêng; nguồn không lưu giá trị bí mật                                                                              |
+| Webhook, environments, custom properties, Pages, variables | Chưa được bộ nhập này quản lý                                                                                                      |
+
+`--repo <tên>` chỉ dùng với `files`, `settings`, `rulesets`, `team`, `labels`; tên không trống, không có khoảng trắng hoặc owner. Lệnh cấp tổ chức, `preview`, `import-settings`, `local-settings` từ chối tùy chọn này. `--discussions` chỉ dùng với `settings`; `preview` và `import-settings` không nhận `--apply`. Tùy chọn được kiểm tra trước đăng nhập và API để giữ đúng phạm vi.
+
+Ruleset cấp tổ chức cần gói GitHub hỗ trợ, kể cả import trên web; GraphQL chỉ đối chiếu. Team xác nhận thông tin, membership và quyền sau ghi; lời mời đang chờ chưa hoàn tất. Chi tiết và mã lỗi theo [ADR 00000015](adr/00000015-github-sync-verification.md).
+
+Một tài nguyên có API riêng không đồng nghĩa bộ nhập hỗ trợ tài nguyên đó. Khả năng áp dụng phụ thuộc hợp đồng script, quyền tài khoản và gói dịch vụ; nguồn hợp lệ hoặc PR đã tạo không chứng minh cài đặt GitHub được áp dụng.
 
 ## 📚 TÀI LIỆU GITHUB
 

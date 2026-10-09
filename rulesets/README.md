@@ -1,58 +1,55 @@
-# 🛡️ RULESET BẢO VỆ NHÁNH CHÍNH VÀ TAG PHÁT HÀNH
+# 🛡️ RULESET BẢO VỆ NHÁNH, TAG VÀ PUSH
 
-Mỗi repository của tổ chức có hai [ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets): **Protect Main** cho nhánh chính ([`protect-main.json`](protect-main.json)) và **Protect Release Tags** cho tag phát hành `Stable.v*`, `Beta.v*` và `v*` ([`protect-release-tags.json`](protect-release-tags.json), [ADR 00000006](../docs/adr/00000006-protect-release-tags.md), [ADR 00000012](../docs/adr/00000012-monthly-releases.md)), để các quy tắc trong [`CONTRIBUTING.md`](../CONTRIBUTING.md) được GitHub thực thi. Ruleset **không** tự áp dụng từ repository này — người quản trị import trên web hoặc chạy `python3 scripts/org-setup.py rulesets --apply`.
+[rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets) thực thi chính sách bảo vệ khi loại repository, quyền và gói GitHub hỗ trợ. Tệp JSON là nguồn local; người quản trị cần đối chiếu và áp dụng, GitHub không tự cài ruleset từ repository này.
 
-Ruleset đặt ở **cấp repository**: tổ chức dùng gói GitHub Free nên ruleset cấp tổ chức (**Organization settings → Repository → Rulesets**) không được thực thi; **push ruleset** (chặn tệp theo đường dẫn, đuôi, kích thước) chỉ dùng được cho repository riêng tư hoặc internal. Gói Free cũng không thực thi ruleset trên repository **riêng tư** — `org-setup.py` cảnh báo và bỏ qua thay vì dừng.
+## 🗂️ NGUỒN CẤU HÌNH
 
-## ⚙️ QUY TẮC CỦA PROTECT MAIN
+| Tệp                                                                              | Phạm vi và nguồn                                                |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [protect-main.json](protect-main.json)                                           | Protect Main cấp repository; nguồn bảo vệ nhánh mặc định        |
+| [protect-release-tags.json](protect-release-tags.json)                           | Protect Release Tags cấp repository; nguồn bảo vệ tag phát hành |
+| [organization-protect-main.json](organization-protect-main.json)                 | Bản tổ chức sinh từ Protect Main                                |
+| [organization-protect-release-tags.json](organization-protect-release-tags.json) | Bản tổ chức sinh từ Protect Release Tags                        |
+| [organization-protect-pushes.json](organization-protect-pushes.json)             | Nguồn độc lập cho push ruleset cấp tổ chức                      |
 
-- Mọi thay đổi phải qua Pull Request, có ít nhất **1** phê duyệt của người trong `CODEOWNERS`; phê duyệt cũ bị hủy khi có commit mới; cần phê duyệt lại sau lần đẩy cuối; chỉ người quản trị được hủy phê duyệt.
-- Mọi góp ý phải được giải quyết; cho phép **Merge** và **Squash**; không cho phép **Rebase** vì commit tạo lại mất chữ ký ([ADR 00000007](../docs/adr/00000007-signed-commits-merge-methods.md)).
-- Kiểm tra tự động bắt buộc thành công trên branch đã cập nhật với nhánh chính; code quality.
-- Commit phải có chữ ký (GPG hoặc SSH).
-- Cấm force push, cấm xóa; chặn tạo và cập nhật nhánh chính ngoài danh sách bỏ qua.
-- Danh sách bỏ qua: tài khoản của người quản trị ([`MAINTAINERS.md`](../MAINTAINERS.md)), chế độ **always** ([ADR 00000004](../docs/adr/00000004-protect-main.md)).
+`orgRulesets()` trong [rulesets.py](../scripts/orgsetup/rulesets.py) sinh các bản nhánh và tag cấp tổ chức. Sửa nguồn cấp repository rồi sinh lại bản tương ứng; tests đối chiếu kết quả. Push ruleset không có nguồn cấp repository.
 
-Mọi ruleset nhánh và tag — cấp repository và cấp tổ chức — có quy tắc **Require signed commits** (`required_signatures`, [ADR 00000007](../docs/adr/00000007-signed-commits-merge-methods.md)); `scripts/validate.py` báo lỗi khi thiếu. Push ruleset không nhận quy tắc này ([ADR 00000005](../docs/adr/00000005-organization-protect-pushes.md)).
+## ⚙️ PROTECT MAIN
+
+- Áp dụng nhánh mặc định; thay đổi qua PR và ít nhất **1** phê duyệt của `CODEOWNERS`.
+- Hủy phê duyệt cũ khi có commit mới, yêu cầu phê duyệt sau lần đẩy cuối; người quản trị kiểm soát việc hủy phê duyệt.
+- Mọi góp ý được giải quyết; kiểm tra bắt buộc thành công trên branch cập nhật với nhánh chính; có code quality.
+- Cho phép Merge và Squash, không Rebase and merge ở cấp repository.
+- Commit có chữ ký; cấm force push, xóa và tạo/cập nhật nhánh ngoài phạm vi được phép.
+- Danh sách bỏ qua dùng tài khoản trong [MAINTAINERS.md](../MAINTAINERS.md) với chế độ **always**, chỉ dùng khi thật cần theo [GOVERNANCE.md](../GOVERNANCE.md).
+
+Quyết định theo [ADR 00000004](../docs/adr/00000004-protect-main.md) và [ADR 00000007](../docs/adr/00000007-signed-commits-merge-methods.md).
 
 ## 🏷️ PROTECT RELEASE TAGS
 
-- Áp dụng cho `refs/tags/Stable.v*`, `refs/tags/Beta.v*` và `refs/tags/v*`: chặn tạo, cập nhật (dời sang commit khác), xóa tag và force push; tag chỉ trỏ tới commit có chữ ký.
-- Danh sách bỏ qua giống Protect Main — chỉ người quản trị tạo được tag phát hành, nên GitHub Release luôn trỏ đúng mã đã phát hành.
-- Bổ sung cho ruleset: tổ chức bắt buộc **Immutable releases** cho mọi repository — khi Release đã phát hành, không ai (kể cả người trong danh sách bỏ qua) dời được tag, sửa được tệp đính kèm, hay xóa được tag khi Release còn đó; xóa Release rồi cũng không dùng lại được tên tag.
+Áp dụng `refs/tags/Stable.v*`, `refs/tags/Beta.v*` và `refs/tags/v*`; chặn tạo, cập nhật, xóa tag và force push. Tag trỏ tới commit có chữ ký. Danh sách bỏ qua giống Protect Main, để người quản trị phát hành theo [ADR 00000006](../docs/adr/00000006-protect-release-tags.md).
+
+Immutable releases bổ sung bảo vệ tag và tệp đính kèm sau phát hành; tên tag đã phát hành không được dùng lại. Định dạng phiên bản theo [ADR 00000012](../docs/adr/00000012-monthly-releases.md).
 
 ## 🏢 RULESET CẤP TỔ CHỨC
 
-Ba ruleset cho mọi repository (`~ALL`), cài trên web bằng import (**Active**) và được `make org-preview` đối chiếu với tệp — ruleset khác tệp thì import lại; chỉ được thực thi khi tổ chức nâng lên gói **GitHub Team** (gói Free không thực thi ruleset cấp tổ chức):
+Các bản tổ chức có trạng thái Active và phạm vi `~ALL`. Danh sách bỏ qua dùng `OrganizationAdmin`; không dùng actor `User` và không giới hạn người hủy phê duyệt như bản repository.
 
-- [`organization-protect-main.json`](organization-protect-main.json) — **Organization Protect Main**: quy tắc của Protect Main, thêm **code scanning** như trên web: kết quả CodeQL của Pull Request không có cảnh báo mức `errors` hay cảnh báo bảo mật từ `high_or_higher` (`ORG_CODE_SCANNING_RULE` trong `scripts/orgsetup/rulesets.py`). Repository cần workflow CodeQL ([`workflow-templates/codeql.yml`](../workflow-templates/codeql.yml)) để có kết quả, nếu không Pull Request bị chặn khi gói Team thực thi ruleset.
-- [`organization-protect-release-tags.json`](organization-protect-release-tags.json) — **Organization Protect Release Tags**: cùng quy tắc với Protect Release Tags trên tag `Stable.v*`, `Beta.v*` và `v*`.
-- [`organization-protect-pushes.json`](organization-protect-pushes.json) — **Organization Protect Pushes**: push ruleset, xem [mục dưới](#-protect-pushes-cấp-tổ-chức).
+Organization Protect Main áp dụng nhánh mặc định cùng `refs/heads/main`, cho phép Merge, Squash và Rebase. Hạn chế cấp repository vẫn có hiệu lực. Bản tổ chức giữ các kiểm tra PR title, branch name và code quality; yêu cầu CodeQL không có cảnh báo `errors` hoặc bảo mật `high_or_higher`. Repository cần [workflow CodeQL](../workflow-templates/codeql.yml) để có kết quả.
 
-Khác với bản cấp repository:
+Organization Protect Release Tags dùng cùng phạm vi tag và có quy tắc status checks rỗng theo cấu hình nguồn; danh sách rỗng không yêu cầu thêm check.
 
-- Chỉ giữ các kiểm tra bắt buộc có ở mọi repository (tiêu đề Pull Request, tên branch) — như Protect Main của repository khác; vẫn có `code_quality`.
-- Organization Protect Main cho phép thêm **Rebase** và áp dụng cả `refs/heads/main` ngoài nhánh mặc định ([ADR 00000007](../docs/adr/00000007-signed-commits-merge-methods.md)); ruleset và cài đặt cấp repository vẫn không cho Rebase.
-- Không dùng actor loại `User` (import báo "contains an invalid actor"): danh sách bỏ qua là **chủ tổ chức** (`OrganizationAdmin`) — cùng người quản trị như bản cấp repository; không giới hạn người hủy phê duyệt.
-- Organization Protect Release Tags có thêm quy tắc kiểm tra bắt buộc với danh sách rỗng như trên web — quy tắc này không chặn gì, có thể xóa trên web rồi bỏ trong `orgTagRuleset()`.
-- Hai tệp sinh từ `protect-main.json`, `protect-release-tags.json` bằng `orgRulesets()` trong `scripts/orgsetup/rulesets.py` để đối chiếu với ruleset đang cài trên web; test bảo đảm tệp khớp `orgRulesets()` — sửa bản cấp repository rồi sinh lại tệp cấp tổ chức.
-- Áp dụng: **Organization settings → Repository → Rulesets → New ruleset → Import a ruleset** → chọn `organization-protect-main.json` → **Create**, lặp lại với `organization-protect-release-tags.json` và `organization-protect-pushes.json`. Ở gói Free, ghi ruleset cấp tổ chức qua REST (HTTP 403, dù token có quyền `admin:org`) lẫn GraphQL (`updateRepositoryRuleset`, `createRepositoryRuleset`) đều bị chặn, nên `python3 scripts/org-setup.py org-rulesets` chỉ so tệp với ruleset trên web (đọc qua GraphQL); `--apply` chỉ tạo, cập nhật được khi tổ chức dùng gói Team.
-- Danh sách ruleset được đọc hết các trang REST hoặc GraphQL trước khi đối chiếu. GraphQL kiểm tra trường và kiểu dữ liệu, lỗi từng trang, tên không trùng và `pageInfo` của ruleset, quy tắc, danh sách bỏ qua. Phản hồi thiếu, bị cắt hoặc có trạng thái phân trang mâu thuẫn được báo lỗi đọc; không kết luận ruleset đã đúng hay chưa có từ dữ liệu đó. Actor `DeployKey` được đối chiếu với ID `null` như REST; ID của `OrganizationAdmin` được chuẩn hóa vì API bỏ qua giá trị này.
-- Script nhận diện cả tên `Protect Main (Organization)`, `Protect Release Tags (Organization)` và `Protect Pushes (Organization)` khi chúng đang có trên GitHub: đổi sang tên trong tệp local bằng cập nhật cùng ID, không tạo ruleset thứ hai. Nếu cả hai tên cùng tồn tại, script chặn việc ghi để người quản trị giải quyết trùng. Đối chiếu GraphQL báo đúng tên hiện có và các phần khác biệt; trên gói Free, sửa ruleset hiện có trên web theo tệp local.
+Tạo, sửa và thực thi ruleset cấp tổ chức cần [GitHub Team hoặc Enterprise](https://docs.github.com/en/organizations/managing-organization-settings/creating-rulesets-for-repositories-in-your-organization), kể cả import trên web. Gói Free không thực thi ruleset cấp tổ chức hoặc ruleset repository riêng tư. Khi REST bị chặn, lệnh đối chiếu bằng GraphQL; áp dụng vẫn trả mã lỗi vì chưa ghi.
 
-## 📤 PROTECT PUSHES (CẤP TỔ CHỨC)
+## 📤 PROTECT PUSHES CẤP TỔ CHỨC
 
-Push ruleset ([ADR 00000005](../docs/adr/00000005-organization-protect-pushes.md)) chặn ngay khi đẩy — trên mọi branch, kể cả branch chưa hợp nhất — những tệp không được có trong repository:
+Push ruleset chặn ngay khi đẩy trên các branch, gồm branch chưa hợp nhất, của repository riêng tư/internal và fork network khi gói hỗ trợ:
 
-- Đường dẫn: `**/.env` và khóa SSH riêng (`id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`). `.env.*` không bị chặn vì `.env.example` được phép commit.
-- Đuôi: khóa, chứng chỉ, kho mật khẩu (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `*.ppk`, `*.kdbx`) và tệp cơ sở dữ liệu (`*.sqlite`, `*.sqlite3`, `*.db`).
-- Tệp tối đa **10 MB** (Git LFS không tính); đường dẫn tối đa **200** ký tự.
+- Đường dẫn `**/.env` và khóa SSH riêng `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`.
+- Đuôi `.pem`, `.key`, `.p12`, `.pfx`, `.jks`, `.keystore`, `.ppk`, `.kdbx`, `.sqlite`, `.sqlite3`, `.db`.
+- Tệp tối đa **10 MB**, không tính Git LFS; đường dẫn tối đa **200** ký tự.
 
-Khác hai ruleset cấp tổ chức kia:
-
-- GitHub chỉ áp dụng push ruleset cho repository **riêng tư** hoặc **internal** (cả fork network) — repository công khai như `.github` không bị ảnh hưởng; vẫn chỉ thực thi với gói Team.
-- Không có `required_signatures` (push ruleset chỉ nhận bốn quy tắc push) và không có bản cấp repository: tệp là nguồn, `orgPushRuleset()` chỉ chuẩn hóa danh sách bỏ qua và phạm vi.
-- Import và so với web như hai tệp kia (`python3 scripts/org-setup.py org-rulesets`).
+`.env.*` được giữ để cho phép `.env.example`. Push ruleset không áp dụng repository công khai và không có `required_signatures`; `orgPushRuleset()` chuẩn hóa phạm vi và danh sách bỏ qua. Chính sách theo [ADR 00000005](../docs/adr/00000005-organization-protect-pushes.md).
 
 ## ✅ KIỂM TRA BẮT BUỘC
 
@@ -64,13 +61,30 @@ Khác hai ruleset cấp tổ chức kia:
 | `Kiểm tra tiêu đề Pull Request`                             | ✔                    | ✔               |
 | `Kiểm tra tên branch`                                       | ✔                    | ✔               |
 
-Tên kiểm tra phải trùng **tên job**, nếu không Pull Request sẽ chờ mãi một kiểm tra không tồn tại. `scripts/org-setup.py` tự bỏ kiểm tra mà repository không có job tương ứng; `scripts/validate.py` báo lỗi khi tên không trùng job của repository này.
+Tên check phải đúng **tên job**. Script chỉ chọn check có workflow/job tương ứng ở repository đích; validator đối chiếu tên với workflow của repository này. Thiếu workflow bắt buộc được báo khi xem trước và làm áp dụng chưa hoàn tất.
 
-## 📥 CÁCH ÁP DỤNG
+## 📥 ĐỐI CHIẾU VÀ ÁP DỤNG
 
-- **Bằng script** (khuyên dùng cho repository khác): `python3 scripts/org-setup.py rulesets --apply --repo <tên>` — tạo mới hoặc cập nhật hai ruleset **Protect Main**, **Protect Release Tags** (so với ruleset trên GitHub trước: giống tệp thì báo đã đúng, không ghi) và cảnh báo nếu repository còn ruleset khác.
-- **Trên web** (repository `.github`): **Settings → Rules → Rulesets → New ruleset → Import a ruleset** → chọn `protect-main.json` → **Create**; lặp lại với `protect-release-tags.json`. Import `protect-main.json` trên web giữ nguyên mọi kiểm tra bắt buộc — chỉ dùng cho repository `.github`.
+```sh
+python3 scripts/org-setup.py rulesets --repo <tên>
+python3 scripts/org-setup.py rulesets --apply --repo <tên>
+python3 scripts/org-setup.py org-rulesets
+```
 
-Khi REST đọc được, script yêu cầu tên và ID trong danh sách hợp lệ, không trùng; mỗi phản hồi chi tiết phải khớp cả tên lẫn ID đã liệt kê. Chi tiết được đọc song song, sau đó các trường bắt buộc và kiểu cấu trúc điều kiện, quy tắc, danh sách bỏ qua của toàn bộ ruleset cần so được kiểm tra trước lần ghi đầu tiên trong từng repository hoặc cấp tổ chức. Lỗi đọc hay dữ liệu sai chặn việc ghi trong phạm vi đó. Mỗi lượt đọc lại GitHub, không giữ cache giữa các lượt; ghi tuần tự theo thứ tự tệp nguồn. Lỗi một lần ghi được cảnh báo riêng và không tự hoàn tác những lần ghi trước.
+Lệnh mặc định chỉ xem trước; nguồn khớp thì không ghi. Lệnh cấp tổ chức dùng `--apply` khi quyền và gói hỗ trợ. Import trên web tại **Settings → Rules → Rulesets → New ruleset → Import a ruleset**; cấp tổ chức ở **Organization settings → Repository → Rulesets**. Bản Protect Main đầy đủ chỉ dành cho `.github`; repository khác dùng script để chọn đúng check.
 
-`make validate` và các lệnh đồng bộ dùng cùng kiểm tra cấu trúc ruleset. Tham số `pull_request` phải có tên được hỗ trợ và đúng kiểu; boolean không nhận chuỗi `"true"`, số lần phê duyệt không nhận boolean, danh sách phương thức hợp nhất chỉ nhận `merge`, `squash`, `rebase` và không trùng.
+Script đọc hết các trang danh sách, xác minh tên/ID không trùng và chi tiết khớp danh sách. Chi tiết được đọc song song; cấu trúc toàn bộ ruleset cần so trong từng phạm vi được kiểm tra trước lần ghi đầu tiên. Thiếu trang, lỗi đọc hoặc dữ liệu sai chặn ghi trong phạm vi đó. Một trang REST chứa danh sách rỗng vẫn hợp lệ.
+
+Các tên `Protect Main (Organization)`, `Protect Release Tags (Organization)`, `Protect Pushes (Organization)` được nhận diện để cập nhật cùng ID sang tên nguồn. Nếu cả tên này và tên nguồn cùng tồn tại, script chặn ghi do trùng tài nguyên.
+
+Ghi tuần tự theo nguồn; sau ghi phải xác minh ID phản hồi và đọc lại theo ID, so tên, target, enforcement, conditions, bypass và rules. Lỗi ghi hoặc xác nhận được tổng hợp sau khi thử các ruleset còn lại; trả mã lỗi và không tự hoàn tác thay đổi thành công. Mỗi lượt dùng dữ liệu mới theo [ADR 00000015](../docs/adr/00000015-github-sync-verification.md).
+
+## 🔎 QUY TẮC SO SÁNH VÀ KIỂM TRA DỮ LIỆU
+
+Các danh sách tập hợp được so theo nội dung: include/exclude, phương thức merge, reviewer, người hủy phê duyệt, status checks, công cụ scanning, đường dẫn và đuôi bị chặn. Thứ tự `file_patterns` của từng reviewer được giữ vì [GitHub xét mẫu và phủ định theo thứ tự](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#required-reviewers). Nguồn và payload không được sắp xếp lại; trường ngoài danh sách chuẩn hóa giữ nguyên.
+
+Validator và lệnh đồng bộ dùng chung kiểm tra [cấu trúc REST](https://docs.github.com/en/rest/repos/rules#create-a-repository-ruleset): cờ đúng boolean, số phê duyệt đúng số nguyên, phương thức merge hợp lệ và không trùng, actor đúng loại và ID, context không trống. `integration_id` có thể vắng hoặc `null`; giá trị khai báo phải là số nguyên, không nhận boolean. Cờ status checks bắt buộc và cờ tùy chọn được kiểm tra theo hợp đồng.
+
+Reviewer bắt buộc cần `file_patterns` là danh sách chuỗi, `minimum_approvals` là số nguyên không âm, reviewer loại Team với ID nguyên dương. Phê duyệt `0` chỉ thêm team vào PR; danh sách rỗng không yêu cầu team. Kiểm tra cấu trúc không chứng minh team có quyền phù hợp.
+
+GraphQL kiểm tra trường, kiểu, lỗi trang và `pageInfo` của ruleset, rules và bypass. Phản hồi thiếu hoặc phân trang mâu thuẫn trả mã lỗi. Node ID reviewer được giải về ID số sau khi xác minh node là team; thiếu, trùng hoặc sai loại node làm đối chiếu thất bại. `DeployKey` dùng ID `null`, ID `OrganizationAdmin` được chuẩn hóa theo cách API xử lý.

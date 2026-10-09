@@ -5,21 +5,20 @@
 
 ## 📌 BỐI CẢNH
 
-Tên branch và tiêu đề commit là nơi đầu tiên người đọc lịch sử nhìn vào. Tên branch tiếng Việt không dấu khó đọc và dễ nhầm nghĩa; tiêu đề commit tự do không gom nhóm được khi chuẩn bị nội dung phát hành. Quy ước chỉ có tác dụng khi được kiểm tra tự động ở mọi repository.
+Branch, commit và Pull Request cần có tên dễ tìm, dễ đánh giá và phục vụ việc phân nhóm nội dung phát hành. Quy ước dùng chung cần được kiểm tra tại máy và trong workflow.
 
 ## ✅ QUYẾT ĐỊNH
 
-- Tên branch dạng `<tiền tố>/<mô_tả>`: tiền tố trong bảng của `CONTRIBUTING.md`; mô tả bằng **tiếng Anh**, chữ thường, các từ nối bằng **dấu gạch dưới** (ví dụ `docs/update_readme`). Branch của Dependabot được bỏ qua.
-- Tiêu đề commit và Pull Request dạng `<loại>(<phạm vi>): <mô tả>` theo [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/), với loại trong bảng của `CONTRIBUTING.md`; phạm vi tùy chọn.
-- `scripts/conventions.py` là nơi duy nhất khai báo danh sách loại commit và tiền tố branch; workflow `branch-name.yml`, `pr-title.yml` (của repository này và workflow mẫu) và `make check` cùng gọi script này.
+Branch có dạng `<tiền tố>/<mô_tả>`: tiền tố theo `CONTRIBUTING.md`, mô tả bằng tiếng Anh, chữ thường và nối từ bằng dấu gạch dưới, ví dụ `docs/update_readme`. Branch của Dependabot được miễn kiểm tra.
+
+Commit và tiêu đề Pull Request có dạng `<loại>(<phạm vi>): <mô tả>` theo [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/); phạm vi là tùy chọn.
+
+`scripts/conventions.py` khai báo các loại commit và tiền tố branch. `make check`, workflow của repository và workflow mẫu dùng cùng script.
 
 ## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
 
-- **Tên branch tiếng Việt không dấu** (ví dụ `chore/thong-nhat-quy-tac-dinh-dang`): khó đọc, dễ nhầm nghĩa; công cụ và tài liệu kỹ thuật chủ yếu dùng tiếng Anh.
-- **Tiêu đề commit tự do**: không nhóm được thay đổi khi viết `CHANGELOG.md` và GitHub Release.
-- **Quy ước chỉ ghi trong tài liệu, không kiểm tra**: không bảo đảm được ở mọi repository; chọn kiểm tra bằng `scripts/conventions.py` trong workflow mẫu.
+Tên branch tiếng Việt không dấu dễ nhầm nghĩa. Tiêu đề tự do khó phân nhóm nội dung phát hành. Chỉ ghi quy ước trong tài liệu không bảo đảm việc áp dụng nhất quán.
 
 ## ⚖️ HỆ QUẢ
 
-- `validate.py` kiểm tra danh sách trong `CONTRIBUTING.md`, `scripts/conventions.py` và mẫu commit `.gitmessage` khớp nhau; tiền tố branch mới cần thêm luật gắn nhãn trong `.github/labeler.yml`.
-- Merge commit do nút **Update branch** của GitHub tạo không bị kiểm tra.
+Danh sách trong `CONTRIBUTING.md`, `scripts/conventions.py` và `.gitmessage` phải khớp. Tiền tố branch phải có luật gắn nhãn trong `.github/labeler.yml`. Merge commit do nút **Update branch** của GitHub tạo được miễn kiểm tra.

@@ -27,12 +27,33 @@ def ghJson(*args):
 
 
 def ghList(endpoint):
-	"""Đọc đầy đủ danh sách REST, gộp các trang; lỗi trang sau không trả lại danh sách thiếu."""
+	"""Gộp danh sách REST từ ít nhất một trang (trang rỗng hợp lệ); lỗi trang sau không trả danh sách thiếu."""
 	separator = '&' if '?' in endpoint else '?'
 	pages = ghJson('api', '--paginate', '--slurp', f'{endpoint}{separator}per_page=100')
-	if not isinstance(pages, list) or any(not isinstance(page, list) for page in pages):
+	if (
+		not isinstance(pages, list)
+		or not pages
+		or any(not isinstance(page, list) for page in pages)
+	):
 		raise ValueError(f'{endpoint}: phản hồi phân trang phải là danh sách các trang')
 	return [item for page in pages for item in page]
+
+
+def validateIdentity(endpoint, data):
+	"""Xác minh tài nguyên sau chuyển hướng API; tên GitHub không phân biệt hoa/thường."""
+	parts = endpoint.split('/')
+	if len(parts) == 3 and parts[0] == 'repos':
+		key, expected = 'full_name', '/'.join(parts[1:])
+	elif len(parts) == 2 and parts[0] == 'orgs':
+		key, expected = 'login', parts[1]
+	else:
+		raise ValueError(f'{endpoint}: endpoint không có danh tính repository hoặc tổ chức')
+	if (
+		not isinstance(data, dict)
+		or not isinstance(data.get(key), str)
+		or data[key].casefold() != expected.casefold()
+	):
+		raise ValueError(f'{endpoint}: không xác minh được danh tính tài nguyên')
 
 
 def isNotFound(exc):
@@ -71,11 +92,10 @@ def listRepos(only, includeArchived=False):
 
 
 def defaultBranch(repo):
-	data = ghJson('api', f'repos/{ORG}/{repo}')
-	if (
-		not isinstance(data, dict)
-		or not isinstance(data.get('default_branch'), str)
-		or not data['default_branch']
-	):
+	"""Xác minh repository trước khi dùng nhánh mặc định để đọc hoặc ghi tệp, ruleset."""
+	endpoint = f'repos/{ORG}/{repo}'
+	data = ghJson('api', endpoint)
+	validateIdentity(endpoint, data)
+	if not isinstance(data.get('default_branch'), str) or not data['default_branch']:
 		raise ValueError(f'{repo}: không đọc được nhánh mặc định')
 	return data['default_branch']

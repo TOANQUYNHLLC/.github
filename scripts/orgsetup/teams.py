@@ -10,8 +10,8 @@ MAINTAINERS = ('nguyentrongtoandl', 'trongtoandl81')
 # Team ghi trong CODEOWNERS.
 TEAM = 'maintainers'
 
-# Team của tổ chức: slug → (tên, quyền trên mọi repository, hiển thị, mô tả
-# khi tạo). Quyền None: chỉ quản lý thông tin và cấu trúc, giữ nguyên thành viên và quyền.
+# Team của tổ chức: slug → (tên, quyền trên mọi repository, hiển thị, mô tả).
+# Quyền None: chỉ quản lý thông tin và cấu trúc, giữ nguyên thành viên và quyền.
 TEAMS = {
 	'engineering': (
 		'Engineering',
@@ -94,7 +94,7 @@ def membershipState(data, location):
 
 
 def teamPermission(team, repo):
-	"""Quyền của team trên repository; None chỉ khi HTTP 404, lỗi đọc khác phải dừng trước khi ghi."""
+	"""Quyền của team trên repository; None chỉ khi HTTP 404, lỗi đọc khác không được suy đoán là thiếu quyền."""
 	try:
 		data = github.ghJson(
 			'api',
@@ -151,6 +151,22 @@ def parentSlug(details, team):
 
 def teamOrder():
 	"""Kiểm tra cấu trúc local và xếp team cha trước team con, không phụ thuộc thứ tự khai báo."""
+	if not isinstance(TEAMS, dict) or not TEAMS or not isinstance(TEAM_PARENTS, dict):
+		raise ValueError('TEAMS phải là object không rỗng; TEAM_PARENTS phải là object')
+	for team, profile in TEAMS.items():
+		if not isinstance(team, str) or not team.strip():
+			raise ValueError('TEAMS chứa slug trống hoặc sai kiểu')
+		if not isinstance(profile, (tuple, list)) or len(profile) != 4:
+			raise ValueError(f'{team}: cấu hình team phải có tên, quyền, chế độ hiển thị và mô tả')
+		name, permission, privacy, description = profile
+		if (
+			not isinstance(name, str)
+			or not name.strip()
+			or permission not in (None, 'pull', 'triage', 'push', 'maintain', 'admin')
+			or privacy not in ('secret', 'closed')
+			or not isinstance(description, str)
+		):
+			raise ValueError(f'{team}: tên, quyền, chế độ hiển thị hoặc mô tả team không hợp lệ')
 	if set(TEAM_PARENTS) - set(TEAMS):
 		raise ValueError('TEAM_PARENTS chứa team con chưa khai báo trong TEAMS')
 	ordered, visiting = [], set()
@@ -212,6 +228,7 @@ def teamState(team, repos):
 
 def syncTeams(repos, apply):
 	ordered = teamOrder()
+	pending = []
 	# Đọc trạng thái các team song song — mỗi team vài lượt gọi gh, tuần tự thì hơn 20 giây; ghi vẫn tuần tự.
 	with ThreadPoolExecutor(max_workers=len(TEAMS)) as pool:
 		states = list(pool.map(lambda team: teamState(team, repos), ordered))
@@ -256,10 +273,16 @@ def syncTeams(repos, apply):
 				'-',
 				stdin=json.dumps(body, ensure_ascii=False),
 			)
-		if (not exists or 'parent_team_slug' in drift) and parentSlug(
-			teamDetails(team), team
-		) != TEAM_PARENTS.get(team):
-			raise RuntimeError(f'{team}: GitHub chưa áp dụng đúng team cha')
+		if not exists or drift:
+			confirmed = teamDetails(team)
+			if parentSlug(confirmed, team) != TEAM_PARENTS.get(team):
+				raise RuntimeError(f'{team}: GitHub chưa áp dụng đúng team cha')
+			wanted = {'name': name, 'description': description, 'privacy': privacy}
+			unconfirmed = [key for key, value in wanted.items() if confirmed.get(key) != value]
+			if unconfirmed:
+				raise RuntimeError(
+					f'{team}: GitHub chưa áp dụng đúng thông tin team: {", ".join(unconfirmed)}'
+				)
 		for user in users:
 			data = github.ghJson(
 				'api',
@@ -272,6 +295,7 @@ def syncTeams(repos, apply):
 			role, membership = membershipState(data, f'{team}/{user}')
 			if membership == 'pending':
 				print(f'   ⚠ {user}: chờ chấp nhận lời mời vào team {team}')
+				pending.append(f'{team}/{user}')
 			elif role == 'maintainer':
 				print(f'   ✔ thêm {user} (maintainer)')
 			else:
@@ -285,7 +309,16 @@ def syncTeams(repos, apply):
 				'-f',
 				f'permission={permission}',
 			)
+			confirmed = teamPermission(team, repo)
+			if PERMISSION_RANK.get(confirmed, -1) < PERMISSION_RANK[permission]:
+				raise RuntimeError(
+					f'{team}/{repo}: GitHub chưa xác nhận quyền {permission} hoặc cao hơn'
+				)
 			print(f'   ✔ {permission} {github.ORG}/{repo}')
+	if pending:
+		raise RuntimeError(
+			f'Chưa hoàn tất đồng bộ team: chờ chấp nhận lời mời {", ".join(pending)}'
+		)
 	if apply:
 		print(
 			f'   CODEOWNERS dùng @{github.ORG}/{TEAM}; đổi thành viên thì cập nhật MAINTAINERS.md và MAINTAINERS trong scripts/orgsetup/teams.py.'

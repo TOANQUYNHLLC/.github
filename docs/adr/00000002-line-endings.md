@@ -5,21 +5,20 @@
 
 ## 📌 BỐI CẢNH
 
-Người đóng góp dùng cả Windows và macOS; CI chạy trên Linux. Shell script xuống dòng CRLF không chạy được trên Linux, trong khi một số định dạng lại bắt buộc CRLF.
+Người đóng góp dùng nhiều hệ điều hành, còn CI và Dev Container chạy trên Linux. Quy tắc xuống dòng cần phù hợp với công cụ xử lý từng loại tệp và cho kết quả giống nhau trên các máy.
 
 ## ✅ QUYẾT ĐỊNH
 
-- Mặc định **LF**, mã hóa **UTF-8** cho mọi tệp văn bản (`* text=auto eol=lf` trong `.gitattributes`, `end_of_line = lf` trong `.editorconfig`).
-- **CRLF** chỉ cho tệp bắt buộc: batch script (`.bat`, `.cmd`), Visual C++ 6 (`.dsp`, `.dsw`), chuẩn MIME/iCalendar/vCard/CSV, dự án Visual Studio (kèm BOM UTF-8), registry/INF (UTF-16 LE có BOM).
-- CSV và email giữ khoảng trắng cuối dòng vì đó là dữ liệu.
+Tệp văn bản mặc định dùng **UTF-8 và LF**. `.gitattributes` khai báo `* text=auto eol=lf`; `.editorconfig` khai báo `end_of_line = lf`.
+
+Các định dạng bắt buộc dùng CRLF gồm batch script, Visual C++ 6, MIME, iCalendar, vCard, CSV và dự án Visual Studio. Dự án Visual Studio dùng BOM UTF-8; registry và INF dùng UTF-16 LE có BOM khi checkout. CSV và email giữ khoảng trắng cuối dòng vì đó là dữ liệu.
+
+Danh sách ngoại lệ phải khớp giữa `.editorconfig`, `.gitattributes` và `scripts/validation/formatting.py`.
 
 ## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
 
-- **Để git tự chuyển theo hệ điều hành** (`core.autocrlf`): kết quả phụ thuộc cấu hình từng máy, cùng một tệp có thể vào repository với hai kiểu xuống dòng.
-- **CRLF cho mọi tệp**: shell script không chạy được trên Linux (CI, Dev Container).
-- **LF cho mọi tệp, kể cả batch script, dự án Visual Studio**: các định dạng đó bắt buộc CRLF; không chọn.
+Tự chuyển xuống dòng theo hệ điều hành khiến kết quả phụ thuộc cấu hình máy. CRLF cho mọi tệp không phù hợp với shell trên Linux; LF cho mọi tệp không đáp ứng định dạng bắt buộc CRLF.
 
 ## ⚖️ HỆ QUẢ
 
-- Danh sách đuôi tệp nằm ở `.editorconfig`, `.gitattributes` và `scripts/validation/formatting.py`; `validate.py` kiểm tra ba nơi khớp nhau.
-- `.reg`, `.inf` lưu UTF-8 trong repository (diff đọc được) và checkout ra UTF-16 LE nhờ `working-tree-encoding`.
+Validator kiểm tra xuống dòng, mã hóa và danh sách ngoại lệ. Tệp `.reg`, `.inf` được lưu UTF-8 trong Git để đọc diff và chuyển sang UTF-16 LE khi checkout bằng `working-tree-encoding`.

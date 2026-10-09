@@ -1,5 +1,6 @@
 """Lệnh rulesets, org-rulesets: ruleset cấp repository và cấp tổ chức (so qua GraphQL ở gói Free)."""
 
+import copy
 import json
 import re
 import urllib.parse
@@ -47,6 +48,15 @@ PULL_REQUEST_FIELDS = {
 	'allowed_merge_methods': list,
 }
 
+# Danh sách được GitHub dùng như tập hợp; chỉ chuẩn hóa trong loại quy tắc tương ứng.
+UNORDERED_RULE_PARAMETERS = {
+	'pull_request': ('allowed_merge_methods', 'required_reviewers'),
+	'required_status_checks': ('required_status_checks',),
+	'code_scanning': ('code_scanning_tools',),
+	'file_path_restriction': ('restricted_file_paths',),
+	'file_extension_restriction': ('restricted_file_extensions',),
+}
+
 # Import cấp tổ chức không nhận actor loại User ("contains an invalid actor"): bỏ qua là chủ tổ chức (actor_id
 # bị bỏ qua) — cùng người quản trị; ruleset trên web tắt giới hạn hủy phê duyệt.
 ORG_BYPASS_ACTORS = [{'actor_id': 1, 'actor_type': 'OrganizationAdmin', 'bypass_mode': 'always'}]
@@ -86,8 +96,99 @@ def rulesetFor(repo):
 	return ruleset
 
 
+def normalizedRule(rule):
+	"""Biểu diễn quy tắc để so sánh; không coi thứ tự của danh sách tập hợp là thay đổi."""
+	result = copy.deepcopy(rule)
+	parameters = result.get('parameters', {})
+	for key in UNORDERED_RULE_PARAMETERS.get(result['type'], ()):
+		if isinstance(parameters.get(key), list):
+			parameters[key] = sorted(
+				parameters[key],
+				key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=False),
+			)
+	if result['type'] == 'pull_request':
+		restriction = parameters.get('dismissal_restriction', {})
+		if isinstance(restriction.get('allowed_actors'), list):
+			restriction['allowed_actors'] = sorted(
+				restriction['allowed_actors'],
+				key=lambda item: json.dumps(item, sort_keys=True, ensure_ascii=False),
+			)
+	return json.dumps(result, sort_keys=True, ensure_ascii=False)
+
+
+def validateDismissalRestriction(restriction):
+	"""Kiểm tra nội dung quyền hủy phê duyệt, không chỉ kiểu object bên ngoài."""
+	if type(restriction.get('enabled')) is not bool:
+		raise ValueError('ruleset: pull_request.dismissal_restriction.enabled phải là boolean')
+	actors = restriction.get('allowed_actors', [])
+	if not isinstance(actors, list):
+		raise TypeError(
+			'ruleset: pull_request.dismissal_restriction.allowed_actors phải là danh sách'
+		)
+	for actor in actors:
+		if (
+			not isinstance(actor, dict)
+			or type(actor.get('id')) is not int
+			or actor['id'] <= 0
+			or actor.get('type')
+			not in ('User', 'Team', 'IntegrationInstallation', 'RepositoryRole')
+		):
+			raise ValueError('ruleset: pull_request.dismissal_restriction có actor không hợp lệ')
+
+
+def validateRequiredReviewers(reviewers):
+	"""Kiểm tra từng team, mẫu đường dẫn và số phê duyệt theo hợp đồng REST."""
+	for item in reviewers:
+		if not isinstance(item, dict):
+			raise TypeError('ruleset: pull_request.required_reviewers phải chứa các object')
+		patterns = item.get('file_patterns')
+		if not isinstance(patterns, list) or any(not isinstance(value, str) for value in patterns):
+			raise ValueError(
+				'ruleset: pull_request.required_reviewers.file_patterns phải là danh sách chuỗi'
+			)
+		count = item.get('minimum_approvals')
+		if type(count) is not int or count < 0:
+			raise ValueError(
+				'ruleset: pull_request.required_reviewers.minimum_approvals phải là số nguyên không âm'
+			)
+		reviewer = item.get('reviewer')
+		if (
+			not isinstance(reviewer, dict)
+			or reviewer.get('type') != 'Team'
+			or type(reviewer.get('id')) is not int
+			or reviewer['id'] <= 0
+		):
+			raise ValueError(
+				'ruleset: pull_request.required_reviewers.reviewer phải là Team có ID nguyên dương'
+			)
+
+
+def validateStatusChecks(parameters):
+	"""Kiểm tra cờ và từng status check theo cấu trúc REST trước khi áp dụng ruleset."""
+	for key in ('strict_required_status_checks_policy', 'do_not_enforce_on_create'):
+		if key == 'do_not_enforce_on_create' and key not in parameters:
+			continue
+		if type(parameters.get(key)) is not bool:
+			raise ValueError(f'ruleset: required_status_checks.{key} phải là boolean')
+	checks = parameters.get('required_status_checks')
+	if not isinstance(checks, list):
+		raise TypeError('ruleset: required_status_checks.required_status_checks phải là danh sách')
+	for check in checks:
+		if (
+			not isinstance(check, dict)
+			or not isinstance(check.get('context'), str)
+			or not check['context'].strip()
+			or (
+				check.get('integration_id') is not None and type(check['integration_id']) is not int
+			)
+		):
+			raise ValueError(
+				'ruleset: required_status_checks có context hoặc integration_id không hợp lệ'
+			)
+
+
 def rulesetSummary(ruleset):
-	"""Phần so sánh được của ruleset — bỏ id, node_id, ngày tạo, liên kết… mà GitHub thêm vào khi đọc."""
+	"""Phần so sánh được của ruleset; bỏ metadata, chuẩn hóa thứ tự danh sách tập hợp, giữ nguyên đầu vào."""
 	if not isinstance(ruleset, dict):
 		raise TypeError('ruleset: phản hồi phải là object')
 	for field, kind in (
@@ -173,16 +274,24 @@ def rulesetSummary(ruleset):
 				or len(methods) != len(set(methods))
 			):
 				raise ValueError('ruleset: pull_request.allowed_merge_methods không hợp lệ')
+			if 'dismissal_restriction' in parameters:
+				validateDismissalRestriction(parameters['dismissal_restriction'])
+			if 'required_reviewers' in parameters:
+				validateRequiredReviewers(parameters['required_reviewers'])
+		elif rule['type'] == 'required_status_checks':
+			validateStatusChecks(rule.get('parameters', {}))
+	conditions = copy.deepcopy(ruleset['conditions'])
+	for field in ('ref_name', 'repository_name'):
+		if field in conditions:
+			for key in ('include', 'exclude'):
+				conditions[field][key] = sorted(conditions[field][key])
 	return {
 		'name': ruleset.get('name'),
 		'target': ruleset.get('target'),
 		'enforcement': ruleset.get('enforcement'),
-		'conditions': ruleset.get('conditions'),
+		'conditions': conditions,
 		'bypass_actors': sorted(actors, key=lambda actor: (actor[1], actor[0] or 0, actor[2])),
-		'rules': sorted(
-			json.dumps(rule, sort_keys=True, ensure_ascii=False)
-			for rule in ruleset.get('rules') or []
-		),
+		'rules': sorted(normalizedRule(rule) for rule in ruleset['rules']),
 	}
 
 
@@ -302,6 +411,54 @@ def graphqlNodes(connection, label, paginated=False):
 	return connection['nodes']
 
 
+def graphqlRequiredReviewers(reviewers):
+	"""Giải Node ID của team từ GraphQL thành ID số của reviewer trong REST."""
+	if not isinstance(reviewers, list) or any(
+		not isinstance(item, dict)
+		or not isinstance(item.get('reviewer_id'), str)
+		or not item['reviewer_id'].strip()
+		for item in reviewers
+	):
+		raise ValueError('ruleset: required_reviewers GraphQL thiếu Node ID của team')
+	if not reviewers:
+		return []
+	nodeIds = list(dict.fromkeys(item['reviewer_id'] for item in reviewers))
+	query = (
+		f'query {{ nodes(ids: {json.dumps(nodeIds)}) '
+		'{ id __typename ... on Team { databaseId } } }'
+	)
+	data = github.ghJson('api', 'graphql', '-f', f'query={query}')
+	if (
+		not isinstance(data, dict)
+		or data.get('errors')
+		or not isinstance(data.get('data'), dict)
+		or not isinstance(data['data'].get('nodes'), list)
+	):
+		raise ValueError('ruleset: không đọc được ID team của required_reviewers GraphQL')
+	lookup = {}
+	for team in data['data']['nodes']:
+		if (
+			not isinstance(team, dict)
+			or not isinstance(team.get('id'), str)
+			or team['id'] not in nodeIds
+			or team['id'] in lookup
+			or team.get('__typename') != 'Team'
+			or type(team.get('databaseId')) is not int
+			or team['databaseId'] <= 0
+		):
+			raise ValueError('ruleset: không xác minh được team của required_reviewers GraphQL')
+		lookup[team['id']] = team['databaseId']
+	if set(lookup) != set(nodeIds):
+		raise ValueError('ruleset: chưa đọc đủ team của required_reviewers GraphQL')
+	result = []
+	for item in reviewers:
+		reviewer = dict(item)
+		reviewer['reviewer'] = {'id': lookup[reviewer.pop('reviewer_id')], 'type': 'Team'}
+		result.append(reviewer)
+	validateRequiredReviewers(result)
+	return result
+
+
 def graphqlRuleset(node):
 	"""Ruleset đọc qua GraphQL, đổi sang dạng REST của tệp ruleset."""
 	if not isinstance(node, dict):
@@ -356,6 +513,10 @@ def graphqlRuleset(node):
 		):
 			raise ValueError('ruleset: quy tắc GraphQL thiếu trường hoặc sai kiểu')
 		parameters = snakeKeys(rule['parameters'] or {})
+		if rule['type'] == 'PULL_REQUEST' and 'required_reviewers' in parameters:
+			parameters['required_reviewers'] = graphqlRequiredReviewers(
+				parameters['required_reviewers']
+			)
 		for key in GRAPHQL_ENUM_PARAMETERS:
 			if key in parameters:
 				value = parameters[key]
@@ -470,7 +631,42 @@ def rulesetsFor(repo):
 	]
 
 
+def applyRuleset(endpoint, ruleset, rulesetId=None):
+	"""Ghi ruleset, xác minh ID và đọc lại cấu hình trước khi báo thành công."""
+	wanted = rulesetSummary(ruleset)
+	path = f'{endpoint}/{rulesetId}' if rulesetId is not None else endpoint
+	output = github.gh(
+		'api',
+		'-X',
+		'PUT' if rulesetId is not None else 'POST',
+		path,
+		'--input',
+		'-',
+		stdin=json.dumps(ruleset, ensure_ascii=False),
+	)
+	try:
+		response = json.loads(output)
+		if (
+			not isinstance(response, dict)
+			or type(response.get('id')) is not int
+			or response['id'] <= 0
+			or (rulesetId is not None and response['id'] != rulesetId)
+		):
+			raise ValueError('phản hồi ghi thiếu ID hợp lệ hoặc ID không khớp')
+		confirmedId = response['id']
+		live = github.ghJson('api', f'{endpoint}/{confirmedId}')
+		current = rulesetSummary(live)
+		if type(live.get('id')) is not int or live['id'] != confirmedId:
+			raise ValueError('ID đọc lại không khớp ruleset vừa ghi')
+		drift = [key for key, value in wanted.items() if current[key] != value]
+		if drift:
+			raise ValueError(f'cấu hình đọc lại chưa khớp: {", ".join(drift)}')
+	except (RuntimeError, ValueError, TypeError) as exc:
+		raise RuntimeError(f'Không xác minh được ruleset "{ruleset["name"]}": {exc}') from exc
+
+
 def syncRulesets(repos, apply):
+	failed = []
 	for repo in repos:
 		print(f'== {github.ORG}/{repo}')
 		if repo != '.github':
@@ -484,6 +680,8 @@ def syncRulesets(repos, apply):
 				print(
 					f'   ⚠ thiếu {", ".join(absent)} — hợp nhất Pull Request của lệnh files trước'
 				)
+				if apply:
+					failed.append(f'{repo}: thiếu workflow bắt buộc')
 				continue
 		endpoint = f'repos/{github.ORG}/{repo}/rulesets'
 		# Chỉ ruleset của repository: mặc định GitHub trả cả ruleset cấp tổ chức áp dụng cho nó.
@@ -501,31 +699,12 @@ def syncRulesets(repos, apply):
 					f'   (xem trước) {action} ruleset "{name}" từ {source.relative_to(github.ROOT)}'
 				)
 				continue
-			body = json.dumps(ruleset, ensure_ascii=False)
 			try:
-				if name in existing:
-					github.gh(
-						'api',
-						'-X',
-						'PUT',
-						f'repos/{github.ORG}/{repo}/rulesets/{existing[name]}',
-						'--input',
-						'-',
-						stdin=body,
-					)
-				else:
-					github.gh(
-						'api',
-						'-X',
-						'POST',
-						f'repos/{github.ORG}/{repo}/rulesets',
-						'--input',
-						'-',
-						stdin=body,
-					)
+				applyRuleset(endpoint, ruleset, existing.get(name))
 			except RuntimeError as exc:
 				# Gói GitHub Free không hỗ trợ ruleset cho repository riêng tư.
 				print(f'   ⚠ không {action} được ruleset "{name}": {exc}')
+				failed.append(f'{repo}/{name}')
 				continue
 			print(f'   ✔ đã {action} ruleset "{name}"')
 		names = sorted(ruleset['name'] for _, ruleset in wanted)
@@ -534,10 +713,12 @@ def syncRulesets(repos, apply):
 			print(
 				f'   ⚠ còn ruleset khác: {", ".join(others)} — xóa trên web để chỉ còn {", ".join(names)}'
 			)
+	if failed:
+		raise RuntimeError(f'Không áp dụng được ruleset cấp repository: {", ".join(failed)}')
 
 
 def compareOrgRulesets():
-	"""So tệp ruleset cấp tổ chức với ruleset trên web (đọc qua GraphQL); sửa trên web bằng import."""
+	"""So tệp ruleset cấp tổ chức qua GraphQL; việc ghi cần quyền và gói GitHub hỗ trợ."""
 	how = 'Organization settings → Repository → Rulesets → New ruleset → Import a ruleset'
 	try:
 		data = github.ghJson(
@@ -571,20 +752,27 @@ def compareOrgRulesets():
 	except (RuntimeError, KeyError, ValueError, TypeError) as exc:
 		print(f'   ⚠ không đọc được qua GraphQL: {exc}')
 		print(
-			f'   Cấp quyền: gh auth refresh -h github.com -s admin:org — hoặc import tệp tại {how}.'
+			f'   Kiểm tra quyền: gh auth refresh -h github.com -s admin:org; '
+			f'import tệp tại {how} cần quyền và gói GitHub hỗ trợ.'
 		)
-		return
+		raise RuntimeError('Không đối chiếu được ruleset cấp tổ chức qua GraphQL') from exc
 	for source, ruleset in orgRulesets():
 		name, path = ruleset['name'], source.relative_to(github.ROOT)
 		liveName = names[name]
 		if liveName not in live:
-			print(f'   ✘ chưa có ruleset "{name}" — import {path} tại {how}')
+			print(
+				f'   ✘ chưa có ruleset "{name}" — import {path} tại {how} '
+				'(cần quyền và gói GitHub hỗ trợ)'
+			)
 		elif rulesetSummary(live[liveName]) == rulesetSummary(graphqlVisible(ruleset)):
 			print(f'   ✔ ruleset "{name}" đã đúng')
 		else:
 			before, after = rulesetSummary(live[liveName]), rulesetSummary(graphqlVisible(ruleset))
 			fields = ', '.join(key for key in after if before[key] != after[key])
-			print(f'   ✘ ruleset "{liveName}" khác {path}: {fields} — sửa ruleset hiện có trên web')
+			print(
+				f'   ✘ ruleset "{liveName}" khác {path}: {fields} — sửa ruleset hiện có trên web '
+				'(cần quyền và gói GitHub hỗ trợ)'
+			)
 
 
 def syncOrgRulesets(apply):
@@ -595,10 +783,15 @@ def syncOrgRulesets(apply):
 	except RuntimeError as exc:
 		print(f'   ⚠ REST API ruleset cấp tổ chức: {exc}')
 		compareOrgRulesets()
+		if apply:
+			raise RuntimeError(
+				'Không áp dụng được ruleset cấp tổ chức; đối chiếu GraphQL chỉ đọc'
+			) from exc
 		return
 	wanted = orgRulesets()
 	names = organizationRulesetNames(existing)
 	changes = readRulesetChanges(f'orgs/{github.ORG}/rulesets', existing, wanted, names)
+	failed = []
 	for (source, ruleset), changed in zip(wanted, changes, strict=True):
 		name = ruleset['name']
 		liveName = names[name]
@@ -609,16 +802,12 @@ def syncOrgRulesets(apply):
 		if not apply:
 			print(f'   (xem trước) {action} ruleset "{name}" từ {source.relative_to(github.ROOT)}')
 			continue
-		body = json.dumps(ruleset, ensure_ascii=False)
 		try:
-			if liveName in existing:
-				path = f'orgs/{github.ORG}/rulesets/{existing[liveName]}'
-				github.gh('api', '-X', 'PUT', path, '--input', '-', stdin=body)
-			else:
-				github.gh(
-					'api', '-X', 'POST', f'orgs/{github.ORG}/rulesets', '--input', '-', stdin=body
-				)
+			applyRuleset(f'orgs/{github.ORG}/rulesets', ruleset, existing.get(liveName))
 		except RuntimeError as exc:
 			print(f'   ⚠ không {action} được ruleset "{name}": {exc}')
+			failed.append(name)
 			continue
 		print(f'   ✔ đã {action} ruleset "{name}"')
+	if failed:
+		raise RuntimeError(f'Không áp dụng được ruleset cấp tổ chức: {", ".join(failed)}')

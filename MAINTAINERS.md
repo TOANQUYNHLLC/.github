@@ -1,8 +1,6 @@
 # 🧑‍💼 NGƯỜI QUẢN TRỊ
 
-Danh sách người quản trị các repository của **CÔNG TY TNHH TOÀN QUỲNH** trên GitHub. Người quản trị thuộc team [`@TOANQUYNHLLC/maintainers`](https://github.com/orgs/TOANQUYNHLLC/teams/maintainers) — team được ghi trong `CODEOWNERS` nên mọi thành viên đều duyệt được Pull Request. Vai trò và quy trình thay đổi: xem [`GOVERNANCE.md`](GOVERNANCE.md).
-
----
+Người quản trị chịu trách nhiệm duy trì các repository của **CÔNG TY TNHH TOÀN QUỲNH**, đánh giá thay đổi, quản lý quyền truy cập và phát hành. Vai trò và quy trình quyết định theo [GOVERNANCE.md](GOVERNANCE.md).
 
 ## 👥 NGƯỜI QUẢN TRỊ HIỆN TẠI
 
@@ -11,13 +9,17 @@ Danh sách người quản trị các repository của **CÔNG TY TNHH TOÀN QU�
 | Nguyễn Trọng Toàn | [@nguyentrongtoandl](https://github.com/nguyentrongtoandl) | Toàn bộ repository của tổ chức |
 | Nguyễn Trọng Toàn | [@trongtoandl81](https://github.com/trongtoandl81)         | Toàn bộ repository của tổ chức |
 
-## 👪 TEAM CỦA TỔ CHỨC
+Các tài khoản này thuộc [@TOANQUYNHLLC/maintainers](https://github.com/orgs/TOANQUYNHLLC/teams/maintainers), là chủ sở hữu mã trong `CODEOWNERS`. Danh sách phải khớp `MAINTAINERS` trong [teams.py](scripts/orgsetup/teams.py) và danh sách bỏ qua của ruleset cấp repository.
 
-Người quản trị ở bảng trên được quản lý với vai trò maintainer trong các team có quyền repository ở bảng dưới. `python3 scripts/org-setup.py team` quản lý thông tin team, cấu trúc cha–con và cấp quyền trên mọi repository, giữ quyền đã cao hơn. Nguồn là `TEAMS` và `TEAM_PARENTS` trong [`scripts/orgsetup/teams.py`](scripts/orgsetup/teams.py).
+## 👪 CẤU TRÚC TEAM
 
-Engineering và Creative là hai team cha ở cấp cao nhất, cùng chế độ hiển thị `closed`; Admins là team độc lập, bí mật. Engineering chứa Maintainers, Developers và QA; Creative chứa Design và Marketing. Hai team cha có quyền `None` trong nguồn local: lệnh chỉ quản lý tên, mô tả, chế độ hiển thị và vị trí trong cấu trúc, giữ nguyên thành viên và quyền repository của chúng.
+| Team cha    | Team con                    | Phạm vi                                |
+| ----------- | --------------------------- | -------------------------------------- |
+| Engineering | Maintainers, Developers, QA | Phát triển và duy trì repository       |
+| Creative    | Design, Marketing           | Thiết kế và truyền thông               |
+| Admins      | Không có                    | Team độc lập, bí mật, quản trị tổ chức |
 
-Lệnh kiểm tra cấu trúc local, đọc đầy đủ trạng thái trước khi ghi và tạo team cha trước team con. Cấu trúc không được có chu trình; team cha và team con phải có chế độ hiển thị `closed`. Quan hệ dùng slug, được đọc lại sau khi tạo hoặc đổi team cha. Thành viên chỉ được tính khi đã `active`; lời mời `pending`, dữ liệu không đọc được hoặc quyền tùy chỉnh chưa xếp hạng được chặn đồng bộ. Lời mời mới được báo chờ chấp nhận cho đến khi GitHub xác nhận vai trò maintainer hoạt động. Cơ chế team lồng nhau xem [tài liệu GitHub](https://docs.github.com/en/rest/teams/teams#update-a-team).
+Engineering và Creative có chế độ `closed`, quyền `None` trong nguồn: script quản lý thông tin và cấu trúc, giữ nguyên thành viên và quyền repository. Các team có quyền cấu hình quản lý tài khoản quản trị với vai trò maintainer và quyền repository dưới đây.
 
 | Team                                                                                  | Quyền trên repository | Phụ trách                                                                       |
 | ------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------- |
@@ -28,13 +30,19 @@ Lệnh kiểm tra cấu trúc local, đọc đầy đủ trạng thái trước 
 | [`@TOANQUYNHLLC/design`](https://github.com/orgs/TOANQUYNHLLC/teams/design)           | Triage                | Thiết kế UI/UX, góp ý sản phẩm                                                  |
 | [`@TOANQUYNHLLC/marketing`](https://github.com/orgs/TOANQUYNHLLC/teams/marketing)     | Read                  | Website, bài viết, hình ảnh truyền thông                                        |
 
----
+## 🔄 ĐỒNG BỘ VÀ XÁC NHẬN
+
+`TEAMS` và `TEAM_PARENTS` trong [teams.py](scripts/orgsetup/teams.py) là nguồn thông tin, quyền và quan hệ cha–con. Chạy `python3 scripts/org-setup.py team` để xem trước; thêm `--apply` để áp dụng, hoặc `--repo <tên>` để giới hạn repository.
+
+Script kiểm tra cấu hình và trạng thái trước ghi, tạo team cha trước team con và xác nhận lại thông tin sau tạo/sửa. Cấu trúc không có chu trình; team cha và con phải `closed` theo [hợp đồng GitHub](https://docs.github.com/en/rest/teams/teams#update-a-team).
+
+Membership phải đúng vai trò và `active`. Lời mời đã có đang `pending`, dữ liệu chưa rõ hoặc quyền tùy chỉnh chưa xếp hạng được chặn đồng bộ. Lời mời mới được báo riêng; lệnh xử lý các team còn lại rồi trả mã lỗi vì chưa hoàn tất. Quyền chuẩn cao hơn nguồn được giữ; sau cấp quyền phải đọc lại và xác nhận bằng hoặc cao hơn yêu cầu. Lỗi xác nhận dừng lệnh.
+
+Script chỉ thêm người quản trị và cấp quyền; gỡ thành viên và thu hồi quyền theo quy trình trong [GOVERNANCE.md](GOVERNANCE.md).
 
 ## 📞 LIÊN HỆ
 
-Liên hệ người quản trị qua Issue với biểu mẫu **❓ Câu hỏi hoặc cần hỗ trợ** hoặc email [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com). Vấn đề bảo mật: làm theo [`SECURITY.md`](SECURITY.md).
-
----
+Dùng Issue **❓ Câu hỏi hoặc cần hỗ trợ** hoặc email [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com). Báo cáo bảo mật riêng theo [SECURITY.md](SECURITY.md).
 
 <p align="center">
     <strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
