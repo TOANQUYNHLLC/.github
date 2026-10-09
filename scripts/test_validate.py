@@ -90,6 +90,7 @@ class ValidateTest(unittest.TestCase):
 					data['organization']['endpoints']['actions/permissions'].update(
 						enabled_repositories='none'
 					),
+					data['organization']['endpoints'].pop('actions/permissions/repositories', None),
 					data['repositories']['.github']['endpoints']['actions/permissions'].update(
 						enabled=True, allowed_actions='all'
 					),

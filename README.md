@@ -48,18 +48,20 @@ GitHub CLI cần đăng nhập bằng tài khoản có quyền phù hợp. Các 
 ```bash
 make org-preview
 make org-import
-make org-settings-preview
+make org-settings-audit
 ```
 
 `make org-import` chỉ ghi cài đặt đọc được vào `github-settings.json`. Kiểm tra diff trước khi dùng `make org-settings-apply`. Dữ liệu chưa đọc được không được suy đoán; áp dụng cần xác minh nguồn, phạm vi và trạng thái sau ghi. Các thay đổi thành công không tự hoàn tác khi bước sau thất bại.
 
-| Nguồn                                          | Phạm vi                                                                                                                |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `github-settings.json`                         | Cài đặt tổ chức và repository; hợp đồng API trong `scripts/orgsetup/configuration.py`, `scripts/orgsetup/resources.py` |
-| `repository-templates/`, `workflow-templates/` | Tệp thiếu được đề xuất qua Pull Request bằng lệnh `files`                                                              |
-| `rulesets/`                                    | Bảo vệ nhánh, tag và push theo [hướng dẫn ruleset](rulesets/README.md)                                                 |
-| `scripts/orgsetup/teams.py`                    | Thông tin team, quan hệ cha–con và quyền repository                                                                    |
-| `labels.yml`                                   | Nhãn chuẩn; nhãn riêng được giữ khi đồng bộ                                                                            |
+Để khôi phục sau nâng cấp gói GitHub, giữ bản local đã kiểm tra, dùng `make org-import-missing` bổ sung phần API từng bị chặn rồi xem trước và áp dụng. Bản tổng quát gồm cài đặt, ruleset đang cài, team và quyền repository, nhãn, custom properties, environments, Pages, variables, webhooks, bảo vệ nhánh kiểu cũ, IP allow list, cấu hình mạng, vai trò cho team, Actions policies, hosted runners, quyền truy cập Dependabot, mẫu secret scanning, chính sách push protection theo mẫu, private registries và định nghĩa bảo mật tùy chỉnh. Giới hạn lưu trữ/thời gian giữ cache Actions nằm trong nguồn theo repository. Giá trị variables, URL webhook, địa chỉ/tên IP allow list, regex tùy chỉnh và định nghĩa registry lưu riêng ngoài Git; phải sao lưu tệp riêng để khôi phục trên máy khác. Nhập lại bằng `make org-import` thay nguồn bằng trạng thái web; `make org-settings-audit` kiểm tra phạm vi đã nhập và trả mã lỗi khi còn phần thiếu. Lệnh `local-settings --only <nhóm>` cho phép khôi phục nhóm được chọn rõ khi nhóm khác chưa đủ quyền/gói; audit vẫn kiểm tra bản đầy đủ. Cách khôi phục và giới hạn nằm trong [hướng dẫn cài đặt GitHub](docs/github-settings.md#-khôi-phục-sau-nâng-cấp-gói).
+
+| Nguồn                                          | Phạm vi                                                                                                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `github-settings.json`                         | Bản khôi phục cài đặt và tài nguyên đang có trên GitHub; hợp đồng trong `configuration.py`, `resources.py`, `catalog.py` của `scripts/orgsetup/` |
+| `repository-templates/`, `workflow-templates/` | Tệp thiếu được đề xuất qua Pull Request bằng lệnh `files`                                                                                        |
+| `rulesets/`                                    | Bảo vệ nhánh, tag và push theo [hướng dẫn ruleset](rulesets/README.md)                                                                           |
+| `scripts/orgsetup/teams.py`                    | Thông tin team, quan hệ cha–con và quyền repository                                                                                              |
+| `labels.yml`                                   | Nhãn chuẩn; nhãn riêng được giữ khi đồng bộ                                                                                                      |
 
 [hướng dẫn cài đặt GitHub](docs/github-settings.md) mô tả cách nhập, xem trước, áp dụng và giới hạn quyền/gói dịch vụ. Thiết lập dự án đích theo [ROADMAP.md](ROADMAP.md).
 
@@ -99,6 +101,8 @@ PR phát hành dùng [mẫu phát hành](.github/PULL_REQUEST_TEMPLATE/release.m
 | `make versions`             | Công cụ trong `mise.toml`, action chỉ có trong `workflow-templates/` có bản phát hành mới hơn                                                                                                                                           |
 | `make forms REF=…`          | Kiểm tra Issue theo ref; Discussion chỉ xác minh trên nhánh mặc định, ref khác báo chưa xác minh và trả mã lỗi (mặc định `main`)                                                                                                        |
 | `make org-import`           | Lấy cài đặt GitHub của tổ chức và các repository về `github-settings.json`; chỉ ghi local                                                                                                                                               |
+| `make org-import-missing`   | Bổ sung dữ liệu chưa có sau nâng cấp gói hoặc quyền; giữ cài đặt local đã lưu                                                                                                                                                           |
+| `make org-settings-audit`   | Kiểm tra toàn bộ phạm vi nhập, phần thiếu và khác biệt với GitHub; chỉ đọc                                                                                                                                                              |
 | `make org-settings-preview` | Xem trước cài đặt API trong `github-settings.json`, gồm trạng thái Actions và các endpoint bổ sung                                                                                                                                      |
 | `make org-settings-apply`   | Áp dụng cài đặt API trong `github-settings.json`, đọc lại để xác nhận; báo riêng mục cần thao tác trên web                                                                                                                              |
 | `make org-preview`          | Xem trước việc áp dụng cấu hình chung lên mọi repository và cài đặt tổ chức (cần GitHub CLI)                                                                                                                                            |

@@ -65,8 +65,21 @@ def validateRunnerGroups(groups):
 		}:
 			raise ValueError('Cấu trúc nhóm runner không hợp lệ')
 		settings = group['settings']
-		if not isinstance(settings, dict) or set(settings) != set(RUNNER_SETTINGS):
+		if (
+			not isinstance(settings, dict)
+			or set(settings) - {*RUNNER_SETTINGS, 'network_configuration'}
+			or set(RUNNER_SETTINGS) - set(settings)
+		):
 			raise ValueError('Nhóm runner thiếu trường hoặc có trường không được hỗ trợ')
+		if (
+			'network_configuration' in settings
+			and settings['network_configuration'] is not None
+			and (
+				not isinstance(settings['network_configuration'], str)
+				or not settings['network_configuration']
+			)
+		):
+			raise ValueError('Nhóm runner dùng tên cấu hình mạng hoặc null')
 		for key, expected in RUNNER_SETTINGS.items():
 			value = settings[key]
 			if isinstance(expected, tuple):
@@ -126,6 +139,12 @@ def readRunnerGroups():
 	details = list(runnerGroupDetails().values())
 	selected = [item for item in details if item.get('visibility') == 'selected']
 	groups = []
+	networkNames = {}
+	if any(item.get('network_configuration_id') is not None for item in details):
+		from orgsetup import enterprise
+
+		_, networkIds = enterprise.readDetails(f'orgs/{github.ORG}', 'network_configurations')
+		networkNames = {resourceId: name for name, resourceId in networkIds.items()}
 	with ThreadPoolExecutor(max_workers=max(1, min(4, len(selected)))) as pool:
 		repositoryTasks = {
 			item['id']: pool.submit(
@@ -141,6 +160,11 @@ def readRunnerGroups():
 				**{key: item[key] for key in RUNNER_METADATA if key in item},
 				'selected_repositories': [],
 			}
+			if 'network_configuration_id' in item:
+				networkId = item['network_configuration_id']
+				if networkId is not None and networkId not in networkNames:
+					raise ValueError('Nhóm runner chưa xác minh được cấu hình mạng')
+				group['settings']['network_configuration'] = networkNames.get(networkId)
 			if item.get('visibility') == 'selected':
 				repositories = repositoryTasks[item['id']].result()
 				ids = set()
@@ -210,6 +234,7 @@ def runnerGroupChanges(plan, current, wanted, resourceCache=None):
 	validateRunnerGroups(wanted)
 	if resourceCache is None:
 		resourceCache = {}
+	resourceCache['planned_runner_groups'] = {group['settings']['name'] for group in wanted}
 	present = {group['settings']['name']: group for group in current}
 	details = None
 	for target in wanted:
@@ -217,6 +242,12 @@ def runnerGroupChanges(plan, current, wanted, resourceCache=None):
 		group = present.get(name)
 		targetSummary = runnerGroupSummary(target)
 		groupSummary = runnerGroupSummary(group) if group is not None else None
+		if (
+			group is not None
+			and 'network_configuration' in settings
+			and 'network_configuration' not in group['settings']
+		):
+			raise ValueError('Nhóm runner chưa đọc được liên kết mạng; không suy đoán null')
 		if groupSummary == targetSummary:
 			continue
 		if not settings['restricted_to_workflows'] and targetSummary['settings'][
@@ -230,7 +261,7 @@ def runnerGroupChanges(plan, current, wanted, resourceCache=None):
 				raise ValueError(
 					f'Nhóm runner {name}: nhóm mặc định/kế thừa phải tồn tại trước khi áp dụng'
 				)
-			body = dict(settings)
+			body = runnerGroupBody(settings, resourceCache)
 			if settings['visibility'] == 'selected':
 				body['selected_repository_ids'] = repositoryIds(
 					target['selected_repositories'], resourceCache
@@ -254,10 +285,10 @@ def runnerGroupChanges(plan, current, wanted, resourceCache=None):
 		changes = {
 			key: value
 			for key, value in settings.items()
-			if groupSummary['settings'][key] != targetSummary['settings'][key]
+			if groupSummary['settings'].get(key) != targetSummary['settings'][key]
 		}
 		if changes:
-			body = dict(changes, name=name)
+			body = runnerGroupBody(dict(changes, name=name), resourceCache)
 			if settings['restricted_to_workflows'] and any(
 				key in changes for key in ('restricted_to_workflows', 'selected_workflows')
 			):
@@ -282,3 +313,38 @@ def runnerGroupChanges(plan, current, wanted, resourceCache=None):
 					{'selected_repositories': target['selected_repositories']},
 				)
 			)
+
+
+def runnerGroupBody(settings, resourceCache):
+	"""Tên cấu hình mạng được xác minh trước ghi và giải ID sau bước tạo cấu hình mạng."""
+	body = dict(settings)
+	if 'network_configuration' not in body:
+		return body
+	name = body.pop('network_configuration')
+	if name is not None:
+		from orgsetup import enterprise
+
+		_, ids = enterprise.readDetails(f'orgs/{github.ORG}', 'network_configurations')
+		if name not in ids and name not in resourceCache.get(
+			'planned_network_configurations', set()
+		):
+			raise ValueError('Nhóm runner cần cấu hình mạng đã xác minh hoặc nằm trong kế hoạch')
+	body['network_configuration_name'] = name
+	return body
+
+
+def resolveRunnerGroupBody(body):
+	if 'network_configuration_name' not in body:
+		return body
+	result = dict(body)
+	name = result.pop('network_configuration_name')
+	if name is None:
+		result['network_configuration_id'] = None
+	else:
+		from orgsetup import enterprise
+
+		_, ids = enterprise.readDetails(f'orgs/{github.ORG}', 'network_configurations')
+		if name not in ids:
+			raise ValueError('Chưa giải được ID cấu hình mạng trước khi ghi nhóm runner')
+		result['network_configuration_id'] = ids[name]
+	return result

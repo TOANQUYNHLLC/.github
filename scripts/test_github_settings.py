@@ -15,7 +15,7 @@ try:
 except ModuleNotFoundError:
 	from scripts.testsupport import ROOT, loadScript
 
-from orgsetup import configuration, github, resources
+from orgsetup import catalog, configuration, github, resources
 
 
 def baselineConfig():
@@ -24,6 +24,9 @@ def baselineConfig():
 	repository… — nên test không được dựa vào giá trị của nó."""
 	config = configuration.readConfig(ROOT)
 	organization, repository = config['organization'], config['repositories']['.github']
+	for scope in (organization, repository):
+		scope.pop('collections', None)
+		scope.pop('observed', None)
 	config['repositories'], config['unavailable'] = {'.github': repository}, {}
 	organization['settings']['blog'] = 'https://toanquynh.com'
 	organization['web_settings']['two_factor_requirement_enabled'] = True
@@ -43,6 +46,9 @@ def baselineConfig():
 		}
 	]
 	repository['settings']['archived'] = False
+	repository['settings']['allow_rebase_merge'] = False
+	repository['endpoints']['actions/cache/retention-limit'] = {'max_cache_retention_days': 7}
+	repository['endpoints']['actions/cache/storage-limit'] = {'max_cache_size_gb': 10}
 	for scope in (organization, repository):
 		for suffix in configuration.SELECTED_ENDPOINTS:
 			scope['endpoints'].pop(suffix, None)
@@ -52,6 +58,8 @@ def baselineConfig():
 		}
 	organization['endpoints'].update(
 		{
+			'actions/permissions/self-hosted-runners': {'enabled_repositories': 'all'},
+			'copilot/coding-agent/permissions': {'enabled_repositories': 'all'},
 			'actions/permissions': {'enabled_repositories': 'none', 'sha_pinning_required': False},
 			'actions/oidc/customization/sub': {},
 			'settings/immutable-releases': {'enforced_repositories': 'all'},
@@ -703,6 +711,10 @@ class GitHubSettingsTest(unittest.TestCase):
 	def setUp(self):
 		# Mọi lần đọc nguồn cài đặt trong test (readConfig() không truyền root) dùng bản cố định.
 		self.config = baselineConfig()
+		# Các test hợp đồng chính dùng catalog giả lập; test_catalog kiểm tra danh mục thật riêng.
+		catalogReader = mock.patch.object(catalog, 'readCollections', return_value=({}, {}, {}))
+		catalogReader.start()
+		self.addCleanup(catalogReader.stop)
 		folder = tempfile.TemporaryDirectory()
 		self.addCleanup(folder.cleanup)
 		self.saveConfig(Path(folder.name), self.config)
@@ -897,6 +909,108 @@ class GitHubSettingsTest(unittest.TestCase):
 			captured = json.loads((root / configuration.CONFIG_NAME).read_text())
 			self.assertEqual(captured['unavailable'], unavailable)
 			self.assertNotIn('actions/permissions', captured['organization']['endpoints'])
+
+	def testImportedSnapshotRestoresSettingsWithoutReimportAndIsIdempotent(self):
+		captured = copy.deepcopy(self.config)
+		organization, repository = captured['organization'], captured['repositories']['.github']
+		organization['endpoints']['actions/permissions'] = {
+			'enabled_repositories': 'selected',
+			'allowed_actions': 'all',
+			'sha_pinning_required': True,
+		}
+		organization['endpoints']['actions/permissions/repositories'] = {
+			'selected_repositories': []
+		}
+		repository['settings'].update(
+			{
+				'has_wiki': True,
+				'has_projects': True,
+				'is_template': False,
+				'allow_rebase_merge': True,
+			}
+		)
+		for scope in (organization, repository):
+			scope['endpoints']['interaction-limits/pulls/creation-cap']['include_drafts'] = False
+		current = copy.deepcopy(captured)
+
+		def readScope(repo=None):
+			scope = current['organization'] if repo is None else current['repositories'][repo]
+			return copy.deepcopy(scope), {}
+
+		def restore(*args, stdin):
+			path, payload = args[3], json.loads(stdin)
+			base = 'orgs/TOANQUYNHLLC' if path.startswith('orgs/') else 'repos/TOANQUYNHLLC/.github'
+			scope = (
+				current['organization']
+				if path.startswith('orgs/')
+				else current['repositories']['.github']
+			)
+			if path == base:
+				analysis = payload.pop('security_and_analysis', {})
+				scope.get('security', {}).update(
+					{key: value['status'] for key, value in analysis.items()}
+				)
+				scope['settings'].update(payload)
+			else:
+				suffix = path[len(base) + 1 :]
+				if suffix == 'actions/permissions/repositories':
+					self.assertEqual(payload, {'selected_repository_ids': []})
+					payload = {'selected_repositories': []}
+				scope['endpoints'][suffix] = payload
+
+		with tempfile.TemporaryDirectory() as directory:
+			root = Path(directory)
+			self.saveConfig(root, self.config)
+			with (
+				mock.patch.object(github, 'ROOT', root),
+				mock.patch.object(github, 'listRepos', return_value=['.github']),
+				mock.patch.object(configuration, 'readScope', side_effect=readScope),
+				mock.patch.object(github, 'gh', side_effect=restore) as write,
+				mock.patch.object(
+					github, 'ghJson', return_value={'maximum_allowed_days': 90}
+				) as readLimits,
+				mock.patch.object(github, 'ghList') as readCatalog,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				self.assertEqual(configuration.importSettings(), 0)
+				write.assert_not_called()
+				snapshot = (root / configuration.CONFIG_NAME).read_bytes()
+				self.assertEqual(configuration.readConfig(root), captured)
+				# Mô phỏng GitHub đổi trạng thái sau khi đã lưu nguồn: khôi phục trực tiếp bản local.
+				organization = current['organization']
+				organization['endpoints']['actions/permissions'] = {
+					'enabled_repositories': 'all',
+					'allowed_actions': 'all',
+					'sha_pinning_required': False,
+				}
+				organization['endpoints'].pop('actions/permissions/repositories')
+				organization['endpoints']['actions/permissions/artifact-and-log-retention'][
+					'days'
+				] = 30
+				repository = current['repositories']['.github']
+				repository['settings'].update(
+					{
+						'has_wiki': False,
+						'has_projects': False,
+						'is_template': True,
+						'allow_rebase_merge': False,
+					}
+				)
+				repository['security']['secret_scanning_push_protection'] = 'disabled'
+				repository['endpoints']['topics'] = {'names': []}
+				self.assertEqual(configuration.syncConfiguredSettings(False), 0)
+				write.assert_not_called()
+				self.assertEqual(configuration.syncConfiguredSettings(True), 0)
+				self.assertEqual(current, captured)
+				self.assertEqual(write.call_count, 6)
+				self.assertEqual(configuration.syncConfiguredSettings(True), 0)
+				self.assertEqual(write.call_count, 6)
+				self.assertEqual((root / configuration.CONFIG_NAME).read_bytes(), snapshot)
+				self.assertEqual(readLimits.call_count, 2)
+				readLimits.assert_called_with(
+					'api', 'orgs/TOANQUYNHLLC/actions/permissions/artifact-and-log-retention'
+				)
+				readCatalog.assert_not_called()
 
 	def testImportWritesPrettierFormattedJson(self):
 		# make check chạy Prettier trên github-settings.json: tệp vừa nhập phải đúng định dạng đó ngay, không cần

@@ -32,6 +32,8 @@ Engineering và Creative có chế độ `closed`, quyền `None` trong nguồn:
 
 ## 🔄 ĐỒNG BỘ VÀ XÁC NHẬN
 
+Bản khôi phục team đang cài và quyền từng repository nằm trong `collections.teams` của [github-settings.json](github-settings.json), áp dụng bằng `make org-settings-apply`. Nguồn chính sách dưới đây dùng cho lệnh thiết lập team; thống nhất với bản khôi phục trước khi áp dụng. Bản nhập không lưu danh sách thành viên hoặc hồ sơ người dùng.
+
 `TEAMS` và `TEAM_PARENTS` trong [teams.py](scripts/orgsetup/teams.py) là nguồn thông tin, quyền và quan hệ cha–con. Chạy `python3 scripts/org-setup.py team` để xem trước; thêm `--apply` để áp dụng, hoặc `--repo <tên>` để giới hạn repository.
 
 Script kiểm tra cấu hình và trạng thái trước ghi, tạo team cha trước team con và xác nhận lại thông tin sau tạo/sửa. Cấu trúc không có chu trình; team cha và con phải `closed` theo [hợp đồng GitHub](https://docs.github.com/en/rest/teams/teams#update-a-team).

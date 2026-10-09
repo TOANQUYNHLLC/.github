@@ -14,6 +14,8 @@
 
 `orgRulesets()` trong [rulesets.py](../scripts/orgsetup/rulesets.py) sinh các bản nhánh và tag cấp tổ chức. Sửa nguồn cấp repository rồi sinh lại bản tương ứng; tests đối chiếu kết quả. Push ruleset không có nguồn cấp repository.
 
+Ruleset đang cài trên GitHub được nhập riêng vào `collections.rulesets` của [github-settings.json](../github-settings.json), khôi phục bằng `make org-settings-apply`. Các tệp trong thư mục này là nguồn chính sách cho lệnh ruleset; thống nhất với bản khôi phục trước khi áp dụng. Ruleset chỉ đọc một phần qua GraphQL nằm trong `observed`, không dùng để ghi.
+
 ## ⚙️ PROTECT MAIN
 
 - Áp dụng nhánh mặc định; thay đổi qua PR và ít nhất **1** phê duyệt của `CODEOWNERS`.
