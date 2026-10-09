@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 ORG = 'TOANQUYNHLLC'
+CLI_TIMEOUT = 120
 
 ROOT = Path(__file__).resolve().parents[2]
 COMMIT_MUTATION = (
@@ -15,7 +16,20 @@ COMMIT_MUTATION = (
 
 
 def gh(*args, stdin=None):
-	result = subprocess.run(['gh', *args], input=stdin, capture_output=True, text=True, check=False)
+	try:
+		result = subprocess.run(
+			['gh', *args],
+			input=stdin,
+			capture_output=True,
+			text=True,
+			check=False,
+			timeout=CLI_TIMEOUT,
+		)
+	except subprocess.TimeoutExpired as exc:
+		# Kết quả mutation có thể chưa biết; không tự gửi lại hoặc in stdin chứa payload.
+		raise RuntimeError(
+			'GitHub CLI vượt thời gian chờ; chưa xác nhận kết quả, hãy xem trước lại'
+		) from exc
 	if result.returncode != 0:
 		raise RuntimeError(result.stderr.strip() or f'gh {" ".join(args)} thất bại')
 	return result.stdout

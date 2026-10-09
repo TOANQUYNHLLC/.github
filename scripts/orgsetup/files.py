@@ -102,7 +102,7 @@ def templateJobs():
 def syncFiles(repos, apply):
 	for repo in repos:
 		print(f'== {github.ORG}/{repo}')
-		if repo == '.github':
+		if repo.casefold() == '.github':
 			print('   – bỏ qua: repository nguồn của tệp dùng chung')
 			continue
 		base = github.defaultBranch(repo)

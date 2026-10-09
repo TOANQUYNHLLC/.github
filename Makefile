@@ -128,6 +128,14 @@ release-pr: ## Chuẩn bị rồi mở Pull Request phát hành tại máy (khi 
 org-import: ## Lấy cài đặt hiện tại từ GitHub về github-settings.json; chỉ ghi local
 	$(PYTHON) scripts/org-setup.py import-settings
 
+.PHONY: org-import-missing
+org-import-missing: ## Bổ sung phần chưa có sau nâng cấp gói hoặc quyền; giữ cài đặt local đã lưu
+	$(PYTHON) scripts/org-setup.py import-settings --complete
+
+.PHONY: org-settings-audit
+org-settings-audit: ## Kiểm tra toàn bộ phạm vi bản nhập và khác biệt với GitHub; chỉ đọc
+	$(PYTHON) scripts/org-setup.py settings-audit
+
 .PHONY: org-settings-preview
 org-settings-preview: ## So cài đặt GitHub với github-settings.json, gồm trạng thái Actions và các endpoint bổ sung
 	$(PYTHON) scripts/org-setup.py local-settings

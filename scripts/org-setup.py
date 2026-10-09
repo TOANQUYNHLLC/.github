@@ -8,12 +8,16 @@ rulesets, team, labels; --discussions chỉ dùng với settings. Tùy chọn sa
 
 Lệnh (nên chạy theo thứ tự):
 	import-settings: đọc cài đặt GitHub của tổ chức và mọi repository đọc được (cả archive),
-		ghi github-settings.json tại máy; không ghi GitHub, không nhận --apply, --repo, --discussions.
+		ghi github-settings.json tại máy; gồm danh mục ruleset, team, nhãn, properties, environments và
+		định nghĩa bảo mật, bảo vệ nhánh kiểu cũ, mạng, IP allow list và vai trò team; --complete chỉ bổ sung phần chưa có, giữ cài đặt local đã lưu.
+		Không ghi GitHub, không nhận --apply, --repo, --discussions.
+	settings-audit: đọc lại mọi nhóm được quản lý, kiểm tra phạm vi repository, dữ liệu chưa nhập và
+		khác biệt của bản local; không ghi local hoặc GitHub, chưa đầy đủ thì trả mã lỗi.
 	local-settings: đối chiếu github-settings.json; --apply để áp dụng các mục API được hỗ trợ,
 		bao gồm trạng thái Actions, bảo mật, thời gian lưu dữ liệu, fork, tương tác và cấu hình bảo mật.
 		Kiểm tra tổ chức trước, đọc repository song song có giới hạn; kế hoạch và ghi theo thứ tự nguồn.
 		Đọc mọi phạm vi trước khi ghi, đọc lại sau khi áp dụng; lỗi hoặc mục chưa hoàn tất trả mã lỗi.
-		Không nhận --repo, --discussions; nguồn JSON xác định phạm vi cần xử lý.
+		Không nhận --repo, --discussions; --only chọn rõ nhóm cần xử lý, nguồn JSON xác định tài nguyên.
 	files: mở Pull Request thêm các tệp dùng chung còn thiếu — .editorconfig, .gitattributes,
 		workflow kiểm tra tiêu đề Pull Request, tên branch và gắn nhãn (labeler), CODEOWNERS, dependabot.yml, release.yml
 		và tệp định dạng, phiên bản (.nvmrc, .python-version) theo ngôn ngữ repository dùng. Không ghi đè tệp đã có.
@@ -173,14 +177,27 @@ def main():
 	)
 	parser.add_argument(
 		'command',
-		choices=(*COMMANDS, 'preview', 'import-settings', 'local-settings'),
+		choices=(*COMMANDS, 'preview', 'import-settings', 'local-settings', 'settings-audit'),
 	)
 	parser.add_argument('--apply', action='store_true', help='áp dụng thay đổi trên GitHub')
+	parser.add_argument(
+		'--only',
+		action='append',
+		choices=sorted(configuration.SETTING_GROUPS),
+		help='local-settings: chỉ xử lý nhóm được chọn; lặp tùy chọn để chọn nhiều nhóm',
+	)
+	parser.add_argument(
+		'--complete',
+		action='store_true',
+		help='import-settings: bổ sung mục chưa có, giữ giá trị local đã lưu',
+	)
 	parser.add_argument('--repo', help='chỉ xử lý một repository')
 	parser.add_argument(
 		'--discussions', action='store_true', help='settings: bật GitHub Discussions'
 	)
 	args = parser.parse_args()
+	if args.only is not None and args.command != 'local-settings':
+		parser.error('--only chỉ dùng với local-settings')
 	if args.repo is not None:
 		if args.command not in REPOSITORY_COMMANDS:
 			parser.error('--repo chỉ dùng với files, settings, rulesets, team, labels')
@@ -188,12 +205,18 @@ def main():
 			parser.error('--repo cần tên repository hợp lệ, không trống và không kèm owner')
 	if args.discussions and args.command != 'settings':
 		parser.error('--discussions chỉ dùng với settings')
-	if args.apply and args.command in ('preview', 'import-settings'):
+	if args.complete and args.command != 'import-settings':
+		parser.error('--complete chỉ dùng với import-settings')
+	if args.apply and args.command in ('preview', 'import-settings', 'settings-audit'):
 		parser.error(f'{args.command} không nhận --apply')
 
 	def repositories():
 		# Giữ lỗi đọc để main báo sau khi xác minh đăng nhập; không gọi lại một request đã thất bại.
-		if args.command.startswith('org-') or args.command in ('import-settings', 'local-settings'):
+		if args.command.startswith('org-') or args.command in (
+			'import-settings',
+			'local-settings',
+			'settings-audit',
+		):
 			return []
 		try:
 			return github.listRepos(args.repo)
@@ -211,9 +234,19 @@ def main():
 		return 1
 	try:
 		if args.command == 'import-settings':
-			return configuration.importSettings()
+			return (
+				configuration.importSettings(complete=True)
+				if args.complete
+				else configuration.importSettings()
+			)
+		if args.command == 'settings-audit':
+			return configuration.auditSettings()
 		if args.command == 'local-settings':
-			return configuration.syncConfiguredSettings(args.apply)
+			return (
+				configuration.syncConfiguredSettings(args.apply, only=args.only)
+				if args.only is not None
+				else configuration.syncConfiguredSettings(args.apply)
+			)
 		if args.command == 'preview':
 			return previewAll(repos)
 		runCommand(args.command, repos, args.apply, args.discussions)

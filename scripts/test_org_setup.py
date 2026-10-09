@@ -2657,13 +2657,15 @@ class OrgSetupTest(unittest.TestCase):
 		)
 
 	def testRepositorySettingsMergeOverrides(self):
-		own = settings.repositorySettings('.github')
-		other = settings.repositorySettings('app')
-		# Không Rebase (ADR 00000007) là chính sách; bật/tắt Discussions là giá trị nhập từ GitHub, chỉ cần được gộp.
-		self.assertFalse(own['allow_rebase_merge'])
-		self.assertEqual(
-			own, dict(settings.REPOSITORY_SETTINGS, **settings.REPOSITORY_OVERRIDES['.github'])
-		)
+		# Nguồn nhập có thể khác chính sách mặc định; dữ liệu giả lập giữ test độc lập với GitHub.
+		overrides = {'.github': {'allow_rebase_merge': False, 'has_discussions': True}}
+		with mock.patch.object(settings, 'REPOSITORY_OVERRIDES', overrides):
+			own = settings.repositorySettings('.github')
+			other = settings.repositorySettings('app')
+			self.assertFalse(own['allow_rebase_merge'])
+			self.assertEqual(own, dict(settings.REPOSITORY_SETTINGS, **overrides['.github']))
+			overrides['.github']['allow_rebase_merge'] = True
+			self.assertTrue(settings.repositorySettings('.github')['allow_rebase_merge'])
 		self.assertIn('has_discussions', own)
 		self.assertNotIn('has_discussions', other)
 		self.assertNotIn('homepage', other)

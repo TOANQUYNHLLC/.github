@@ -81,7 +81,14 @@
 			"interaction-limits": {},
 			"interaction-limits/pulls/creation-cap": {
 				"enabled": false,
-				"max_open_pull_requests": 1
+				"max_open_pull_requests": 1,
+				"include_drafts": false
+			},
+			"actions/permissions/self-hosted-runners": {
+				"enabled_repositories": "all"
+			},
+			"copilot/coding-agent/permissions": {
+				"enabled_repositories": "all"
 			},
 			"actions/oidc/customization/sub": {},
 			"actions/permissions": {
@@ -113,7 +120,428 @@
 				"target_type": "global",
 				"default_for_new_repos": "none"
 			}
-		]
+		],
+		"collections": {
+			"organization_roles": [
+				{
+					"name": "all_repo_admin",
+					"description": "Grants admin access to all repositories in the organization.",
+					"source": "Predefined",
+					"base_role": "admin",
+					"permissions": [],
+					"teams": []
+				},
+				{
+					"name": "all_repo_maintain",
+					"description": "Grants maintenance access to all repositories in the organization.",
+					"source": "Predefined",
+					"base_role": "maintain",
+					"permissions": [],
+					"teams": []
+				},
+				{
+					"name": "all_repo_read",
+					"description": "Grants read access to all repositories in the organization.",
+					"source": "Predefined",
+					"base_role": "read",
+					"permissions": [],
+					"teams": []
+				},
+				{
+					"name": "all_repo_triage",
+					"description": "Grants triage access to all repositories in the organization.",
+					"source": "Predefined",
+					"base_role": "triage",
+					"permissions": [],
+					"teams": []
+				},
+				{
+					"name": "all_repo_write",
+					"description": "Grants write access to all repositories in the organization.",
+					"source": "Predefined",
+					"base_role": "write",
+					"permissions": [],
+					"teams": []
+				},
+				{
+					"name": "app_manager",
+					"description": "Grants the ability to manage all GitHub Apps owned by an organization.",
+					"source": "Predefined",
+					"base_role": null,
+					"permissions": [],
+					"teams": []
+				},
+				{
+					"name": "ci_cd_admin",
+					"description": "Grants admin access to manage Actions policies, runners, runner groups, network configurations, secrets, variables, and usage metrics for an organization.",
+					"source": "Predefined",
+					"base_role": null,
+					"permissions": [
+						"read_organization_actions_usage_metrics",
+						"write_organization_actions_secrets",
+						"write_organization_actions_settings",
+						"write_organization_actions_variables",
+						"write_organization_network_configurations",
+						"write_organization_runner_custom_images",
+						"write_organization_runners_and_runner_groups"
+					],
+					"teams": []
+				},
+				{
+					"name": "open_source_license_manager",
+					"description": "Grants the ability to review open-source license compliance closure requests and update repository license policies.",
+					"source": "Predefined",
+					"base_role": "read",
+					"permissions": [
+						"review_license_compliance_closure_requests",
+						"view_license_compliance_closure_requests",
+						"view_repository_license_policy"
+					],
+					"teams": []
+				},
+				{
+					"name": "security_manager",
+					"description": "Grants the ability to manage security policies, security alerts, and security configurations for an organization and all its repositories.",
+					"source": "Predefined",
+					"base_role": "read",
+					"permissions": [
+						"delete_alerts_code_scanning",
+						"org_bypass_code_scanning_dismissal_requests",
+						"org_bypass_dependabot_alert_dismissal_requests",
+						"org_bypass_secret_scanning_closure_requests",
+						"org_review_and_manage_secret_scanning_bypass_requests",
+						"org_review_and_manage_secret_scanning_closure_requests",
+						"publish_repository_advisories",
+						"read_code_quality",
+						"read_code_scanning",
+						"read_repository_advisories",
+						"resolve_dependabot_alerts",
+						"resolve_secret_scanning_alerts",
+						"review_org_code_scanning_dismissal_requests",
+						"review_org_dependabot_alert_dismissal_requests",
+						"triage_repository_advisories",
+						"view_dependabot_alerts",
+						"view_org_code_scanning_dismissal_requests",
+						"view_org_dependabot_alert_dismissal_requests",
+						"view_secret_scanning_alerts",
+						"write_code_quality",
+						"write_code_scanning",
+						"write_repository_advisories"
+					],
+					"teams": []
+				}
+			],
+			"ip_allow_list": [
+				{
+					"enabled": false,
+					"apps_enabled": false,
+					"entries": []
+				}
+			],
+			"property_schema": [],
+			"security_definitions": [],
+			"teams": [
+				{
+					"name": "Admins",
+					"slug": "admins",
+					"description": "Quản trị Organization, repository, bảo mật và phân quyền.",
+					"privacy": "secret",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": null,
+					"repositories": {
+						"TOANQUYNHLLC/.github": "admin"
+					}
+				},
+				{
+					"name": "Creative",
+					"slug": "creative",
+					"description": "Thiết kế sản phẩm, thương hiệu và nội dung truyền thông.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": null,
+					"repositories": {}
+				},
+				{
+					"name": "Design",
+					"slug": "design",
+					"description": "Thiết kế UI/UX, góp ý sản phẩm.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": "creative",
+					"repositories": {
+						"TOANQUYNHLLC/.github": "triage"
+					}
+				},
+				{
+					"name": "Developers",
+					"slug": "developers",
+					"description": "Phát triển, review và duy trì mã nguồn.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": "engineering",
+					"repositories": {
+						"TOANQUYNHLLC/.github": "write"
+					}
+				},
+				{
+					"name": "Engineering",
+					"slug": "engineering",
+					"description": "Phát triển, kiểm thử và duy trì các sản phẩm phần mềm.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": null,
+					"repositories": {}
+				},
+				{
+					"name": "Maintainers",
+					"slug": "maintainers",
+					"description": "Duy trì repository, quản lý phát hành và kiểm duyệt Pull Request.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": "engineering",
+					"repositories": {
+						"TOANQUYNHLLC/.github": "maintain"
+					}
+				},
+				{
+					"name": "Marketing",
+					"slug": "marketing",
+					"description": "Website, bài viết, hình ảnh truyền thông.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": "creative",
+					"repositories": {
+						"TOANQUYNHLLC/.github": "read"
+					}
+				},
+				{
+					"name": "QA",
+					"slug": "qa",
+					"description": "Quản lý issue, kiểm thử, xác nhận lỗi.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": "engineering",
+					"repositories": {
+						"TOANQUYNHLLC/.github": "triage"
+					}
+				}
+			],
+			"security_managers": [],
+			"oidc_properties": [],
+			"variables": [],
+			"private_registries": [],
+			"dependabot_access": [
+				{
+					"repositories": []
+				}
+			]
+		},
+		"observed": {
+			"rulesets": [
+				{
+					"name": "Protect Main (Organization)",
+					"target": "branch",
+					"enforcement": "active",
+					"conditions": {
+						"ref_name": {
+							"include": ["~DEFAULT_BRANCH", "refs/heads/main"],
+							"exclude": []
+						},
+						"repository_name": {
+							"include": ["~ALL"],
+							"exclude": [],
+							"protected": false
+						}
+					},
+					"bypass_actors": [
+						{
+							"actor_id": 1,
+							"actor_type": "OrganizationAdmin",
+							"bypass_mode": "always"
+						}
+					],
+					"rules": [
+						{
+							"type": "deletion"
+						},
+						{
+							"type": "non_fast_forward"
+						},
+						{
+							"type": "creation"
+						},
+						{
+							"type": "update"
+						},
+						{
+							"type": "required_signatures"
+						},
+						{
+							"type": "pull_request",
+							"parameters": {
+								"allowed_merge_methods": ["merge", "squash", "rebase"],
+								"dismiss_stale_reviews_on_push": true,
+								"dismissal_restriction": {
+									"enabled": false,
+									"allowed_actors": []
+								},
+								"require_code_owner_review": true,
+								"require_last_push_approval": true,
+								"required_approving_review_count": 1,
+								"required_review_thread_resolution": true,
+								"required_reviewers": []
+							}
+						},
+						{
+							"type": "required_status_checks",
+							"parameters": {
+								"do_not_enforce_on_create": true,
+								"strict_required_status_checks_policy": true,
+								"required_status_checks": [
+									{
+										"context": "Kiểm tra tiêu đề Pull Request",
+										"integration_id": 15368
+									},
+									{
+										"context": "Kiểm tra tên branch",
+										"integration_id": 15368
+									}
+								]
+							}
+						},
+						{
+							"type": "code_quality",
+							"parameters": {
+								"severity": "all"
+							}
+						},
+						{
+							"type": "code_scanning",
+							"parameters": {
+								"code_scanning_tools": [
+									{
+										"tool": "CodeQL",
+										"alerts_threshold": "errors",
+										"security_alerts_threshold": "high_or_higher"
+									}
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "Protect Pushes (Organization)",
+					"target": "push",
+					"enforcement": "active",
+					"conditions": {
+						"repository_name": {
+							"include": ["~ALL"],
+							"exclude": [],
+							"protected": false
+						}
+					},
+					"bypass_actors": [
+						{
+							"actor_id": 1,
+							"actor_type": "OrganizationAdmin",
+							"bypass_mode": "always"
+						}
+					],
+					"rules": [
+						{
+							"type": "file_path_restriction",
+							"parameters": {
+								"restricted_file_paths": [
+									"**/.env",
+									"**/id_rsa",
+									"**/id_dsa",
+									"**/id_ecdsa",
+									"**/id_ed25519"
+								]
+							}
+						},
+						{
+							"type": "file_extension_restriction",
+							"parameters": {
+								"restricted_file_extensions": [
+									"*.pem",
+									"*.key",
+									"*.p12",
+									"*.pfx",
+									"*.jks",
+									"*.keystore",
+									"*.ppk",
+									"*.kdbx",
+									"*.sqlite",
+									"*.sqlite3",
+									"*.db"
+								]
+							}
+						},
+						{
+							"type": "max_file_size",
+							"parameters": {
+								"max_file_size": 10
+							}
+						},
+						{
+							"type": "max_file_path_length",
+							"parameters": {
+								"max_file_path_length": 200
+							}
+						}
+					]
+				},
+				{
+					"name": "Protect Release Tags (Organization)",
+					"target": "tag",
+					"enforcement": "active",
+					"conditions": {
+						"ref_name": {
+							"include": ["refs/tags/v*"],
+							"exclude": []
+						},
+						"repository_name": {
+							"include": ["~ALL"],
+							"exclude": [],
+							"protected": false
+						}
+					},
+					"bypass_actors": [
+						{
+							"actor_id": 1,
+							"actor_type": "OrganizationAdmin",
+							"bypass_mode": "always"
+						}
+					],
+					"rules": [
+						{
+							"type": "creation"
+						},
+						{
+							"type": "update"
+						},
+						{
+							"type": "deletion"
+						},
+						{
+							"type": "non_fast_forward"
+						},
+						{
+							"type": "required_signatures"
+						},
+						{
+							"type": "required_status_checks",
+							"parameters": {
+								"do_not_enforce_on_create": false,
+								"strict_required_status_checks_policy": true,
+								"required_status_checks": []
+							}
+						}
+					]
+				}
+			]
+		}
 	},
 	"repositories": {
 		".github": {
@@ -121,12 +549,12 @@
 				"description": "Hồ sơ tổ chức, tệp cộng đồng mặc định, biểu mẫu và cấu hình GitHub dùng chung cho mọi repository của CÔNG TY TNHH TOÀN QUỲNH",
 				"homepage": "https://toanquynh.com",
 				"has_issues": true,
-				"has_projects": false,
-				"has_wiki": false,
+				"has_projects": true,
+				"has_wiki": true,
 				"has_discussions": true,
 				"archived": false,
 				"allow_forking": true,
-				"is_template": true,
+				"is_template": false,
 				"web_commit_signoff_required": true,
 				"has_pull_requests": true,
 				"pull_request_creation_policy": "all",
@@ -134,7 +562,7 @@
 				"default_branch": "main",
 				"allow_squash_merge": true,
 				"allow_merge_commit": true,
-				"allow_rebase_merge": false,
+				"allow_rebase_merge": true,
 				"allow_auto_merge": true,
 				"delete_branch_on_merge": true,
 				"allow_update_branch": true,
@@ -160,7 +588,8 @@
 				"interaction-limits": {},
 				"interaction-limits/pulls/creation-cap": {
 					"enabled": false,
-					"max_open_pull_requests": 1
+					"max_open_pull_requests": 1,
+					"include_drafts": false
 				},
 				"actions/oidc/customization/sub": {
 					"use_default": true,
@@ -205,8 +634,429 @@
 				"secret_scanning_push_protection": "enabled",
 				"secret_scanning_non_provider_patterns": "disabled"
 			},
-			"security_configuration": null
+			"security_configuration": null,
+			"collections": {
+				"branch_protection": [],
+				"labels": [
+					{
+						"name": "accessibility",
+						"color": "0052cc",
+						"description": "Khả năng tiếp cận — trình đọc màn hình, bàn phím, độ tương phản"
+					},
+					{
+						"name": "area: api",
+						"color": "c2e0f4",
+						"description": "Giao diện lập trình (API)"
+					},
+					{
+						"name": "area: auth",
+						"color": "c2e0f4",
+						"description": "Hệ thống xác thực hoặc phân quyền"
+					},
+					{
+						"name": "area: backend",
+						"color": "c2e0f4",
+						"description": "Xử lý phía máy chủ"
+					},
+					{
+						"name": "area: database",
+						"color": "c2e0f4",
+						"description": "Cơ sở dữ liệu"
+					},
+					{
+						"name": "area: frontend",
+						"color": "c2e0f4",
+						"description": "Giao diện người dùng"
+					},
+					{
+						"name": "area: infrastructure",
+						"color": "c2e0f4",
+						"description": "Hạ tầng hoặc quy trình triển khai"
+					},
+					{
+						"name": "Beta",
+						"color": "fbca04",
+						"description": "Phiên bản Thử Nghiệm"
+					},
+					{
+						"name": "blocked",
+						"color": "e99695",
+						"description": "Đang chờ việc khác xong mới làm tiếp được"
+					},
+					{
+						"name": "breaking change",
+						"color": "e11d21",
+						"description": "Thay đổi phá vỡ tương thích (commit có dấu ! hoặc BREAKING CHANGE)"
+					},
+					{
+						"name": "bug",
+						"color": "d73a4a",
+						"description": "Một chức năng chạy sai, không chạy hoặc hiển thị không đúng"
+					},
+					{
+						"name": "build",
+						"color": "bfdadc",
+						"description": "Hệ thống build, phụ thuộc, công cụ phát triển"
+					},
+					{
+						"name": "chore",
+						"color": "e4e4e4",
+						"description": "Cấu hình, phụ thuộc, công việc bảo trì khác"
+					},
+					{
+						"name": "ci",
+						"color": "fef2c0",
+						"description": "Workflow CI/CD, build, triển khai"
+					},
+					{
+						"name": "confirmed",
+						"color": "0e8a16",
+						"description": "Đã phân loại và xác nhận lỗi hoặc đề xuất hợp lệ"
+					},
+					{
+						"name": "dependencies",
+						"color": "0366d6",
+						"description": "Cập nhật thư viện hoặc phụ thuộc"
+					},
+					{
+						"name": "docker",
+						"color": "21ceff",
+						"description": "Cập nhật image Docker"
+					},
+					{
+						"name": "documentation",
+						"color": "0075ca",
+						"description": "Cập nhật hoặc bổ sung tài liệu"
+					},
+					{
+						"name": "duplicate",
+						"color": "cfd3d7",
+						"description": "Trùng với Issue hoặc Pull Request đã có"
+					},
+					{
+						"name": "enhancement",
+						"color": "a2eeef",
+						"description": "Tính năng mới hoặc cải thiện chức năng hiện có"
+					},
+					{
+						"name": "github_actions",
+						"color": "000000",
+						"description": "Cập nhật GitHub Actions"
+					},
+					{
+						"name": "go",
+						"color": "16e2e2",
+						"description": "Cập nhật module Go"
+					},
+					{
+						"name": "good first issue",
+						"color": "7057ff",
+						"description": "Phù hợp cho người mới tham gia"
+					},
+					{
+						"name": "help wanted",
+						"color": "008672",
+						"description": "Cần thêm người cùng xử lý"
+					},
+					{
+						"name": "hotfix",
+						"color": "ff7619",
+						"description": "Sửa lỗi khẩn cấp trên bản đang chạy thật"
+					},
+					{
+						"name": "i18n",
+						"color": "5319e7",
+						"description": "Đa ngôn ngữ, bản dịch (tiếng Việt, tiếng Anh)"
+					},
+					{
+						"name": "in progress",
+						"color": "c2e0c6",
+						"description": "Đang được xử lý"
+					},
+					{
+						"name": "invalid",
+						"color": "e4e669",
+						"description": "Không hợp lệ hoặc thiếu thông tin"
+					},
+					{
+						"name": "javascript",
+						"color": "168700",
+						"description": "Cập nhật thư viện JavaScript (npm)"
+					},
+					{
+						"name": "needs more info",
+						"color": "d4c5f9",
+						"description": "Cần người tạo bổ sung thông tin"
+					},
+					{
+						"name": "needs triage",
+						"color": "ededed",
+						"description": "Chờ người quản trị phân loại — biểu mẫu Issue tự gắn, bỏ nhãn sau khi phân loại"
+					},
+					{
+						"name": "performance",
+						"color": "f9d0c4",
+						"description": "Cải thiện hiệu năng"
+					},
+					{
+						"name": "pinned",
+						"color": "fad8c7",
+						"description": "Giữ lâu dài — workflow stale không đánh dấu, không đóng"
+					},
+					{
+						"name": "Pre-Release",
+						"color": "a2eeef",
+						"description": "Phiên bản Chuẩn Bị Release"
+					},
+					{
+						"name": "priority: cao",
+						"color": "d93f0b",
+						"description": "Ảnh hưởng lớn, chưa có cách xử lý tạm"
+					},
+					{
+						"name": "priority: khẩn cấp",
+						"color": "b60205",
+						"description": "Hệ thống ngừng hoạt động hoặc mất dữ liệu"
+					},
+					{
+						"name": "priority: thấp",
+						"color": "0e8a16",
+						"description": "Cải tiến nhỏ"
+					},
+					{
+						"name": "priority: trung bình",
+						"color": "fbca04",
+						"description": "Có cách xử lý tạm"
+					},
+					{
+						"name": "python",
+						"color": "2b67c6",
+						"description": "Cập nhật thư viện Python (pip)"
+					},
+					{
+						"name": "question",
+						"color": "d876e3",
+						"description": "Câu hỏi hoặc cần hỗ trợ"
+					},
+					{
+						"name": "refactor",
+						"color": "c5def5",
+						"description": "Tái cấu trúc, không đổi hành vi"
+					},
+					{
+						"name": "regression",
+						"color": "b60205",
+						"description": "Chức năng trước đây chạy đúng nay bị lỗi"
+					},
+					{
+						"name": "release",
+						"color": "1d76db",
+						"description": "Chuẩn bị phát hành — CHANGELOG, số phiên bản"
+					},
+					{
+						"name": "security",
+						"color": "b60205",
+						"description": "Liên quan đến bảo mật (chi tiết lỗ hổng báo cáo riêng qua SECURITY.md)"
+					},
+					{
+						"name": "Stable",
+						"color": "0e8a16",
+						"description": "Phiên bản Ổn Định"
+					},
+					{
+						"name": "stale",
+						"color": "dadada",
+						"description": "Không có hoạt động trong thời gian dài, sẽ tự đóng nếu không có phản hồi"
+					},
+					{
+						"name": "tests",
+						"color": "bfd4f2",
+						"description": "Bổ sung hoặc sửa kiểm thử"
+					},
+					{
+						"name": "ui/ux",
+						"color": "d4a5ff",
+						"description": "Giao diện hoặc trải nghiệm người dùng"
+					},
+					{
+						"name": "upstream",
+						"color": "fbca04",
+						"description": "Do thư viện hoặc dịch vụ bên ngoài — chờ bên đó sửa (stale bỏ qua)"
+					},
+					{
+						"name": "wontfix",
+						"color": "ffffff",
+						"description": "Không xử lý"
+					}
+				],
+				"autolinks": [],
+				"custom_properties": [],
+				"rulesets": [
+					{
+						"name": "Protect Main",
+						"target": "branch",
+						"enforcement": "active",
+						"conditions": {
+							"ref_name": {
+								"exclude": [],
+								"include": ["~DEFAULT_BRANCH"]
+							}
+						},
+						"bypass_actors": [
+							{
+								"actor_id": 107941543,
+								"actor_type": "User",
+								"bypass_mode": "always"
+							},
+							{
+								"actor_id": 108377655,
+								"actor_type": "User",
+								"bypass_mode": "always"
+							}
+						],
+						"rules": [
+							{
+								"type": "deletion"
+							},
+							{
+								"type": "non_fast_forward"
+							},
+							{
+								"type": "creation"
+							},
+							{
+								"type": "update"
+							},
+							{
+								"type": "required_signatures"
+							},
+							{
+								"type": "pull_request",
+								"parameters": {
+									"required_approving_review_count": 1,
+									"dismiss_stale_reviews_on_push": true,
+									"required_reviewers": [],
+									"require_code_owner_review": true,
+									"dismissal_restriction": {
+										"enabled": true,
+										"allowed_actors": [
+											{
+												"id": 107941543,
+												"type": "User"
+											},
+											{
+												"id": 108377655,
+												"type": "User"
+											}
+										]
+									},
+									"require_last_push_approval": true,
+									"required_review_thread_resolution": true,
+									"require_extra_approval_for_unattributed_changes": true,
+									"allowed_merge_methods": ["merge", "squash"]
+								}
+							},
+							{
+								"type": "required_status_checks",
+								"parameters": {
+									"strict_required_status_checks_policy": true,
+									"do_not_enforce_on_create": true,
+									"required_status_checks": [
+										{
+											"context": "Liên kết, biểu mẫu, nhãn, cấu hình định dạng và mẫu email",
+											"integration_id": 15368
+										},
+										{
+											"context": "Định dạng (Prettier, ruff)",
+											"integration_id": 15368
+										},
+										{
+											"context": "Shell script và workflow",
+											"integration_id": 15368
+										},
+										{
+											"context": "Kiểm tra tiêu đề Pull Request",
+											"integration_id": 15368
+										},
+										{
+											"context": "Kiểm tra tên branch",
+											"integration_id": 15368
+										}
+									]
+								}
+							},
+							{
+								"type": "code_quality",
+								"parameters": {
+									"severity": "all"
+								}
+							}
+						]
+					},
+					{
+						"name": "Protect Release Tags",
+						"target": "tag",
+						"enforcement": "active",
+						"conditions": {
+							"ref_name": {
+								"exclude": [],
+								"include": [
+									"refs/tags/v*",
+									"refs/tags/Stable.v*",
+									"refs/tags/Beta.v*"
+								]
+							}
+						},
+						"bypass_actors": [
+							{
+								"actor_id": 107941543,
+								"actor_type": "User",
+								"bypass_mode": "always"
+							},
+							{
+								"actor_id": 108377655,
+								"actor_type": "User",
+								"bypass_mode": "always"
+							}
+						],
+						"rules": [
+							{
+								"type": "creation"
+							},
+							{
+								"type": "update"
+							},
+							{
+								"type": "deletion"
+							},
+							{
+								"type": "non_fast_forward"
+							},
+							{
+								"type": "required_signatures"
+							}
+						]
+					}
+				],
+				"environments": [],
+				"pages": [],
+				"variables": [],
+				"webhooks": [],
+				"actions_policies": []
+			}
 		}
 	},
-	"unavailable": {}
+	"unavailable": {
+		"orgs/TOANQUYNHLLC/settings/network-configurations": "HTTP 404",
+		"orgs/TOANQUYNHLLC/secret-scanning/custom-patterns": "HTTP 404",
+		"orgs/TOANQUYNHLLC/secret-scanning/pattern-configurations": "HTTP 404",
+		"orgs/TOANQUYNHLLC/actions/policies": "HTTP 403",
+		"orgs/TOANQUYNHLLC/dependabot/repository-access": "API không trả default_level; danh sách repository đã lưu, không suy đoán null",
+		"orgs/TOANQUYNHLLC/actions/hosted-runners": "HTTP 404",
+		"orgs/TOANQUYNHLLC/rulesets": "HTTP 403; GraphQL chỉ đọc một phần, cần REST trước khi khôi phục",
+		"orgs/TOANQUYNHLLC/hooks": "HTTP 404",
+		"repos/TOANQUYNHLLC/.github/actions/cache/retention-limit": "HTTP 402",
+		"repos/TOANQUYNHLLC/.github/actions/cache/storage-limit": "HTTP 402",
+		"repos/TOANQUYNHLLC/.github/secret-scanning/custom-patterns": "HTTP 404"
+	}
 }

@@ -88,7 +88,15 @@ def citationKeywords():
 
 def repositorySettings(repo, discussions=False):
 	"""Cài đặt mong muốn của repository: chung cho mọi repository, cộng phần riêng của nó."""
-	wanted = dict(REPOSITORY_SETTINGS, **REPOSITORY_OVERRIDES.get(repo, {}))
+	overrides = next(
+		(
+			value
+			for name, value in REPOSITORY_OVERRIDES.items()
+			if name.casefold() == repo.casefold()
+		),
+		{},
+	)
+	wanted = dict(REPOSITORY_SETTINGS, **overrides)
 	if discussions:
 		wanted['has_discussions'] = True
 	return wanted
@@ -188,7 +196,7 @@ def syncSettings(repos, apply, discussions):
 
 def syncTopics(repo, current, apply):
 	"""Topics của .github khớp keywords trong CITATION.cff; repository khác không quản lý."""
-	if repo != '.github':
+	if repo.casefold() != '.github':
 		return
 	if (
 		not isinstance(current, dict)

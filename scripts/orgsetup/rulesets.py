@@ -85,7 +85,7 @@ ORG_EXTRA_BRANCH = 'refs/heads/main'
 def rulesetFor(repo):
 	"""Ruleset Protect Main cho repository: repository khác chỉ giữ kiểm tra bắt buộc có job tương ứng."""
 	ruleset = json.loads(RULESET_FILE.read_text(encoding='utf-8'))
-	if repo != '.github':
+	if repo.casefold() != '.github':
 		jobs = files.templateJobs()
 		for rule in ruleset['rules']:
 			if rule['type'] == 'required_status_checks':
@@ -669,7 +669,7 @@ def syncRulesets(repos, apply):
 	failed = []
 	for repo in repos:
 		print(f'== {github.ORG}/{repo}')
-		if repo != '.github':
+		if repo.casefold() != '.github':
 			base = urllib.parse.quote(github.defaultBranch(repo), safe='')
 			absent = [
 				workflow
@@ -717,37 +717,41 @@ def syncRulesets(repos, apply):
 		raise RuntimeError(f'Không áp dụng được ruleset cấp repository: {", ".join(failed)}')
 
 
+def readOrgRulesetsGraphql():
+	"""Đọc ruleset tổ chức qua GraphQL; không chứng minh đã đọc các trường chỉ có ở REST."""
+	data = github.ghJson(
+		'api',
+		'graphql',
+		'--paginate',
+		'--slurp',
+		'-f',
+		f'query={ORG_RULESETS_QUERY}',
+		'-f',
+		f'org={github.ORG}',
+	)
+	if not isinstance(data, list) or not data:
+		raise ValueError('ruleset: GraphQL không trả danh sách trang')
+	live = {}
+	for index, page in enumerate(data):
+		if not isinstance(page, dict) or page.get('errors'):
+			raise ValueError('ruleset: trang GraphQL thiếu dữ liệu hoặc có errors')
+		connection = page['data']['organization']['rulesets']
+		nodes = graphqlNodes(connection, 'rulesets', paginated=index < len(data) - 1)
+		if connection['pageInfo']['hasNextPage'] != (index < len(data) - 1):
+			raise ValueError('ruleset: trạng thái phân trang GraphQL không khớp các trang đã đọc')
+		for node in nodes:
+			ruleset = graphqlRuleset(node)
+			if ruleset['name'] in live:
+				raise ValueError(f'ruleset: tên {ruleset["name"]} trùng trong GraphQL')
+			live[ruleset['name']] = ruleset
+	return live
+
+
 def compareOrgRulesets():
 	"""So tệp ruleset cấp tổ chức qua GraphQL; việc ghi cần quyền và gói GitHub hỗ trợ."""
 	how = 'Organization settings → Repository → Rulesets → New ruleset → Import a ruleset'
 	try:
-		data = github.ghJson(
-			'api',
-			'graphql',
-			'--paginate',
-			'--slurp',
-			'-f',
-			f'query={ORG_RULESETS_QUERY}',
-			'-f',
-			f'org={github.ORG}',
-		)
-		if not isinstance(data, list) or not data:
-			raise ValueError('ruleset: GraphQL không trả danh sách trang')
-		live = {}
-		for index, page in enumerate(data):
-			if not isinstance(page, dict) or page.get('errors'):
-				raise ValueError('ruleset: trang GraphQL thiếu dữ liệu hoặc có errors')
-			connection = page['data']['organization']['rulesets']
-			nodes = graphqlNodes(connection, 'rulesets', paginated=index < len(data) - 1)
-			if connection['pageInfo']['hasNextPage'] != (index < len(data) - 1):
-				raise ValueError(
-					'ruleset: trạng thái phân trang GraphQL không khớp các trang đã đọc'
-				)
-			for node in nodes:
-				ruleset = graphqlRuleset(node)
-				if ruleset['name'] in live:
-					raise ValueError(f'ruleset: tên {ruleset["name"]} trùng trong GraphQL')
-				live[ruleset['name']] = ruleset
+		live = readOrgRulesetsGraphql()
 		names = organizationRulesetNames(live)
 	except (RuntimeError, KeyError, ValueError, TypeError) as exc:
 		print(f'   ⚠ không đọc được qua GraphQL: {exc}')
