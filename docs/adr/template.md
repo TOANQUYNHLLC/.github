@@ -5,16 +5,16 @@
 
 ## 📌 BỐI CẢNH
 
-Vấn đề cần quyết định, ràng buộc và các lựa chọn đã cân nhắc.
+Mục tiêu, vấn đề cần giải quyết và các ràng buộc đang áp dụng.
 
 ## ✅ QUYẾT ĐỊNH
 
-Điều dự án sẽ làm.
+Quy tắc hoặc cơ chế được chọn, phạm vi áp dụng và nguồn cấu hình.
 
 ## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
 
-Các lựa chọn khác và lý do không chọn — chỉ ghi điều kiểm chứng được.
+Các lựa chọn phù hợp và lý do chọn quyết định trên; chỉ ghi điều kiểm chứng được.
 
 ## ⚖️ HỆ QUẢ
 
-Lợi ích, đánh đổi và việc cần làm theo sau.
+Kết quả vận hành, đánh đổi, giới hạn và trách nhiệm khi áp dụng.

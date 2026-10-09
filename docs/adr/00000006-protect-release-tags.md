@@ -5,21 +5,20 @@
 
 ## 📌 BỐI CẢNH
 
-GitHub Release, nội dung phát hành và liên kết so sánh phiên bản đều dựa vào tag phát hành: `Stable.v*`, `Beta.v*` ([ADR 00000012](00000012-monthly-releases.md)) và các tag `v*` đã phát hành. Protect Main chỉ bảo vệ nhánh: người có quyền ghi vẫn tạo, dời hoặc xóa được tag, khiến Release đã công bố trỏ tới mã khác lúc phát hành.
+Tag xác định mã nguồn của phiên bản phát hành. Bảo vệ nhánh chính không ngăn người có quyền ghi tạo, dời hoặc xóa tag; tag và Release cần chính sách bảo vệ riêng.
 
 ## ✅ QUYẾT ĐỊNH
 
-- Mỗi repository có ruleset **Protect Release Tags** trong `rulesets/protect-release-tags.json`: áp dụng cho `refs/tags/Stable.v*`, `refs/tags/Beta.v*` và `refs/tags/v*`, chặn tạo, cập nhật (dời), xóa tag và force push; tag chỉ trỏ tới commit có chữ ký.
-- Danh sách bỏ qua giống Protect Main: chỉ người quản trị tạo được tag phát hành.
-- Tổ chức bật **Immutable releases**: Release đã phát hành không dời được tag, không sửa được tệp đính kèm, không dùng lại được tên tag.
+`rulesets/protect-release-tags.json` là nguồn cho **Protect Release Tags**, áp dụng cho `refs/tags/Stable.v*`, `refs/tags/Beta.v*` và `refs/tags/v*`.
+
+Ruleset chặn tạo, cập nhật, xóa tag và force push; tag phải trỏ tới commit có chữ ký. Danh sách bỏ qua giống Protect Main, để người quản trị thực hiện phát hành.
+
+Tổ chức dùng **Immutable releases**: tag và tệp đính kèm của Release đã phát hành không được thay đổi; tên tag không được dùng lại. Định dạng phiên bản theo [ADR 00000012](00000012-monthly-releases.md).
 
 ## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
 
-- **Ruleset tag cấp tổ chức**: không được thực thi với gói Free; giữ bản cấp tổ chức sẵn sàng cho gói Team.
-- **Push ruleset**: chỉ áp dụng cho repository riêng tư hoặc internal, không bảo vệ được repository công khai như `.github`.
-- **Ruleset tag cấp repository** (chọn): dùng được với repository công khai trên gói Free.
+Ruleset cấp repository bảo vệ repository công khai trên gói Free. Ruleset cấp tổ chức cần gói hỗ trợ; push ruleset không bảo vệ tag của repository công khai.
 
 ## ⚖️ HỆ QUẢ
 
-- Người đóng góp không phải người quản trị không tạo được tag phát hành; phát hành do người quản trị thực hiện ([ADR 00000012](00000012-monthly-releases.md)).
-- Release đính kèm tệp phải tạo bản nháp, tải tệp lên rồi mới phát hành.
+Người quản trị tạo tag phát hành. Release có tệp đính kèm được tạo dưới dạng bản nháp, tải đủ tệp rồi phát hành. Bản cấp tổ chức được sinh từ nguồn cấp repository để quản lý khi có gói hỗ trợ.

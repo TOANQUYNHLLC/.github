@@ -3,12 +3,15 @@
 Chạy: python3 scripts/org-setup.py <lệnh> [--apply] [--repo TÊN] [--discussions]
 Mặc định chỉ xem trước, không thay đổi gì; thêm --apply để áp dụng trên GitHub.
 Yêu cầu: gh đã đăng nhập bằng tài khoản có quyền quản trị tổ chức.
+--repo chỉ nhận tên repository của tổ chức (không kèm owner), dùng với files, settings,
+rulesets, team, labels; --discussions chỉ dùng với settings. Tùy chọn sai dừng trước khi gọi API.
 
 Lệnh (nên chạy theo thứ tự):
 	import-settings: đọc cài đặt GitHub của tổ chức và mọi repository đọc được (cả archive),
 		ghi github-settings.json tại máy; không ghi GitHub, không nhận --apply, --repo, --discussions.
 	local-settings: đối chiếu github-settings.json; --apply để áp dụng các mục API được hỗ trợ,
 		bao gồm trạng thái Actions, bảo mật, thời gian lưu dữ liệu, fork, tương tác và cấu hình bảo mật.
+		Kiểm tra tổ chức trước, đọc repository song song có giới hạn; kế hoạch và ghi theo thứ tự nguồn.
 		Đọc mọi phạm vi trước khi ghi, đọc lại sau khi áp dụng; lỗi hoặc mục chưa hoàn tất trả mã lỗi.
 		Không nhận --repo, --discussions; nguồn JSON xác định phạm vi cần xử lý.
 	files: mở Pull Request thêm các tệp dùng chung còn thiếu — .editorconfig, .gitattributes,
@@ -26,32 +29,48 @@ Lệnh (nên chạy theo thứ tự):
 		Cài đặt thiếu trường/sai kiểu không được PATCH; quyền Actions và trạng thái bảo mật chưa đọc
 		được được cảnh báo và bỏ qua. Topics lấy từ keywords YAML hợp lệ của CITATION.cff.
 		Bỏ archive trước các cập nhật khác khi nguồn yêu cầu; archive sau topics, bảo mật và quyền Actions.
+		Đọc lại các trường cài đặt chính sau khi ghi; lỗi đọc, sai kiểu hoặc giá trị chưa khớp dừng lệnh.
+		Các bước topics và bảo mật dùng metadata đã xác nhận, gồm chế độ công khai/riêng tư mới.
 	rulesets: tạo hoặc cập nhật ruleset Protect Main (rulesets/protect-main.json) và Protect Release
 		Tags (rulesets/protect-release-tags.json, ADR 00000006); Protect Main của repository khác chỉ giữ
 		kiểm tra bắt buộc có job tương ứng. Bỏ qua repository
 		chưa có workflow kiểm tra bắt buộc — hợp nhất Pull Request của lệnh files trước.
+		Sau khi ghi, xác minh ID và đọc lại cấu hình trước khi báo thành công.
+		Đối chiếu danh sách tập hợp không phụ thuộc thứ tự, giữ nguyên nội dung gửi GitHub.
+		Kiểm tra cờ và từng phần tử của quyền hủy phê duyệt, status checks trước lần ghi đầu tiên.
+		--apply trả mã lỗi khi thiếu workflow hoặc có thao tác ghi, xác nhận thất bại,
+		sau khi thử các ruleset còn lại.
 	team: quản lý thông tin trong TEAMS và cấu trúc team cha và team con trong TEAM_PARENTS,
 		tạo team cha trước team con,
-		đọc lại quan hệ sau khi ghi. Team có quyền None giữ nguyên thành viên và quyền repository;
+		kiểm tra cấu hình trước khi gọi API; đọc lại thông tin và quan hệ sau khi tạo hoặc sửa.
+		Team có quyền None giữ nguyên thành viên và quyền repository;
 		các team có quyền cấu hình được thêm người quản trị và cấp quyền trên mọi repository
 		(không hạ quyền đã cao hơn); đã đủ thì báo đã đúng.
 		Lời mời đang chờ, dữ liệu sai hoặc quyền tùy chỉnh chưa xếp hạng được dừng trước khi ghi;
 		lời mời mới được báo chờ chấp nhận cho đến khi GitHub xác nhận maintainer active.
+		Sau mỗi lần cấp quyền repository, đọc lại và yêu cầu quyền bằng hoặc cao hơn nguồn;
+		lỗi xác nhận dừng lệnh. Lời mời mới pending trả mã lỗi sau khi xử lý các team còn lại.
 	labels: tạo hoặc cập nhật màu, mô tả theo labels.yml (chỉ nhãn khác), đổi tên nhãn chỉ khác chữ hoa/thường;
 		không xóa nhãn riêng của repository.
 	org-settings: cài đặt tổ chức (ORG_SETTINGS) và quyền GitHub Actions cấp tổ chức; mục chỉ đổi được
 		trên web (ORG_WEB_ONLY_SETTINGS) thì chỉ so và báo.
+		Đọc lại các trường ORG_SETTINGS sau khi ghi và dừng khi chưa xác nhận đúng nguồn.
 	org-rulesets: tạo hoặc cập nhật ruleset cấp tổ chức Organization Protect Main, Organization Protect
 		Release Tags và Organization Protect Pushes (ADR 00000005) (rulesets/organization-*.json) cho mọi
 		repository; cần token có quyền admin:org
 		(gh auth refresh -h github.com -s admin:org) và gói GitHub Team trở lên. Gói Free: REST API
-		trả HTTP 403 nên chỉ so tệp với ruleset trên web (đọc qua GraphQL) — tạo, sửa bằng import trên web.
+		trả HTTP 403 nên chỉ so tệp với ruleset trên web (đọc qua GraphQL).
+		Lỗi đọc GraphQL làm lệnh đối chiếu và preview trả mã lỗi.
+		Sau khi ghi, xác minh ID và đọc lại cấu hình trước khi báo thành công.
+		--apply trả mã lỗi khi REST bị chặn hoặc có thao tác ghi, xác nhận thất bại;
+		tạo, sửa trên web cũng cần gói hỗ trợ.
 	preview: xem trước mọi lệnh trên cùng lúc, in kết quả theo thứ tự trên (make org-preview).
 """
 
 import argparse
 import contextlib
 import io
+import re
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -66,7 +85,8 @@ except ModuleNotFoundError:
 
 from orgsetup import configuration, files, github, labels, rulesets, settings, teams
 
-COMMANDS = ('files', 'settings', 'rulesets', 'team', 'labels', 'org-rulesets', 'org-settings')
+REPOSITORY_COMMANDS = ('files', 'settings', 'rulesets', 'team', 'labels')
+COMMANDS = (*REPOSITORY_COMMANDS, 'org-rulesets', 'org-settings')
 PREVIEW_NOTE = 'Chế độ xem trước — chạy lại với --apply để áp dụng.'
 
 
@@ -161,14 +181,15 @@ def main():
 		'--discussions', action='store_true', help='settings: bật GitHub Discussions'
 	)
 	args = parser.parse_args()
-	if args.command in ('import-settings', 'local-settings') and (
-		args.repo or args.discussions or (args.command == 'import-settings' and args.apply)
-	):
-		parser.error(
-			'import-settings chỉ nhập local; local-settings áp dụng các phạm vi trong github-settings.json; không nhận --repo, --discussions'
-		)
-	if args.command == 'preview' and (args.apply or args.repo or args.discussions):
-		parser.error('preview chỉ xem trước mọi lệnh, không nhận --apply, --repo, --discussions')
+	if args.repo is not None:
+		if args.command not in REPOSITORY_COMMANDS:
+			parser.error('--repo chỉ dùng với files, settings, rulesets, team, labels')
+		if not re.fullmatch(r'[A-Za-z0-9_.-]+', args.repo) or args.repo in ('.', '..'):
+			parser.error('--repo cần tên repository hợp lệ, không trống và không kèm owner')
+	if args.discussions and args.command != 'settings':
+		parser.error('--discussions chỉ dùng với settings')
+	if args.apply and args.command in ('preview', 'import-settings'):
+		parser.error(f'{args.command} không nhận --apply')
 
 	def repositories():
 		# Giữ lỗi đọc để main báo sau khi xác minh đăng nhập; không gọi lại một request đã thất bại.

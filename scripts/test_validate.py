@@ -30,6 +30,52 @@ except ModuleNotFoundError:
 
 
 class ValidateTest(unittest.TestCase):
+	def testRequiredReviewerStructureIsReportedByValidator(self):
+		path = self.repo / 'rulesets/protect-main.json'
+		data = json.loads(path.read_text(encoding='utf-8'))
+		parameters = next(
+			rule['parameters'] for rule in data['rules'] if rule['type'] == 'pull_request'
+		)
+		parameters['required_reviewers'] = [
+			{
+				'file_patterns': ['src/**'],
+				'minimum_approvals': True,
+				'reviewer': {'id': 7, 'type': 'Team'},
+			}
+		]
+		path.write_text(json.dumps(data, ensure_ascii=False, indent='\t') + '\n', encoding='utf-8')
+		self.assertFails(
+			'rulesets/protect-main.json: cấu trúc ruleset không hợp lệ: '
+			'ruleset: pull_request.required_reviewers.minimum_approvals phải là số nguyên không âm'
+		)
+
+	def testInvalidNestedRulesetParametersAreReported(self):
+		path = self.repo / 'rulesets/protect-main.json'
+		original = path.read_text(encoding='utf-8')
+		for ruleType, expected in (
+			('pull_request', 'pull_request.dismissal_restriction.enabled phải là boolean'),
+			(
+				'required_status_checks',
+				'required_status_checks có context hoặc integration_id không hợp lệ',
+			),
+		):
+			with self.subTest(ruleType=ruleType):
+				data = json.loads(original)
+				parameters = next(
+					rule['parameters'] for rule in data['rules'] if rule['type'] == ruleType
+				)
+				if ruleType == 'pull_request':
+					parameters['dismissal_restriction']['enabled'] = 'true'
+				else:
+					parameters['required_status_checks'][0]['integration_id'] = True
+				path.write_text(
+					json.dumps(data, ensure_ascii=False, indent='\t') + '\n', encoding='utf-8'
+				)
+				self.assertFails(
+					f'rulesets/protect-main.json: cấu trúc ruleset không hợp lệ: ruleset: {expected}'
+				)
+		path.write_text(original, encoding='utf-8')
+
 	def testGitHubSettingsRejectUnknownFieldsAndDependencyConflicts(self):
 		path = self.repo / 'github-settings.json'
 		original = path.read_text(encoding='utf-8')
@@ -931,6 +977,52 @@ class ValidateTest(unittest.TestCase):
 			('tên biến', 'bad_variable'),
 		):
 			self.assertIn(f'{kind} "{name}" phải viết camelCase', output)
+
+	def testNamesInAsyncArgumentsLambdasAndHandlersAreChecked(self):
+		path = self.repo / 'example.py'
+		path.write_text(
+			'async def bad_async(positional_arg, /, *remaining_args, flag_arg=False, **extra_args):\n'
+			'\ttry:\n'
+			'\t\tbad_result = lambda lambda_arg: lambda_arg\n'
+			'\texcept Exception as caught_error:\n'
+			'\t\treturn caught_error\n',
+			encoding='utf-8',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 1, output)
+		for kind, name in (
+			('tên hàm', 'bad_async'),
+			('tham số', 'positional_arg'),
+			('tham số', 'remaining_args'),
+			('tham số', 'flag_arg'),
+			('tham số', 'extra_args'),
+			('tham số', 'lambda_arg'),
+			('tên biến', 'bad_result'),
+			('tên biến', 'caught_error'),
+		):
+			self.assertIn(f'{kind} "{name}" phải viết camelCase', output)
+
+	def testWalrusBindingsInsideExpressionsAreChecked(self):
+		path = self.repo / 'example.py'
+		text = (
+			'items = [item for item in values if (selected_value := item)]\n'
+			'label = f"{(formatted_value := value)}"\n'
+			'literal = "literal_value = 1"\n'
+		)
+		path.write_text(text, encoding='utf-8')
+		code, output = self.runValidate()
+		self.assertEqual(code, 1, output)
+		for name in ('selected_value', 'formatted_value'):
+			self.assertIn(f'tên biến "{name}" phải viết camelCase', output)
+		self.assertNotIn('tên biến "literal_value"', output)
+		path.write_text(
+			text.replace('selected_value', 'selectedValue').replace(
+				'formatted_value', 'formattedValue'
+			),
+			encoding='utf-8',
+		)
+		code, output = self.runValidate()
+		self.assertEqual(code, 0, output)
 
 	def testParameterAndVariableNamesMustNotBeSnakeCase(self):
 		self.edit(

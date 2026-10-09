@@ -27,7 +27,7 @@ LIBRARY_NAME_PATTERNS = {
 
 
 def importedNames(nodes):
-	"""Tên được import trong tệp (nodes: mọi nút của cây cú pháp) → đường dẫn đầy đủ (import http.server → http;
+	"""Tên được import trong tệp (nodes: các nút đã giữ của cây cú pháp) → đường dẫn đầy đủ (import http.server → http;
 	from x import y → x.y)."""
 	names = {}
 	for node in nodes:
@@ -111,15 +111,35 @@ def nameProblems(text):
 		tree = ast.parse(text)
 	except SyntaxError:
 		return None
-	# Duyệt cây một lần, ba bước dùng chung danh sách nút.
-	# Đọc trực tiếp các trường đã có trên nút, tránh getattr cho từng trường của cây lớn.
-	nodes = [tree]
-	for node in nodes:
-		for value in vars(node).values():
+	# Duyệt các nhánh của cây, chỉ giữ các nút mang tên cần kiểm tra hoặc khai báo thư viện.
+	# _fields chỉ chứa trường cú pháp, không duyệt lại metadata dòng/cột trên mỗi nút.
+	namingTypes = {
+		ast.ClassDef,
+		ast.FunctionDef,
+		ast.AsyncFunctionDef,
+		ast.Lambda,
+		ast.ExceptHandler,
+		ast.MatchAs,
+		ast.MatchStar,
+		ast.MatchMapping,
+		ast.alias,
+		ast.Import,
+		ast.ImportFrom,
+	}
+	pending, nodes = [tree], []
+	for node in pending:
+		nodeType = type(node)
+		if nodeType in namingTypes or (nodeType is ast.Name and isinstance(node.ctx, ast.Store)):
+			nodes.append(node)
+		# Tên đã xét ngữ cảnh Store ở trên; hằng không chứa nút con cần kiểm tra.
+		if nodeType is ast.Name or nodeType is ast.Constant:
+			continue
+		for field in node._fields:
+			value = getattr(node, field, None)
 			if isinstance(value, ast.AST):
-				nodes.append(value)
+				pending.append(value)
 			elif isinstance(value, list):
-				nodes.extend(item for item in value if isinstance(item, ast.AST))
+				pending.extend(item for item in value if isinstance(item, ast.AST))
 	required = libraryMethods(nodes)
 	problems = []
 	for node in nodes:

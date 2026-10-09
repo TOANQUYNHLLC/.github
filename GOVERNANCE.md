@@ -1,48 +1,44 @@
 # 🏛️ QUẢN TRỊ DỰ ÁN
 
-Tài liệu này mô tả ai ra quyết định và cách thay đổi được chấp nhận trong **mọi repository** của **CÔNG TY TNHH TOÀN QUỲNH** trên GitHub, trừ khi repository đó có tệp `GOVERNANCE.md` riêng.
-
----
+Quy định vai trò, quyết định và quyền truy cập cho các repository của **CÔNG TY TNHH TOÀN QUỲNH**, trừ khi dự án có chính sách riêng. `GOVERNANCE.md` là chính sách tổ chức, không tự được GitHub sao chép vào repository đích.
 
 ## 👥 VAI TRÒ
 
-| Vai trò            | Quyền hạn và trách nhiệm                                                                                                                           |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Người quản trị** | Quyết định định hướng, duyệt và hợp nhất Pull Request, quản lý quyền truy cập, ruleset và phát hành. Danh sách: [`MAINTAINERS.md`](MAINTAINERS.md) |
-| **Người đóng góp** | Báo lỗi, đề xuất, gửi Pull Request theo [`CONTRIBUTING.md`](CONTRIBUTING.md)                                                                       |
-| **Chủ sở hữu mã**  | Người hoặc team trong `CODEOWNERS` của từng repository, bắt buộc phê duyệt thay đổi thuộc phần mình phụ trách                                      |
+| Vai trò        | Trách nhiệm                                                                                                                 |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Người quản trị | Định hướng, phê duyệt và hợp nhất PR, quản lý quyền, ruleset và phát hành; danh sách trong [MAINTAINERS.md](MAINTAINERS.md) |
+| Chủ sở hữu mã  | Đánh giá phần phụ trách theo `CODEOWNERS` của repository                                                                    |
+| Người đóng góp | Báo lỗi, đề xuất và gửi PR theo [CONTRIBUTING.md](CONTRIBUTING.md)                                                          |
 
----
+## 🗳️ RA QUYẾT ĐỊNH
 
-## 🗳️ CÁCH RA QUYẾT ĐỊNH
+Thay đổi thông thường được xem xét qua Pull Request, cần phê duyệt của chủ sở hữu mã và các kiểm tra phù hợp. Thay đổi lớn về kiến trúc, quy ước, công cụ hoặc quy trình được trao đổi qua Issue trước; người quản trị quyết định cuối cùng.
 
-- Thay đổi thông thường: quyết định qua Pull Request — cần phê duyệt của chủ sở hữu mã và mọi kiểm tra tự động thành công.
-- Thay đổi lớn (kiến trúc, quy ước chung, công cụ, quy trình): tạo Issue để trao đổi trước; người quản trị ra quyết định cuối cùng và ghi lại lý do trong Issue (repository `.github` ghi thêm bản ghi quyết định trong `docs/adr/`).
-- Thay đổi quy ước dùng chung cho cả tổ chức (repository `.github`): chỉ người quản trị được hợp nhất; khi chuẩn bị phiên bản, thay đổi được tóm tắt cho người sử dụng trong mục **CHƯA PHÁT HÀNH** của `CHANGELOG.md`.
-
----
+Repository `.github` ghi quyết định chung trong [ADR](docs/adr/README.md), mỗi chủ đề một tài liệu hoàn chỉnh. Tài liệu vận hành mô tả hiện trạng; nội dung cho người sử dụng được chuẩn bị trong `CHANGELOG.md` khi phát hành.
 
 ## 🔀 ĐÁNH GIÁ VÀ HỢP NHẤT
 
-- Nhánh chính được bảo vệ bằng ruleset trong [`rulesets/`](rulesets/): bắt buộc Pull Request, phê duyệt, kiểm tra tự động, cho phép Merge và Squash (ưu tiên Squash; không Rebase — ADR 00000007), commit có chữ ký.
-- Người quản trị được bỏ qua yêu cầu phê duyệt khi không có người quản trị khác để duyệt. Với repository `.github`, tài khoản của người quản trị ([`MAINTAINERS.md`](MAINTAINERS.md)) nằm trong danh sách bỏ qua của ruleset (xem [ADR 00000004](docs/adr/00000004-protect-main.md)) nhưng chỉ dùng khi thật cần: thay đổi thông thường vẫn qua Pull Request và kiểm tra tự động, không đẩy thẳng lên nhánh chính.
-- Sửa lỗi khẩn cấp theo quy trình **Sửa lỗi khẩn cấp** trong [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Nhánh chính được bảo vệ theo [ruleset](rulesets/README.md) khi loại repository và gói GitHub hỗ trợ. Thay đổi qua PR, có phê duyệt, kiểm tra phù hợp và commit có chữ ký. Cấp repository cho phép Merge và Squash, ưu tiên Squash; không Rebase and merge theo [ADR 00000007](docs/adr/00000007-signed-commits-merge-methods.md).
 
----
+Người quản trị chỉ dùng quyền bỏ qua ruleset khi thật cần, gồm trường hợp không có người quản trị khác để duyệt. Thay đổi thông thường vẫn qua PR và kiểm tra, không đẩy thẳng lên nhánh chính. Danh sách bỏ qua theo [ADR 00000004](docs/adr/00000004-protect-main.md).
 
-## ➕ THAY ĐỔI NGƯỜI QUẢN TRỊ
+Sửa lỗi khẩn cấp theo quy trình trong [CONTRIBUTING.md](CONTRIBUTING.md). Kiểm tra tại máy vẫn bắt buộc khi GitHub Actions tắt.
 
-- Thêm người quản trị: người quản trị hiện tại đề xuất qua Pull Request kèm lý do, sửa cùng lúc [`MAINTAINERS.md`](MAINTAINERS.md), `MAINTAINERS` trong [`scripts/orgsetup/teams.py`](scripts/orgsetup/teams.py) và `actor_id` trong danh sách bỏ qua của [`rulesets/protect-*.json`](rulesets/) (`validate.py` báo lỗi khi lệch). Sau khi hợp nhất, chạy `python3 scripts/org-setup.py team --apply` và `rulesets --apply`. `CODEOWNERS` dùng team `@TOANQUYNHLLC/maintainers` nên không cần sửa.
-- Người quản trị nghỉ hoặc không còn tham gia: bỏ khỏi danh sách hiện tại trong `MAINTAINERS.md`, `teams.py` và danh sách bỏ qua của ruleset như trên rồi chạy `rulesets --apply`; gỡ khỏi các team và thu hồi quyền truy cập ngay trên web (`org-setup.py team` chỉ thêm người, không gỡ).
-- Quyền truy cập GitHub cấp theo nguyên tắc tối thiểu: chỉ cấp quyền cần cho công việc.
+## 🔑 QUẢN LÝ QUYỀN TRUY CẬP
 
----
+Quyền được cấp theo nhu cầu công việc. Mọi thay đổi người quản trị được đề xuất và duyệt qua PR; cập nhật cùng lúc:
 
-## 📜 THAY ĐỔI TÀI LIỆU NÀY
+- [MAINTAINERS.md](MAINTAINERS.md).
+- `MAINTAINERS` trong [teams.py](scripts/orgsetup/teams.py).
+- Danh sách bỏ qua của ruleset cấp repository trong [rulesets/](rulesets/).
 
-Mọi thay đổi `GOVERNANCE.md` đi qua Pull Request, do người quản trị phê duyệt; khi chuẩn bị phiên bản, thay đổi được nêu trong mục **CHƯA PHÁT HÀNH** của `CHANGELOG.md`.
+Sau khi hợp nhất, áp dụng team bằng `python3 scripts/org-setup.py team --apply` và ruleset bằng `python3 scripts/org-setup.py rulesets --apply`. `CODEOWNERS` dùng team maintainers nên không cần liệt kê tài khoản riêng.
 
----
+Khi người quản trị ngừng tham gia, cập nhật các nguồn trên và thu hồi membership, quyền truy cập trên GitHub. Lệnh team chỉ thêm người, không tự gỡ; việc sửa danh sách local chưa hoàn tất thu hồi quyền.
+
+## 📝 DUY TRÌ CHÍNH SÁCH
+
+Người quản trị phê duyệt thay đổi chính sách qua PR. Tài liệu, cấu hình và scripts liên quan phải thống nhất trong cùng thay đổi; nội dung phát hành chỉ được chuẩn bị khi phát hành phiên bản.
 
 <p align="center">
     <strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>

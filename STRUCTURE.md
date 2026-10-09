@@ -1,72 +1,26 @@
-# CẤU TRÚC REPOSITORY `.github` CỦA TỔ CHỨC
+# 📁 CẤU TRÚC VÀ PHẠM VI ÁP DỤNG
 
-Repository `TOANQUYNHLLC/.github` cung cấp một số tài liệu và mẫu mặc định cho các repository thuộc tổ chức. GitHub không sao chép các file này sang repository khác.
+Repository `TOANQUYNHLLC/.github` cung cấp hồ sơ tổ chức, tệp cộng đồng và tài nguyên dùng chung. [README.md](README.md) là điểm bắt đầu; tài liệu này giải thích vị trí tệp và cách dùng trong repository đích.
 
-## 1. PHÂN BIỆT REPOSITORY VÀ THƯ MỤC `.github`
+## 🗂️ CÁC NHÓM TÀI NGUYÊN
 
-- `.github` bên ngoài là tên repository của tổ chức.
-- `.github` bên trong là thư mục cấu hình GitHub, tính từ gốc repository.
-- Vì vậy, đường dẫn local `.../.github/.github/ISSUE_TEMPLATE/` là hợp lệ khi thư mục ngoài cùng là gốc repository tên `.github`.
-- Với dự án thông thường `website`, đường dẫn đúng là `website/.github/ISSUE_TEMPLATE/`, không phải `website/.github/.github/ISSUE_TEMPLATE/`.
+| Vị trí                         | Nội dung                                                                         |
+| ------------------------------ | -------------------------------------------------------------------------------- |
+| Gốc repository                 | README, chính sách cộng đồng, quản trị, cấu hình công cụ và nguồn cài đặt GitHub |
+| `profile/`                     | Hồ sơ hiển thị trên trang tổ chức                                                |
+| `.github/`                     | Biểu mẫu, workflows và cấu hình phục vụ GitHub                                   |
+| `workflow-templates/`          | Workflow mẫu, metadata và icon dùng trong bộ chọn Actions                        |
+| `repository-templates/`        | Tệp nguồn để chọn và chép vào dự án                                              |
+| `scripts/`                     | Kiểm tra, công cụ quản trị và tests                                              |
+| `shell/`                       | Tiện ích Git tại máy                                                             |
+| `rulesets/`                    | Nguồn bảo vệ nhánh, tag và push                                                  |
+| `docs/`, `docs/adr/`, `specs/` | Hướng dẫn vận hành, quyết định kiến trúc và quy trình rà soát                    |
 
-## 2. CÂY THƯ MỤC
+`.github` là tên repository và cũng là tên thư mục cấu hình bên trong. Vì vậy, đường dẫn local `.github/.github/ISSUE_TEMPLATE/` hợp lệ khi thư mục đầu là gốc repository. Dự án khác chỉ cần `<dự án>/.github/ISSUE_TEMPLATE/`.
 
-Phần cấu trúc liên quan đến tài liệu cộng đồng và cấu hình GitHub trong thư mục làm việc. Tệp chỉ có ở máy cần được hợp nhất vào nhánh mặc định trên GitHub trước khi có thể áp dụng cho repository khác.
+## 📋 TỆP CỘNG ĐỒNG MẶC ĐỊNH
 
-```text
-.github/                               ← Gốc repository TOANQUYNHLLC/.github
-├── README.md                          ← Giới thiệu repository.
-├── STRUCTURE.md                       ← Tài liệu cấu trúc.
-├── CONTRIBUTING.md                    ← Hướng dẫn đóng góp mặc định
-├── CODE_OF_CONDUCT.md                 ← Quy tắc ứng xử mặc định
-├── SECURITY.md                        ← Chính sách bảo mật mặc định
-├── SUPPORT.md                         ← Hướng dẫn hỗ trợ mặc định
-├── ACCESSIBILITY.md                   ← Chính sách khả năng tiếp cận
-├── specs/
-│   └── jobs-guideline.md                ← Quy trình rà soát dự án
-├── profile/
-│   └── README.md                      ← Giới thiệu trên trang tổ chức
-├── .github/                           ← Thư mục cấu hình GitHub
-│   ├── ISSUE_TEMPLATE/
-│   │   ├── bug-report.yml             ← Form báo lỗi
-│   │   ├── documentation.yml          ← Form báo lỗi tài liệu
-│   │   ├── test-failure.yml           ← Form lỗi CI hoặc kiểm thử
-│   │   ├── feature-request.yml        ← Form đề xuất tính năng
-│   │   ├── question.yml               ← Form câu hỏi
-│   │   └── config.yml                 ← Cấu hình bộ mẫu issue
-│   ├── PULL_REQUEST_TEMPLATE.md       ← Mẫu PR mặc định
-│   ├── PULL_REQUEST_TEMPLATE/
-│   │   ├── feature.md                 ← Mẫu PR tính năng
-│   │   ├── bugfix.md                  ← Mẫu PR sửa lỗi
-│   │   ├── release.md                 ← Mẫu PR chuẩn bị phát hành
-│   │   ├── configuration.md           ← Mẫu PR cấu hình, workflow và hạ tầng
-│   │   ├── documentation.md           ← Mẫu PR tài liệu
-│   │   ├── hotfix.md                  ← Mẫu PR sửa lỗi khẩn cấp
-│   │   ├── refactor.md                ← Mẫu PR tái cấu trúc
-│   │   ├── dependencies.md            ← Mẫu PR dependency, công cụ và action
-│   │   ├── testing.md                 ← Mẫu PR kiểm thử
-│   │   ├── migration.md               ← Mẫu PR migration schema/dữ liệu và backfill
-│   │   └── performance.md             ← Mẫu PR tối ưu hiệu năng
-│   ├── DISCUSSION_TEMPLATE/
-│   │   ├── announcements.yml          ← Thông báo
-│   │   ├── general.yml                ← Thảo luận chung
-│   │   ├── ideas.yml                  ← Ý tưởng
-│   │   ├── q-a.yml                    ← Hỏi đáp
-│   │   └── show-and-tell.yml          ← Chia sẻ demo và tình huống sử dụng
-│   ├── VULNERABILITY_REPORT.yml       ← Form báo cáo lỗ hổng riêng tư
-│   ├── CODEOWNERS                     ← Người phụ trách code của repo
-│   ├── dependabot.yml                 ← Dependabot của repo
-│   ├── release.yml                    ← Cấu hình nội dung Release tự sinh
-│   ├── labeler.yml                    ← Cấu hình gắn nhãn PR
-│   ├── copilot-instructions.md        ← Hướng dẫn Copilot
-│   ├── instructions/                  ← Hướng dẫn theo đường dẫn
-│   ├── agents/                        ← Agent Copilot
-│   └── workflows/                     ← Workflow của repo
-├── workflow-templates/                ← Workflow mẫu và metadata ở gốc repo
-└── repository-templates/              ← Tệp để chép vào từng dự án
-```
-
-## 3. CÁC FILE ĐƯỢC DÙNG LÀM MẶC ĐỊNH
+GitHub dùng nội dung từ repository `.github` công khai khi repository đích cùng tổ chức chưa có bản riêng tương ứng. Mặc định có thể áp dụng cho repository công khai hoặc riêng tư; tệp không được sao chép vào cây Git, bản clone hoặc gói tải xuống.
 
 | File hoặc đường dẫn                             | Vị trí trong repository `.github` | Tác dụng                                                      |
 | ----------------------------------------------- | --------------------------------- | ------------------------------------------------------------- |
@@ -84,106 +38,21 @@ Phần cấu trúc liên quan đến tài liệu cộng đồng và cấu hình 
 | `.github/FUNDING.yml`                           | Đúng đường dẫn.                   | Nút tài trợ                                                   |
 | `.github/VULNERABILITY_REPORT.yml` hoặc `.yaml` | Đúng đường dẫn.                   | Form báo cáo lỗ hổng riêng tư                                 |
 
-Không cần đặt cùng một tài liệu ở nhiều vị trí. Các tính năng Discussions, tài trợ và báo cáo lỗ hổng còn phụ thuộc vào việc bật tính năng và điều kiện hỗ trợ của GitHub.
+Tệp có nhiều vị trí được tìm theo thứ tự `.github/`, gốc, `docs/`; repository này đặt tài liệu cộng đồng ở gốc và biểu mẫu trong `.github/`. Bộ Issue riêng hợp lệ, kể cả `config.yml`, thay thế toàn bộ bộ mặc định. Labels phải được tạo tại repository dùng mẫu.
 
-### NHIỀU MẪU PULL REQUEST
+Discussion cần bật tính năng và có category slug phù hợp với tên tệp. Báo cáo lỗ hổng cần bật Private vulnerability reporting. Biểu mẫu nằm trên nhánh mặc định; tệp mẫu không tự bật tính năng hoặc tạo category.
 
-Repository giữ mẫu chung và các mẫu riêng theo loại công việc. Các mẫu riêng giữ đầy đủ bố cục và checklist của mẫu chung, bổ sung nội dung phù hợp với từng loại:
+Pull Request có mẫu chung và mẫu theo loại công việc. Dùng `?quick_pull=1&template=feature.md` trên URL so sánh nhánh, hoặc `&template=feature.md` khi URL đã có query. Tên tệp theo `.github/PULL_REQUEST_TEMPLATE/`; xem [cách chọn mẫu](CONTRIBUTING.md#-chọn-mẫu-pull-request). Liên kết trong biểu mẫu dùng URL tuyệt đối vì biểu mẫu hiển thị ở repository khác.
 
-```text
-.github/
-├── PULL_REQUEST_TEMPLATE.md           ← Mẫu chung khi không chọn mẫu riêng
-└── PULL_REQUEST_TEMPLATE/
-    ├── feature.md
-    ├── bugfix.md
-    ├── release.md
-    ├── configuration.md
-    ├── documentation.md
-    ├── hotfix.md
-    ├── refactor.md
-    ├── dependencies.md
-    ├── testing.md
-    ├── migration.md
-    └── performance.md
-```
+## ⚙️ TÀI NGUYÊN CẦN THIẾT LẬP RIÊNG
 
-Nhiều mẫu PR không tự tạo bộ chọn giống mẫu issue. Trên URL so sánh nhánh của repository đích, thêm `?quick_pull=1&template=feature.md`; thay `feature.md` bằng tên tệp mẫu tương ứng trong cây thư mục ở trên. Nếu URL đã có tham số, thêm `&template=feature.md`. Các mẫu cần được hợp nhất vào nhánh mặc định trước khi GitHub sử dụng. Xem [hướng dẫn chọn mẫu](CONTRIBUTING.md#-chọn-mẫu-pull-request).
+Workflows, `CODEOWNERS`, Dependabot, labels, ruleset, secrets, variables, quyền team và cài đặt tính năng không tự được thiết lập qua tệp cộng đồng. Cấu hình công cụ, manifests, README, hướng dẫn AI và chính sách quản trị cần phù hợp với dự án đích.
 
-### MẪU THÔNG BÁO DISCUSSION
+Workflow mẫu được chọn trong **Actions → New workflow** hoặc chép vào `.github/workflows/`. Kiểm tra dùng scripts tổ chức bằng cách checkout vào `.org/`; đó là dùng chung script. Workflow hiện có không khai báo `workflow_call`, nên không gọi như reusable workflow bằng `jobs.<job_id>.uses`.
 
-`.github/DISCUSSION_TEMPLATE/announcements.yml` chuẩn hóa nội dung, phạm vi ảnh hưởng, thời điểm áp dụng và việc người sử dụng cần làm. Repository dùng mẫu phải bật Discussions và có category với slug `announcements`; tệp mẫu không tự tạo category hoặc thay đổi quyền đăng thông báo.
+## 📦 TEMPLATE REPOSITORY
 
-### MẪU BÁO LỖI TÀI LIỆU
-
-`.github/ISSUE_TEMPLATE/documentation.yml` thu thập trang hoặc tệp tài liệu, vấn đề, nội dung mong đợi, lệnh/ví dụ không chạy và môi trường liên quan. Mẫu dùng nhãn `documentation`, `needs triage`; yêu cầu tài liệu mới dùng mẫu đề xuất tính năng. Mẫu báo lỗi chức năng có thêm tần suất xảy ra và thông tin runtime/dependency để chẩn đoán.
-
-### MẪU LỖI KIỂM THỬ VÀ CHIA SẺ DEMO
-
-`.github/ISSUE_TEMPLATE/test-failure.yml` thu thập workflow/job, test bị ảnh hưởng, kiểu thất bại, lần chạy, commit, môi trường và cách tái hiện. Mẫu dùng nhãn `tests`, `ci`, `needs triage`; các nhãn phải tồn tại ở từng repository sử dụng mẫu.
-
-`.github/DISCUSSION_TEMPLATE/show-and-tell.yml` thu thập demo, tình huống sử dụng, tài nguyên minh họa, cách thử và bài học triển khai. Repository dùng mẫu phải bật Discussions và có category với slug `show-and-tell`; mẫu không tự tạo danh mục. Mẫu cần được hợp nhất vào nhánh mặc định trước khi GitHub sử dụng. Chỉ chia sẻ tài nguyên được phép công khai.
-
-## 4. CÁC FILE KHÔNG TỰ KẾ THỪA
-
-| File/thư mục                               | Vai trò và phạm vi                                           |
-| ------------------------------------------ | ------------------------------------------------------------ |
-| `README.md`                                | Giới thiệu repo `.github`; không thành README của repo khác  |
-| `STRUCTURE.md`                             | Tài liệu của repo; không tự xuất hiện ở repo khác            |
-| `specs/jobs-guideline.md`                  | Quy trình rà soát của repo; không tự sao chép sang repo khác |
-| `profile/README.md`                        | Giới thiệu tổ chức; không thành README dự án                 |
-| `LICENSE`                                  | Không tự cấp phép cho các repo khác                          |
-| `.github/CODEOWNERS`                       | Phân công người phụ trách trong repo.                        |
-| `.github/dependabot.yml`                   | Cấu hình cập nhật dependency trong repo.                     |
-| `.github/workflows/`                       | Workflow trong repo; không tự chạy trong repo khác           |
-| `workflow-templates/`                      | Cung cấp mẫu để tạo workflow; không tự cài vào repo mới      |
-| `.gitignore`, `.gitattributes`             | Cấu hình Git của repo.                                       |
-| `.editorconfig`, cấu hình formatter/linter | Cấu hình công cụ của repo.                                   |
-| `AGENTS.md`                                | Hướng dẫn agent trong repo.                                  |
-| `package.json` và cấu hình dự án khác      | Không tự sao chép sang dự án mới                             |
-
-Các cấu hình bảo vệ nhánh, rulesets, quyền truy cập, secrets và labels cũng không được sao chép nhờ các file mặc định. Một số có cơ chế quản lý ở cấp tổ chức riêng.
-
-## 5. QUY TẮC ÁP DỤNG
-
-1. Repository `.github` cung cấp community health files mặc định phải public.
-2. Mặc định áp dụng cho cả repository mới và đã tồn tại, public hoặc private thuộc cùng tài khoản/tổ chức.
-3. Khi repository đích có file tương ứng riêng, GitHub dùng file riêng.
-4. Với file hỗ trợ nhiều vị trí, thứ tự ưu tiên là `.github/`, gốc repository, rồi `docs/`. GitHub cũng áp dụng thứ tự này khi tìm file trong repository mặc định.
-5. Nếu repository đích có mẫu issue hoặc cấu hình issue riêng hợp lệ, toàn bộ bộ mẫu `.github/ISSUE_TEMPLATE/` mặc định sẽ không được dùng; GitHub không trộn hai bộ.
-6. Labels dùng trong mẫu issue phải được tạo trong repo `.github` và từng repository sử dụng mẫu; labels không tự kế thừa.
-7. File mặc định không xuất hiện trong cây thư mục, lịch sử Git, bản clone, gói hoặc bản tải xuống của repository đích.
-8. Thay đổi tài liệu mặc định được quản lý tập trung trong repo `.github`; các repo có tài liệu riêng tiếp tục dùng tài liệu riêng của mình.
-
-## 6. KIỂM CHỨNG VIỆC ÁP DỤNG
-
-Kiểm tra tại máy xác nhận cú pháp và cấu trúc tệp. Kiểm chứng việc GitHub áp dụng mặc định cần đọc trạng thái trên GitHub và dùng một repository đích thuộc cùng tổ chức. Thực hiện khi có repository đích và các tệp nguồn đã được hợp nhất vào nhánh mặc định.
-
-| Nội dung                      | Cách kiểm chứng                                                                                                                         | Điều kiện cần                                                                                                                                                   |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Tài liệu cộng đồng mặc định   | Đối chiếu cây tệp của nhánh mặc định ở repo nguồn và repo đích; mở các liên kết cộng đồng trên repo đích để xác nhận tài liệu được dùng | Repo nguồn `.github` public; repo đích không có tài liệu riêng cùng loại                                                                                        |
-| Mẫu Issue và `config.yml`     | Mở trang tạo Issue của repo đích, kiểm tra bộ chọn biểu mẫu, trường nhập và liên kết liên hệ                                            | Issues bật; repo đích không có mẫu hoặc cấu hình Issue riêng hợp lệ                                                                                             |
-| Labels của mẫu Issue          | Đọc danh sách labels của từng repo qua GitHub CLI/API hoặc trang Issues → Labels; đối chiếu với trường `labels` trong các mẫu           | `bug`, `documentation`, `enhancement`, `question`, `tests`, `ci`, `needs triage` phải có ở repo nguồn và từng repo dùng mẫu; `labels.yml` chỉ là nguồn cấu hình |
-| Mẫu Discussion                | Đối chiếu tên tệp với slug danh mục và mở trang tạo Discussion theo từng danh mục ở repo đích                                           | Discussions bật; danh mục phù hợp tồn tại                                                                                                                       |
-| Form báo cáo lỗ hổng riêng tư | Đọc cài đặt Private vulnerability reporting; mở trang báo cáo bằng tài khoản GitHub và xác nhận các trường tùy chỉnh xuất hiện          | Form trên nhánh mặc định; repo đích bật báo cáo riêng tư; có tài khoản truy cập giao diện                                                                       |
-| Workflow mẫu                  | Đối chiếu từng `.yml` với `.properties.json`, icon và bộ lọc `filePatterns`; mở Actions → New workflow ở repo đích rồi xem nội dung mẫu | Repo đích cho phép Actions; dự án phù hợp bộ lọc của mẫu; tài khoản có quyền tạo workflow                                                                       |
-
-Không coi một trang chuyển hướng đến đăng nhập là bằng chứng form tùy chỉnh đã hoạt động. Nếu GitHub không phân tích được form báo cáo lỗ hổng, giao diện có thể dùng form mặc định; cần đối chiếu các trường thực tế với tệp cấu hình. Chỉ mở trang xem, không gửi báo cáo thử để kiểm tra giao diện.
-
-Repository này cung cấp workflow mẫu và script dùng chung; các workflow hiện có không khai báo `workflow_call`. Nếu triển khai reusable workflow, tệp cần khai báo `on.workflow_call` trong `.github/workflows/` và repo đích cần gọi bằng `jobs.<job_id>.uses`. Việc checkout `TOANQUYNHLLC/.github` để chạy script là cách dùng chung script, không phải lời gọi reusable workflow.
-
-Kiểm chứng trên repo đích không đòi hỏi tự tạo repo, bật tính năng hoặc đẩy tệp chỉ để lấy kết quả kiểm tra. Những thao tác triển khai đó cần thuộc phạm vi công việc được giao.
-
-## 7. GIẤY PHÉP
-
-`LICENSE` trong repository tổ chức `.github` không tự áp dụng cho mã nguồn của các repository khác. Mỗi dự án phải xác định giấy phép riêng và đưa thông báo cần thiết vào dự án nếu cấp phép.
-
-Nếu không muốn cấp phép MIT cho repo `.github`, không thêm MIT chỉ để hoàn thiện cây thư mục. Tuy nhiên, việc bỏ giấy phép không thu hồi quyền đã cấp đối với các bản trước đây được phát hành theo MIT. Giữ các thông báo bản quyền và giấy phép bắt buộc của nội dung bên thứ ba.
-
-## 8. NỘI DUNG NÊN ĐẶT TRONG TEMPLATE REPOSITORY
-
-Dùng một repository được bật **Template repository** trên GitHub khi muốn dự án mới nhận bản sao của các tệp và cấu trúc thư mục. GitHub giữ đường dẫn trong template; thư mục `repository-templates/` của repository này chỉ chứa nguồn để chọn và chép sang vị trí phù hợp. Xem [hướng dẫn tạo template repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-template-repository).
-
-### CHỌN TỆP VÀ ĐẶT ĐÚNG VỊ TRÍ
+Một repository được bật **Template repository** sao chép cây tệp tại thời điểm tạo dự án. Thư mục `repository-templates/` chỉ chứa nguồn; phải chọn và đặt tệp ở đường dẫn đích trước khi dùng tính năng template.
 
 | Nguồn hiện có                                                                                                                                                                    | Đường dẫn trong template dự án                                      | Điều kiện và nội dung cần chỉnh                                                                                                                            |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -198,37 +67,34 @@ Dùng một repository được bật **Template repository** trên GitHub khi m
 | [`AGENTS.md`](AGENTS.md), [hướng dẫn Copilot](.github/copilot-instructions.md), [instructions](.github/instructions/), [agents](.github/agents/)                                 | `AGENTS.md` và các đường dẫn tương ứng trong `.github/`             | Viết lại hướng dẫn theo dự án đích; chỉnh `applyTo`, liên kết, lệnh và phạm vi agent vốn đang dành cho repository tổ chức                                  |
 | [`repository-templates/.dockerignore`](repository-templates/.dockerignore), [`.env.example`](repository-templates/.env.example), [`PRIVACY.md`](repository-templates/PRIVACY.md) | `.dockerignore`, `.env.example`, `PRIVACY.md` ở gốc dự án           | Chỉ thêm khi dự án cần; `.env.example` dùng giá trị mẫu; điền nội dung sản phẩm và rà soát chính sách quyền riêng tư trước khi công bố                     |
 
-README, mã nguồn, manifests, lockfiles, lệnh kiểm thử và cấu hình build của template cần được viết cho dự án đích. `README.md` và `profile/README.md` của repository này mô tả repository cộng đồng và tổ chức; không dùng nguyên nội dung đó làm README ứng dụng.
+Workflow chép vào template cần thay `$default-branch` bằng nhánh thực tế. GitHub chỉ tự xử lý placeholder khi tạo từ bộ chọn workflow mẫu. Metadata `.properties.json` và icon phục vụ bộ chọn, không cần chép sang dự án.
 
-### CHUẨN BỊ WORKFLOW VÀ CẤU HÌNH PHỤ THUỘC
+Chuẩn bị manifests, lockfiles, tệp phiên bản và lệnh workflow gọi. Node.js CI dùng `.nvmrc` và `npm ci`, chỉ chạy script lint/test/build có trong package. Python CI dùng `.python-version`, cài requirements và package khi dự án có khai báo package; pyproject chỉ cấu hình công cụ không kích hoạt cài package. Poetry `package-mode = false` cần luồng cài dependency riêng hoặc requirements. Pytest chạy khi có tệp trong `tests/`.
 
-- Khi chép workflow vào template, thay `$default-branch` bằng tên nhánh mà dự án dùng. GitHub chỉ tự thay placeholder này khi tạo workflow qua cơ chế workflow templates, không xử lý nó như biến khi sao chép tệp từ template repository.
-- Workflow Node.js hiện có cần `.nvmrc` và lockfile phù hợp với `npm ci`; workflow Python cần `.python-version`. Chuẩn bị các tệp và lệnh mà workflow gọi trước khi đưa vào template.
-- Metadata `.properties.json` và icon của `workflow-templates/` dùng cho bộ chọn workflow ở repository tổ chức; dự án chỉ cần các tệp workflow đã chọn trong `.github/workflows/`.
-- Chọn mẫu Dependabot từ `repository-templates/dependabot.yml`. Cấu hình `.github/dependabot.yml` đang phục vụ chính repository này, với các dependency công cụ phát triển và Dev Container riêng.
-- Tài liệu cộng đồng có thể tiếp tục dùng mặc định của tổ chức. Chỉ đặt bản riêng trong template khi dự án cần nội dung riêng hoặc muốn các tài liệu có trong bản clone; các bản sao sẽ ghi đè mặc định tương ứng và không tự cập nhật theo repo nguồn.
+`python3 scripts/org-setup.py files --repo <tên>` xem trước tệp thiếu; `--apply` mở PR cho các tệp thuộc danh sách được quản lý. Lệnh không ghi đè tệp đã có, không chép toàn bộ template và bỏ qua repository chưa có commit. Phạm vi theo [mẫu tệp](repository-templates/README.md).
 
-### CẤU HÌNH GITHUB SAU KHI TẠO REPOSITORY
+Tệp tạo từ template không tự cập nhật theo nguồn. Sau tạo, đối chiếu cài đặt, nhãn, quyền và ruleset theo [ROADMAP.md](ROADMAP.md) và [cài đặt GitHub](docs/github-settings.md).
 
-Tệp trong template được sao chép tại thời điểm tạo, không tự đồng bộ khi template thay đổi. Labels, secrets, variables, quyền team, rulesets/branch protection, cài đặt Actions, Discussions và báo cáo lỗ hổng cần được đối chiếu và thiết lập bằng cơ chế riêng. Việc chép `labels.yml`, ruleset JSON hoặc `CODEOWNERS` không tự tạo các cài đặt và quyền đó.
+## ✅ KIỂM CHỨNG
 
-Lệnh `python3 scripts/org-setup.py files --repo <tên>` xem trước các tệp thiếu trong repo đích đã có commit. Thêm `--apply` thì script mở PR thêm các tệp thuộc danh sách của nó; không ghi đè tệp đã có và không sao chép toàn bộ nội dung của template repository. Phạm vi cụ thể xem [`repository-templates/README.md`](repository-templates/README.md).
+| Nội dung                      | Cách kiểm chứng                                                                                                                         | Điều kiện cần                                                                                                                                                   |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Tài liệu cộng đồng mặc định   | Đối chiếu cây tệp của nhánh mặc định ở repo nguồn và repo đích; mở các liên kết cộng đồng trên repo đích để xác nhận tài liệu được dùng | Repo nguồn `.github` public; repo đích không có tài liệu riêng cùng loại                                                                                        |
+| Mẫu Issue và `config.yml`     | Mở trang tạo Issue của repo đích, kiểm tra bộ chọn biểu mẫu, trường nhập và liên kết liên hệ                                            | Issues bật; repo đích không có mẫu hoặc cấu hình Issue riêng hợp lệ                                                                                             |
+| Labels của mẫu Issue          | Đọc danh sách labels của từng repo qua GitHub CLI/API hoặc trang Issues → Labels; đối chiếu với trường `labels` trong các mẫu           | `bug`, `documentation`, `enhancement`, `question`, `tests`, `ci`, `needs triage` phải có ở repo nguồn và từng repo dùng mẫu; `labels.yml` chỉ là nguồn cấu hình |
+| Mẫu Discussion                | Đối chiếu tên tệp với slug danh mục và mở trang tạo Discussion theo từng danh mục ở repo đích                                           | Discussions bật; danh mục phù hợp tồn tại                                                                                                                       |
+| Form báo cáo lỗ hổng riêng tư | Đọc cài đặt Private vulnerability reporting; mở trang báo cáo bằng tài khoản GitHub và xác nhận các trường tùy chỉnh xuất hiện          | Form trên nhánh mặc định; repo đích bật báo cáo riêng tư; có tài khoản truy cập giao diện                                                                       |
+| Workflow mẫu                  | Đối chiếu từng `.yml` với `.properties.json`, icon và bộ lọc `filePatterns`; mở Actions → New workflow ở repo đích rồi xem nội dung mẫu | Repo đích cho phép Actions; dự án phù hợp bộ lọc của mẫu; tài khoản có quyền tạo workflow                                                                       |
 
-## 9. BỘ KHỞI ĐẦU ĐỀ XUẤT
+Validator kiểm tra cấu trúc tại máy; `make forms` xác minh Issue và Discussion theo phạm vi GitHub hỗ trợ. Biểu mẫu lỗ hổng riêng tư cần mở trang bằng tài khoản phù hợp để đối chiếu trường thực tế. Trang chuyển hướng đăng nhập không chứng minh biểu mẫu đã hoạt động; không gửi báo cáo thử để kiểm tra.
 
-- `README.md`: giải thích mục đích repository `.github`.
-- `profile/README.md`: giới thiệu tổ chức Công ty TNHH TOÀN QUỲNH.
-- `CONTRIBUTING.md`: quy trình đóng góp và quy ước dự án.
-- `SECURITY.md`: kênh báo cáo lỗ hổng.
-- `SUPPORT.md`: kênh hỗ trợ.
-- `.github/PULL_REQUEST_TEMPLATE.md`: checklist PR.
-- `.github/ISSUE_TEMPLATE/bug-report.yml`: form báo lỗi.
-- `.github/ISSUE_TEMPLATE/feature-request.yml`: form yêu cầu tính năng.
-- `.github/ISSUE_TEMPLATE/config.yml`: cấu hình bộ mẫu issue.
+Xác minh trên repository đích nằm trong phạm vi được giao; việc kiểm tra không tự cho phép tạo dự án, bật tính năng hoặc đẩy cấu hình. Công cụ kiểm tra và giới hạn theo [hướng dẫn tại máy](docs/local-checks.md).
 
-Thêm các file còn lại khi có nhu cầu thực tế. Quy ước được viết trong tài liệu không tự thực thi; kiểm tra tự động cần workflow hoặc công cụ tương ứng trong từng dự án.
+## 📜 BẢN QUYỀN VÀ GIẤY PHÉP
 
-## 10. TÀI LIỆU THAM KHẢO
+Không tự thêm giấy phép nguồn mở hoặc tuyên bố cho phép phân phối lại nội dung của tổ chức. Repository đích phải có chính sách giấy phép phù hợp riêng; giữ thông báo bản quyền và giấy phép bắt buộc của nội dung bên thứ ba. Tệp giấy phép trong repository `.github`, nếu có, không tự áp dụng cho mã nguồn dự án khác.
+
+## 📚 TÀI LIỆU THAM KHẢO
 
 - [Creating a default community health file](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file)
 - [Configuring private vulnerability reporting for a repository](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository)

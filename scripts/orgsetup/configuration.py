@@ -348,13 +348,8 @@ def readScope(repo=None):
 	organization = repo is None
 	base = f'orgs/{github.ORG}' if organization else f'repos/{github.ORG}/{quote(repo, safe="")}'
 	current = github.ghJson('api', base)
+	github.validateIdentity(base, current)
 	fields = ORG_FIELDS if organization else REPO_FIELDS
-	if (
-		not isinstance(current, dict)
-		or (organization and current.get('login') != github.ORG)
-		or (not organization and current.get('full_name') != f'{github.ORG}/{repo}')
-	):
-		raise ValueError(f'{base}: không xác minh được danh tính tài nguyên')
 	scope = {
 		'settings': selectFields(current, fields, base),
 		'web_settings': selectFields(
@@ -362,6 +357,7 @@ def readScope(repo=None):
 		),
 		'endpoints': {},
 	}
+	unavailable = {}
 	if not scope['settings']:
 		raise ValueError(f'{base}: thiếu cài đặt')
 	if set(fields) - set(scope['settings']):
@@ -370,6 +366,11 @@ def readScope(repo=None):
 		if type(current.get('private')) is not bool:
 			raise ValueError(f'{base}: thiếu private')
 		analysis = current.get('security_and_analysis')
+		if analysis is None and current['private']:
+			unavailable[f'{base} (security_and_analysis)'] = (
+				'API không cung cấp trạng thái bảo mật; không suy đoán giá trị'
+			)
+			analysis = {}
 		if not isinstance(analysis, dict):
 			raise ValueError(f'{base}: thiếu security_and_analysis')
 		for key, value in analysis.items():
@@ -391,7 +392,17 @@ def readScope(repo=None):
 				)
 		checkFields(scope['web_settings'], REPO_WEB_FIELDS, base, partial=True)
 	definitions = endpointDefinitions(organization, current.get('private', False))
-	unavailable = {}
+	resourceReaders = (
+		[
+			('actions/runner-groups', 'runner_groups', resources.readRunnerGroups),
+			('installations', 'installed_apps', resources.installedApps),
+			('code-security', 'security_configurations', readSecurityDefaults),
+		]
+		if organization
+		else [
+			('code-security', 'security_configuration', lambda: readSecurityConfiguration(base)),
+		]
+	)
 
 	def read(item):
 		suffix, (_, allowed) = item
@@ -405,6 +416,10 @@ def readScope(repo=None):
 			return suffix, None, 'API thiếu hoặc sai dữ liệu; không suy đoán giá trị'
 
 	with ThreadPoolExecutor(max_workers=6) as pool:
+		# Metadata đã xác minh; tài nguyên độc lập đọc cùng endpoint, dùng chung giới hạn luồng.
+		resourceTasks = [
+			(suffix, key, pool.submit(reader)) for suffix, key, reader in resourceReaders
+		]
 		for suffix, value, problem in pool.map(
 			read,
 			(
@@ -428,44 +443,44 @@ def readScope(repo=None):
 				unavailable[f'{base}/{suffix}'] = problem
 			else:
 				scope['endpoints'][suffix] = value
-	if organization:
-		for suffix, readResource in (
-			('actions/runner-groups', resources.readRunnerGroups),
-			('installations', resources.installedApps),
-		):
+		for suffix, key, task in resourceTasks:
 			try:
-				value = readResource()
+				value = task.result()
 				if suffix == 'installations':
-					scope['web_settings']['installed_apps'] = value
+					scope['web_settings'][key] = value
 				else:
-					scope['runner_groups'] = value
+					scope[key] = value
 			except (RuntimeError, ValueError, TypeError):
-				unavailable[f'{base}/{suffix}'] = 'Không đọc đủ hoặc không xác minh được tài nguyên'
-	try:
-		if organization:
-			scope['security_configurations'] = readSecurityDefaults()
-		else:
-			scope['security_configuration'] = readSecurityConfiguration(base)
-	except (RuntimeError, ValueError, TypeError):
-		unavailable[f'{base}/code-security'] = 'Không đọc được cấu hình bảo mật và phạm vi áp dụng'
+				unavailable[f'{base}/{suffix}'] = (
+					'Không đọc được cấu hình bảo mật và phạm vi áp dụng'
+					if suffix == 'code-security'
+					else 'Không đọc đủ hoặc không xác minh được tài nguyên'
+				)
 	return scope, unavailable
 
 
-def securityConfigurationIds():
-	"""Giải tên cấu hình sang ID tại thời điểm áp dụng; ID không được coi là khả chuyển giữa tổ chức."""
+def securityConfigurationIds(resourceCache=None):
+	"""Giải tên cấu hình sang ID; danh sách đã xác minh chỉ dùng chung trong một lượt lập kế hoạch."""
+	if resourceCache is not None and 'security_configurations' in resourceCache:
+		return resourceCache['security_configurations']
 	items = github.ghList(f'orgs/{github.ORG}/code-security/configurations')
-	result = {}
+	result, ids = {}, set()
 	for item in items:
 		if (
 			not isinstance(item, dict)
 			or not isinstance(item.get('name'), str)
+			or not item['name']
 			or type(item.get('id')) is not int
 			or item['id'] < 1
 			or item.get('target_type') not in ('global', 'organization')
 			or item['name'] in result
+			or item['id'] in ids
 		):
-			raise ValueError('Danh sách cấu hình bảo mật thiếu dữ liệu hoặc trùng tên')
+			raise ValueError('Danh sách cấu hình bảo mật thiếu dữ liệu hoặc trùng tên/ID')
 		result[item['name']] = item
+		ids.add(item['id'])
+	if resourceCache is not None:
+		resourceCache['security_configurations'] = result
 	return result
 
 
@@ -481,10 +496,15 @@ def readSecurityDefaults():
 	for item in defaults:
 		if not isinstance(item, dict) or not isinstance(item.get('configuration'), dict):
 			raise TypeError('Cấu hình bảo mật mặc định thiếu dữ liệu')
-		name = item['configuration'].get('name')
+		identity = item['configuration']
+		name = identity.get('name')
 		if (
-			name not in wanted
+			not isinstance(name, str)
+			or name not in wanted
 			or name in seen
+			or type(identity.get('id')) is not int
+			or identity['id'] != configurations[name]['id']
+			or identity.get('target_type') != configurations[name]['target_type']
 			or item.get('default_for_new_repos') not in ('public', 'private_and_internal', 'all')
 		):
 			raise ValueError('Phạm vi cấu hình bảo mật mặc định không hợp lệ')
@@ -560,6 +580,8 @@ def readConfig(root=None):
 		raise ValueError(
 			f'{CONFIG_NAME}: danh sách repository hoặc phần chưa đọc được không hợp lệ'
 		)
+	if len(data['repositories']) != len({repo.casefold() for repo in data['repositories']}):
+		raise ValueError(f'{CONFIG_NAME}: tên repository trùng khi bỏ qua hoa/thường')
 	for repo in data['repositories']:
 		if not re.fullmatch(r'[A-Za-z0-9_.-]+', repo) or repo in ('.', '..'):
 			raise ValueError(f'{CONFIG_NAME}: tên repository không hợp lệ')
@@ -714,7 +736,7 @@ def validateDependencies(config):
 			raise ValueError(f'{repo}: tổ chức đang bắt buộc Release bất biến cho repository này')
 
 
-def selectedEndpointChanges(plan, base, suffix, current, wanted):
+def selectedEndpointChanges(plan, base, suffix, current, wanted, resourceCache=None):
 	"""Đặt chính sách cha trước danh sách con; so danh sách như tập hợp, giải tên thành ID trước mọi lần ghi."""
 	old, target = dict(current or {}), dict(wanted)
 	key = (
@@ -730,7 +752,7 @@ def selectedEndpointChanges(plan, base, suffix, current, wanted):
 	body = (
 		target
 		if key == 'patterns_allowed'
-		else {'selected_repository_ids': resources.repositoryIds(target[key])}
+		else {'selected_repository_ids': resources.repositoryIds(target[key], resourceCache)}
 	)
 	plan.append((f'{base}/{suffix}', 'PUT', body, target))
 
@@ -835,6 +857,15 @@ def importSettings():
 	return 1 if config['unavailable'] else 0
 
 
+def equivalentEndpointValue(suffix, key, current, wanted):
+	"""Topics được GitHub lưu chữ thường; topics và ngôn ngữ CodeQL là tập hợp, claim OIDC giữ thứ tự."""
+	if suffix == 'topics' and key == 'names':
+		return {name.lower() for name in current} == {name.lower() for name in wanted}
+	if suffix == 'code-scanning/default-setup' and key == 'languages':
+		return set(current) == set(wanted)
+	return current == wanted
+
+
 def addChanges(plan, path, current, wanted, method='PATCH', suffix=''):
 	"""So sánh chỉ phần được quản lý; PUT gửi đầy đủ trường bắt buộc, PATCH chỉ gửi phần khác."""
 	for key in wanted:
@@ -852,7 +883,11 @@ def addChanges(plan, path, current, wanted, method='PATCH', suffix=''):
 			):
 				continue
 			raise ValueError(f'{path}: chưa đọc được trường {key}; dừng trước khi ghi')
-	changes = {key: value for key, value in wanted.items() if current.get(key) != value}
+	changes = {
+		key: value
+		for key, value in wanted.items()
+		if not equivalentEndpointValue(suffix, key, current.get(key), value)
+	}
 	if not changes:
 		return
 	if suffix == 'actions/permissions/artifact-and-log-retention':
@@ -880,21 +915,48 @@ def addChanges(plan, path, current, wanted, method='PATCH', suffix=''):
 	plan.append((path, method, body, changes))
 
 
-def repositorySettingChanges(plan, base, current, wanted):
-	"""Discussions dùng mutation GraphQL công khai; cài đặt khác dùng PATCH REST."""
+def repositoryIdentity(base, resourceCache=None):
+	"""Đọc danh tính khi lập kế hoạch; chỉ dùng lại trong lượt nếu đủ ID REST và GraphQL đã xác minh."""
+	key = f'repository_identity:{base}'
+	data = resourceCache.get(key) if resourceCache is not None else None
+	if data is None:
+		data = github.ghJson('api', base)
+	github.validateIdentity(base, data)
+	if (
+		resourceCache is not None
+		and type(data.get('id')) is int
+		and data['id'] > 0
+		and isinstance(data.get('node_id'), str)
+		and data['node_id']
+	):
+		resourceCache[key] = {field: data[field] for field in ('full_name', 'id', 'node_id')}
+	return data
+
+
+def repositorySettingChanges(plan, base, current, wanted, resourceCache=None):
+	"""Discussions dùng GraphQL; PATCH REST gửi cả tiêu đề bắt buộc khi đổi nội dung commit."""
 	settings = dict(wanted)
-	if 'has_discussions' in settings:
-		wantedDiscussions = settings.pop('has_discussions')
+	wantedDiscussions = settings.pop('has_discussions', None)
+	repositoryPlan = []
+	addChanges(repositoryPlan, base, current, settings)
+	if repositoryPlan:
+		path, method, body, changes = repositoryPlan[0]
+		body = dict(body)
+		for prefix in ('merge', 'squash_merge'):
+			messageKey, titleKey = f'{prefix}_commit_message', f'{prefix}_commit_title'
+			if messageKey not in changes:
+				continue
+			title = settings.get(titleKey, current.get(titleKey))
+			if title not in REPO_FIELDS[titleKey]:
+				raise ValueError(f'{base}: thiếu hoặc sai {titleKey}; dừng trước khi ghi')
+			body[titleKey] = title
+		repositoryPlan[0] = (path, method, body, changes)
+	if 'has_discussions' in wanted:
 		if 'has_discussions' not in current:
 			raise ValueError(f'{base}: chưa đọc được has_discussions')
 		if wantedDiscussions != current['has_discussions']:
-			data = github.ghJson('api', base)
-			if (
-				not isinstance(data, dict)
-				or data.get('full_name') != base.removeprefix('repos/')
-				or not isinstance(data.get('node_id'), str)
-				or not data['node_id']
-			):
+			data = repositoryIdentity(base, resourceCache)
+			if not isinstance(data.get('node_id'), str) or not data['node_id']:
 				raise ValueError(f'{base}: không xác minh được ID GraphQL')
 			body = {
 				'query': 'mutation($input: UpdateRepositoryInput!) { updateRepository(input: $input) { repository { hasDiscussionsEnabled } } }',
@@ -905,12 +967,16 @@ def repositorySettingChanges(plan, base, current, wanted):
 					}
 				},
 			}
-			plan.append(('graphql', 'POST', body, {'has_discussions': wantedDiscussions}))
-	addChanges(plan, base, current, settings)
+			repositoryPlan.insert(
+				0, ('graphql', 'POST', body, {'has_discussions': wantedDiscussions})
+			)
+	plan.extend(repositoryPlan)
 
 
-def securityBindingChanges(plan, base, repo, current, wanted):
+def securityBindingChanges(plan, base, repo, current, wanted, resourceCache=None):
 	"""Áp dụng phạm vi mặc định và liên kết cấu hình có sẵn; không sao chép cấu hình do GitHub quản lý."""
+	if resourceCache is None:
+		resourceCache = {}
 	if repo is None:
 		present = {item['name']: item for item in current.get('security_configurations', [])}
 		for item in wanted.get('security_configurations', []):
@@ -923,7 +989,12 @@ def securityBindingChanges(plan, base, repo, current, wanted):
 				)
 			if item['default_for_new_repos'] == present[item['name']]['default_for_new_repos']:
 				continue
-			configurationId = securityConfigurationIds()[item['name']]['id']
+			catalogEntry = securityConfigurationIds(resourceCache).get(item['name'])
+			if catalogEntry is None or catalogEntry['target_type'] != item['target_type']:
+				raise ValueError(
+					f'{base}: cấu hình bảo mật {item["name"]} chưa tồn tại hoặc khác loại; dừng trước khi ghi'
+				)
+			configurationId = catalogEntry['id']
 			body = {'default_for_new_repos': item['default_for_new_repos']}
 			plan.append(
 				(
@@ -941,19 +1012,14 @@ def securityBindingChanges(plan, base, repo, current, wanted):
 	name = wanted['security_configuration']
 	if name == current['security_configuration']:
 		return
-	data = github.ghJson('api', base)
-	if (
-		not isinstance(data, dict)
-		or type(data.get('id')) is not int
-		or data['id'] < 1
-		or data.get('full_name') != f'{github.ORG}/{repo}'
-	):
+	data = repositoryIdentity(base, resourceCache)
+	if type(data.get('id')) is not int or data['id'] < 1:
 		raise ValueError(f'{base}: không xác minh được ID repository')
 	body = {'selected_repository_ids': [data['id']]}
 	if name is None:
 		path, method = f'orgs/{github.ORG}/code-security/configurations/detach', 'DELETE'
 	else:
-		configurations = securityConfigurationIds()
+		configurations = securityConfigurationIds(resourceCache)
 		if name not in configurations:
 			raise ValueError(f'{base}: cấu hình bảo mật {name} chưa tồn tại')
 		configurationId = configurations[name]['id']
@@ -965,19 +1031,32 @@ def securityBindingChanges(plan, base, repo, current, wanted):
 	plan.append((path, method, body, {'security_configuration': name}))
 
 
+def configuredScopes(config):
+	"""Tổ chức được xử lý trước; đọc các repository song song, trả theo thứ tự nguồn sau khi đọc xong."""
+	yield None, config['organization'], readScope(None)
+	repos = list(config['repositories'])
+	if not repos:
+		return
+	with ThreadPoolExecutor(max_workers=min(4, len(repos))) as pool:
+		scopes = list(pool.map(readScope, repos))
+	for repo, scope in zip(repos, scopes, strict=True):
+		yield repo, config['repositories'][repo], scope
+
+
 def syncConfiguredSettings(apply=False, verify=False):
 	"""Đối chiếu/áp dụng cấu hình đã nhập; thất bại đọc bất kỳ phạm vi nào chặn mọi mutation."""
 	config = readConfig()
 	plan, manual = [], []
+	# Chỉ giữ ID và danh tính đã xác minh trong lượt này; lượt đọc lại sau ghi tạo cache mới.
+	resourceCache = {}
 	if config['unavailable']:
 		raise ValueError(
 			f'{CONFIG_NAME}: có mục chưa nhập; chạy lại make org-import trước khi áp dụng'
 		)
-	for repo, wanted in [(None, config['organization']), *config['repositories'].items()]:
+	for repo, wanted, (current, unavailable) in configuredScopes(config):
 		base = (
 			f'orgs/{github.ORG}' if repo is None else f'repos/{github.ORG}/{quote(repo, safe="")}'
 		)
-		current, unavailable = readScope(repo)
 		if unavailable:
 			raise ValueError(f'{base}: chưa đọc được {", ".join(unavailable)}; dừng trước khi ghi')
 		archivePlan = []
@@ -991,17 +1070,19 @@ def syncConfiguredSettings(apply=False, verify=False):
 				current['settings'],
 				{'archived': archived},
 			)
-		securityBindingChanges(plan, base, repo, current, wanted)
+		securityBindingChanges(plan, base, repo, current, wanted, resourceCache)
 		if repo is None:
 			addChanges(plan, base, current['settings'], wanted['settings'])
 			if 'runner_groups' in wanted:
 				if 'runner_groups' not in current:
 					raise ValueError(f'{base}: chưa đọc được các nhóm runner')
 				resources.runnerGroupChanges(
-					plan, current['runner_groups'], wanted['runner_groups']
+					plan, current['runner_groups'], wanted['runner_groups'], resourceCache
 				)
 		else:
-			repositorySettingChanges(plan, base, current['settings'], repositorySettings)
+			repositorySettingChanges(
+				plan, base, current['settings'], repositorySettings, resourceCache
+			)
 		for key, value in wanted['web_settings'].items():
 			if key not in current['web_settings']:
 				raise ValueError(f'{base}: chưa đọc được {key}; dừng trước khi ghi')
@@ -1042,7 +1123,7 @@ def syncConfiguredSettings(apply=False, verify=False):
 		for suffix, target in ordered:
 			if suffix in SELECTED_ENDPOINTS:
 				selectedEndpointChanges(
-					plan, base, suffix, current['endpoints'].get(suffix), target
+					plan, base, suffix, current['endpoints'].get(suffix), target, resourceCache
 				)
 				continue
 			if suffix not in current['endpoints']:

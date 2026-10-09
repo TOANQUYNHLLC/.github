@@ -5,6 +5,7 @@ Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts 
 
 import base64
 import contextlib
+import copy
 import importlib
 import io
 import json
@@ -40,6 +41,635 @@ def teamFixture(team):
 
 
 class OrgSetupTest(unittest.TestCase):
+	def testRequiredReviewersAreValidatedBeforeAnyRulesetWrite(self):
+		valid = {
+			'file_patterns': ['src/**'],
+			'minimum_approvals': 1,
+			'reviewer': {'id': 7, 'type': 'Team'},
+		}
+		invalid = [42, {}, {'minimum_approvals': 1, 'reviewer': valid['reviewer']}]
+		invalid.extend(dict(valid, file_patterns=value) for value in (None, 'src/**', [42]))
+		invalid.append({'file_patterns': valid['file_patterns'], 'reviewer': valid['reviewer']})
+		invalid.extend(dict(valid, minimum_approvals=value) for value in (None, '1', True, -1))
+		invalid.extend(
+			dict(valid, reviewer=value)
+			for value in (
+				None,
+				[],
+				{},
+				{'id': 7},
+				{'id': 7, 'type': 'User'},
+				{'id': True, 'type': 'Team'},
+				{'id': 0, 'type': 'Team'},
+				{'id': '7', 'type': 'Team'},
+			)
+		)
+		for organization in (False, True):
+			for reviewer in invalid:
+				wanted = rulesets.orgRulesets() if organization else rulesets.rulesetsFor('.github')
+				wanted[-1][1]['rules'].append(
+					{'type': 'pull_request', 'parameters': {'required_reviewers': [reviewer]}}
+				)
+				with (
+					self.subTest(organization=organization, reviewer=reviewer),
+					mock.patch.object(
+						rulesets,
+						'orgRulesets' if organization else 'rulesetsFor',
+						return_value=wanted,
+					),
+					mock.patch.object(github, 'ghList', return_value=[]),
+					mock.patch.object(github, 'ghJson') as read,
+					mock.patch.object(github, 'gh') as write,
+					contextlib.redirect_stdout(io.StringIO()),
+					self.assertRaisesRegex((ValueError, TypeError), 'required_reviewers'),
+				):
+					if organization:
+						rulesets.syncOrgRulesets(apply=True)
+					else:
+						rulesets.syncRulesets(['.github'], apply=True)
+				read.assert_not_called()
+				write.assert_not_called()
+
+	def testRequiredReviewersAllowZeroApprovalsAndPreservePayload(self):
+		wanted = rulesets.rulesetFor('.github')
+		parameters = next(
+			rule['parameters'] for rule in wanted['rules'] if rule['type'] == 'pull_request'
+		)
+		parameters['required_reviewers'] = [
+			{
+				'file_patterns': ['src/**', 'tests/**'],
+				'minimum_approvals': count,
+				'reviewer': {'id': count + 7, 'type': 'Team'},
+			}
+			for count in (0, 1)
+		]
+		original = copy.deepcopy(wanted)
+		with (
+			mock.patch.object(github, 'gh', return_value='{"id": 7}') as write,
+			mock.patch.object(
+				github, 'ghJson', return_value=self.reverseRulesetLists(dict(wanted, id=7))
+			),
+		):
+			rulesets.applyRuleset('repos/TOANQUYNHLLC/.github/rulesets', wanted, 7)
+		self.assertEqual(json.loads(write.call_args.kwargs['stdin']), original)
+		self.assertEqual(wanted, original)
+
+	def testGraphqlReviewerNodeIdsMatchRestTeamIds(self):
+		reviewers = [
+			{
+				'filePatterns': ['src/**'],
+				'minimumApprovals': count,
+				'reviewerId': f'TEAM_NODE_{count + 7}',
+			}
+			for count in (0, 1, 0)
+		]
+		node = {
+			'name': 'x',
+			'target': 'BRANCH',
+			'enforcement': 'ACTIVE',
+			'conditions': {},
+			'bypassActors': {'pageInfo': {'hasNextPage': False}, 'nodes': []},
+			'rules': {
+				'pageInfo': {'hasNextPage': False},
+				'nodes': [{'type': 'PULL_REQUEST', 'parameters': {'requiredReviewers': reviewers}}],
+			},
+		}
+		original = copy.deepcopy(node)
+		with mock.patch.object(
+			github,
+			'ghJson',
+			return_value={
+				'data': {
+					'nodes': [
+						{'id': f'TEAM_NODE_{teamId}', '__typename': 'Team', 'databaseId': teamId}
+						for teamId in (8, 7)
+					]
+				}
+			},
+		) as read:
+			live = rulesets.graphqlRuleset(node)
+		expected = dict(
+			live,
+			rules=[
+				{
+					'type': 'pull_request',
+					'parameters': {
+						'required_reviewers': [
+							{
+								'file_patterns': ['src/**'],
+								'minimum_approvals': count,
+								'reviewer': {'id': count + 7, 'type': 'Team'},
+							}
+							for count in (0, 1, 0)
+						]
+					},
+				}
+			],
+		)
+		self.assertEqual(rulesets.rulesetSummary(live), rulesets.rulesetSummary(expected))
+		self.assertEqual(node, original)
+		read.assert_called_once()
+		self.assertIn('nodes(ids: ["TEAM_NODE_7", "TEAM_NODE_8"])', read.call_args.args[-1])
+
+	def testGraphqlReviewersRequireVerifiedTeamIdentity(self):
+		reviewers = [
+			{'file_patterns': ['src/**'], 'minimum_approvals': 0, 'reviewer_id': 'TEAM_NODE_7'}
+		]
+		team = {'id': 'TEAM_NODE_7', '__typename': 'Team', 'databaseId': 7}
+		for response in (
+			None,
+			{},
+			{'data': {'nodes': None}},
+			{'data': {'nodes': []}},
+			{'data': {'nodes': [None]}},
+			{'data': {'nodes': [team, team]}},
+			{'data': {'nodes': [dict(team, id='OTHER_NODE')]}},
+			{'data': {'nodes': [dict(team, __typename='User')]}},
+			{'data': {'nodes': [dict(team, databaseId=True)]}},
+			{'data': {'nodes': [dict(team, databaseId=0)]}},
+			{'data': {'nodes': [team]}, 'errors': [{'message': 'Không có quyền'}]},
+		):
+			with (
+				self.subTest(response=response),
+				mock.patch.object(github, 'ghJson', return_value=response),
+				self.assertRaisesRegex(ValueError, 'required_reviewers GraphQL'),
+			):
+				rulesets.graphqlRequiredReviewers(reviewers)
+		for invalid in (None, {}, [42], [{}], [dict(reviewers[0], reviewer_id=7)]):
+			with (
+				self.subTest(invalid=invalid),
+				mock.patch.object(github, 'ghJson') as read,
+				self.assertRaisesRegex(ValueError, 'required_reviewers GraphQL'),
+			):
+				rulesets.graphqlRequiredReviewers(invalid)
+			read.assert_not_called()
+		with mock.patch.object(github, 'ghJson') as read:
+			self.assertEqual(rulesets.graphqlRequiredReviewers([]), [])
+		read.assert_not_called()
+
+	def testOptionalNestedRulesetDefaultsRemainValid(self):
+		for integration in ({}, {'integration_id': None}, {'integration_id': 15368}):
+			wanted = rulesets.rulesetFor('.github')
+			for rule in wanted['rules']:
+				if rule['type'] == 'required_status_checks':
+					rule['parameters'] = {
+						'strict_required_status_checks_policy': True,
+						'required_status_checks': [{'context': 'CI', **integration}],
+					}
+				elif rule['type'] == 'pull_request':
+					rule['parameters']['dismissal_restriction'] = {'enabled': False}
+			with (
+				self.subTest(integration=integration),
+				mock.patch.object(
+					rulesets, 'rulesetsFor', return_value=[(rulesets.RULESET_FILE, wanted)]
+				),
+				mock.patch.object(
+					github, 'ghList', return_value=[{'id': 1, 'name': wanted['name']}]
+				),
+				mock.patch.object(github, 'ghJson', return_value=dict(wanted, id=1)),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()) as output,
+			):
+				rulesets.syncRulesets(['.github'], apply=True)
+			write.assert_not_called()
+			self.assertIn('đã đúng', output.getvalue())
+
+	def testInvalidNestedRulesetParametersStopBeforeAnyWrites(self):
+		cases = (
+			('pull_request', {'dismissal_restriction': {}}),
+			('pull_request', {'dismissal_restriction': {'enabled': 'true', 'allowed_actors': []}}),
+			('pull_request', {'dismissal_restriction': {'enabled': True, 'allowed_actors': None}}),
+			('pull_request', {'dismissal_restriction': {'enabled': True, 'allowed_actors': [42]}}),
+			(
+				'pull_request',
+				{
+					'dismissal_restriction': {
+						'enabled': True,
+						'allowed_actors': [{'id': True, 'type': 'User'}],
+					}
+				},
+			),
+			(
+				'pull_request',
+				{
+					'dismissal_restriction': {
+						'enabled': True,
+						'allowed_actors': [{'id': 0, 'type': 'User'}],
+					}
+				},
+			),
+			(
+				'pull_request',
+				{
+					'dismissal_restriction': {
+						'enabled': True,
+						'allowed_actors': [{'id': 1, 'type': 'Unknown'}],
+					}
+				},
+			),
+			('required_status_checks', {}),
+			(
+				'required_status_checks',
+				{'strict_required_status_checks_policy': 'true', 'required_status_checks': []},
+			),
+			(
+				'required_status_checks',
+				{
+					'strict_required_status_checks_policy': True,
+					'do_not_enforce_on_create': 1,
+					'required_status_checks': [],
+				},
+			),
+			(
+				'required_status_checks',
+				{'strict_required_status_checks_policy': True, 'required_status_checks': None},
+			),
+			(
+				'required_status_checks',
+				{'strict_required_status_checks_policy': True, 'required_status_checks': [42]},
+			),
+			(
+				'required_status_checks',
+				{'strict_required_status_checks_policy': True, 'required_status_checks': [{}]},
+			),
+			(
+				'required_status_checks',
+				{
+					'strict_required_status_checks_policy': True,
+					'required_status_checks': [{'context': ' '}],
+				},
+			),
+			(
+				'required_status_checks',
+				{
+					'strict_required_status_checks_policy': True,
+					'required_status_checks': [{'context': 'CI', 'integration_id': True}],
+				},
+			),
+			(
+				'required_status_checks',
+				{
+					'strict_required_status_checks_policy': True,
+					'required_status_checks': [{'context': 'CI', 'integration_id': '15368'}],
+				},
+			),
+		)
+		for organization in (False, True):
+			for ruleType, parameters in cases:
+				wanted = rulesets.orgRulesets() if organization else rulesets.rulesetsFor('.github')
+				wanted[-1][1]['rules'].append({'type': ruleType, 'parameters': parameters})
+				with (
+					self.subTest(
+						organization=organization, ruleType=ruleType, parameters=parameters
+					),
+					mock.patch.object(
+						rulesets,
+						'orgRulesets' if organization else 'rulesetsFor',
+						return_value=wanted,
+					),
+					mock.patch.object(github, 'ghList', return_value=[]),
+					mock.patch.object(github, 'ghJson') as read,
+					mock.patch.object(github, 'gh') as write,
+					contextlib.redirect_stdout(io.StringIO()),
+					self.assertRaisesRegex((ValueError, TypeError), ruleType),
+				):
+					if organization:
+						rulesets.syncOrgRulesets(apply=True)
+					else:
+						rulesets.syncRulesets(['.github'], apply=True)
+				read.assert_not_called()
+				write.assert_not_called()
+
+	def reverseRulesetLists(self, value):
+		"""Giả lập API trả danh sách theo thứ tự khác, giữ nguyên nội dung."""
+		result = copy.deepcopy(value)
+		for condition in result['conditions'].values():
+			for key in ('include', 'exclude'):
+				if isinstance(condition.get(key), list):
+					condition[key].reverse()
+		for rule in result['rules']:
+			parameters = rule.get('parameters', {})
+			for key in (
+				'allowed_merge_methods',
+				'required_status_checks',
+				'code_scanning_tools',
+				'restricted_file_paths',
+				'restricted_file_extensions',
+				'required_reviewers',
+			):
+				if isinstance(parameters.get(key), list):
+					parameters[key].reverse()
+			if 'dismissal_restriction' in parameters:
+				parameters['dismissal_restriction']['allowed_actors'].reverse()
+		return result
+
+	def testReorderedRulesetListsDoNotCauseWrites(self):
+		for organization in (False, True):
+			wanted = rulesets.orgRulesets() if organization else rulesets.rulesetsFor('.github')
+			listing = [
+				{'name': item['name'], 'id': index + 1} for index, (_, item) in enumerate(wanted)
+			]
+			live = {
+				index + 1: self.reverseRulesetLists(dict(item, id=index + 1))
+				for index, (_, item) in enumerate(wanted)
+			}
+			with (
+				self.subTest(organization=organization),
+				mock.patch.object(github, 'ghList', return_value=listing),
+				mock.patch.object(
+					github,
+					'ghJson',
+					side_effect=lambda *args, live=live: live[int(args[-1].rsplit('/', 1)[-1])],
+				),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				if organization:
+					rulesets.syncOrgRulesets(apply=True)
+				else:
+					rulesets.syncRulesets(['.github'], apply=True)
+			write.assert_not_called()
+
+	def testRulesetReadbackAcceptsEquivalentListOrders(self):
+		wanted = rulesets.rulesetFor('.github')
+		with (
+			mock.patch.object(github, 'gh', return_value='{"id": 7}'),
+			mock.patch.object(
+				github, 'ghJson', return_value=self.reverseRulesetLists(dict(wanted, id=7))
+			),
+		):
+			rulesets.applyRuleset('repos/TOANQUYNHLLC/.github/rulesets', wanted, 7)
+
+	def testRulesetSummaryKeepsInputsAndMeaningfulListDifferences(self):
+		wanted = rulesets.orgTagRuleset()
+		wanted['conditions']['ref_name']['exclude'] = ['refs/tags/dev-*', 'refs/tags/test-*']
+		wanted['conditions']['repository_name']['include'] = ['app', 'website']
+		wanted['conditions']['repository_name']['exclude'] = ['legacy', 'archive']
+		original = copy.deepcopy(wanted)
+		live = self.reverseRulesetLists(wanted)
+		before = copy.deepcopy(live)
+		self.assertEqual(rulesets.rulesetSummary(wanted), rulesets.rulesetSummary(live))
+		self.assertEqual(wanted, original)
+		self.assertEqual(live, before)
+		live['conditions']['ref_name']['include'].pop()
+		self.assertNotEqual(rulesets.rulesetSummary(wanted), rulesets.rulesetSummary(live))
+		for value in ('merge', 'squash'):
+			wanted = rulesets.rulesetFor('.github')
+			live = copy.deepcopy(wanted)
+			next(rule['parameters'] for rule in live['rules'] if rule['type'] == 'pull_request')[
+				'allowed_merge_methods'
+			] = [value]
+			self.assertNotEqual(rulesets.rulesetSummary(wanted), rulesets.rulesetSummary(live))
+		wanted['rules'].append({'type': 'custom_rule', 'parameters': {'sequence': ['a', 'b']}})
+		live = copy.deepcopy(wanted)
+		live['rules'][-1]['parameters']['sequence'].reverse()
+		self.assertNotEqual(rulesets.rulesetSummary(wanted), rulesets.rulesetSummary(live))
+
+	def testEquivalentCitationTopicsDoNotCauseWrites(self):
+		with (
+			mock.patch.object(
+				settings, 'citationKeywords', return_value=['GitHub', 'PYTHON', 'python']
+			),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			settings.syncTopics('.github', {'topics': ['python', 'github']}, apply=True)
+		write.assert_not_called()
+
+	def testRequiredReviewerPatternOrderIsVerifiedAfterWriting(self):
+		wanted = rulesets.rulesetFor('.github')
+		parameters = next(
+			rule['parameters'] for rule in wanted['rules'] if rule['type'] == 'pull_request'
+		)
+		parameters['required_reviewers'] = [
+			{
+				'file_patterns': ['src/**', '!src/generated/**'],
+				'minimum_approvals': 1,
+				'reviewer': {'type': 'Team', 'id': 7},
+			},
+			{
+				'file_patterns': ['docs/**'],
+				'minimum_approvals': 0,
+				'reviewer': {'type': 'Team', 'id': 8},
+			},
+		]
+		original = copy.deepcopy(wanted)
+		live = self.reverseRulesetLists(dict(wanted, id=9))
+		self.assertEqual(rulesets.rulesetSummary(wanted), rulesets.rulesetSummary(live))
+		liveParameters = next(
+			rule['parameters'] for rule in live['rules'] if rule['type'] == 'pull_request'
+		)
+		liveParameters['required_reviewers'][1]['file_patterns'].reverse()
+		self.assertNotEqual(rulesets.rulesetSummary(wanted), rulesets.rulesetSummary(live))
+		with (
+			mock.patch.object(github, 'gh', return_value='{"id": 9}') as write,
+			mock.patch.object(github, 'ghJson', return_value=live),
+			self.assertRaisesRegex(RuntimeError, 'Không xác minh được'),
+		):
+			rulesets.applyRuleset('repos/TOANQUYNHLLC/.github/rulesets', wanted, 9)
+		self.assertEqual(json.loads(write.call_args.kwargs['stdin']), original)
+		self.assertEqual(wanted, original)
+
+	def testRulesetWriteResponseRequiresMatchingPositiveId(self):
+		wanted = rulesets.rulesetFor('.github')
+		for rulesetId in (None, 7):
+			responses = [
+				'',
+				'invalid JSON',
+				'null',
+				'[]',
+				'{}',
+				'{"id": true}',
+				'{"id": 0}',
+				'{"id": "7"}',
+			]
+			if rulesetId is not None:
+				responses.append('{"id": 8}')
+			for response in responses:
+				with (
+					self.subTest(id=rulesetId, response=response),
+					mock.patch.object(github, 'gh', return_value=response) as write,
+					mock.patch.object(github, 'ghJson') as read,
+					self.assertRaisesRegex(RuntimeError, 'Không xác minh được'),
+				):
+					rulesets.applyRuleset('repos/TOANQUYNHLLC/.github/rulesets', wanted, rulesetId)
+				write.assert_called_once()
+				read.assert_not_called()
+
+	def testRulesetReadbackRejectsMissingIdentityOrConfiguration(self):
+		wanted = rulesets.rulesetFor('.github')
+		for response in (
+			RuntimeError('HTTP 502'),
+			{},
+			wanted,
+			dict(wanted, id=True),
+			dict(wanted, id=8),
+			dict(wanted, id=7, name='Sai tên'),
+			dict(wanted, id=7, enforcement='disabled'),
+			dict(wanted, id=7, rules=[]),
+			dict(wanted, id=7, bypass_actors=[]),
+			dict(wanted, id=7, conditions={}),
+		):
+			with (
+				self.subTest(response=response),
+				mock.patch.object(github, 'gh', return_value='{"id": 7}'),
+				mock.patch.object(github, 'ghJson', side_effect=[response]) as read,
+				self.assertRaisesRegex(RuntimeError, 'Không xác minh được'),
+			):
+				rulesets.applyRuleset('repos/TOANQUYNHLLC/.github/rulesets', wanted, 7)
+			read.assert_called_once_with('api', 'repos/TOANQUYNHLLC/.github/rulesets/7')
+
+	def testRulesetWriteReadsBackBothScopesByConfirmedId(self):
+		for organization in (False, True):
+			wanted = rulesets.orgRuleset() if organization else rulesets.rulesetFor('.github')
+			endpoint = (
+				'orgs/TOANQUYNHLLC/rulesets'
+				if organization
+				else 'repos/TOANQUYNHLLC/.github/rulesets'
+			)
+			for creating in (False, True):
+				with (
+					self.subTest(organization=organization, creating=creating),
+					mock.patch.object(github, 'gh', return_value='{"id": 7}') as write,
+					mock.patch.object(
+						github, 'ghJson', return_value=dict(wanted, id=7, node_id='ignored')
+					) as read,
+				):
+					rulesets.applyRuleset(endpoint, wanted, None if creating else 7)
+				write.assert_called_once()
+				self.assertEqual(write.call_args.args[2], 'POST' if creating else 'PUT')
+				self.assertEqual(write.call_args.args[3], endpoint if creating else f'{endpoint}/7')
+				self.assertEqual(json.loads(write.call_args.kwargs['stdin']), wanted)
+				read.assert_called_once_with('api', f'{endpoint}/7')
+
+	def testRulesetApplyRejectsUnconfirmedWrites(self):
+		for organization in (False, True):
+			for creating in (False, True):
+				wanted = rulesets.orgRulesets() if organization else rulesets.rulesetsFor('.github')
+				listing = (
+					[]
+					if creating
+					else [
+						{'name': item['name'], 'id': index + 1}
+						for index, (_, item) in enumerate(wanted)
+					]
+				)
+				writes = []
+
+				def read(*args, wanted=wanted):
+					index = int(args[-1].rsplit('/', 1)[-1]) - 1
+					return dict(wanted[index][1], enforcement='disabled', id=index + 1)
+
+				def write(*args, stdin=None, writes=writes):
+					writes.append(args)
+					return json.dumps({'id': len(writes)})
+
+				with (
+					self.subTest(organization=organization, creating=creating),
+					mock.patch.object(github, 'ghList', return_value=listing),
+					mock.patch.object(github, 'ghJson', side_effect=read),
+					mock.patch.object(github, 'gh', side_effect=write),
+					contextlib.redirect_stdout(io.StringIO()) as output,
+					self.assertRaisesRegex(RuntimeError, 'Không áp dụng được'),
+				):
+					if organization:
+						rulesets.syncOrgRulesets(apply=True)
+					else:
+						rulesets.syncRulesets(['.github'], apply=True)
+				self.assertEqual(len(writes), len(wanted))
+				self.assertNotIn('✔ đã', output.getvalue())
+
+	def testOrganizationRulesetReadFailuresReturnFailureInCli(self):
+		module = loadScript('org-setup')
+		for command in ('org-rulesets', 'preview'):
+			for response in (RuntimeError('HTTP 502'), [], [{'errors': [{'message': 'Lỗi đọc'}]}]):
+				with (
+					self.subTest(command=command, response=response),
+					mock.patch.object(module, 'signedIn', return_value=True),
+					mock.patch.object(module, 'COMMANDS', ('org-rulesets',)),
+					mock.patch.object(github, 'listRepos', return_value=[]),
+					mock.patch.object(github, 'ghList', side_effect=RuntimeError('HTTP 403')),
+					mock.patch.object(
+						github,
+						'ghJson',
+						side_effect=[response],
+					),
+					mock.patch.object(github, 'gh') as write,
+					mock.patch.object(module.sys, 'argv', ['org-setup.py', command]),
+					contextlib.redirect_stdout(io.StringIO()) as output,
+					contextlib.redirect_stderr(io.StringIO()),
+				):
+					self.assertEqual(module.main(), 1)
+				self.assertIn('không đọc được qua GraphQL', output.getvalue())
+				self.assertNotIn('đã đúng', output.getvalue())
+				write.assert_not_called()
+
+	def testRepositoryRulesetWriteFailuresReturnFailureAfterOtherWrites(self):
+		module = loadScript('org-setup')
+		calls = []
+		live = {}
+
+		def write(*args, stdin=None):
+			calls.append(args)
+			if len(calls) == 1:
+				raise RuntimeError('HTTP 500')
+			live[f'{args[3]}/{len(calls)}'] = dict(json.loads(stdin), id=len(calls))
+			return json.dumps({'id': len(calls)})
+
+		with (
+			mock.patch.object(module, 'signedIn', return_value=True),
+			mock.patch.object(github, 'listRepos', return_value=['.github', 'app']),
+			mock.patch.object(github, 'defaultBranch', return_value='main'),
+			mock.patch.object(github, 'ghExists', return_value=True),
+			mock.patch.object(github, 'ghList', return_value=[]),
+			mock.patch.object(github, 'ghJson', side_effect=lambda *args: live[args[-1]]),
+			mock.patch.object(github, 'gh', side_effect=write),
+			mock.patch.object(module.sys, 'argv', ['org-setup.py', 'rulesets', '--apply']),
+			contextlib.redirect_stdout(io.StringIO()) as output,
+			contextlib.redirect_stderr(io.StringIO()) as error,
+		):
+			self.assertEqual(module.main(), 1)
+		self.assertEqual(len(calls), 4)
+		self.assertEqual(
+			[args[3] for args in calls],
+			['repos/TOANQUYNHLLC/.github/rulesets'] * 2 + ['repos/TOANQUYNHLLC/app/rulesets'] * 2,
+		)
+		self.assertEqual(output.getvalue().count('✔ đã tạo'), 3)
+		self.assertIn('.github/Protect Main', error.getvalue())
+
+	def testMissingRequiredWorkflowsBlockRulesetApplyInCli(self):
+		module = loadScript('org-setup')
+		live = {}
+
+		def apply(*args, stdin=None):
+			rulesetId = len(live) + 1
+			live[f'{args[3]}/{rulesetId}'] = dict(json.loads(stdin), id=rulesetId)
+			return json.dumps({'id': rulesetId})
+
+		with (
+			mock.patch.object(module, 'signedIn', return_value=True),
+			mock.patch.object(github, 'listRepos', return_value=['app', '.github']),
+			mock.patch.object(github, 'defaultBranch', return_value='main'),
+			mock.patch.object(github, 'ghExists', return_value=False),
+			mock.patch.object(github, 'ghList', return_value=[]),
+			mock.patch.object(github, 'ghJson', side_effect=lambda *args: live[args[-1]]),
+			mock.patch.object(github, 'gh', side_effect=apply) as write,
+			mock.patch.object(module.sys, 'argv', ['org-setup.py', 'rulesets', '--apply']),
+			contextlib.redirect_stdout(io.StringIO()) as output,
+			contextlib.redirect_stderr(io.StringIO()) as error,
+		):
+			self.assertEqual(module.main(), 1)
+		self.assertIn('hợp nhất Pull Request của lệnh files trước', output.getvalue())
+		self.assertIn('app: thiếu workflow bắt buộc', error.getvalue())
+		self.assertEqual(output.getvalue().count('✔ đã tạo'), 2)
+		self.assertEqual(write.call_count, 2)
+		self.assertTrue(
+			all(
+				call.args[3] == 'repos/TOANQUYNHLLC/.github/rulesets'
+				for call in write.call_args_list
+			)
+		)
+
 	def testInvalidPullRequestParametersStopBeforeWrites(self):
 		for key, value in (
 			('require d_review_thread_resolution', True),
@@ -72,15 +702,23 @@ class OrgSetupTest(unittest.TestCase):
 			'Protect Pushes (Organization)',
 		]
 		listing = [{'name': name, 'id': index + 1} for index, name in enumerate(oldNames)]
+		live = {
+			index + 1: dict(item, name=name, id=index + 1)
+			for index, ((_, item), name) in enumerate(zip(wanted, oldNames, strict=True))
+		}
 
 		def read(*args):
-			index = int(args[-1].rsplit('/', 1)[-1]) - 1
-			return dict(wanted[index][1], name=oldNames[index], id=index + 1)
+			return live[int(args[-1].rsplit('/', 1)[-1])]
+
+		def apply(*args, stdin=None):
+			rulesetId = int(args[3].rsplit('/', 1)[-1])
+			live[rulesetId] = dict(json.loads(stdin), id=rulesetId)
+			return json.dumps({'id': rulesetId})
 
 		with (
 			mock.patch.object(github, 'ghList', return_value=listing),
 			mock.patch.object(github, 'ghJson', side_effect=read),
-			mock.patch.object(github, 'gh') as write,
+			mock.patch.object(github, 'gh', side_effect=apply) as write,
 			contextlib.redirect_stdout(io.StringIO()),
 		):
 			rulesets.syncOrgRulesets(apply=True)
@@ -237,6 +875,7 @@ class OrgSetupTest(unittest.TestCase):
 				with (
 					mock.patch.object(github, 'ghJson', return_value=data),
 					contextlib.redirect_stdout(io.StringIO()) as output,
+					self.assertRaisesRegex(RuntimeError, 'Không đối chiếu được'),
 				):
 					rulesets.compareOrgRulesets()
 				self.assertIn('không đọc được qua GraphQL', output.getvalue())
@@ -266,6 +905,7 @@ class OrgSetupTest(unittest.TestCase):
 				with (
 					mock.patch.object(github, 'ghJson', return_value=data),
 					contextlib.redirect_stdout(io.StringIO()) as output,
+					self.assertRaisesRegex(RuntimeError, 'Không đối chiếu được'),
 				):
 					rulesets.compareOrgRulesets()
 				self.assertIn('không đọc được qua GraphQL', output.getvalue())
@@ -286,6 +926,7 @@ class OrgSetupTest(unittest.TestCase):
 			mock.patch.object(github, 'ghJson', return_value=data),
 			mock.patch.object(rulesets, 'graphqlRuleset', rulesets.graphqlVisible),
 			contextlib.redirect_stdout(io.StringIO()) as output,
+			self.assertRaisesRegex(RuntimeError, 'Không đối chiếu được'),
 		):
 			rulesets.compareOrgRulesets()
 		self.assertIn('không đọc được qua GraphQL', output.getvalue())
@@ -431,16 +1072,28 @@ class OrgSetupTest(unittest.TestCase):
 			{'name': item['name'], 'id': index + 1} for index, (_, item) in enumerate(wanted)
 		]
 		barrier = threading.Barrier(len(wanted))
+		live = {
+			index + 1: dict(item, enforcement='disabled', id=index + 1)
+			for index, (_, item) in enumerate(wanted)
+		}
+		written = set()
 
 		def read(*args):
-			barrier.wait(timeout=2)
-			index = int(args[-1].rsplit('/', 1)[-1]) - 1
-			return dict(wanted[index][1], enforcement='disabled', id=index + 1)
+			rulesetId = int(args[-1].rsplit('/', 1)[-1])
+			if rulesetId not in written:
+				barrier.wait(timeout=2)
+			return live[rulesetId]
+
+		def apply(*args, stdin=None):
+			rulesetId = int(args[3].rsplit('/', 1)[-1])
+			live[rulesetId] = dict(json.loads(stdin), id=rulesetId)
+			written.add(rulesetId)
+			return json.dumps({'id': rulesetId})
 
 		with (
 			mock.patch.object(github, 'ghList', return_value=listing),
 			mock.patch.object(github, 'ghJson', read),
-			mock.patch.object(github, 'gh') as write,
+			mock.patch.object(github, 'gh', side_effect=apply) as write,
 			contextlib.redirect_stdout(io.StringIO()),
 		):
 			rulesets.syncOrgRulesets(apply=True)
@@ -513,13 +1166,43 @@ class OrgSetupTest(unittest.TestCase):
 		)
 
 	def testDefaultBranchMustBeReadable(self):
-		for data in (None, [], {}, {'default_branch': None}, {'default_branch': ''}):
+		for data in (
+			None,
+			[],
+			{},
+			{'full_name': 'TOANQUYNHLLC/app', 'default_branch': None},
+			{'full_name': 'TOANQUYNHLLC/app', 'default_branch': ''},
+		):
 			with (
 				self.subTest(data=data),
 				mock.patch.object(github, 'ghJson', return_value=data),
 				self.assertRaises(ValueError),
 			):
 				github.defaultBranch('app')
+
+	def testDefaultBranchIdentityStopsFileAndRulesetWrites(self):
+		for identity in (None, 'TOANQUYNHLLC/renamed', 'another-owner/app'):
+			for sync in (files.syncFiles, rulesets.syncRulesets):
+				with (
+					self.subTest(identity=identity, sync=sync.__name__),
+					mock.patch.object(
+						github,
+						'ghJson',
+						return_value={'full_name': identity, 'default_branch': 'main'},
+					) as read,
+					mock.patch.object(github, 'gh') as write,
+					contextlib.redirect_stdout(io.StringIO()),
+					self.assertRaisesRegex(ValueError, 'danh tính'),
+				):
+					sync(['app'], apply=True)
+				read.assert_called_once_with('api', 'repos/TOANQUYNHLLC/app')
+				write.assert_not_called()
+		with mock.patch.object(
+			github,
+			'ghJson',
+			return_value={'full_name': 'toanquynhllc/APP', 'default_branch': 'release/current'},
+		):
+			self.assertEqual(github.defaultBranch('app'), 'release/current')
 
 	def testMalformedFileInventoryStopsBeforeWrites(self):
 		validRef = {'object': {'sha': 'abc123'}}
@@ -770,6 +1453,253 @@ class OrgSetupTest(unittest.TestCase):
 				)
 			write.assert_not_called()
 
+	def testLegacySettingsRejectWrongResourceBeforeAnyWrite(self):
+		for base, key in (
+			('repos/TOANQUYNHLLC/app', 'full_name'),
+			('orgs/TOANQUYNHLLC', 'login'),
+		):
+			for identity in (None, '', 7, 'OTHER/app', 'TOANQUYNHLLC/renamed'):
+				for apply in (False, True):
+					for changed in (False, True):
+						current = {key: identity, 'description': 'Hiện tại'}
+						if identity is None:
+							current.pop(key)
+						with (
+							self.subTest(
+								base=base, identity=identity, apply=apply, changed=changed
+							),
+							mock.patch.object(github, 'gh') as write,
+							mock.patch.object(github, 'ghJson') as read,
+							contextlib.redirect_stdout(io.StringIO()),
+							self.assertRaisesRegex(ValueError, 'danh tính'),
+						):
+							settings.updateSettings(
+								base,
+								current,
+								{'description': 'Mới' if changed else 'Hiện tại'},
+								apply,
+								'cài đặt',
+							)
+						write.assert_not_called()
+						read.assert_not_called()
+
+	def testLegacySettingsReadbackRejectsWrongResource(self):
+		for base, key, expected in (
+			('repos/TOANQUYNHLLC/app', 'full_name', 'TOANQUYNHLLC/app'),
+			('orgs/TOANQUYNHLLC', 'login', 'TOANQUYNHLLC'),
+		):
+			for identity in (None, 'OTHER/app'):
+				confirmed = {'description': 'Mới'}
+				if identity is not None:
+					confirmed[key] = identity
+				with (
+					self.subTest(base=base, identity=identity),
+					mock.patch.object(github, 'ghJson', return_value=confirmed),
+					mock.patch.object(github, 'gh') as write,
+					contextlib.redirect_stdout(io.StringIO()) as output,
+					self.assertRaisesRegex(ValueError, 'danh tính'),
+				):
+					settings.updateSettings(
+						base,
+						{key: expected, 'description': 'Cũ'},
+						{'description': 'Mới'},
+						True,
+						'cài đặt',
+					)
+				write.assert_called_once()
+				self.assertNotIn('✔ đã cập nhật', output.getvalue())
+
+	def testResourceIdentityAcceptsCaseDifferences(self):
+		for base, key, expected in (
+			('repos/toanquynhllc/app', 'full_name', 'TOANQUYNHLLC/App'),
+			('orgs/toanquynhllc', 'login', 'TOANQUYNHLLC'),
+		):
+			state = {key: expected, 'description': 'Mới'}
+			with (
+				self.subTest(base=base),
+				mock.patch.object(github, 'ghJson', return_value=state),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				confirmed = settings.updateSettings(
+					base,
+					{key: expected, 'description': 'Cũ'},
+					{'description': 'Mới'},
+					True,
+					'cài đặt',
+				)
+				self.assertIs(confirmed, state)
+				write.assert_called_once()
+		plan = []
+		with mock.patch.object(
+			github,
+			'ghJson',
+			return_value={'full_name': 'TOANQUYNHLLC/App', 'node_id': 'R_app'},
+		):
+			settings.repositorySettingChanges(
+				plan,
+				'repos/toanquynhllc/app',
+				{'has_discussions': False},
+				{'has_discussions': True},
+			)
+		self.assertEqual(plan[0][2]['variables']['input']['repositoryId'], 'R_app')
+
+	def testUnconfirmedSettingsWritesReturnFailureInCli(self):
+		module = loadScript('org-setup')
+		for command, key, value in (
+			('settings', 'has_issues', True),
+			('org-settings', 'has_organization_projects', False),
+		):
+			identity = (
+				{'full_name': 'TOANQUYNHLLC/app'}
+				if command == 'settings'
+				else {'login': 'TOANQUYNHLLC'}
+			)
+			for response in (
+				{key: not value},
+				{},
+				[],
+				None,
+				{key: int(value)},
+				RuntimeError('HTTP 403'),
+			):
+				confirmed = dict(response, **identity) if isinstance(response, dict) else response
+				with self.subTest(command=command, confirmed=confirmed):
+					with (
+						mock.patch.object(module, 'signedIn', return_value=True),
+						mock.patch.object(github, 'listRepos', return_value=['app']),
+						mock.patch.object(
+							settings, 'repositorySettings', return_value={key: value}
+						),
+						mock.patch.object(settings, 'ORG_SETTINGS', {key: value}),
+						mock.patch.object(settings, 'ORG_WEB_ONLY_SETTINGS', {}),
+						mock.patch.object(settings, 'readActions', return_value=[]),
+						mock.patch.object(settings, 'syncTopics') as topics,
+						mock.patch.object(settings, 'syncSecurity') as security,
+						mock.patch.object(settings, 'syncActions') as actions,
+						mock.patch.object(
+							github, 'ghJson', side_effect=[{key: not value, **identity}, confirmed]
+						),
+						mock.patch.object(github, 'gh', return_value='{}') as write,
+						mock.patch.object(module.sys, 'argv', ['org-setup.py', command, '--apply']),
+						contextlib.redirect_stdout(io.StringIO()) as output,
+						contextlib.redirect_stderr(io.StringIO()) as error,
+					):
+						self.assertEqual(module.main(), 1)
+					write.assert_called_once()
+					self.assertNotIn('✔ đã cập nhật', output.getvalue())
+					self.assertIn('❌', error.getvalue())
+					for remaining in (topics, security, actions):
+						remaining.assert_not_called()
+
+	def testSettingsConfirmationReturnsFreshStateAndAcceptsNullText(self):
+		base = 'repos/TOANQUYNHLLC/app'
+		current = {
+			'full_name': 'TOANQUYNHLLC/app',
+			'has_issues': False,
+			'description': 'Cũ',
+			'private': False,
+		}
+		original = dict(current)
+		wanted = {'has_issues': True, 'description': ''}
+		confirmed = dict(current, has_issues=True, description=None, private=True)
+		with (
+			mock.patch.object(github, 'ghJson', return_value=confirmed) as read,
+			mock.patch.object(github, 'gh', return_value='{}') as write,
+			contextlib.redirect_stdout(io.StringIO()) as output,
+		):
+			result = settings.updateSettings(base, current, wanted, True, 'cài đặt repository')
+		self.assertIs(result, confirmed)
+		self.assertEqual(current, original)
+		read.assert_called_once_with('api', base)
+		self.assertEqual(json.loads(write.call_args.kwargs['stdin']), wanted)
+		self.assertIn('✔ đã cập nhật', output.getvalue())
+
+	def testUnconfirmedDiscussionsWritesReturnFailureInCli(self):
+		module = loadScript('org-setup')
+		for enabled in (False, True):
+			with self.subTest(enabled=enabled):
+				current = {
+					'has_discussions': not enabled,
+					'node_id': 'R_app',
+					'full_name': 'TOANQUYNHLLC/app',
+				}
+				with (
+					mock.patch.object(module, 'signedIn', return_value=True),
+					mock.patch.object(github, 'listRepos', return_value=['app']),
+					mock.patch.object(
+						settings, 'repositorySettings', return_value={'has_discussions': enabled}
+					),
+					mock.patch.object(settings, 'readActions', return_value=[]),
+					mock.patch.object(settings, 'syncTopics') as topics,
+					mock.patch.object(settings, 'syncSecurity') as security,
+					mock.patch.object(settings, 'syncActions') as actions,
+					mock.patch.object(github, 'ghJson', return_value=current),
+					mock.patch.object(
+						github, 'gh', return_value='{"errors": [{"message": "failed"}]}'
+					) as write,
+					mock.patch.object(module.sys, 'argv', ['org-setup.py', 'settings', '--apply']),
+					contextlib.redirect_stdout(io.StringIO()) as output,
+					contextlib.redirect_stderr(io.StringIO()),
+				):
+					self.assertEqual(module.main(), 1)
+				write.assert_called_once()
+				self.assertEqual(write.call_args.args[:4], ('api', '-X', 'POST', 'graphql'))
+				self.assertNotIn('✔ đã cập nhật', output.getvalue())
+				for remaining in (topics, security, actions):
+					remaining.assert_not_called()
+
+	def testSettingsUseConfirmedVisibilityForSecurity(self):
+		for private in (False, True):
+			with self.subTest(private=private):
+				current = {
+					'full_name': 'TOANQUYNHLLC/app',
+					'visibility': 'public' if private else 'private',
+					'private': not private,
+				}
+				confirmed = dict(
+					current, visibility='private' if private else 'public', private=private
+				)
+				with (
+					mock.patch.object(
+						settings,
+						'repositorySettings',
+						return_value={'visibility': confirmed['visibility']},
+					),
+					mock.patch.object(settings, 'readActions', return_value=[]),
+					mock.patch.object(settings, 'syncTopics') as topics,
+					mock.patch.object(settings, 'syncSecurity') as security,
+					mock.patch.object(settings, 'syncActions'),
+					mock.patch.object(github, 'ghJson', side_effect=[current, confirmed]),
+					mock.patch.object(github, 'gh', return_value='{}'),
+					contextlib.redirect_stdout(io.StringIO()),
+				):
+					settings.syncSettings(['app'], apply=True, discussions=False)
+				security.assert_called_once_with('app', confirmed, True)
+				topics.assert_called_once_with('app', confirmed, True)
+
+	def testUnconfirmedUnarchiveStopsRemainingWrites(self):
+		current = {'full_name': 'TOANQUYNHLLC/app', 'archived': True, 'has_issues': False}
+		with (
+			mock.patch.object(
+				settings, 'repositorySettings', return_value={'archived': False, 'has_issues': True}
+			),
+			mock.patch.object(settings, 'readActions', return_value=[]),
+			mock.patch.object(settings, 'syncTopics') as topics,
+			mock.patch.object(settings, 'syncSecurity') as security,
+			mock.patch.object(settings, 'syncActions') as actions,
+			mock.patch.object(github, 'ghJson', return_value=current),
+			mock.patch.object(github, 'gh', return_value='{}') as write,
+			contextlib.redirect_stdout(io.StringIO()) as output,
+			self.assertRaisesRegex(RuntimeError, 'archived'),
+		):
+			settings.syncSettings(['app'], apply=True, discussions=False)
+		write.assert_called_once()
+		self.assertEqual(json.loads(write.call_args.kwargs['stdin']), {'archived': False})
+		self.assertNotIn('✔ đã cập nhật', output.getvalue())
+		for remaining in (topics, security, actions):
+			remaining.assert_not_called()
+
 	def testSettingsArchiveTransitionsSurroundOtherUpdates(self):
 		base = 'repos/TOANQUYNHLLC/app'
 		for before, after, apply in (
@@ -846,7 +1776,9 @@ class OrgSetupTest(unittest.TestCase):
 				settings, 'repositorySettings', return_value={'archived': False, 'has_issues': True}
 			),
 			mock.patch.object(settings, 'readActions', return_value=[]),
-			mock.patch.object(github, 'ghJson', return_value={'archived': True}),
+			mock.patch.object(
+				github, 'ghJson', return_value={'full_name': 'TOANQUYNHLLC/app', 'archived': True}
+			),
 			mock.patch.object(github, 'gh') as write,
 			contextlib.redirect_stdout(io.StringIO()),
 			self.assertRaisesRegex(ValueError, 'has_issues'),
@@ -915,6 +1847,146 @@ class OrgSetupTest(unittest.TestCase):
 			):
 				teams.syncTeams(['app'], apply=True)
 			write.assert_not_called()
+
+	def testUnconfirmedTeamRepositoryPermissionReturnsFailureInCli(self):
+		module = loadScript('org-setup')
+		for confirmed in (
+			None,
+			{'role_name': 'write'},
+			{'role_name': 'custom_role'},
+			{},
+			RuntimeError('HTTP 403'),
+			RuntimeError('HTTP 429'),
+		):
+			with self.subTest(confirmed=confirmed):
+				permissionReads = []
+
+				def read(*args, confirmed=confirmed, permissionReads=permissionReads):
+					path = args[-1]
+					if '/memberships/' in path:
+						return {'role': 'maintainer', 'state': 'active'}
+					if '/repos/' not in path:
+						return {**teamFixture('maintainers'), 'parent': None}
+					permissionReads.append(args)
+					if len(permissionReads) == 1:
+						return {'role_name': 'read'}
+					if confirmed is None:
+						raise RuntimeError('HTTP 404')
+					if isinstance(confirmed, RuntimeError):
+						raise confirmed
+					return confirmed
+
+				with (
+					mock.patch.object(teams, 'TEAMS', {'maintainers': teams.TEAMS['maintainers']}),
+					mock.patch.object(teams, 'TEAM_PARENTS', {}),
+					mock.patch.object(module, 'signedIn', return_value=True),
+					mock.patch.object(github, 'listRepos', return_value=['app']),
+					mock.patch.object(github, 'ghJson', side_effect=read),
+					mock.patch.object(github, 'gh', return_value='') as write,
+					mock.patch.object(
+						module.sys, 'argv', ['org-setup.py', 'team', '--repo', 'app', '--apply']
+					),
+					contextlib.redirect_stdout(io.StringIO()) as output,
+					contextlib.redirect_stderr(io.StringIO()) as error,
+				):
+					self.assertEqual(module.main(), 1)
+				write.assert_called_once_with(
+					'api',
+					'-X',
+					'PUT',
+					'orgs/TOANQUYNHLLC/teams/maintainers/repos/TOANQUYNHLLC/app',
+					'-f',
+					'permission=maintain',
+				)
+				self.assertEqual(len(permissionReads), 2)
+				self.assertIn('application/vnd.github.v3.repository+json', permissionReads[-1][-2])
+				self.assertNotIn('✔ maintain TOANQUYNHLLC/app', output.getvalue())
+				self.assertIn('❌', error.getvalue())
+
+	def testTeamPermissionConfirmationAcceptsEqualOrHigherStandardRoles(self):
+		for permission, confirmed in (
+			('pull', 'read'),
+			('triage', 'triage'),
+			('push', 'write'),
+			('maintain', 'maintain'),
+			('admin', 'admin'),
+			('maintain', 'admin'),
+		):
+			with self.subTest(permission=permission, confirmed=confirmed):
+				live, permissionReads = {}, []
+
+				def read(*args, live=live, permissionReads=permissionReads):
+					path = args[-1]
+					if '/memberships/' in path:
+						return {'role': 'maintainer', 'state': 'active'}
+					if '/repos/' not in path:
+						return {**teamFixture('qa'), 'parent': None}
+					permissionReads.append(path)
+					if path not in live:
+						raise RuntimeError('HTTP 404')
+					return {'role_name': live[path]}
+
+				def write(*args, stdin=None, live=live, confirmed=confirmed):
+					live[args[3]] = confirmed
+					return ''
+
+				profile = ('QA', permission, 'closed', teams.TEAMS['qa'][3])
+				with (
+					mock.patch.object(teams, 'TEAMS', {'qa': profile}),
+					mock.patch.object(teams, 'TEAM_PARENTS', {}),
+					mock.patch.object(github, 'ghJson', side_effect=read),
+					mock.patch.object(github, 'gh', side_effect=write) as writer,
+					contextlib.redirect_stdout(io.StringIO()) as output,
+				):
+					teams.syncTeams(['app', 'web'], apply=True)
+				self.assertEqual(writer.call_count, 2)
+				self.assertEqual(len(permissionReads), 4)
+				for repo in ('app', 'web'):
+					self.assertIn(f'✔ {permission} TOANQUYNHLLC/{repo}', output.getvalue())
+					path = f'orgs/TOANQUYNHLLC/teams/qa/repos/TOANQUYNHLLC/{repo}'
+					self.assertEqual(permissionReads.count(path), 2)
+					self.assertEqual(live[path], confirmed)
+
+	def testNewPendingTeamInvitationReturnsFailureAfterOtherMembershipWrites(self):
+		module = loadScript('org-setup')
+		profiles = {team: teams.TEAMS[team] for team in ('qa', 'developers')}
+
+		def write(*args, stdin=None):
+			state = (
+				'pending'
+				if args[3].endswith(f'/qa/memberships/{teams.MAINTAINERS[0]}')
+				else 'active'
+			)
+			return json.dumps({'role': 'maintainer', 'state': state})
+
+		with (
+			mock.patch.object(teams, 'TEAMS', profiles),
+			mock.patch.object(teams, 'TEAM_PARENTS', {}),
+			mock.patch.object(
+				teams,
+				'teamDetails',
+				side_effect=lambda team: {
+					**teamFixture(team),
+					'parent': None,
+				},
+			),
+			mock.patch.object(teams, 'teamRole', return_value=None),
+			mock.patch.object(teams, 'teamPermission', return_value='admin'),
+			mock.patch.object(module, 'signedIn', return_value=True),
+			mock.patch.object(github, 'listRepos', return_value=['app']),
+			mock.patch.object(github, 'gh', side_effect=write) as writer,
+			mock.patch.object(
+				module.sys, 'argv', ['org-setup.py', 'team', '--repo', 'app', '--apply']
+			),
+			contextlib.redirect_stdout(io.StringIO()) as output,
+			contextlib.redirect_stderr(io.StringIO()) as error,
+		):
+			self.assertEqual(module.main(), 1)
+		self.assertEqual(writer.call_count, len(profiles) * len(teams.MAINTAINERS))
+		self.assertIn(f'qa/{teams.MAINTAINERS[0]}', error.getvalue())
+		self.assertIn(f'✔ thêm {teams.MAINTAINERS[1]} (maintainer)', output.getvalue())
+		self.assertIn('== team TOANQUYNHLLC/developers: đã có', output.getvalue())
+		self.assertIn('chờ chấp nhận lời mời', output.getvalue())
 
 	def testPendingOrMalformedMembershipStopsBeforeAnyWrite(self):
 		for membership in (
@@ -1000,6 +2072,108 @@ class OrgSetupTest(unittest.TestCase):
 				teams.syncTeams(['app'], apply=True)
 			read.assert_not_called()
 			write.assert_not_called()
+
+	def testInvalidTeamProfilesStopBeforeReadingOrWriting(self):
+		for profile in (
+			('QA', 'owner', 'closed', 'Kiểm thử'),
+			('QA', [], 'closed', 'Kiểm thử'),
+			('QA', 'push', 'public', 'Kiểm thử'),
+			('   ', 'push', 'closed', 'Kiểm thử'),
+			('QA', 'push', 'closed', []),
+			('QA', 'push'),
+		):
+			with (
+				self.subTest(profile=profile),
+				mock.patch.object(teams, 'TEAMS', {'qa': profile}),
+				mock.patch.object(teams, 'TEAM_PARENTS', {}),
+				mock.patch.object(github, 'ghJson') as read,
+				mock.patch.object(github, 'gh') as write,
+				self.assertRaises(ValueError),
+			):
+				teams.syncTeams(['app'], apply=True)
+			read.assert_not_called()
+			write.assert_not_called()
+
+	def testUnconfirmedTeamMetadataStopsBeforeMembershipWrites(self):
+		for creating in (False, True):
+			for field, wrong in (
+				('name', 'Sai tên'),
+				('description', 'Sai mô tả'),
+				('privacy', 'secret'),
+			):
+				calls = []
+				live = {
+					'details': None
+					if creating
+					else {**teamFixture('qa'), 'parent': None, 'description': 'mô tả cũ'}
+				}
+
+				def read(team, live=live):
+					if live['details'] is None:
+						raise RuntimeError('Not Found (HTTP 404)')
+					return live['details']
+
+				def write(*args, stdin=None, field=field, wrong=wrong, calls=calls, live=live):
+					calls.append(args)
+					if '/memberships/' in str(args):
+						return json.dumps({'role': 'maintainer', 'state': 'active'})
+					live['details'] = {**teamFixture('qa'), field: wrong}
+					return '{}'
+
+				with (
+					self.subTest(creating=creating, field=field),
+					mock.patch.object(teams, 'TEAMS', {'qa': teams.TEAMS['qa']}),
+					mock.patch.object(teams, 'TEAM_PARENTS', {}),
+					mock.patch.object(teams, 'teamDetails', side_effect=read),
+					mock.patch.object(teams, 'teamRole', return_value=None),
+					mock.patch.object(teams, 'teamPermission', return_value='admin'),
+					mock.patch.object(github, 'gh', side_effect=write),
+					contextlib.redirect_stdout(io.StringIO()),
+					self.assertRaisesRegex(RuntimeError, 'thông tin team'),
+				):
+					teams.syncTeams(['app'], apply=True)
+				self.assertEqual(len(calls), 1)
+				self.assertIn(calls[0][2], ('POST', 'PATCH'))
+
+	def testBlockedOrgRulesetApplyReturnsFailureInCli(self):
+		module = loadScript('org-setup')
+		with (
+			mock.patch.object(module, 'signedIn', return_value=True),
+			mock.patch.object(github, 'ghList', side_effect=RuntimeError('HTTP 403')),
+			mock.patch.object(rulesets, 'compareOrgRulesets') as compare,
+			mock.patch.object(github, 'gh') as write,
+			mock.patch.object(module.sys, 'argv', ['org-setup.py', 'org-rulesets', '--apply']),
+			contextlib.redirect_stdout(io.StringIO()),
+			contextlib.redirect_stderr(io.StringIO()),
+		):
+			self.assertEqual(module.main(), 1)
+		compare.assert_called_once_with()
+		write.assert_not_called()
+
+	def testFailedOrganizationRulesetWritesReturnFailureInCli(self):
+		module = loadScript('org-setup')
+		wanted = rulesets.orgRulesets()
+		listing = [
+			{'name': item['name'], 'id': index + 1} for index, (_, item) in enumerate(wanted)
+		]
+
+		def read(*args):
+			index = int(args[-1].rsplit('/', 1)[-1]) - 1
+			return dict(wanted[index][1], enforcement='disabled', id=index + 1)
+
+		with (
+			mock.patch.object(module, 'signedIn', return_value=True),
+			mock.patch.object(github, 'ghList', return_value=listing),
+			mock.patch.object(github, 'ghJson', side_effect=read),
+			mock.patch.object(github, 'gh', side_effect=RuntimeError('HTTP 403')) as write,
+			mock.patch.object(module.sys, 'argv', ['org-setup.py', 'org-rulesets', '--apply']),
+			contextlib.redirect_stdout(io.StringIO()) as output,
+			contextlib.redirect_stderr(io.StringIO()) as error,
+		):
+			self.assertEqual(module.main(), 1)
+		self.assertEqual(write.call_count, len(wanted))
+		self.assertNotIn('✔ đã', output.getvalue())
+		self.assertIn('Không áp dụng được ruleset cấp tổ chức', error.getvalue())
 
 	def testParentTeamsDoNotManageMembersOrRepositoryPermissions(self):
 		for team in ('engineering', 'creative'):
@@ -1118,7 +2292,11 @@ class OrgSetupTest(unittest.TestCase):
 				),
 				contextlib.redirect_stdout(output),
 			):
-				teams.syncTeams(['app'], apply=True)
+				if state == 'pending':
+					with self.assertRaisesRegex(RuntimeError, 'chờ chấp nhận lời mời'):
+						teams.syncTeams(['app'], apply=True)
+				else:
+					teams.syncTeams(['app'], apply=True)
 			if state == 'pending':
 				self.assertIn('chờ chấp nhận lời mời', output.getvalue())
 				self.assertNotIn('✔ thêm nguyentrongtoandl (maintainer)', output.getvalue())
@@ -1250,6 +2428,31 @@ class OrgSetupTest(unittest.TestCase):
 		):
 			labels.syncLabels(['app'], apply=True)
 		write.assert_not_called()
+
+	def testPaginatedListsRequireAPageAndAcceptAnEmptyPage(self):
+		with (
+			mock.patch.object(github, 'ghJson', return_value=[]),
+			self.assertRaisesRegex(ValueError, 'phản hồi phân trang'),
+		):
+			github.ghList('repos/o/r/labels')
+		with mock.patch.object(github, 'ghJson', return_value=[[]]):
+			self.assertEqual(github.ghList('repos/o/r/labels'), [])
+
+	def testMissingRestPagesPreventLabelAndRulesetWrites(self):
+		for action in (
+			lambda: labels.syncLabels(['app'], apply=True),
+			lambda: rulesets.syncRulesets(['.github'], apply=True),
+			lambda: rulesets.syncOrgRulesets(apply=True),
+		):
+			with (
+				self.subTest(action=action),
+				mock.patch.object(github, 'ghJson', return_value=[]),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+				self.assertRaisesRegex(ValueError, 'phản hồi phân trang'),
+			):
+				action()
+			write.assert_not_called()
 
 	def testTruncatedGraphqlCollectionsAreNotCompared(self):
 		for collection in ('rules', 'bypassActors'):
@@ -1692,9 +2895,16 @@ class OrgSetupTest(unittest.TestCase):
 		teams.teamRole = lambda team, user: (
 			'member' if (team, user) == ('maintainers', 'trongtoandl81') else 'maintainer'
 		)
-		teams.teamPermission = lambda team, repo: (
-			'write' if (team, repo) == ('maintainers', 'app') else 'admin'
-		)
+		permissions = {('maintainers', 'app'): 'write'}
+		teams.teamPermission = lambda team, repo: permissions.get((team, repo), 'admin')
+
+		def write(*args, stdin=None):
+			calls.append(args)
+			if '/repos/' in args[3]:
+				permissions[('maintainers', 'app')] = 'maintain'
+			return json.dumps({'role': 'maintainer', 'state': 'active'})
+
+		github.gh = write
 		with contextlib.redirect_stdout(io.StringIO()):
 			teams.syncTeams(['.github', 'app'], apply=True)
 		self.assertEqual(
@@ -1704,6 +2914,7 @@ class OrgSetupTest(unittest.TestCase):
 				'orgs/TOANQUYNHLLC/teams/maintainers/repos/TOANQUYNHLLC/app',
 			],
 		)
+		self.assertEqual(permissions[('maintainers', 'app')], 'maintain')
 
 	def testSettingsReadActionsEarlyButPrintInOrder(self):
 		# Quyền Actions đọc song song với cài đặt repository (bắt đầu trước khi đọc xong repository); đầu ra vẫn
@@ -1718,6 +2929,7 @@ class OrgSetupTest(unittest.TestCase):
 				time.sleep(0.2)
 				return dict(
 					settings.repositorySettings('app'),
+					full_name='TOANQUYNHLLC/app',
 					private=True,
 					security_and_analysis={
 						name: {'status': 'disabled'} for name in settings.SECURITY_FEATURES
@@ -1990,11 +3202,15 @@ class OrgSetupTest(unittest.TestCase):
 		github.ghExists = lambda endpoint: True
 		teams.teamRole = lambda team, user: 'maintainer'
 		teams.teamPermission = lambda team, repo: 'admin'
-		teams.teamDetails = lambda team: {
-			**teamFixture(team),
-			'description': 'mô tả cũ' if team == 'qa' else teams.TEAMS[team][3],
-		}
-		github.gh = lambda *args, **kwargs: calls.append((args, kwargs.get('stdin')))
+		live = {team: teamFixture(team) for team in teams.TEAMS}
+		live['qa']['description'] = 'mô tả cũ'
+		teams.teamDetails = lambda team: live[team]
+
+		def write(*args, stdin=None):
+			calls.append((args, stdin))
+			live['qa'].update(json.loads(stdin))
+
+		github.gh = write
 		with contextlib.redirect_stdout(io.StringIO()):
 			teams.syncTeams(['.github'], apply=True)
 		self.assertEqual([args[3] for args, _ in calls], ['orgs/TOANQUYNHLLC/teams/qa'])
@@ -2062,17 +3278,20 @@ class OrgSetupTest(unittest.TestCase):
 		protectMain = wanted[rulesets.RULESET_FILE]
 		listing = [{'name': 'Protect Main', 'id': 7}, {'name': 'Cũ', 'id': 9}]
 		writes = []
+		live = {'7': dict(protectMain, enforcement='disabled', id=7)}
 
 		def read(*args):
 			if '--paginate' in args:
 				return [listing]
-			self.assertEqual(args[-1], 'repos/TOANQUYNHLLC/.github/rulesets/7')
-			return dict(protectMain, enforcement='disabled', id=7)
+			return live[args[-1].rsplit('/', 1)[-1]]
 
 		def write(*args, stdin=None):
 			writes.append((args, json.loads(stdin) if stdin else None))
 			if failingMethod and failingMethod in args:
 				raise RuntimeError('HTTP 403')
+			rulesetId = 7 if args[2] == 'PUT' else 8
+			live[str(rulesetId)] = dict(json.loads(stdin), id=rulesetId)
+			return json.dumps({'id': rulesetId})
 
 		output = io.StringIO()
 		with (
@@ -2080,7 +3299,11 @@ class OrgSetupTest(unittest.TestCase):
 			mock.patch.object(github, 'gh', write),
 			contextlib.redirect_stdout(output),
 		):
-			rulesets.syncRulesets(['.github'], apply=apply)
+			if failingMethod:
+				with self.assertRaisesRegex(RuntimeError, 'Không áp dụng được'):
+					rulesets.syncRulesets(['.github'], apply=apply)
+			else:
+				rulesets.syncRulesets(['.github'], apply=apply)
 		return output.getvalue(), writes
 
 	def testRulesetPreviewListsCreateAndUpdateWithoutWriting(self):
@@ -2122,20 +3345,28 @@ class OrgSetupTest(unittest.TestCase):
 	def testOrgRulesetsFallBackToGraphqlWhenRestBlocked(self):
 		# Gói Free: REST ruleset cấp tổ chức trả HTTP 403 — so qua GraphQL, không ghi.
 		output = io.StringIO()
-		with (
-			mock.patch.object(github, 'ghList', side_effect=RuntimeError('HTTP 403')),
-			mock.patch.object(rulesets, 'compareOrgRulesets') as compare,
-			mock.patch.object(github, 'gh') as write,
-			contextlib.redirect_stdout(output),
-		):
-			rulesets.syncOrgRulesets(apply=True)
-		compare.assert_called_once_with()
-		write.assert_not_called()
+		for apply in (False, True):
+			with (
+				self.subTest(apply=apply),
+				mock.patch.object(github, 'ghList', side_effect=RuntimeError('HTTP 403')),
+				mock.patch.object(rulesets, 'compareOrgRulesets') as compare,
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(output),
+			):
+				if apply:
+					with self.assertRaisesRegex(RuntimeError, 'Không áp dụng được'):
+						rulesets.syncOrgRulesets(apply=True)
+				else:
+					rulesets.syncOrgRulesets(apply=False)
+			compare.assert_called_once_with()
+			write.assert_not_called()
 		self.assertIn('REST API ruleset cấp tổ chức: HTTP 403', output.getvalue())
 
 	def testOrgSettingsPatchOnlyApiSettingsAndReportWebOnly(self):
 		# Cài đặt đổi được qua API thì PATCH phần khác; mục chỉ đổi trên web chỉ được báo, không ghi.
-		current = dict(settings.ORG_SETTINGS, **settings.ORG_WEB_ONLY_SETTINGS)
+		current = dict(
+			settings.ORG_SETTINGS, login='TOANQUYNHLLC', **settings.ORG_WEB_ONLY_SETTINGS
+		)
 		current['blog'] = 'https://cu.example'
 		# Trên web khác nguồn cài đặt, dù nguồn (đổi sau mỗi lần make org-import) đang bật hay tắt 2FA.
 		wanted = settings.ORG_WEB_ONLY_SETTINGS['two_factor_requirement_enabled']
@@ -2150,15 +3381,19 @@ class OrgSetupTest(unittest.TestCase):
 		]
 		for apply in (False, True):
 			writes, output = [], io.StringIO()
+			live = dict(current)
+
+			def write(*args, stdin=None, writes=writes, live=live):
+				writes.append((args, stdin))
+				live.update(json.loads(stdin))
+
 			with (
 				self.subTest(apply=apply),
 				mock.patch.object(settings, 'readActions', return_value=readings),
-				mock.patch.object(github, 'ghJson', return_value=dict(current)),
 				mock.patch.object(
-					github,
-					'gh',
-					lambda *args, stdin=None, writes=writes: writes.append((args, stdin)),
+					github, 'ghJson', side_effect=lambda *args, live=live: dict(live)
 				),
+				mock.patch.object(github, 'gh', side_effect=write),
 				contextlib.redirect_stdout(output),
 			):
 				settings.syncOrgSettings(apply)
@@ -2166,6 +3401,7 @@ class OrgSetupTest(unittest.TestCase):
 			self.assertIn(f'two_factor_requirement_enabled: {not wanted} ≠ {wanted}', text)
 			self.assertIn('quyền GitHub Actions đã đúng', text)
 			if apply:
+				self.assertEqual(live['blog'], settings.ORG_SETTINGS['blog'])
 				self.assertEqual(
 					writes,
 					[
@@ -2221,6 +3457,78 @@ class OrgSetupTest(unittest.TestCase):
 			with self.subTest(command=command), mock.patch.object(owner, name) as target:
 				module.runCommand(command, ['app'], True, discussions=True)
 				target.assert_called_once_with(*arguments)
+
+	def testCliRejectsUnsupportedOptionsBeforeGitHub(self):
+		module = loadScript('org-setup')
+		commands = (*module.COMMANDS, 'preview', 'import-settings', 'local-settings')
+		cases = [(command, ['--discussions']) for command in commands if command != 'settings']
+		for command in (
+			'org-rulesets',
+			'org-settings',
+			'preview',
+			'import-settings',
+			'local-settings',
+		):
+			cases.extend((command, ['--repo', repo]) for repo in ('app', ''))
+		cases.extend((command, ['--apply']) for command in ('preview', 'import-settings'))
+		for command, options in cases:
+			with (
+				self.subTest(command=command, options=options),
+				mock.patch.object(module.sys, 'argv', ['org-setup.py', command, *options]),
+				mock.patch.object(module, 'signedIn') as login,
+				mock.patch.object(github, 'listRepos') as listing,
+				mock.patch.object(module, 'runCommand') as run,
+				mock.patch.object(module.configuration, 'importSettings') as capture,
+				mock.patch.object(module.configuration, 'syncConfiguredSettings') as sync,
+				contextlib.redirect_stderr(io.StringIO()),
+				contextlib.redirect_stdout(io.StringIO()),
+				self.assertRaises(SystemExit) as stopped,
+			):
+				module.main()
+			self.assertEqual(stopped.exception.code, 2)
+			for operation in (login, listing, run, capture, sync):
+				operation.assert_not_called()
+
+	def testCliRejectsInvalidRepositoryNamesBeforeGitHub(self):
+		module = loadScript('org-setup')
+		for command in ('files', 'settings', 'rulesets', 'team', 'labels'):
+			for repo in ('', ' ', '\t', '.', '..', ' app', 'app ', 'owner/app', 'app?x=1', 'app#x'):
+				with (
+					self.subTest(command=command, repo=repo),
+					mock.patch.object(
+						module.sys, 'argv', ['org-setup.py', command, '--repo', repo, '--apply']
+					),
+					mock.patch.object(module, 'signedIn') as login,
+					mock.patch.object(github, 'listRepos') as listing,
+					mock.patch.object(module, 'runCommand') as run,
+					contextlib.redirect_stderr(io.StringIO()),
+					contextlib.redirect_stdout(io.StringIO()),
+					self.assertRaises(SystemExit) as stopped,
+				):
+					module.main()
+				self.assertEqual(stopped.exception.code, 2)
+				for operation in (login, listing, run):
+					operation.assert_not_called()
+
+	def testCliPreservesValidRepositoryScope(self):
+		module = loadScript('org-setup')
+		for command in ('files', 'settings', 'rulesets', 'team', 'labels'):
+			for repo in ('.github', 'app_name-v1.2'):
+				options = ['--discussions'] if command == 'settings' else []
+				with (
+					self.subTest(command=command, repo=repo),
+					mock.patch.object(
+						module.sys,
+						'argv',
+						['org-setup.py', command, '--repo', repo, '--apply', *options],
+					),
+					mock.patch.object(module, 'signedIn', return_value=True),
+					mock.patch.object(github, 'listRepos', return_value=[repo]) as listing,
+					mock.patch.object(module, 'runCommand') as run,
+				):
+					self.assertEqual(module.main(), 0)
+				listing.assert_called_once_with(repo)
+				run.assert_called_once_with(command, [repo], True, command == 'settings')
 
 	def testNewTeamPreviewListsEveryStepWithoutWriting(self):
 		output = io.StringIO()

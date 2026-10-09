@@ -5,23 +5,23 @@
 
 ## 📌 BỐI CẢNH
 
-Các repository cần một quy ước thụt lề thống nhất. Tab cho phép mỗi người chọn độ rộng hiển thị và tệp nhỏ hơn; một số ngôn ngữ và formatter chính thức lại không chấp nhận tab.
+Các repository dùng chung quy tắc thụt lề để mã nguồn được định dạng nhất quán. Tab cho phép người đọc chọn độ rộng hiển thị; định dạng không hỗ trợ tab cần ngoại lệ rõ ràng.
 
 ## ✅ QUYẾT ĐỊNH
 
-- Mặc định thụt lề bằng **tab**, độ rộng **4**, cho mọi ngôn ngữ — kể cả Python (`ruff format` với `indent-style = "tab"`), JSON, shell, `Makefile`.
-- Chỉ ngôn ngữ bắt buộc dấu cách mới dùng dấu cách:
-    - **4** cho YAML (đặc tả cấm tab), Markdown (Prettier luôn thụt lề danh sách bằng dấu cách), F#, Elm, Nim, Zig.
-    - **2** cho Dart, Elixir, Terraform, Crystal, Gleam, Nix — formatter chính thức cố định độ rộng 2.
-- Quy tắc khai báo trong `.editorconfig`, `.prettierrc.json`, `ruff.toml` và được `scripts/validate.py` kiểm tra.
+Mặc định dùng **tab, độ rộng 4** cho Python, JSON, shell, Makefile và các ngôn ngữ hỗ trợ tab. Python dùng `ruff format` với `indent-style = "tab"`.
+
+Các ngoại lệ dùng dấu cách theo yêu cầu của định dạng hoặc formatter:
+
+- Độ rộng **4**: YAML, Markdown, F#, Elm, Nim, Zig.
+- Độ rộng **2**: Dart, Elixir, Terraform, Crystal, Gleam, Nix.
+
+Quy tắc nằm trong `.editorconfig`, `.prettierrc.json` và `ruff.toml`; `scripts/validate.py` đối chiếu các cấu hình.
 
 ## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
 
-- **Dấu cách cho mọi tệp** (mặc định của nhiều formatter, khuyến nghị của PEP 8): không cho người đọc chọn độ rộng hiển thị và làm tệp lớn hơn; không chọn.
-- **Tab cho mọi tệp, kể cả YAML, Markdown**: đặc tả YAML cấm tab và Prettier luôn thụt lề danh sách Markdown bằng dấu cách — không làm được; vì vậy chỉ ngôn ngữ bắt buộc dấu cách mới dùng dấu cách.
+Dấu cách cho mọi tệp không đáp ứng lựa chọn độ rộng hiển thị của người đọc. Tab cho mọi tệp không tương thích với YAML và formatter Markdown. Quy tắc mặc định kèm ngoại lệ đáp ứng cả hai yêu cầu.
 
 ## ⚖️ HỆ QUẢ
 
-- Python dùng tab, khác khuyến nghị PEP 8; không bật lint `W191` của ruff.
-- Formatter mặc định dấu cách (rustfmt, clang-format…) được cấu hình dùng tab trong từng repository — `org-setup.py files` thêm tệp cấu hình mẫu.
-- Commit chỉ đổi định dạng được liệt kê trong `.git-blame-ignore-revs`.
+Python dùng tab và không bật luật `W191` của ruff. Formatter như rustfmt và clang-format được cấu hình dùng tab trong từng dự án; lệnh `files` cung cấp mẫu tương ứng. Commit chỉ đổi định dạng được ghi trong `.git-blame-ignore-revs`.

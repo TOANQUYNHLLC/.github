@@ -5,23 +5,24 @@
 
 ## 📌 BỐI CẢNH
 
-Giá trị cố định trong Python không phản ánh đầy đủ các cài đặt GitHub có endpoint riêng. Cần nhập trạng thái hiện tại về local và dùng cùng nguồn đó khi áp dụng lại, đồng thời phân biệt mục có API ghi với mục chỉ đối chiếu.
+Cài đặt GitHub gồm hồ sơ, chính sách và tài nguyên có API riêng. Nguồn local cần cho phép đọc diff và áp dụng có kiểm chứng, đồng thời thể hiện dữ liệu chưa đọc được và mục chỉ đối chiếu.
 
 ## ✅ QUYẾT ĐỊNH
 
-- Dùng `github-settings.json` làm nguồn cài đặt tổ chức và từng repository. Các module Python khai báo hợp đồng API và kiểm tra dữ liệu, không duy trì một bản giá trị hồ sơ riêng.
-- Nhập chỉ ghi local, lọc trường theo danh sách cho phép và giữ giá trị `false`. Phần chính sách chung `repository_defaults` được giữ riêng khỏi trạng thái từng repository.
-- Endpoint chưa đọc được được đánh dấu, không dùng dữ liệu cũ thay thế. Xác minh mọi phạm vi trước khi ghi; đọc lại sau khi áp dụng.
-- Chỉ áp dụng tài nguyên và trường có hợp đồng được hỗ trợ. Mục chỉ đọc được giữ để đối chiếu; quyền, giới hạn gói và tài nguyên cần cơ chế riêng được mô tả rõ.
-- Nhóm runner và liên kết cấu hình bảo mật lưu tên thay cho ID; ID chỉ được giải từ API tại thời điểm áp dụng. Cấu hình OIDC chỉ lưu trường có thể ghi, bỏ subject prefix do GitHub sinh. Danh sách Apps chỉ phục vụ đối chiếu.
-- Ruleset, team, nhãn và workflow tiếp tục dùng nguồn và cơ chế hiện có.
+`github-settings.json` là nguồn cài đặt tổ chức và repository. `configuration.py` và `resources.py` trong `scripts/orgsetup/` khai báo hợp đồng API và kiểm tra dữ liệu.
+
+Nhập cài đặt chỉ ghi local, lọc theo trường cho phép, giữ giá trị `false` và giữ chính sách `repository_defaults`. Dữ liệu chưa đọc được được đánh dấu trong `unavailable`, không thay bằng giá trị cũ hoặc suy đoán.
+
+Áp dụng xác minh mọi phạm vi trước khi ghi, chỉ ghi hợp đồng được hỗ trợ và đọc lại kết quả. Mục chỉ đọc được lưu để đối chiếu.
+
+Nhóm runner và liên kết cấu hình bảo mật lưu tên; script giải ID tại thời điểm lập kế hoạch. OIDC lưu trường có thể ghi; GitHub Apps chỉ lưu tên để đối chiếu. Ruleset, team, nhãn và workflow dùng nguồn riêng.
+
+Phạm vi và giới hạn trong [hướng dẫn cài đặt GitHub](../github-settings.md).
 
 ## 🔍 PHƯƠNG ÁN ĐÃ CÂN NHẮC
 
-- Giữ giá trị trong Python: việc nhập khó tách dữ liệu khỏi hành vi và không bao quát endpoint riêng.
-- Lưu toàn bộ phản hồi API: có metadata, dữ liệu nhạy cảm và trường không được chấp nhận khi ghi.
-- Dùng phiên đăng nhập trình duyệt để tự sửa mọi trang Settings: phụ thuộc biểu mẫu nội bộ, không phải hợp đồng API ổn định.
+Giá trị hồ sơ trong Python trộn dữ liệu với hành vi. Lưu phản hồi API thô đưa metadata và trường không thể ghi vào nguồn. Tự thao tác qua biểu mẫu trình duyệt phụ thuộc giao diện thay vì hợp đồng API.
 
 ## ⚖️ HỆ QUẢ
 
-Người quản trị có thể kiểm tra diff cài đặt và áp dụng các phần được hỗ trợ từ local. Đây không phải bản sao lưu toàn bộ tài khoản GitHub; các thao tác API riêng lẻ không tạo transaction và vẫn chịu giới hạn quyền, gói dịch vụ.
+Người quản trị kiểm tra diff sau nhập và xem trước trước khi áp dụng. Nguồn không phải bản sao toàn bộ tài khoản; không chứa secrets và không vượt quyền hoặc giới hạn gói. Ghi nhiều endpoint không phải transaction.

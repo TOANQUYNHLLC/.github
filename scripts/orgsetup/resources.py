@@ -1,6 +1,7 @@
 """Cài đặt tài nguyên Actions: nhóm runner và danh sách Apps để đối chiếu khi khôi phục."""
 
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 from orgsetup import github
 
@@ -103,7 +104,7 @@ def validateRunnerGroups(groups):
 def runnerGroupDetails():
 	"""Đọc ID để gửi API; loại thông tin này ra khỏi tệp nguồn local."""
 	items = readCollection(f'orgs/{github.ORG}/actions/runner-groups', 'runner_groups')
-	result = {}
+	result, ids = {}, set()
 	for item in items:
 		if (
 			not isinstance(item, dict)
@@ -112,39 +113,57 @@ def runnerGroupDetails():
 			or not isinstance(item.get('name'), str)
 			or not item['name']
 			or item['name'] in result
+			or item['id'] in ids
 		):
-			raise ValueError('Danh sách nhóm runner thiếu ID hoặc trùng tên')
+			raise ValueError('Danh sách nhóm runner thiếu ID hoặc trùng tên/ID')
 		result[item['name']] = item
+		ids.add(item['id'])
 	return result
 
 
 def readRunnerGroups():
+	"""Đọc danh sách repository của các nhóm selected song song có giới hạn; xác minh đủ trước khi trả."""
+	details = list(runnerGroupDetails().values())
+	selected = [item for item in details if item.get('visibility') == 'selected']
 	groups = []
-	for item in runnerGroupDetails().values():
-		group = {
-			'settings': {key: item[key] for key in RUNNER_SETTINGS if key in item},
-			**{key: item[key] for key in RUNNER_METADATA if key in item},
-			'selected_repositories': [],
-		}
-		if item.get('visibility') == 'selected':
-			repositories = readCollection(
-				f'orgs/{github.ORG}/actions/runner-groups/{item["id"]}/repositories', 'repositories'
+	with ThreadPoolExecutor(max_workers=max(1, min(4, len(selected)))) as pool:
+		repositoryTasks = {
+			item['id']: pool.submit(
+				readCollection,
+				f'orgs/{github.ORG}/actions/runner-groups/{item["id"]}/repositories',
+				'repositories',
 			)
-			if any(
-				not isinstance(repo, dict) or not isinstance(repo.get('full_name'), str)
-				for repo in repositories
-			):
-				raise ValueError('Nhóm runner: danh sách repository không hợp lệ')
-			group['selected_repositories'] = sorted(repo['full_name'] for repo in repositories)
-		groups.append(group)
+			for item in selected
+		}
+		for item in details:
+			group = {
+				'settings': {key: item[key] for key in RUNNER_SETTINGS if key in item},
+				**{key: item[key] for key in RUNNER_METADATA if key in item},
+				'selected_repositories': [],
+			}
+			if item.get('visibility') == 'selected':
+				repositories = repositoryTasks[item['id']].result()
+				ids = set()
+				for repo in repositories:
+					if (
+						not isinstance(repo, dict)
+						or not isinstance(repo.get('full_name'), str)
+						or type(repo.get('id')) is not int
+						or repo['id'] < 1
+						or repo['id'] in ids
+					):
+						raise ValueError('Nhóm runner: repository thiếu danh tính hoặc trùng ID')
+					ids.add(repo['id'])
+				group['selected_repositories'] = sorted(repo['full_name'] for repo in repositories)
+			groups.append(group)
 	validateRunnerGroups(groups)
 	return sorted(groups, key=lambda group: group['settings']['name'])
 
 
-def repositoryIds(names):
-	"""Giải full_name thành ID hiện tại; API đọc metadata không nhận URL do tệp local tùy ý cung cấp."""
+def repositoryIdLookup():
+	"""Đọc đầy đủ và xác minh danh tính trước khi dùng danh sách repository để giải ID."""
 	items = github.ghList(f'orgs/{github.ORG}/repos?type=all')
-	lookup = {}
+	lookup, ids = {}, set()
 	for item in items:
 		if (
 			not isinstance(item, dict)
@@ -152,25 +171,60 @@ def repositoryIds(names):
 			or type(item.get('id')) is not int
 			or item['id'] < 1
 			or item['full_name'] in lookup
+			or item['id'] in ids
 		):
 			raise ValueError('Không đọc được ID các repository của tổ chức')
 		lookup[item['full_name']] = item['id']
+		ids.add(item['id'])
+	return lookup
+
+
+def repositoryIds(names, resourceCache=None):
+	"""Giải full_name thành ID; cache chỉ dùng trong một lượt lập kế hoạch, danh sách rỗng không cần API."""
+	if not names:
+		return []
+	lookup = resourceCache.get('repository_ids') if resourceCache is not None else None
+	if lookup is None:
+		lookup = repositoryIdLookup()
 	if any(name not in lookup for name in names):
 		raise ValueError('Danh sách chọn repository chưa có hoặc tài khoản chưa đọc được')
+	if resourceCache is not None:
+		resourceCache['repository_ids'] = lookup
 	return [lookup[name] for name in names]
 
 
-def runnerGroupChanges(plan, current, wanted):
+def runnerGroupSummary(group):
+	"""So các danh sách quyền theo nội dung; không thay đổi nguồn hoặc payload gửi GitHub."""
+	return dict(
+		group,
+		settings=dict(
+			group['settings'], selected_workflows=sorted(group['settings']['selected_workflows'])
+		),
+		selected_repositories=sorted(group['selected_repositories']),
+	)
+
+
+def runnerGroupChanges(plan, current, wanted, resourceCache=None):
 	"""Tạo/cập nhật nhóm trong nguồn; xác minh mọi trường và metadata trước khi lập lệnh ghi."""
 	validateRunnerGroups(current)
 	validateRunnerGroups(wanted)
+	if resourceCache is None:
+		resourceCache = {}
 	present = {group['settings']['name']: group for group in current}
 	details = None
 	for target in wanted:
 		name, settings = target['settings']['name'], target['settings']
 		group = present.get(name)
-		if group == target:
+		targetSummary = runnerGroupSummary(target)
+		groupSummary = runnerGroupSummary(group) if group is not None else None
+		if groupSummary == targetSummary:
 			continue
+		if not settings['restricted_to_workflows'] and targetSummary['settings'][
+			'selected_workflows'
+		] != (groupSummary['settings']['selected_workflows'] if groupSummary else []):
+			raise ValueError(
+				f'Nhóm runner {name}: không thể đổi selected_workflows khi restricted_to_workflows=false'
+			)
 		if group is None:
 			if any(target[key] for key in RUNNER_METADATA):
 				raise ValueError(
@@ -178,7 +232,9 @@ def runnerGroupChanges(plan, current, wanted):
 				)
 			body = dict(settings)
 			if settings['visibility'] == 'selected':
-				body['selected_repository_ids'] = repositoryIds(target['selected_repositories'])
+				body['selected_repository_ids'] = repositoryIds(
+					target['selected_repositories'], resourceCache
+				)
 			plan.append(
 				(f'orgs/{github.ORG}/actions/runner-groups', 'POST', body, {'runner_group': name})
 			)
@@ -186,7 +242,7 @@ def runnerGroupChanges(plan, current, wanted):
 		if any(group[key] != target[key] for key in RUNNER_METADATA) or group['inherited']:
 			raise ValueError(f'Nhóm runner {name}: metadata khác hoặc nhóm do enterprise quản lý')
 		if group['workflow_restrictions_read_only'] and any(
-			group['settings'][key] != settings[key]
+			groupSummary['settings'][key] != targetSummary['settings'][key]
 			for key in ('restricted_to_workflows', 'selected_workflows')
 		):
 			raise ValueError(f'Nhóm runner {name}: không có quyền sửa giới hạn workflow')
@@ -195,14 +251,29 @@ def runnerGroupChanges(plan, current, wanted):
 		if name not in details:
 			raise ValueError(f'Nhóm runner {name}: tài nguyên đổi trong lúc đọc')
 		endpoint = f'orgs/{github.ORG}/actions/runner-groups/{details[name]["id"]}'
-		changes = {key: value for key, value in settings.items() if group['settings'][key] != value}
+		changes = {
+			key: value
+			for key, value in settings.items()
+			if groupSummary['settings'][key] != targetSummary['settings'][key]
+		}
 		if changes:
-			plan.append((endpoint, 'PATCH', dict(changes, name=name), changes))
+			body = dict(changes, name=name)
+			if settings['restricted_to_workflows'] and any(
+				key in changes for key in ('restricted_to_workflows', 'selected_workflows')
+			):
+				body.update(
+					restricted_to_workflows=True, selected_workflows=settings['selected_workflows']
+				)
+			plan.append((endpoint, 'PATCH', body, changes))
 		if settings['visibility'] == 'selected' and (
 			group['settings']['visibility'] != 'selected'
-			or sorted(group['selected_repositories']) != sorted(target['selected_repositories'])
+			or groupSummary['selected_repositories'] != targetSummary['selected_repositories']
 		):
-			body = {'selected_repository_ids': repositoryIds(target['selected_repositories'])}
+			body = {
+				'selected_repository_ids': repositoryIds(
+					target['selected_repositories'], resourceCache
+				)
+			}
 			plan.append(
 				(
 					f'{endpoint}/repositories',

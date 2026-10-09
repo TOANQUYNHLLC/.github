@@ -24,7 +24,7 @@ PUBLIC_ONLY_ENDPOINTS = ('private-vulnerability-reporting',)
 STATUS_ONLY_ENDPOINTS = ('vulnerability-alerts',)
 
 # Nguồn cài đặt được nhập từ GitHub; không duy trì một bản giá trị cố định riêng trong Python.
-from orgsetup.configuration import readConfig, repositorySettingChanges
+from orgsetup.configuration import equivalentEndpointValue, readConfig, repositorySettingChanges
 
 CONFIG = readConfig()
 REPOSITORY_SETTINGS = CONFIG['repository_defaults']
@@ -95,9 +95,10 @@ def repositorySettings(repo, discussions=False):
 
 
 def validateCurrentSettings(endpoint, current, wanted):
-	"""Kiểm tra mọi trường trước khi ghi, kể cả trước thao tác bỏ archive."""
+	"""Xác minh danh tính và mọi trường trước khi ghi, kể cả trước thao tác bỏ archive."""
 	if not isinstance(current, dict):
 		raise TypeError(f'{endpoint}: không đọc được object cài đặt')
+	github.validateIdentity(endpoint, current)
 	for key, value in wanted.items():
 		if key not in current or (
 			type(current[key]) is not type(value)
@@ -107,7 +108,7 @@ def validateCurrentSettings(endpoint, current, wanted):
 
 
 def updateSettings(endpoint, current, wanted, apply, what):
-	"""So cài đặt; --apply ghi phần khác, Discussions qua GraphQL sau khi xác minh ID repository."""
+	"""So cài đặt, ghi phần khác và đọc lại để xác nhận; trả trạng thái mới cho các bước phụ thuộc."""
 	validateCurrentSettings(endpoint, current, wanted)
 	changes = {
 		key: value
@@ -116,7 +117,7 @@ def updateSettings(endpoint, current, wanted, apply, what):
 	}
 	if not changes:
 		print(f'   ✔ {what} đã đúng')
-		return
+		return current
 	for key, value in changes.items():
 		print(f'   {"" if apply else "(xem trước) "}{key}: {current.get(key)} → {value}')
 	if apply:
@@ -127,7 +128,20 @@ def updateSettings(endpoint, current, wanted, apply, what):
 			plan.append((endpoint, 'PATCH', changes, changes))
 		for path, method, body, _ in plan:
 			github.gh('api', '-X', method, path, '--input', '-', stdin=json.dumps(body))
+		confirmed = github.ghJson('api', endpoint)
+		validateCurrentSettings(endpoint, confirmed, wanted)
+		unconfirmed = [
+			key
+			for key, value in wanted.items()
+			if confirmed[key] != value and not (value == '' and confirmed[key] is None)
+		]
+		if unconfirmed:
+			raise RuntimeError(
+				f'{endpoint}: GitHub chưa áp dụng đúng cài đặt: {", ".join(unconfirmed)}'
+			)
 		print('   ✔ đã cập nhật')
+		return confirmed
+	return current
 
 
 def syncSettings(repos, apply, discussions):
@@ -144,7 +158,7 @@ def syncSettings(repos, apply, discussions):
 			archiveChanged = 'archived' in wanted and current['archived'] != wanted['archived']
 			archived = wanted.pop('archived', None)
 			if archiveChanged and not archived:
-				updateSettings(
+				current = updateSettings(
 					repositoryEndpoint,
 					current,
 					{'archived': False},
@@ -152,7 +166,7 @@ def syncSettings(repos, apply, discussions):
 					'trạng thái archive',
 				)
 			# Bỏ archive trước Discussions và các cập nhật khác; archive sau topics, bảo mật, quyền Actions.
-			updateSettings(
+			current = updateSettings(
 				repositoryEndpoint,
 				current,
 				wanted,
@@ -183,7 +197,7 @@ def syncTopics(repo, current, apply):
 	):
 		raise ValueError('không đọc được topics hiện tại của repository .github')
 	wanted = citationKeywords()
-	if sorted(current.get('topics') or []) == sorted(wanted):
+	if equivalentEndpointValue('topics', 'names', current['topics'], wanted):
 		print('   ✔ topics khớp CITATION.cff')
 		return
 	print(f'   {"" if apply else "(xem trước) "}topics: {current.get("topics")} → {wanted}')
@@ -283,7 +297,9 @@ def syncOrgSettings(apply):
 	with ThreadPoolExecutor(max_workers=1) as pool:
 		actions = pool.submit(readActions, endpoint)
 		current = github.ghJson('api', f'orgs/{github.ORG}')
-		updateSettings(f'orgs/{github.ORG}', current, ORG_SETTINGS, apply, 'cài đặt tổ chức')
+		current = updateSettings(
+			f'orgs/{github.ORG}', current, ORG_SETTINGS, apply, 'cài đặt tổ chức'
+		)
 		for key, value in ORG_WEB_ONLY_SETTINGS.items():
 			observed = current.get(key)
 			if key == 'installed_apps':

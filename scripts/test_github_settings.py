@@ -5,6 +5,7 @@ import copy
 import io
 import json
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -75,6 +76,364 @@ def baselineConfig():
 
 
 class GitHubSettingsTest(unittest.TestCase):
+	def testSecurityAndDiscussionsShareIdentityOnlyWithinOnePlan(self):
+		wanted = copy.deepcopy(self.config)
+		repository = wanted['repositories'].pop('.github')
+		wanted['repositories']['app'] = repository
+		repository['settings']['has_discussions'] = True
+		repository['security_configuration'] = 'Baseline'
+		original = copy.deepcopy(wanted)
+		for repositoryId, nodeId in ((99, 'R_first'), (109, 'R_second')):
+			current = copy.deepcopy(repository)
+			current['settings']['has_discussions'] = False
+			current['security_configuration'] = None
+			bodies = []
+
+			def recordWrite(*args, stdin, current=current, bodies=bodies):
+				body = json.loads(stdin)
+				bodies.append(body)
+				if args[3] == 'graphql':
+					current['settings']['has_discussions'] = body['variables']['input'][
+						'hasDiscussionsEnabled'
+					]
+				else:
+					current['security_configuration'] = 'Baseline'
+
+			with (
+				self.subTest(repositoryId=repositoryId, nodeId=nodeId),
+				mock.patch.object(configuration, 'readConfig', return_value=wanted),
+				mock.patch.object(
+					configuration,
+					'readScope',
+					side_effect=lambda repo, current=current: (
+						current if repo is not None else wanted['organization'],
+						{},
+					),
+				),
+				mock.patch.object(
+					github,
+					'ghJson',
+					return_value={
+						'full_name': 'TOANQUYNHLLC/app',
+						'id': repositoryId,
+						'node_id': nodeId,
+					},
+				) as identity,
+				mock.patch.object(
+					github,
+					'ghList',
+					return_value=[{'name': 'Baseline', 'id': 7, 'target_type': 'organization'}],
+				),
+				mock.patch.object(github, 'gh', side_effect=recordWrite) as write,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				self.assertEqual(configuration.syncConfiguredSettings(apply=True), 0)
+			identity.assert_called_once_with('api', 'repos/TOANQUYNHLLC/app')
+			self.assertEqual(write.call_count, 2)
+			self.assertEqual(
+				bodies[0], {'selected_repository_ids': [repositoryId], 'scope': 'selected'}
+			)
+			self.assertEqual(bodies[1]['variables']['input']['repositoryId'], nodeId)
+			self.assertEqual(wanted, original)
+
+	def testIncompleteRepositoryIdentityIsReadAgainWhenNeeded(self):
+		base = 'repos/TOANQUYNHLLC/app'
+		complete = {'full_name': 'TOANQUYNHLLC/app', 'id': 99, 'node_id': 'R_app'}
+		for nodeId in (None, '', True):
+			resourceCache, plan = {}, []
+			with (
+				self.subTest(nodeId=nodeId),
+				mock.patch.object(
+					github, 'ghJson', side_effect=[dict(complete, node_id=nodeId), complete]
+				) as read,
+			):
+				configuration.securityBindingChanges(
+					plan,
+					base,
+					'app',
+					{'security_configuration': 'Baseline'},
+					{'security_configuration': None},
+					resourceCache,
+				)
+				configuration.repositorySettingChanges(
+					plan,
+					base,
+					{'has_discussions': False},
+					{'has_discussions': True},
+					resourceCache,
+				)
+				configuration.repositorySettingChanges(
+					plan,
+					base,
+					{'has_discussions': False},
+					{'has_discussions': True},
+					resourceCache,
+				)
+			self.assertEqual(read.call_count, 2)
+			self.assertEqual(plan[0][2], {'selected_repository_ids': [99]})
+			self.assertEqual(plan[1][2]['variables']['input']['repositoryId'], 'R_app')
+			self.assertEqual(plan[2][2]['variables']['input']['repositoryId'], 'R_app')
+
+	def testEquivalentTopicAndLanguageListsDoNotCauseWrites(self):
+		wanted = copy.deepcopy(self.config)
+		repository = wanted['repositories']['.github']
+		repository['endpoints']['topics'] = {'names': ['PYTHON', 'github', 'python']}
+		repository['endpoints']['code-scanning/default-setup'] = {
+			'state': 'configured',
+			'languages': ['python', 'actions'],
+			'query_suite': 'default',
+		}
+		current = copy.deepcopy(repository)
+		current['endpoints']['topics']['names'] = ['github', 'python']
+		current['endpoints']['code-scanning/default-setup']['languages'].reverse()
+		original = copy.deepcopy(wanted)
+		before = copy.deepcopy(current)
+		with (
+			mock.patch.object(configuration, 'readConfig', return_value=wanted),
+			mock.patch.object(
+				configuration,
+				'readScope',
+				side_effect=lambda repo: (
+					current if repo is not None else wanted['organization'],
+					{},
+				),
+			),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			self.assertEqual(configuration.syncConfiguredSettings(apply=True), 0)
+		write.assert_not_called()
+		self.assertEqual(wanted, original)
+		self.assertEqual(current, before)
+
+	def testChangedTopicAndLanguageListsKeepPayloadAndVerifyEquivalentReadback(self):
+		for suffix, key, target, previous in (
+			('topics', 'names', ['PYTHON', 'github'], ['legacy']),
+			('topics', 'names', [], ['python']),
+			('code-scanning/default-setup', 'languages', ['python', 'actions'], ['ruby']),
+		):
+			wanted = copy.deepcopy(self.config)
+			repository = wanted['repositories']['.github']
+			repository['endpoints'][suffix] = (
+				{key: target}
+				if suffix == 'topics'
+				else {'state': 'configured', key: target, 'query_suite': 'default'}
+			)
+			current = copy.deepcopy(repository)
+			current['endpoints'][suffix][key] = previous
+			original = copy.deepcopy(wanted)
+
+			def recordWrite(*args, stdin, current=current, suffix=suffix, key=key, target=target):
+				current['endpoints'][suffix].update(json.loads(stdin))
+				current['endpoints'][suffix][key] = (
+					[item.lower() for item in reversed(target)]
+					if suffix == 'topics'
+					else list(reversed(target))
+				)
+
+			with (
+				self.subTest(suffix=suffix, target=target),
+				mock.patch.object(configuration, 'readConfig', return_value=wanted),
+				mock.patch.object(
+					configuration,
+					'readScope',
+					side_effect=lambda repo, current=current, wanted=wanted: (
+						current if repo is not None else wanted['organization'],
+						{},
+					),
+				),
+				mock.patch.object(github, 'gh', side_effect=recordWrite) as write,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				self.assertEqual(configuration.syncConfiguredSettings(apply=True), 0)
+			write.assert_called_once()
+			self.assertEqual(json.loads(write.call_args.kwargs['stdin'])[key], target)
+			self.assertEqual(wanted, original)
+
+	def testOidcClaimOrderStillCausesUpdate(self):
+		wanted = {'use_default': False, 'include_claim_keys': ['repo', 'context']}
+		current = dict(wanted, include_claim_keys=['context', 'repo'])
+		plan = []
+		configuration.addChanges(
+			plan,
+			'repos/TOANQUYNHLLC/app/actions/oidc/customization/sub',
+			current,
+			wanted,
+			'PUT',
+			'actions/oidc/customization/sub',
+		)
+		self.assertEqual(len(plan), 1)
+		self.assertEqual(plan[0][2], wanted)
+		self.assertEqual(plan[0][3], {'include_claim_keys': ['repo', 'context']})
+
+	def testLanguageOrderDoesNotMaskCodeScanningPolicyChange(self):
+		wanted = {
+			'state': 'configured',
+			'languages': ['python', 'actions'],
+			'query_suite': 'extended',
+		}
+		current = dict(wanted, languages=['actions', 'python'], query_suite='default')
+		plan = []
+		configuration.addChanges(
+			plan,
+			'repos/TOANQUYNHLLC/app/code-scanning/default-setup',
+			current,
+			wanted,
+			'PATCH',
+			'code-scanning/default-setup',
+		)
+		self.assertEqual(len(plan), 1)
+		self.assertEqual(plan[0][2], {'query_suite': 'extended'})
+		self.assertEqual(plan[0][3], {'query_suite': 'extended'})
+
+	def testConfiguredRepositoryReadsOverlapAndKeepWriteOrder(self):
+		names = [f'app{index}' for index in range(8)]
+		wanted = copy.deepcopy(self.config)
+		wanted['repositories'] = {
+			repo: copy.deepcopy(self.config['repositories']['.github']) for repo in names
+		}
+		current = {
+			None: copy.deepcopy(wanted['organization']),
+			**copy.deepcopy(wanted['repositories']),
+		}
+		for repo, scope in current.items():
+			scope['settings']['description'] = f'Giá trị cũ của {repo}'
+		self.saveConfig(github.ROOT, wanted)
+		barrier, secondFinished = threading.Barrier(4, timeout=3), threading.Event()
+		lock = threading.Lock()
+		completed, writes = [], []
+		active, peak = 0, 0
+
+		def read(repo):
+			nonlocal active, peak
+			if repo is not None and not writes:
+				with lock:
+					active += 1
+					peak = max(peak, active)
+				barrier.wait()
+				if repo == names[0]:
+					self.assertTrue(secondFinished.wait(3))
+				with lock:
+					active -= 1
+					completed.append(repo)
+				if repo == names[1]:
+					secondFinished.set()
+			return copy.deepcopy(current[repo]), {}
+
+		def write(*args, **kwargs):
+			self.assertCountEqual(completed, names)
+			path = args[3]
+			repo = None if path.startswith('orgs/') else path.split('/')[2]
+			current[repo]['settings'].update(json.loads(kwargs['stdin']))
+			writes.append(path)
+
+		with (
+			mock.patch.object(configuration, 'readScope', side_effect=read) as reader,
+			mock.patch.object(github, 'gh', side_effect=write),
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			self.assertEqual(configuration.syncConfiguredSettings(True), 0)
+		self.assertEqual(peak, 4)
+		self.assertGreater(completed.index(names[0]), completed.index(names[1]))
+		self.assertEqual(
+			writes, ['orgs/TOANQUYNHLLC', *(f'repos/TOANQUYNHLLC/{repo}' for repo in names)]
+		)
+		self.assertCountEqual([call.args[0] for call in reader.call_args_list], [None, *names] * 2)
+
+	def testConfiguredRepositoryReadFailureBlocksAllWrites(self):
+		names = ['app', 'last']
+		wanted = copy.deepcopy(self.config)
+		wanted['repositories'] = {
+			repo: copy.deepcopy(self.config['repositories']['.github']) for repo in names
+		}
+		self.saveConfig(github.ROOT, wanted)
+		for failure in ('exception', 'unavailable'):
+
+			def read(repo, failure=failure):
+				scope = copy.deepcopy(
+					wanted['organization'] if repo is None else wanted['repositories'][repo]
+				)
+				scope['settings']['description'] = 'Giá trị cũ'
+				if repo == 'last':
+					if failure == 'exception':
+						raise RuntimeError('last: HTTP 403')
+					return scope, {'repos/TOANQUYNHLLC/last/topics': 'HTTP 403'}
+				return scope, {}
+
+			with (
+				self.subTest(failure=failure),
+				mock.patch.object(configuration, 'readScope', side_effect=read),
+				mock.patch.object(github, 'gh') as write,
+				self.assertRaisesRegex((RuntimeError, ValueError), 'last'),
+			):
+				configuration.syncConfiguredSettings(True)
+			write.assert_not_called()
+
+	def testScopeReadsIndependentResourcesWithEndpoints(self):
+		organization = self.config['organization']
+		data = dict(organization['settings'], **organization['web_settings'], login=github.ORG)
+		data.pop('installed_apps', None)
+		for fail in (None, 'runner_groups', 'installed_apps', 'security_configurations'):
+			barrier = threading.Barrier(4, timeout=3)
+
+			def read(value, failure=False, barrier=barrier):
+				barrier.wait()
+				if failure:
+					raise RuntimeError('HTTP 403')
+				return value
+
+			with (
+				self.subTest(fail=fail),
+				mock.patch.object(github, 'ghJson', return_value=data),
+				mock.patch.object(
+					configuration, 'endpointDefinitions', return_value={'example': ('GET', {})}
+				),
+				mock.patch.object(
+					configuration, 'readEndpoint', side_effect=lambda *args: read({'enabled': True})
+				),
+				mock.patch.object(
+					resources,
+					'readRunnerGroups',
+					side_effect=lambda fail=fail: read(
+						organization['runner_groups'], fail == 'runner_groups'
+					),
+				),
+				mock.patch.object(
+					resources,
+					'installedApps',
+					side_effect=lambda fail=fail: read(
+						organization['web_settings']['installed_apps'], fail == 'installed_apps'
+					),
+				),
+				mock.patch.object(
+					configuration,
+					'readSecurityDefaults',
+					side_effect=lambda fail=fail: read(
+						organization['security_configurations'], fail == 'security_configurations'
+					),
+				),
+			):
+				captured, unavailable = configuration.readScope()
+			self.assertEqual(captured['endpoints'], {'example': {'enabled': True}})
+			expectedUnavailable = {}
+			for key, suffix in (
+				('runner_groups', 'actions/runner-groups'),
+				('installed_apps', 'installations'),
+				('security_configurations', 'code-security'),
+			):
+				observed = captured['web_settings'] if key == 'installed_apps' else captured
+				wanted = organization['web_settings'] if key == 'installed_apps' else organization
+				if fail == key:
+					self.assertNotIn(key, observed)
+					expectedUnavailable[f'orgs/TOANQUYNHLLC/{suffix}'] = (
+						'Không đọc được cấu hình bảo mật và phạm vi áp dụng'
+						if key == 'security_configurations'
+						else 'Không đọc đủ hoặc không xác minh được tài nguyên'
+					)
+				else:
+					self.assertEqual(observed[key], wanted[key])
+			self.assertEqual(unavailable, expectedUnavailable)
+
 	def testSelectedListsAreReadOnlyWhenActiveAndFailuresRemainUnavailable(self):
 		for active, fail in ((False, False), (True, False), (True, True)):
 			organization = copy.deepcopy(self.config['organization'])
@@ -353,6 +712,114 @@ class GitHubSettingsTest(unittest.TestCase):
 
 	def saveConfig(self, root, config):
 		(root / configuration.CONFIG_NAME).write_text(json.dumps(config), encoding='utf-8')
+
+	def testRepositoryAliasesCannotCreateConflictingPlans(self):
+		wanted = copy.deepcopy(self.config)
+		wanted['repositories']['.GitHub'] = copy.deepcopy(wanted['repositories']['.github'])
+		wanted['repositories']['.GitHub']['settings']['has_discussions'] = not wanted[
+			'repositories'
+		]['.github']['settings']['has_discussions']
+		self.saveConfig(github.ROOT, wanted)
+		with (
+			mock.patch.object(
+				configuration,
+				'readScope',
+				side_effect=lambda repo: (
+					wanted['repositories']['.github']
+					if repo is not None
+					else wanted['organization'],
+					{},
+				),
+			) as read,
+			mock.patch.object(
+				github,
+				'ghJson',
+				return_value={'full_name': 'TOANQUYNHLLC/.github', 'id': 99, 'node_id': 'R_github'},
+			) as identity,
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+			self.assertRaisesRegex(ValueError, 'repository.*trùng'),
+		):
+			configuration.syncConfiguredSettings(apply=True)
+		read.assert_not_called()
+		identity.assert_not_called()
+		write.assert_not_called()
+
+	def testPrivateSecurityMetadataUnavailableIsImportedAndBlocksAllWrites(self):
+		repository = copy.deepcopy(self.config['repositories']['.github'])
+		repository['settings']['visibility'] = 'private'
+		data = dict(
+			repository['settings'],
+			**repository['web_settings'],
+			full_name='TOANQUYNHLLC/app',
+			private=True,
+			security_and_analysis=None,
+		)
+		readScope = configuration.readScope
+
+		def read(repo=None):
+			return (
+				(copy.deepcopy(self.config['organization']), {})
+				if repo is None
+				else readScope(repo)
+			)
+
+		with (
+			mock.patch.object(github, 'listRepos', return_value=['app']),
+			mock.patch.object(configuration, 'readScope', side_effect=read),
+			mock.patch.object(configuration, 'endpointDefinitions', return_value={}),
+			mock.patch.object(configuration, 'readSecurityConfiguration', return_value=None),
+			mock.patch.object(github, 'ghJson', return_value=data),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			self.assertEqual(configuration.importSettings(), 1)
+			imported = configuration.readConfig()
+			self.assertEqual(imported['repositories']['app']['settings'], repository['settings'])
+			self.assertEqual(imported['repositories']['app']['security'], {})
+			self.assertEqual(
+				list(imported['unavailable']), ['repos/TOANQUYNHLLC/app (security_and_analysis)']
+			)
+			with self.assertRaisesRegex(ValueError, 'có mục chưa nhập'):
+				configuration.syncConfiguredSettings(apply=True)
+			imported['unavailable'] = {}
+			imported['organization']['settings']['description'] = 'Giá trị mới cần áp dụng'
+			self.saveConfig(github.ROOT, imported)
+			with self.assertRaisesRegex(ValueError, 'security_and_analysis.*dừng trước khi ghi'):
+				configuration.syncConfiguredSettings(apply=True)
+		write.assert_not_called()
+
+	def testPrivateSecurityMetadataOnlyAcceptsOmittedOrNullAsUnavailable(self):
+		repository = self.config['repositories']['.github']
+		for private, analysis in (
+			(True, None),
+			(True, 'omitted'),
+			(True, []),
+			(True, False),
+			(False, None),
+		):
+			data = dict(
+				repository['settings'],
+				**repository['web_settings'],
+				full_name='TOANQUYNHLLC/app',
+				private=private,
+				security_and_analysis=analysis,
+			)
+			if analysis == 'omitted':
+				data.pop('security_and_analysis')
+			with (
+				self.subTest(private=private, analysis=analysis),
+				mock.patch.object(github, 'ghJson', return_value=data),
+				mock.patch.object(configuration, 'endpointDefinitions', return_value={}),
+				mock.patch.object(configuration, 'readSecurityConfiguration', return_value=None),
+			):
+				if private and (analysis is None or analysis == 'omitted'):
+					scope, unavailable = configuration.readScope('app')
+					self.assertEqual(scope['security'], {})
+					self.assertIn('repos/TOANQUYNHLLC/app (security_and_analysis)', unavailable)
+				else:
+					with self.assertRaisesRegex(ValueError, 'security_and_analysis'):
+						configuration.readScope('app')
 
 	def testImportOnlyKeepsAllowlistedSettings(self):
 		source = copy.deepcopy(self.config['repositories']['.github'])
@@ -637,7 +1104,7 @@ class GitHubSettingsTest(unittest.TestCase):
 		with mock.patch.object(
 			configuration,
 			'securityConfigurationIds',
-			return_value={'GitHub recommended': {'id': 731}},
+			return_value={'GitHub recommended': {'id': 731, 'target_type': 'global'}},
 		):
 			configuration.securityBindingChanges(plan, 'orgs/TOANQUYNHLLC', None, current, wanted)
 		self.assertEqual(
@@ -806,6 +1273,146 @@ class GitHubSettingsTest(unittest.TestCase):
 			with self.subTest(mutate=mutate), self.assertRaises(ValueError):
 				configuration.validateDependencies(config)
 
+	def testMergeMessagePatchIncludesRequiredTitleWithoutChangingDiff(self):
+		for prefix in ('merge', 'squash_merge'):
+			messageKey, titleKey = f'{prefix}_commit_message', f'{prefix}_commit_title'
+			for includeTitle in (False, True):
+				current = {messageKey: 'BLANK', titleKey: 'PR_TITLE'}
+				wanted = {messageKey: 'PR_BODY'}
+				if includeTitle:
+					wanted[titleKey] = 'PR_TITLE'
+				original = copy.deepcopy((current, wanted))
+				plan = []
+				with self.subTest(prefix=prefix, includeTitle=includeTitle):
+					configuration.repositorySettingChanges(
+						plan, 'repos/TOANQUYNHLLC/app', current, wanted
+					)
+					self.assertEqual(
+						plan,
+						[
+							(
+								'repos/TOANQUYNHLLC/app',
+								'PATCH',
+								{messageKey: 'PR_BODY', titleKey: 'PR_TITLE'},
+								{messageKey: 'PR_BODY'},
+							)
+						],
+					)
+					self.assertEqual((current, wanted), original)
+
+	def testMergeMessagePatchUsesChangedTitleAndKeepsTitleOnlyUpdates(self):
+		for prefix, title in (('merge', 'MERGE_MESSAGE'), ('squash_merge', 'COMMIT_OR_PR_TITLE')):
+			messageKey, titleKey = f'{prefix}_commit_message', f'{prefix}_commit_title'
+			current = {messageKey: 'BLANK', titleKey: 'PR_TITLE'}
+			for wanted in (
+				{messageKey: 'PR_BODY', titleKey: title},
+				{titleKey: title},
+				current,
+			):
+				plan = []
+				with self.subTest(prefix=prefix, wanted=wanted):
+					configuration.repositorySettingChanges(
+						plan, 'repos/TOANQUYNHLLC/app', current, wanted
+					)
+					if wanted == current:
+						self.assertEqual(plan, [])
+					else:
+						self.assertEqual(plan[0][2], wanted)
+						self.assertEqual(plan[0][3], wanted)
+
+	def testMergeMessageCannotPlanWritesWithoutValidTitle(self):
+		for prefix in ('merge', 'squash_merge'):
+			messageKey, titleKey = f'{prefix}_commit_message', f'{prefix}_commit_title'
+			for title in (None, '', 'INVALID', True, []):
+				current = {messageKey: 'BLANK', 'has_discussions': False}
+				if title is not None:
+					current[titleKey] = title
+				plan = []
+				with (
+					self.subTest(prefix=prefix, title=title),
+					mock.patch.object(github, 'ghJson') as read,
+					self.assertRaisesRegex(ValueError, titleKey),
+				):
+					configuration.repositorySettingChanges(
+						plan,
+						'repos/TOANQUYNHLLC/app',
+						current,
+						{messageKey: 'PR_BODY', 'has_discussions': True},
+					)
+				self.assertEqual(plan, [])
+				read.assert_not_called()
+
+	def testLegacyMergeMessageUpdatesSendRequiredTitleAndConfirmState(self):
+		from orgsetup import settings
+
+		for prefix in ('merge', 'squash_merge'):
+			messageKey, titleKey = f'{prefix}_commit_message', f'{prefix}_commit_title'
+			state = {'full_name': 'TOANQUYNHLLC/app', messageKey: 'BLANK', titleKey: 'PR_TITLE'}
+			current = dict(state)
+
+			def writeSettings(*args, stdin=None, state=state, titleKey=titleKey):
+				body = json.loads(stdin)
+				self.assertIn(titleKey, body)
+				state.update(body)
+
+			with (
+				self.subTest(prefix=prefix),
+				mock.patch.object(github, 'ghJson', return_value=state) as read,
+				mock.patch.object(github, 'gh', side_effect=writeSettings) as write,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				confirmed = settings.updateSettings(
+					'repos/TOANQUYNHLLC/app',
+					current,
+					{messageKey: 'PR_BODY', titleKey: 'PR_TITLE'},
+					True,
+					'cài đặt repository',
+				)
+				self.assertEqual(confirmed[messageKey], 'PR_BODY')
+				read.assert_called_once_with('api', 'repos/TOANQUYNHLLC/app')
+				self.assertEqual(
+					json.loads(write.call_args.kwargs['stdin']),
+					{messageKey: 'PR_BODY', titleKey: 'PR_TITLE'},
+				)
+
+	def testConfiguredMergeMessageUpdatesSendRequiredTitleAndConfirmState(self):
+		for prefix in ('merge', 'squash_merge'):
+			messageKey, titleKey = f'{prefix}_commit_message', f'{prefix}_commit_title'
+			config = copy.deepcopy(self.config)
+			target = config['repositories']['.github']
+			target['settings'].update({messageKey: 'PR_BODY', titleKey: 'PR_TITLE'})
+			current = copy.deepcopy(target)
+			current['settings'][messageKey] = 'BLANK'
+			self.saveConfig(github.ROOT, config)
+
+			def writeSettings(*args, stdin=None, current=current, titleKey=titleKey):
+				body = json.loads(stdin)
+				self.assertIn(titleKey, body)
+				current['settings'].update(body)
+
+			with (
+				self.subTest(prefix=prefix),
+				mock.patch.object(
+					configuration,
+					'readScope',
+					side_effect=[
+						(config['organization'], {}),
+						(current, {}),
+						(config['organization'], {}),
+						(current, {}),
+					],
+				),
+				mock.patch.object(github, 'gh', side_effect=writeSettings) as write,
+				contextlib.redirect_stdout(io.StringIO()),
+			):
+				self.assertEqual(configuration.syncConfiguredSettings(True), 0)
+				write.assert_called_once()
+				self.assertEqual(current['settings'][messageKey], 'PR_BODY')
+				self.assertEqual(
+					json.loads(write.call_args.kwargs['stdin']),
+					{messageKey: 'PR_BODY', titleKey: 'PR_TITLE'},
+				)
+
 	def testDiscussionsUseDocumentedGraphqlMutation(self):
 		plan = []
 		with mock.patch.object(
@@ -828,23 +1435,40 @@ class GitHubSettingsTest(unittest.TestCase):
 		from orgsetup import settings
 
 		for enabled in (True, False):
+			state = {
+				'full_name': 'TOANQUYNHLLC/app',
+				'node_id': 'REPO_ID',
+				'has_discussions': not enabled,
+				'has_issues': False,
+			}
+
+			def writeSettings(*args, stdin=None, state=state):
+				body = json.loads(stdin)
+				if args[3] == 'graphql':
+					state['has_discussions'] = body['variables']['input']['hasDiscussionsEnabled']
+				else:
+					state.update(body)
+
 			with (
 				self.subTest(enabled=enabled),
-				mock.patch.object(
-					github,
-					'ghJson',
-					return_value={'full_name': 'TOANQUYNHLLC/app', 'node_id': 'REPO_ID'},
-				),
-				mock.patch.object(github, 'gh') as write,
+				mock.patch.object(github, 'ghJson', return_value=state) as read,
+				mock.patch.object(github, 'gh', side_effect=writeSettings) as write,
 				contextlib.redirect_stdout(io.StringIO()),
 			):
-				settings.updateSettings(
+				confirmed = settings.updateSettings(
 					'repos/TOANQUYNHLLC/app',
-					{'has_discussions': not enabled, 'has_issues': False},
+					{
+						'full_name': 'TOANQUYNHLLC/app',
+						'has_discussions': not enabled,
+						'has_issues': False,
+					},
 					{'has_discussions': enabled, 'has_issues': True},
 					True,
 					'cài đặt repository',
 				)
+			self.assertEqual(confirmed['has_discussions'], enabled)
+			self.assertTrue(confirmed['has_issues'])
+			self.assertEqual(read.call_count, 2)
 			self.assertEqual(write.call_count, 2)
 			self.assertEqual(
 				write.call_args_list[0].args, ('api', '-X', 'POST', 'graphql', '--input', '-')
@@ -876,7 +1500,7 @@ class GitHubSettingsTest(unittest.TestCase):
 		):
 			settings.updateSettings(
 				'repos/TOANQUYNHLLC/app',
-				{'has_discussions': False, 'has_issues': False},
+				{'full_name': 'TOANQUYNHLLC/app', 'has_discussions': False, 'has_issues': False},
 				{'has_discussions': True, 'has_issues': True},
 				True,
 				'cài đặt repository',
@@ -934,7 +1558,11 @@ class GitHubSettingsTest(unittest.TestCase):
 
 		with mock.patch.object(github, 'gh') as write, contextlib.redirect_stdout(io.StringIO()):
 			settings.updateSettings(
-				'orgs/TOANQUYNHLLC', {'company': None}, {'company': ''}, True, 'hồ sơ'
+				'orgs/TOANQUYNHLLC',
+				{'login': 'TOANQUYNHLLC', 'company': None},
+				{'company': ''},
+				True,
+				'hồ sơ',
 			)
 		write.assert_not_called()
 
@@ -1102,7 +1730,11 @@ class GitHubSettingsTest(unittest.TestCase):
 				mock.patch.object(settings, 'readActions', return_value=[]),
 				mock.patch.object(settings, 'syncActions'),
 				mock.patch.object(
-					github, 'ghJson', return_value=self.config['organization']['settings']
+					github,
+					'ghJson',
+					return_value=dict(
+						self.config['organization']['settings'], login='TOANQUYNHLLC'
+					),
 				),
 				mock.patch.object(
 					resources,
@@ -1122,6 +1754,89 @@ class GitHubSettingsTest(unittest.TestCase):
 				self.assertIn(expected, output.getvalue())
 			else:
 				self.assertNotIn('installed_apps:', output.getvalue())
+
+	def testRunnerGroupRepositoryReadsOverlapAndFailWithoutPartialResults(self):
+		details, expected = {}, []
+		for index in reversed(range(8)):
+			group = self.runnerGroup()
+			group['settings'].update(name=f'Build{index}', visibility='selected')
+			details[group['settings']['name']] = {
+				**group['settings'],
+				**{key: group[key] for key in resources.RUNNER_METADATA},
+				'id': index + 1,
+			}
+			group['selected_repositories'] = ['TOANQUYNHLLC/app', 'TOANQUYNHLLC/web']
+			expected.append(group)
+		default = self.runnerGroup()
+		default['settings']['name'] = 'Default'
+		default['default'] = True
+		details['Default'] = {
+			**default['settings'],
+			**{key: default[key] for key in resources.RUNNER_METADATA},
+			'id': 9,
+		}
+		expected.append(default)
+		original = copy.deepcopy(details)
+		for failure in (False, True):
+			barrier = threading.Barrier(4, timeout=3)
+			secondFinished = threading.Event()
+			lock = threading.Lock()
+			active, peak, completed = 0, 0, []
+
+			def readRepositories(
+				endpoint,
+				key,
+				failure=failure,
+				barrier=barrier,
+				secondFinished=secondFinished,
+				lock=lock,
+				completed=completed,
+			):
+				nonlocal active, peak
+				groupId = int(endpoint.split('/')[-2])
+				self.assertEqual(key, 'repositories')
+				self.assertLess(groupId, 9)
+				with lock:
+					active += 1
+					peak = max(peak, active)
+				try:
+					barrier.wait()
+					if groupId == 8:
+						self.assertTrue(secondFinished.wait(timeout=3))
+					if groupId == 7 and failure:
+						raise RuntimeError('HTTP 403')
+					return [
+						{'id': 109, 'full_name': 'TOANQUYNHLLC/web'},
+						{'id': 99, 'full_name': 'TOANQUYNHLLC/app'},
+					]
+				finally:
+					with lock:
+						active -= 1
+						completed.append(groupId)
+					if groupId == 7:
+						secondFinished.set()
+
+			with (
+				self.subTest(failure=failure),
+				mock.patch.object(resources, 'runnerGroupDetails', return_value=details),
+				mock.patch.object(
+					resources, 'readCollection', side_effect=readRepositories
+				) as read,
+			):
+				if failure:
+					with self.assertRaisesRegex(RuntimeError, 'HTTP 403'):
+						resources.readRunnerGroups()
+				else:
+					self.assertEqual(
+						resources.readRunnerGroups(),
+						sorted(expected, key=lambda group: group['settings']['name']),
+					)
+			self.assertEqual(read.call_count, 8)
+			self.assertEqual(peak, 4)
+			self.assertEqual(active, 0)
+			self.assertCountEqual(completed, range(1, 9))
+			self.assertGreater(completed.index(8), completed.index(7))
+			self.assertEqual(details, original)
 
 	def testRunnerGroupImportUsesRepositoryNamesAndExcludesRuntimeIds(self):
 		target = self.runnerGroup()
@@ -1144,6 +1859,704 @@ class GitHubSettingsTest(unittest.TestCase):
 		target['selected_repositories'] = ['TOANQUYNHLLC/app']
 		self.assertEqual(groups, [target])
 		self.assertNotIn('UNMANAGED_VALUE', json.dumps(groups))
+
+	def testRunnerGroupPaginationRejectsDuplicateIdsWhenTotalsMatch(self):
+		pages = [
+			{'total_count': 2, 'runner_groups': [{'id': 12, 'name': 'Build'}]},
+			{'total_count': 2, 'runner_groups': [{'id': 12, 'name': 'Renamed'}]},
+		]
+		with (
+			mock.patch.object(github, 'ghJson', return_value=pages),
+			self.assertRaises(ValueError),
+		):
+			resources.runnerGroupDetails()
+		pages[1]['runner_groups'][0]['id'] = 13
+		with mock.patch.object(github, 'ghJson', return_value=pages):
+			self.assertEqual(
+				resources.runnerGroupDetails(),
+				{'Build': {'id': 12, 'name': 'Build'}, 'Renamed': {'id': 13, 'name': 'Renamed'}},
+			)
+
+	def testRepositoryResolverRejectsDuplicateIds(self):
+		items = [
+			{'full_name': 'TOANQUYNHLLC/app', 'id': 99},
+			{'full_name': 'TOANQUYNHLLC/web', 'id': 99},
+		]
+		names = ['TOANQUYNHLLC/web', 'TOANQUYNHLLC/app']
+		with mock.patch.object(github, 'ghList', return_value=items), self.assertRaises(ValueError):
+			resources.repositoryIds(names)
+		items[1]['id'] = 100
+		original = copy.deepcopy(items)
+		with mock.patch.object(github, 'ghList', return_value=items):
+			self.assertEqual(resources.repositoryIds(names), [100, 99])
+		self.assertEqual(items, original)
+
+	def testEmptyRepositorySelectionDoesNotReadCatalog(self):
+		with mock.patch.object(github, 'ghList') as read:
+			self.assertEqual(resources.repositoryIds([]), [])
+		read.assert_not_called()
+
+	def testRunnerGroupPlanSharesCatalogAndRefreshesNextPlan(self):
+		current = self.runnerGroup()
+		target = copy.deepcopy(current)
+		target['settings']['visibility'] = 'selected'
+		target['selected_repositories'] = ['TOANQUYNHLLC/web', 'TOANQUYNHLLC/app']
+		created = copy.deepcopy(target)
+		created['settings']['name'] = 'Deploy'
+		created['selected_repositories'] = ['TOANQUYNHLLC/app']
+		original = copy.deepcopy([current, target, created])
+		with (
+			mock.patch.object(resources, 'runnerGroupDetails', return_value={'Build': {'id': 12}}),
+			mock.patch.object(
+				github,
+				'ghList',
+				side_effect=[
+					[
+						{'full_name': 'TOANQUYNHLLC/app', 'id': 99},
+						{'full_name': 'TOANQUYNHLLC/web', 'id': 100},
+					],
+					[
+						{'full_name': 'TOANQUYNHLLC/app', 'id': 199},
+						{'full_name': 'TOANQUYNHLLC/web', 'id': 200},
+					],
+				],
+			) as read,
+		):
+			for index, expected in enumerate(([100, 99], [200, 199]), start=1):
+				plan = []
+				resources.runnerGroupChanges(plan, [current], [target, created])
+				self.assertEqual(read.call_count, index)
+				self.assertEqual(plan[1][2], {'selected_repository_ids': expected})
+				self.assertEqual(plan[2][2]['selected_repository_ids'], [expected[1]])
+		self.assertEqual([current, target, created], original)
+
+	def testSecurityDefaultPlanReadsConfigurationCatalogOnce(self):
+		current = {
+			'security_configurations': [
+				{'name': name, 'target_type': 'organization', 'default_for_new_repos': 'none'}
+				for name in ('Baseline', 'Strict')
+			]
+		}
+		wanted = copy.deepcopy(current)
+		for item in wanted['security_configurations']:
+			item['default_for_new_repos'] = 'all'
+		with mock.patch.object(
+			github,
+			'ghList',
+			return_value=[
+				{'name': 'Baseline', 'target_type': 'organization', 'id': 11},
+				{'name': 'Strict', 'target_type': 'organization', 'id': 12},
+			],
+		) as read:
+			plan = []
+			configuration.securityBindingChanges(plan, 'orgs/TOANQUYNHLLC', None, current, wanted)
+		read.assert_called_once()
+		self.assertEqual(
+			[path for path, _, _, _ in plan],
+			[
+				'orgs/TOANQUYNHLLC/code-security/configurations/11/defaults',
+				'orgs/TOANQUYNHLLC/code-security/configurations/12/defaults',
+			],
+		)
+
+	def testChangedSecurityCatalogBlocksAllConfiguredWrites(self):
+		current = copy.deepcopy(self.config['organization'])
+		current['security_configurations'] = [
+			{'name': name, 'target_type': 'organization', 'default_for_new_repos': 'none'}
+			for name in ('Baseline', 'Strict')
+		]
+		wanted = copy.deepcopy(self.config)
+		wanted['organization'] = copy.deepcopy(current)
+		for item in wanted['organization']['security_configurations']:
+			item['default_for_new_repos'] = 'all'
+		self.saveConfig(github.ROOT, wanted)
+		for changed in (None, {'name': 'Strict', 'target_type': 'global', 'id': 12}):
+			catalog = [{'name': 'Baseline', 'target_type': 'organization', 'id': 11}]
+			if changed is not None:
+				catalog.append(changed)
+			with (
+				self.subTest(changed=changed),
+				mock.patch.object(configuration, 'readScope', return_value=(current, {})) as scope,
+				mock.patch.object(github, 'ghList', return_value=catalog) as read,
+				mock.patch.object(github, 'gh') as write,
+				self.assertRaisesRegex(ValueError, 'cấu hình bảo mật Strict'),
+			):
+				configuration.syncConfiguredSettings(True)
+			scope.assert_called_once_with(None)
+			read.assert_called_once()
+			write.assert_not_called()
+
+	def testConfiguredPlanSharesRepositoryCatalogAcrossPoliciesAndRunnerGroups(self):
+		wanted = copy.deepcopy(self.config)
+		endpoints = wanted['organization']['endpoints']
+		endpoints['actions/permissions'].update(
+			enabled_repositories='selected', allowed_actions='all'
+		)
+		endpoints['settings/immutable-releases']['enforced_repositories'] = 'selected'
+		for suffix in (
+			'actions/permissions/repositories',
+			'settings/immutable-releases/repositories',
+		):
+			endpoints[suffix] = {'selected_repositories': ['TOANQUYNHLLC/.github']}
+		wanted['repositories']['.github']['endpoints']['immutable-releases']['enabled'] = True
+		group = self.runnerGroup()
+		group['settings']['visibility'] = 'selected'
+		group['selected_repositories'] = ['TOANQUYNHLLC/.github']
+		wanted['organization']['runner_groups'] = [group]
+		self.saveConfig(github.ROOT, wanted)
+		with (
+			mock.patch.object(
+				configuration,
+				'readScope',
+				side_effect=[
+					(self.config['organization'], {}),
+					(self.config['repositories']['.github'], {}),
+					(wanted['organization'], {}),
+					(wanted['repositories']['.github'], {}),
+				],
+			),
+			mock.patch.object(
+				github, 'ghList', return_value=[{'full_name': 'TOANQUYNHLLC/.github', 'id': 99}]
+			) as catalog,
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			self.assertEqual(configuration.syncConfiguredSettings(True), 0)
+		catalog.assert_called_once_with('orgs/TOANQUYNHLLC/repos?type=all')
+		bodies = {
+			call.args[3]: json.loads(call.kwargs['stdin'])
+			for call in write.call_args_list
+			if 'stdin' in call.kwargs
+		}
+		for path in (
+			'orgs/TOANQUYNHLLC/actions/runner-groups',
+			'orgs/TOANQUYNHLLC/actions/permissions/repositories',
+			'orgs/TOANQUYNHLLC/settings/immutable-releases/repositories',
+		):
+			self.assertEqual(bodies[path]['selected_repository_ids'], [99])
+
+	def testRepositoryCacheRejectsInvalidCatalogAndUnknownNames(self):
+		cache = {}
+		with mock.patch.object(
+			github,
+			'ghList',
+			side_effect=[
+				[
+					{'full_name': 'TOANQUYNHLLC/app', 'id': 99},
+					{'full_name': 'TOANQUYNHLLC/web', 'id': 99},
+				],
+				[{'full_name': 'TOANQUYNHLLC/app', 'id': 100}],
+			],
+		) as read:
+			with self.assertRaises(ValueError):
+				resources.repositoryIds(['TOANQUYNHLLC/app'], cache)
+			self.assertEqual(cache, {})
+			self.assertEqual(resources.repositoryIds(['TOANQUYNHLLC/app'], cache), [100])
+			with self.assertRaises(ValueError):
+				resources.repositoryIds(['TOANQUYNHLLC/missing'], cache)
+			self.assertEqual(read.call_count, 2)
+
+	def testConfiguredVerificationReadsFreshRepositoryCatalog(self):
+		wanted = copy.deepcopy(self.config)
+		endpoints = wanted['organization']['endpoints']
+		endpoints['actions/permissions'].update(
+			enabled_repositories='selected', allowed_actions='all'
+		)
+		endpoints['actions/permissions/repositories'] = {
+			'selected_repositories': ['TOANQUYNHLLC/.github']
+		}
+		self.saveConfig(github.ROOT, wanted)
+		with (
+			mock.patch.object(
+				configuration,
+				'readScope',
+				side_effect=[
+					(self.config['organization'], {}),
+					(self.config['repositories']['.github'], {}),
+					(self.config['organization'], {}),
+					(self.config['repositories']['.github'], {}),
+				],
+			),
+			mock.patch.object(
+				github,
+				'ghList',
+				side_effect=[
+					[{'full_name': 'TOANQUYNHLLC/.github', 'id': 99}],
+					[{'full_name': 'TOANQUYNHLLC/.github', 'id': 199}],
+				],
+			) as catalog,
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()) as output,
+		):
+			self.assertEqual(configuration.syncConfiguredSettings(True), 1)
+		self.assertEqual(catalog.call_count, 2)
+		self.assertEqual(write.call_count, 2)
+		body = json.loads(write.call_args_list[-1].kwargs['stdin'])
+		self.assertEqual(body, {'selected_repository_ids': [99]})
+		self.assertIn('chưa xác nhận hoàn tất', output.getvalue())
+
+	def testSecurityDefaultsRequireMatchingCatalogIdentity(self):
+		configurationData = {'name': 'Baseline', 'id': 12, 'target_type': 'organization'}
+		for defaultIdentity in (
+			{'name': 'Baseline'},
+			dict(configurationData, id=13),
+			dict(configurationData, id=True),
+			dict(configurationData, target_type='global'),
+			dict(configurationData, name='Other'),
+		):
+			with (
+				self.subTest(defaultIdentity=defaultIdentity),
+				mock.patch.object(
+					github,
+					'ghList',
+					side_effect=[
+						[configurationData],
+						[{'configuration': defaultIdentity, 'default_for_new_repos': 'all'}],
+					],
+				),
+				self.assertRaisesRegex(ValueError, 'cấu hình bảo mật mặc định'),
+			):
+				configuration.readSecurityDefaults()
+
+	def testSecurityDefaultsKeepUnselectedConfigurationsWithoutIds(self):
+		configurations = [
+			{'name': 'Baseline', 'id': 12, 'target_type': 'organization'},
+			{'name': 'GitHub recommended', 'id': 17, 'target_type': 'global'},
+		]
+		for defaults in (
+			[],
+			[{'configuration': configurations[1], 'default_for_new_repos': 'public'}],
+		):
+			with (
+				self.subTest(defaults=defaults),
+				mock.patch.object(github, 'ghList', side_effect=[configurations, defaults]),
+			):
+				self.assertEqual(
+					configuration.readSecurityDefaults(),
+					[
+						{
+							'name': 'Baseline',
+							'target_type': 'organization',
+							'default_for_new_repos': 'none',
+						},
+						{
+							'name': 'GitHub recommended',
+							'target_type': 'global',
+							'default_for_new_repos': 'public' if defaults else 'none',
+						},
+					],
+				)
+
+	def testMismatchedSecurityDefaultsBlockAllConfiguredWrites(self):
+		wanted = copy.deepcopy(self.config)
+		wanted['repositories'] = {}
+		organization = wanted['organization']
+		configurationData = {'name': 'Baseline', 'id': 12, 'target_type': 'organization'}
+		organization['security_configurations'] = [
+			{'name': 'Baseline', 'target_type': 'organization', 'default_for_new_repos': 'none'}
+		]
+		data = dict(organization['settings'], **organization['web_settings'], login=github.ORG)
+		data['description'] = 'Mô tả cần cập nhật'
+
+		def readCatalog(endpoint):
+			if endpoint.endswith('/defaults'):
+				return [
+					{
+						'configuration': dict(configurationData, id=13),
+						'default_for_new_repos': 'all',
+					}
+				]
+			return [configurationData]
+
+		with (
+			mock.patch.object(configuration, 'readConfig', return_value=wanted),
+			mock.patch.object(github, 'ghJson', return_value=data),
+			mock.patch.object(github, 'ghList', side_effect=readCatalog),
+			mock.patch.object(
+				configuration,
+				'readEndpoint',
+				side_effect=lambda path, suffix, fields: organization['endpoints'][suffix],
+			),
+			mock.patch.object(
+				resources, 'readRunnerGroups', return_value=organization['runner_groups']
+			),
+			mock.patch.object(
+				resources,
+				'installedApps',
+				return_value=organization['web_settings']['installed_apps'],
+			),
+			mock.patch.object(github, 'gh') as write,
+			self.assertRaisesRegex(ValueError, 'code-security.*dừng trước khi ghi'),
+		):
+			configuration.syncConfiguredSettings(apply=True)
+		write.assert_not_called()
+
+	def testSecurityConfigurationResolverRequiresUniqueIdsAndNonemptyNames(self):
+		first = {'id': 12, 'name': 'Baseline', 'target_type': 'organization'}
+		for second in (
+			dict(first, name='Other'),
+			dict(first, id=13),
+			dict(first, id=13, name=''),
+		):
+			with (
+				self.subTest(second=second),
+				mock.patch.object(github, 'ghList', return_value=[first, second]),
+				self.assertRaises(ValueError),
+			):
+				configuration.securityConfigurationIds()
+		second = dict(first, id=13, name='Other')
+		with mock.patch.object(github, 'ghList', return_value=[first, second]):
+			self.assertEqual(
+				configuration.securityConfigurationIds(), {'Baseline': first, 'Other': second}
+			)
+
+	def testRunnerGroupRepositoryImportRequiresCompleteUniqueIdentity(self):
+		target = self.runnerGroup()
+		target['settings']['visibility'] = 'selected'
+		item = {
+			**target['settings'],
+			**{key: target[key] for key in resources.RUNNER_METADATA},
+			'id': 12,
+		}
+		for repositories in (
+			[{'full_name': 'TOANQUYNHLLC/app'}],
+			[{'full_name': 'TOANQUYNHLLC/app', 'id': True}],
+			[{'full_name': 'TOANQUYNHLLC/app', 'id': 0}],
+			[
+				{'full_name': 'TOANQUYNHLLC/app', 'id': 99},
+				{'full_name': 'TOANQUYNHLLC/web', 'id': 99},
+			],
+		):
+			with (
+				self.subTest(repositories=repositories),
+				mock.patch.object(resources, 'runnerGroupDetails', return_value={'Build': item}),
+				mock.patch.object(resources, 'readCollection', return_value=repositories),
+				self.assertRaises(ValueError),
+			):
+				resources.readRunnerGroups()
+
+	def testAmbiguousResourceIdsStopAllConfiguredWrites(self):
+		for resource in ('runner', 'repository', 'security'):
+			config = copy.deepcopy(self.config)
+			before = copy.deepcopy(config['organization'])
+			before['settings']['blog'] = 'https://cu.example'
+			group = self.runnerGroup()
+			if resource == 'runner':
+				before['runner_groups'] = [copy.deepcopy(group)]
+				group['settings']['allows_public_repositories'] = True
+				config['organization']['runner_groups'] = [group]
+				items = [{'id': 12, 'name': 'Build'}, {'id': 12, 'name': 'Renamed'}]
+			elif resource == 'repository':
+				group['settings']['visibility'] = 'selected'
+				group['selected_repositories'] = ['TOANQUYNHLLC/app', 'TOANQUYNHLLC/web']
+				config['organization']['runner_groups'] = [group]
+				items = [{'id': 99, 'full_name': name} for name in group['selected_repositories']]
+			else:
+				default = {
+					'name': 'Baseline',
+					'target_type': 'organization',
+					'default_for_new_repos': 'all',
+				}
+				config['organization']['security_configurations'] = [default]
+				before['security_configurations'] = [dict(default, default_for_new_repos='none')]
+				items = [
+					{'id': 12, 'name': name, 'target_type': 'organization'}
+					for name in ('Baseline', 'Other')
+				]
+			self.saveConfig(github.ROOT, config)
+			with (
+				self.subTest(resource=resource),
+				mock.patch.object(
+					configuration,
+					'readScope',
+					side_effect=[(before, {}), (config['repositories']['.github'], {})],
+				),
+				mock.patch.object(resources, 'readCollection', return_value=items),
+				mock.patch.object(github, 'ghList', return_value=items),
+				mock.patch.object(github, 'gh') as write,
+				contextlib.redirect_stdout(io.StringIO()),
+				self.assertRaises(ValueError),
+			):
+				configuration.syncConfiguredSettings(True)
+			write.assert_not_called()
+
+	def testRunnerGroupOrderDoesNotCreateChanges(self):
+		for inherited in (False, True):
+			for readOnly in (False, True):
+				with self.subTest(inherited=inherited, readOnly=readOnly):
+					current = self.runnerGroup()
+					current['inherited'] = inherited
+					current['workflow_restrictions_read_only'] = readOnly
+					current['settings'].update(
+						visibility='selected',
+						restricted_to_workflows=True,
+						selected_workflows=[
+							'TOANQUYNHLLC/app/.github/workflows/build.yml@refs/heads/main',
+							'TOANQUYNHLLC/app/.github/workflows/deploy.yml@refs/heads/main',
+						],
+					)
+					current['selected_repositories'] = ['TOANQUYNHLLC/app', 'TOANQUYNHLLC/web']
+					target = copy.deepcopy(current)
+					target['settings']['selected_workflows'].reverse()
+					target['selected_repositories'].reverse()
+					original = copy.deepcopy([current, target])
+					plan = []
+					with (
+						mock.patch.object(resources, 'runnerGroupDetails') as lookup,
+						mock.patch.object(resources, 'repositoryIds') as resolve,
+					):
+						resources.runnerGroupChanges(plan, [current], [target])
+					self.assertEqual(plan, [])
+					self.assertEqual([current, target], original)
+					lookup.assert_not_called()
+					resolve.assert_not_called()
+
+	def testRunnerGroupReadOnlyWorkflowChangesRemainBlocked(self):
+		current = self.runnerGroup()
+		current['workflow_restrictions_read_only'] = True
+		current['settings']['restricted_to_workflows'] = True
+		workflow = 'TOANQUYNHLLC/app/.github/workflows/build.yml@refs/heads/main'
+		other = 'TOANQUYNHLLC/app/.github/workflows/deploy.yml@refs/heads/main'
+		current['settings']['selected_workflows'] = [workflow]
+		for workflows in ([], [other], [workflow, other]):
+			with self.subTest(workflows=workflows):
+				target = copy.deepcopy(current)
+				target['settings']['selected_workflows'] = workflows
+				plan = []
+				with (
+					mock.patch.object(resources, 'runnerGroupDetails') as lookup,
+					self.assertRaisesRegex(ValueError, 'không có quyền sửa'),
+				):
+					resources.runnerGroupChanges(plan, [current], [target])
+				self.assertEqual(plan, [])
+				lookup.assert_not_called()
+
+	def testRunnerGroupReadOnlyWorkflowOrderAllowsOtherSettings(self):
+		current = self.runnerGroup()
+		current['workflow_restrictions_read_only'] = True
+		current['settings'].update(
+			restricted_to_workflows=True,
+			selected_workflows=[
+				'TOANQUYNHLLC/app/.github/workflows/build.yml@refs/heads/main',
+				'TOANQUYNHLLC/app/.github/workflows/deploy.yml@refs/heads/main',
+			],
+		)
+		target = copy.deepcopy(current)
+		target['settings']['selected_workflows'].reverse()
+		target['settings']['allows_public_repositories'] = True
+		plan = []
+		with mock.patch.object(resources, 'runnerGroupDetails', return_value={'Build': {'id': 12}}):
+			resources.runnerGroupChanges(plan, [current], [target])
+		self.assertEqual(
+			plan,
+			[
+				(
+					'orgs/TOANQUYNHLLC/actions/runner-groups/12',
+					'PATCH',
+					{'name': 'Build', 'allows_public_repositories': True},
+					{'allows_public_repositories': True},
+				)
+			],
+		)
+
+	def testRunnerGroupApplyAcceptsReorderedReadback(self):
+		wanted = copy.deepcopy(self.config)
+		group = self.runnerGroup()
+		group['settings'].update(
+			restricted_to_workflows=True,
+			selected_workflows=[
+				'TOANQUYNHLLC/app/.github/workflows/deploy.yml@refs/heads/main',
+				'TOANQUYNHLLC/app/.github/workflows/build.yml@refs/heads/main',
+			],
+		)
+		wanted['organization']['runner_groups'] = [group]
+		self.saveConfig(github.ROOT, wanted)
+		before = copy.deepcopy(wanted['organization'])
+		before['runner_groups'][0]['settings'].update(
+			restricted_to_workflows=False, selected_workflows=[]
+		)
+		after = copy.deepcopy(wanted['organization'])
+		after['runner_groups'][0]['settings']['selected_workflows'].reverse()
+		with (
+			mock.patch.object(
+				configuration,
+				'readScope',
+				side_effect=[
+					(before, {}),
+					(wanted['repositories']['.github'], {}),
+					(after, {}),
+					(wanted['repositories']['.github'], {}),
+				],
+			) as reader,
+			mock.patch.object(resources, 'runnerGroupDetails', return_value={'Build': {'id': 12}}),
+			mock.patch.object(github, 'gh') as write,
+			contextlib.redirect_stdout(io.StringIO()) as output,
+		):
+			self.assertEqual(configuration.syncConfiguredSettings(True), 0)
+		reader.assert_has_calls([mock.call(None), mock.call('.github')] * 2)
+		write.assert_called_once()
+		self.assertEqual(
+			write.call_args.args[:4],
+			('api', '-X', 'PATCH', 'orgs/TOANQUYNHLLC/actions/runner-groups/12'),
+		)
+		body = json.loads(write.call_args.kwargs['stdin'])
+		self.assertEqual(
+			body,
+			{
+				'name': 'Build',
+				'restricted_to_workflows': True,
+				'selected_workflows': group['settings']['selected_workflows'],
+			},
+		)
+		self.assertIn('khớp', output.getvalue())
+		self.assertNotIn('chưa xác nhận hoàn tất', output.getvalue())
+
+	def testRunnerGroupWorkflowOnlyUpdateIncludesRestrictionAndConfirmsState(self):
+		wanted = copy.deepcopy(self.config)
+		group = self.runnerGroup()
+		group['settings'].update(
+			restricted_to_workflows=True,
+			selected_workflows=['TOANQUYNHLLC/app/.github/workflows/deploy.yml@refs/heads/main'],
+		)
+		wanted['organization']['runner_groups'] = [group]
+		self.saveConfig(github.ROOT, wanted)
+		current = copy.deepcopy(wanted['organization'])
+		current['runner_groups'][0]['settings']['selected_workflows'] = [
+			'TOANQUYNHLLC/app/.github/workflows/build.yml@refs/heads/main'
+		]
+		original = copy.deepcopy(group)
+
+		def writeSettings(*args, stdin=None):
+			body = json.loads(stdin)
+			state = current['runner_groups'][0]['settings']
+			state.update({key: value for key, value in body.items() if key != 'selected_workflows'})
+			# Hợp đồng REST: danh sách workflow chỉ áp dụng khi cờ trong request được bật.
+			if body.get('restricted_to_workflows') is True:
+				state['selected_workflows'] = body['selected_workflows']
+
+		with (
+			mock.patch.object(
+				configuration,
+				'readScope',
+				side_effect=[
+					(current, {}),
+					(wanted['repositories']['.github'], {}),
+					(current, {}),
+					(wanted['repositories']['.github'], {}),
+				],
+			),
+			mock.patch.object(resources, 'runnerGroupDetails', return_value={'Build': {'id': 12}}),
+			mock.patch.object(github, 'gh', side_effect=writeSettings) as write,
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			self.assertEqual(configuration.syncConfiguredSettings(True), 0)
+			write.assert_called_once()
+			self.assertEqual(
+				json.loads(write.call_args.kwargs['stdin']),
+				{
+					'name': 'Build',
+					'restricted_to_workflows': True,
+					'selected_workflows': original['settings']['selected_workflows'],
+				},
+			)
+		self.assertEqual(current['runner_groups'], [original])
+		self.assertEqual(group, original)
+
+	def testRunnerGroupEnablingRestrictionIncludesRetainedWorkflows(self):
+		current = self.runnerGroup()
+		current['settings']['selected_workflows'] = [
+			'TOANQUYNHLLC/app/.github/workflows/build.yml@refs/heads/main'
+		]
+		target = copy.deepcopy(current)
+		target['settings']['restricted_to_workflows'] = True
+		plan = []
+		with mock.patch.object(resources, 'runnerGroupDetails', return_value={'Build': {'id': 12}}):
+			resources.runnerGroupChanges(plan, [current], [target])
+		self.assertEqual(
+			plan[0][2],
+			{
+				'name': 'Build',
+				'restricted_to_workflows': True,
+				'selected_workflows': target['settings']['selected_workflows'],
+			},
+		)
+		self.assertEqual(plan[0][3], {'restricted_to_workflows': True})
+
+	def testRunnerGroupCannotChangeIgnoredWorkflowListBeforeAnyWrite(self):
+		for wasRestricted in (False, True):
+			for workflows in (
+				[],
+				['TOANQUYNHLLC/app/.github/workflows/deploy.yml@refs/heads/main'],
+			):
+				current = self.runnerGroup()
+				current['settings'].update(
+					restricted_to_workflows=wasRestricted,
+					selected_workflows=[
+						'TOANQUYNHLLC/app/.github/workflows/build.yml@refs/heads/main'
+					],
+				)
+				target = copy.deepcopy(current)
+				previous = copy.deepcopy(self.config)
+				target['settings'].update(
+					restricted_to_workflows=False, selected_workflows=workflows
+				)
+				previous['organization']['runner_groups'] = [target]
+				self.saveConfig(github.ROOT, previous)
+				before = copy.deepcopy(previous['organization'])
+				before['settings']['blog'] = 'https://cu.example'
+				before['runner_groups'] = [current]
+				with (
+					self.subTest(wasRestricted=wasRestricted, workflows=workflows),
+					mock.patch.object(configuration, 'readScope', return_value=(before, {})),
+					mock.patch.object(resources, 'runnerGroupDetails') as lookup,
+					mock.patch.object(github, 'gh') as write,
+					contextlib.redirect_stdout(io.StringIO()),
+					self.assertRaisesRegex(ValueError, 'restricted_to_workflows'),
+				):
+					configuration.syncConfiguredSettings(True)
+				lookup.assert_not_called()
+				write.assert_not_called()
+
+	def testRunnerGroupDisablingRestrictionKeepsStoredWorkflows(self):
+		for wasRestricted in (False, True):
+			current = self.runnerGroup()
+			current['settings'].update(
+				restricted_to_workflows=wasRestricted,
+				selected_workflows=['TOANQUYNHLLC/app/.github/workflows/build.yml@refs/heads/main'],
+			)
+			target = copy.deepcopy(current)
+			if wasRestricted:
+				target['settings']['restricted_to_workflows'] = False
+				changes = {'restricted_to_workflows': False}
+			else:
+				target['settings']['allows_public_repositories'] = True
+				changes = {'allows_public_repositories': True}
+			plan = []
+			with (
+				self.subTest(wasRestricted=wasRestricted),
+				mock.patch.object(
+					resources, 'runnerGroupDetails', return_value={'Build': {'id': 12}}
+				),
+			):
+				resources.runnerGroupChanges(plan, [current], [target])
+				self.assertEqual(plan[0][2], dict(changes, name='Build'))
+				self.assertEqual(plan[0][3], changes)
+
+	def testRunnerGroupCreationCannotSendIgnoredWorkflowList(self):
+		target = self.runnerGroup()
+		target['settings']['selected_workflows'] = [
+			'TOANQUYNHLLC/app/.github/workflows/build.yml@refs/heads/main'
+		]
+		plan = []
+		with (
+			mock.patch.object(resources, 'runnerGroupDetails') as lookup,
+			mock.patch.object(resources, 'repositoryIds') as resolve,
+			self.assertRaisesRegex(ValueError, 'restricted_to_workflows'),
+		):
+			resources.runnerGroupChanges(plan, [], [target])
+		self.assertEqual(plan, [])
+		lookup.assert_not_called()
+		resolve.assert_not_called()
 
 	def testRunnerGroupChangingToSelectedExplicitlyClearsRetainedRepositories(self):
 		current = self.runnerGroup()

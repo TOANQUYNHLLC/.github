@@ -8,36 +8,107 @@
 [![Code Style: Prettier](https://img.shields.io/badge/Code%20Style-Prettier-ff69b4?logo=prettier&logoColor=white)](https://prettier.io)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Repository `.github` chính thức của **CÔNG TY TNHH TOÀN QUỲNH**: hồ sơ tổ chức, tệp cộng đồng mặc định và cấu hình GitHub dùng chung cho mọi repository. Giới thiệu về công ty xem tại [`profile/README.md`](profile/README.md).
-
----
+Repository `.github` của **CÔNG TY TNHH TOÀN QUỲNH** quản lý hồ sơ tổ chức, tài liệu cộng đồng, mẫu cấu hình và công cụ vận hành GitHub. Thông tin công ty nằm trong [hồ sơ tổ chức](profile/README.md).
 
 ## 🎯 MỤC ĐÍCH
 
-- 🏢 Quản lý nội dung giới thiệu công khai của tổ chức trên GitHub.
-- 📋 Chuẩn hóa biểu mẫu Issue, Pull Request và quy trình cộng tác cho mọi repository.
-- 🔐 Công bố chính sách bảo mật, quy tắc ứng xử và kênh hỗ trợ dùng chung.
-- ⚙️ Cung cấp workflow mẫu, bộ nhãn chuẩn, ruleset và công cụ kiểm tra để các dự án nhất quán ngay từ đầu.
+Repository cung cấp quy trình cộng tác và tài nguyên dùng chung cho các dự án. Người đóng góp bắt đầu từ [CONTRIBUTING.md](CONTRIBUTING.md); người quản trị dùng [MAINTAINERS.md](MAINTAINERS.md), [GOVERNANCE.md](GOVERNANCE.md) và [hướng dẫn cài đặt GitHub](docs/github-settings.md).
 
----
+## ⚙️ PHẠM VI ÁP DỤNG
 
-## ⚙️ CÁCH HOẠT ĐỘNG
+| Tài nguyên                     | Cách sử dụng                                                          |
+| ------------------------------ | --------------------------------------------------------------------- |
+| `profile/README.md`            | Hiển thị trên trang tổ chức                                           |
+| Tệp cộng đồng và biểu mẫu      | GitHub dùng mặc định khi repository đích không có bản riêng tương ứng |
+| `workflow-templates/`          | Chọn trong Actions hoặc chép, chỉnh và commit vào repository đích     |
+| `repository-templates/`        | Chọn tệp nguồn rồi đặt đúng đường dẫn trong dự án                     |
+| Ruleset, nhãn, team và cài đặt | Đối chiếu và áp dụng bằng công cụ quản trị                            |
 
-GitHub sử dụng các tài nguyên của repository này theo từng cơ chế:
+Workflows, `CODEOWNERS`, dependencies và cấu hình công cụ cần được thiết lập trong từng dự án. Bộ mẫu Issue riêng hợp lệ ở repository đích thay thế cả bộ mặc định; labels phải tồn tại ở repository dùng biểu mẫu. [STRUCTURE.md](STRUCTURE.md) mô tả đường dẫn, phạm vi kế thừa và cách dùng template repository.
 
-| Nội dung                           | Hiển thị ở đâu                                                                                             |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `profile/README.md`                | Trang giới thiệu của tổ chức trên GitHub                                                                   |
-| Tệp cộng đồng mặc định và biểu mẫu | Repository chưa có bản riêng tương ứng; không sao chép vào cây tệp hoặc bản clone                          |
-| `workflow-templates/`              | Bộ chọn _Actions → New workflow_ khi GitHub hỗ trợ; cần chọn, chỉnh và commit workflow vào repository đích |
+## 🛠️ PHÁT TRIỂN CỤC BỘ
 
-GitHub hỗ trợ mặc định cho `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`, `ACCESSIBILITY.md`, `FUNDING.yml`, `VULNERABILITY_REPORT.yml` hoặc `.yaml` và các biểu mẫu Issue, Pull Request, Discussion. Các tệp hiện có được liệt kê bên dưới; những tính năng như Discussions và báo cáo lỗ hổng cần được bật ở repository đích. Một bộ mẫu Issue hoặc `config.yml` hợp lệ trong `.github/ISSUE_TEMPLATE/` của repository đích thay thế cả bộ mẫu Issue mặc định của tổ chức. Labels cần tồn tại trong từng repository dùng biểu mẫu.
+Dùng phiên bản trong `mise.toml` và `.nvmrc`; kích hoạt mise trong shell rồi thiết lập:
 
-`LICENSE`, `CODEOWNERS`, workflows, `dependabot.yml`, `.gitignore`, `.editorconfig`, `AGENTS.md` và `GOVERNANCE.md` không tự kế thừa qua cơ chế này. Dùng nguồn thích hợp trong [`repository-templates/`](repository-templates/) hoặc viết nội dung riêng cho dự án; `GOVERNANCE.md` hiện nằm ở gốc repository này. Xem [cấu trúc và phạm vi áp dụng](STRUCTURE.md) và [tài liệu GitHub](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file).
+```bash
+mise trust
+mise install
+make hooks
+make check
+```
 
----
+`make check` chạy validator, tests, formatter, lint, quy ước Git và kiểm tra dependency. Các nhóm độc lập chạy song song; CodeQL chạy trên GitHub Actions. Scripts cần Python ≥ 3.11 và Node.js đúng `.nvmrc`. Dev Container tự thiết lập công cụ và hook.
 
-## 📁 CẤU TRÚC REPOSITORY
+Quy tắc định dạng: UTF-8, LF, tab độ rộng 4; Markdown và YAML dùng 4 dấu cách. Ngoại lệ theo `.editorconfig`. Chi tiết môi trường, hook, cache và kiểm tra trực tuyến nằm trong [hướng dẫn kiểm tra tại máy](docs/local-checks.md).
+
+## 🏢 QUẢN TRỊ GITHUB
+
+GitHub CLI cần đăng nhập bằng tài khoản có quyền phù hợp. Các lệnh quản trị mặc định xem trước; `--apply` thực hiện ghi.
+
+```bash
+make org-preview
+make org-import
+make org-settings-preview
+```
+
+`make org-import` chỉ ghi cài đặt đọc được vào `github-settings.json`. Kiểm tra diff trước khi dùng `make org-settings-apply`. Dữ liệu chưa đọc được không được suy đoán; áp dụng cần xác minh nguồn, phạm vi và trạng thái sau ghi. Các thay đổi thành công không tự hoàn tác khi bước sau thất bại.
+
+| Nguồn                                          | Phạm vi                                                                                                                |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `github-settings.json`                         | Cài đặt tổ chức và repository; hợp đồng API trong `scripts/orgsetup/configuration.py`, `scripts/orgsetup/resources.py` |
+| `repository-templates/`, `workflow-templates/` | Tệp thiếu được đề xuất qua Pull Request bằng lệnh `files`                                                              |
+| `rulesets/`                                    | Bảo vệ nhánh, tag và push theo [hướng dẫn ruleset](rulesets/README.md)                                                 |
+| `scripts/orgsetup/teams.py`                    | Thông tin team, quan hệ cha–con và quyền repository                                                                    |
+| `labels.yml`                                   | Nhãn chuẩn; nhãn riêng được giữ khi đồng bộ                                                                            |
+
+[hướng dẫn cài đặt GitHub](docs/github-settings.md) mô tả cách nhập, xem trước, áp dụng và giới hạn quyền/gói dịch vụ. Thiết lập dự án đích theo [ROADMAP.md](ROADMAP.md).
+
+## 🚀 PHÁT HÀNH
+
+Phiên bản có dạng `Stable.vYYYY.MM.DDXXXX` hoặc `Beta.vYYYY.MM.DDXXXX`: ngày chuẩn bị theo giờ Việt Nam, số thứ tự gồm 4 chữ số dùng chung hai kênh và bắt đầu lại mỗi tháng. [ADR 00000012](docs/adr/00000012-monthly-releases.md) quy định cách chọn phiên bản.
+
+`CHANGELOG.md` chứa nội dung dành cho người sử dụng của phiên bản đang chuẩn bị. Các phiên bản đã công bố nằm ở [GitHub Releases](https://github.com/TOANQUYNHLLC/.github/releases).
+
+1. Điền mục **CHƯA PHÁT HÀNH** rồi dùng `make release-pr`, hoặc workflow `monthly-release.yml` chạy lúc 07:00 ngày 1 hằng tháng khi có commit mới.
+2. Xem nội dung bằng `make release-notes TAG=Stable.v2026.11.010001`, hoàn thành kiểm tra và hợp nhất PR bằng Merge hoặc Squash.
+3. Người quản trị gắn tag trên `main`; workflow `release.yml` tạo Release. Khi Actions tắt, dùng `python3 scripts/release.py create Stable.v2026.11.010001` sau khi đẩy tag.
+
+Chuẩn bị Beta bằng `python3 scripts/release.py prepare --channel Beta --open-pr`. Nội dung trống, lỗi đọc tag hoặc phiên bản không hợp lệ chặn chuẩn bị. Lần phát hành đầu tiên có thể chuẩn bị mục phiên bản và tag bằng tay theo cùng quy tắc. Release bất biến không cho dời hoặc dùng lại tag đã phát hành.
+
+PR phát hành dùng [mẫu phát hành](.github/PULL_REQUEST_TEMPLATE/release.md); người quản trị xác nhận checklist trước khi hợp nhất. Nội dung GitHub tự sinh dùng nhãn trong `.github/release.yml`. PR do `GITHUB_TOKEN` mở có thể cần người có quyền ghi phê duyệt lượt chạy workflow theo yêu cầu của GitHub.
+
+## 🧰 DANH SÁCH LỆNH
+
+| Lệnh                        | Tác dụng                                                                                                                                                                                                                                |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `make`                      | Xem danh sách lệnh                                                                                                                                                                                                                      |
+| `make quick`                | Kiểm tra nhanh: chỉ thu hẹp tests khi mọi tệp thay đổi là test; trường hợp khác chạy đầy đủ                                                                                                                                             |
+| `make check`                | Mọi nhóm kiểm tra, chạy song song                                                                                                                                                                                                       |
+| `make validate`             | Kiểm tra nội dung bằng `scripts/validate.py`                                                                                                                                                                                            |
+| `make test`                 | Test tự động của các script, song song theo CPU khả dụng                                                                                                                                                                                |
+| `make format`               | Định dạng lại toàn bộ bằng Prettier và ruff                                                                                                                                                                                             |
+| `make format-check`         | Prettier, ruff format, ruff check — job "Định dạng (Prettier, ruff)"                                                                                                                                                                    |
+| `make lint`                 | shellcheck, actionlint — job "Shell script và workflow"                                                                                                                                                                                 |
+| `make conventions`          | Tên branch và tiêu đề commit theo quy ước                                                                                                                                                                                               |
+| `make audit`                | Dependency có lỗ hổng mức high trở lên                                                                                                                                                                                                  |
+| `make tools`                | Kiểm tra đã cài đủ công cụ; cài thư viện Node.js nếu thiếu hoặc sai phiên bản                                                                                                                                                           |
+| `make hooks`                | Cài git hook, mẫu commit `.gitmessage`, cấu hình `git blame` bỏ qua commit chỉ đổi định dạng                                                                                                                                            |
+| `make sync [BRANCH=…]`      | Chuyển branch (mặc định `main`), kéo bằng fast-forward và dọn branch local đã hợp nhất; yêu cầu cây làm việc sạch                                                                                                                       |
+| `make cleanup`              | `git clean -fdx`: **xóa vĩnh viễn** mọi tệp git không quản lý — tệp mới chưa `git add`, tệp bị `.gitignore` bỏ qua (`node_modules/`, `.cache/`, `.env`…); xem trước bằng `git clean -ndx`. Lần kiểm tra sau tự cài lại thư viện Node.js |
+| `make links`                | Liên kết bên ngoài còn hoạt động; bản `security.txt` trên website khớp repository                                                                                                                                                       |
+| `make versions`             | Công cụ trong `mise.toml`, action chỉ có trong `workflow-templates/` có bản phát hành mới hơn                                                                                                                                           |
+| `make forms REF=…`          | Kiểm tra Issue theo ref; Discussion chỉ xác minh trên nhánh mặc định, ref khác báo chưa xác minh và trả mã lỗi (mặc định `main`)                                                                                                        |
+| `make org-import`           | Lấy cài đặt GitHub của tổ chức và các repository về `github-settings.json`; chỉ ghi local                                                                                                                                               |
+| `make org-settings-preview` | Xem trước cài đặt API trong `github-settings.json`, gồm trạng thái Actions và các endpoint bổ sung                                                                                                                                      |
+| `make org-settings-apply`   | Áp dụng cài đặt API trong `github-settings.json`, đọc lại để xác nhận; báo riêng mục cần thao tác trên web                                                                                                                              |
+| `make org-preview`          | Xem trước việc áp dụng cấu hình chung lên mọi repository và cài đặt tổ chức (cần GitHub CLI)                                                                                                                                            |
+| `make labels-preview`       | Xem trước việc đồng bộ nhãn lên các repository                                                                                                                                                                                          |
+| `make labels-apply`         | Đồng bộ nhãn lên repository đã có (cần GitHub CLI); nhãn mặc định cấp tổ chức nhập trên web                                                                                                                                             |
+| `make release-notes TAG=…`  | Xem trước nội dung GitHub Release của một tag                                                                                                                                                                                           |
+| `make release-prepare`      | Chuyển mục CHƯA PHÁT HÀNH thành phiên bản của tháng nếu có thay đổi kể từ tag trước                                                                                                                                                     |
+| `make release-pr`           | Chuẩn bị rồi mở Pull Request phát hành tại máy (cần GitHub CLI, đứng ở `main` sạch)                                                                                                                                                     |
+
+## 📁 TÀI NGUYÊN VÀ CÔNG CỤ
 
 **Hồ sơ và quản trị tổ chức**
 
@@ -66,16 +137,14 @@ GitHub hỗ trợ mặc định cho `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SE
 
 **Tài nguyên dùng chung cho các repository**
 
-| Đường dẫn                                        | Chức năng                                                                                                                                                                                                                                                                                   |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`workflow-templates/`](workflow-templates/)     | Workflow mẫu: Node.js CI, Python CI, Go CI, CodeQL, rà soát dependency, Docker image, tạo GitHub Release, kiểm tra tiêu đề Pull Request và tên branch, gắn nhãn, đóng mục không hoạt động, kiểm tra tài liệu. Kiểm tra gọi script của tổ chức (checkout `TOANQUYNHLLC/.github` vào `.org/`) |
-| [`repository-templates/`](repository-templates/) | Tệp riêng cho từng repository: `CODEOWNERS`, `dependabot.yml`, `release.yml`, `labeler.yml`, cấu hình định dạng, phiên bản theo ngôn ngữ, `.dockerignore`, `.env.example`, `PRIVACY.md`                                                                                                     |
-| [`rulesets/`](rulesets/)                         | Ruleset **Protect Main**, **Protect Release Tags** (cấp repository) và bản cấp tổ chức, push ruleset **Protect Pushes** — xem [`rulesets/README.md`](rulesets/README.md)                                                                                                                    |
-| [`labels.yml`](labels.yml)                       | Bộ nhãn chuẩn: nhãn mặc định của GitHub, loại thay đổi (khớp tiền tố branch), phạm vi `area: …`, mức độ ưu tiên, trạng thái xử lý, nhãn Dependabot                                                                                                                                          |
+| Đường dẫn                                        | Chức năng                                                                                                                                                                               |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`workflow-templates/`](workflow-templates/)     | Workflow mẫu theo công nghệ và chức năng; gọi scripts của tổ chức trong `.org/`                                                                                                         |
+| [`repository-templates/`](repository-templates/) | Tệp riêng cho từng repository: `CODEOWNERS`, `dependabot.yml`, `release.yml`, `labeler.yml`, cấu hình định dạng, phiên bản theo ngôn ngữ, `.dockerignore`, `.env.example`, `PRIVACY.md` |
+| [`rulesets/`](rulesets/)                         | Ruleset **Protect Main**, **Protect Release Tags** (cấp repository) và bản cấp tổ chức, push ruleset **Protect Pushes** — xem [`rulesets/README.md`](rulesets/README.md)                |
+| [`labels.yml`](labels.yml)                       | Bộ nhãn chuẩn: nhãn mặc định của GitHub, loại thay đổi (khớp tiền tố branch), phạm vi `area: …`, mức độ ưu tiên, trạng thái xử lý, nhãn Dependabot                                      |
 
-**Workflow của repository này** — huy hiệu **Checks**, **CodeQL** ở đầu trang hiển thị kết quả lượt chạy gần nhất của `validate.yml`, `codeql.yml` trên `main`; bấm vào mở tệp workflow trên cùng nhánh. Khi GitHub Actions tắt, huy hiệu giữ kết quả lượt cuối và không xác nhận các commit mới. `make check` chạy các nhóm kiểm tra tại máy qua hook `pre-push`; CodeQL cần GitHub Actions. Quy trình khi Actions tắt xem mục **PHÁT HÀNH**.
-
-Workflow gắn nhãn dùng `pull_request_target` theo [hướng dẫn của actions/labeler](https://github.com/actions/labeler#recommended-permissions) để xử lý cả Pull Request từ fork: chỉ đọc metadata và cấu hình của nhánh đích qua API. Quyền ghi nằm ở job gắn nhãn; workflow không checkout hay chạy mã của Pull Request. Nhóm concurrency dùng số Pull Request để các PR không hủy lượt chạy của nhau. Workflow mẫu gắn nhãn dùng cùng cách này.
+**Workflow của repository này**
 
 | Đường dẫn                                                                                                                                     | Chức năng                                                                                                                               |
 | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
@@ -91,45 +160,43 @@ Workflow gắn nhãn dùng `pull_request_target` theo [hướng dẫn của acti
 | [`.github/dependabot.yml`](.github/dependabot.yml)                                                                                            | Đề xuất cập nhật GitHub Action (ghim theo commit SHA), Prettier và feature của Dev Container, chờ 7 ngày sau khi phát hành (`cooldown`) |
 | [`.github/CODEOWNERS`](.github/CODEOWNERS)                                                                                                    | Team người quản trị duyệt mọi thay đổi                                                                                                  |
 
-Workflow mẫu Python cài `requirements.txt`, `requirements-dev.txt` nếu có và package khai báo bằng `pyproject.toml`, `setup.py` hoặc `setup.cfg`. Tệp `pyproject.toml` chỉ cấu hình công cụ hoặc metadata không kích hoạt cài package. Với Poetry `package-mode = false`, script bỏ bước cài package; dependency cần xuất ra requirements hoặc cài bằng workflow riêng của dự án. Ruff lấy phiên bản từ `mise.toml` của tổ chức và được cài sau dependency của dự án; thư mục `.org/` được loại khỏi lint và kiểm tra định dạng. Pytest chỉ chạy khi có tệp trong `tests/`. Dependency riêng cho tests dùng `requirements-dev.txt` hoặc chỉnh workflow theo extras/nhóm phụ thuộc của dự án. Workflow đọc phiên bản Python từ `.python-version`.
-
-Workflow mẫu Node.js cài dependency bằng `npm ci`, đọc phiên bản Node.js từ `.nvmrc` và chỉ chạy lint, test, build khi có script tương ứng trong `package.json`.
+Workflow mẫu cần được chọn theo công nghệ và chỉnh cho dự án đích. Cách áp dụng xem [cấu trúc repository](STRUCTURE.md) và [mẫu tệp](repository-templates/README.md).
 
 **Script** — các kiểm tra và công cụ dùng chung
 
-| Đường dẫn                                                                                   | Chức năng                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`scripts/check.py`](scripts/check.py)                                                      | Nguồn duy nhất của các nhóm kiểm tra (`content`, `format`, `lint`, `conventions`, `audit`); `make check` và `validate.yml` cùng gọi, các nhóm chạy song song                                                                                                                                                                                                                                                                                                    |
-| [`scripts/validate.py`](scripts/validate.py) · [`scripts/validation/`](scripts/validation/) | Điểm chạy và các nhóm kiểm tra (mỗi nhóm một module trong `validation/`): định dạng, mã hóa, xuống dòng từng loại tệp; liên kết nội bộ; tiêu đề viết hoa; chữ huy hiệu tiếng Anh, hoa đầu mỗi từ; biểu mẫu; nhãn; workflow; ruleset; bảng ADR và đủ mục của từng ADR; tên hàm, tham số và biến theo camelCase, lớp theo PascalCase; tài liệu khớp code; các danh sách phải khớp nhau; Dev Container ghim phiên bản; email chung; `security.txt`; `CHANGELOG.md` |
-| [`scripts/install-python-dependencies.py`](scripts/install-python-dependencies.py)          | Cài công cụ Python theo phiên bản Ruff của tổ chức, requirements và package cho workflow mẫu Python CI                                                                                                                                                                                                                                                                                                                                                          |
-| [`scripts/run-tests.py`](scripts/run-tests.py)                                              | Chạy test song song theo CPU khả dụng và lịch sử thời gian (`make test`, `make check`)                                                                                                                                                                                                                                                                                                                                                                          |
-| [`scripts/conventions.py`](scripts/conventions.py)                                          | Tên branch, tiêu đề commit và Pull Request (workflow của repository này và workflow mẫu)                                                                                                                                                                                                                                                                                                                                                                        |
-| [`scripts/git-hooks.py`](scripts/git-hooks.py)                                              | Git hook: `pre-commit`, `pre-push`, `post-merge`, `post-rewrite` (mục [PHÁT TRIỂN CỤC BỘ](#️-phát-triển-cục-bộ))                                                                                                                                                                                                                                                                                                                                                 |
-| [`scripts/release.py`](scripts/release.py)                                                  | Phát hành từ `CHANGELOG.md`: xem trước nội dung, chuẩn bị phiên bản của tháng, mở Pull Request phát hành, tạo GitHub Release                                                                                                                                                                                                                                                                                                                                    |
-| [`scripts/org-setup.py`](scripts/org-setup.py) · [`scripts/orgsetup/`](scripts/orgsetup/)   | Nhập cài đặt GitHub về `github-settings.json` và áp dụng từ local; quản lý tệp dùng chung, cài đặt, ruleset, team, nhãn, cài đặt tổ chức; mặc định chỉ xem trước — mỗi nhóm lệnh một module trong `orgsetup/`                                                                                                                                                                                                                                                   |
-| [`scripts/check-markdown-links.py`](scripts/check-markdown-links.py)                        | Liên kết nội bộ trong Markdown (dùng chung với `validate.py` và workflow mẫu `docs-check.yml`)                                                                                                                                                                                                                                                                                                                                                                  |
-| [`scripts/markdown.py`](scripts/markdown.py)                                                | Bỏ nội dung mã trong Markdown, dùng chung cho kiểm tra liên kết nội bộ, liên kết bên ngoài, tiêu đề, thụt lề và nhận diện cấu trúc nội dung phát hành                                                                                                                                                                                                                                                                                                           |
-| [`scripts/check-gofmt.py`](scripts/check-gofmt.py)                                          | Định dạng Go cho workflow mẫu `go-ci.yml`                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| [`scripts/check-external-links.py`](scripts/check-external-links.py)                        | Liên kết bên ngoài còn hoạt động; bản `security.txt` trên website khớp repository                                                                                                                                                                                                                                                                                                                                                                               |
-| [`scripts/check-github-forms.py`](scripts/check-github-forms.py)                            | GitHub chấp nhận biểu mẫu Issue, Discussion (lỗi khóa chỉ hiện trên trang xem tệp)                                                                                                                                                                                                                                                                                                                                                                              |
-| [`scripts/check-tool-versions.py`](scripts/check-tool-versions.py)                          | Công cụ trong `mise.toml` và action chỉ có trong `workflow-templates/` (Dependabot không theo dõi) có bản phát hành mới hơn                                                                                                                                                                                                                                                                                                                                     |
-| [`scripts/test_*.py`](scripts/) · [`scripts/testsupport.py`](scripts/testsupport.py)        | Test tự động, mỗi script một tệp; mỗi luật của `validate.py` có test cố ý làm hỏng một điểm để chứng minh luật còn hoạt động                                                                                                                                                                                                                                                                                                                                    |
+| Đường dẫn                                                                                   | Chức năng                                                                                                                                             |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`scripts/check.py`](scripts/check.py)                                                      | Điều phối nhóm kiểm tra dùng chung tại máy và trên GitHub Actions                                                                                     |
+| [`scripts/validate.py`](scripts/validate.py) · [`scripts/validation/`](scripts/validation/) | Kiểm tra nội dung, quy ước, cấu hình và sự thống nhất của tài liệu                                                                                    |
+| [`scripts/install-python-dependencies.py`](scripts/install-python-dependencies.py)          | Cài công cụ Python theo phiên bản Ruff của tổ chức, requirements và package cho workflow mẫu Python CI                                                |
+| [`scripts/run-tests.py`](scripts/run-tests.py)                                              | Chạy tests song song theo CPU khả dụng và cân bằng nhóm theo thời gian chạy                                                                           |
+| [`scripts/conventions.py`](scripts/conventions.py)                                          | Tên branch, tiêu đề commit và Pull Request (workflow của repository này và workflow mẫu)                                                              |
+| [`scripts/git-hooks.py`](scripts/git-hooks.py)                                              | Cài và chạy hook trước commit, trước push và sau khi kéo code                                                                                         |
+| [`scripts/release.py`](scripts/release.py)                                                  | Phát hành từ `CHANGELOG.md`: xem trước nội dung, chuẩn bị phiên bản của tháng, mở Pull Request phát hành, tạo GitHub Release                          |
+| [`scripts/org-setup.py`](scripts/org-setup.py) · [`scripts/orgsetup/`](scripts/orgsetup/)   | Nhập, đối chiếu và áp dụng cài đặt; quản lý tệp, ruleset, team và nhãn                                                                                |
+| [`scripts/check-markdown-links.py`](scripts/check-markdown-links.py)                        | Liên kết nội bộ trong Markdown (dùng chung với `validate.py` và workflow mẫu `docs-check.yml`)                                                        |
+| [`scripts/markdown.py`](scripts/markdown.py)                                                | Bỏ nội dung mã trong Markdown, dùng chung cho kiểm tra liên kết nội bộ, liên kết bên ngoài, tiêu đề, thụt lề và nhận diện cấu trúc nội dung phát hành |
+| [`scripts/check-gofmt.py`](scripts/check-gofmt.py)                                          | Định dạng Go cho workflow mẫu `go-ci.yml`                                                                                                             |
+| [`scripts/check-external-links.py`](scripts/check-external-links.py)                        | Liên kết bên ngoài còn hoạt động; bản `security.txt` trên website khớp repository                                                                     |
+| [`scripts/check-github-forms.py`](scripts/check-github-forms.py)                            | GitHub chấp nhận biểu mẫu Issue, Discussion (lỗi khóa chỉ hiện trên trang xem tệp)                                                                    |
+| [`scripts/check-tool-versions.py`](scripts/check-tool-versions.py)                          | Công cụ trong `mise.toml` và action chỉ có trong `workflow-templates/` (Dependabot không theo dõi) có bản phát hành mới hơn                           |
+| [`scripts/test_*.py`](scripts/) · [`scripts/testsupport.py`](scripts/testsupport.py)        | Tests và công cụ hỗ trợ dựng môi trường kiểm thử                                                                                                      |
 
 **Cấu hình và công cụ phát triển**
 
-| Đường dẫn                                                                                                  | Chức năng                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [`Makefile`](Makefile)                                                                                     | Lệnh tiện ích theo nhóm (thiết lập, kiểm tra, kiểm tra trực tuyến, đồng bộ git, phát hành, quản trị tổ chức) — gõ `make` để xem; chỉ gọi script, tương thích GNU Make ≥ 3.81                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| [`mise.toml`](mise.toml) · [`.nvmrc`](.nvmrc) · [`package.json`](package.json)                             | Nguồn phiên bản duy nhất: Python, ruff, ShellCheck, actionlint; Node.js; Prettier (`devEngines` chặn phiên bản sai)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| [`.editorconfig`](.editorconfig) · [`.prettierrc.json`](.prettierrc.json) · [`ruff.toml`](ruff.toml)       | Quy tắc định dạng (mục [PHÁT TRIỂN CỤC BỘ](#️-phát-triển-cục-bộ))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| [`.gitattributes`](.gitattributes) · [`.gitignore`](.gitignore)                                            | Xuống dòng theo loại tệp, tệp nhị phân; bỏ qua tệp tạm, `node_modules/`, bí mật                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| [`.devcontainer/`](.devcontainer/) · [`.vscode/extensions.json`](.vscode/extensions.json)                  | Dev Container, Codespaces (mục [PHÁT TRIỂN CỤC BỘ](#️-phát-triển-cục-bộ)): image ghim đúng bản Python của `mise.toml`, feature ghim theo phiên bản chính; extension VS Code giống nhau ở cả hai nơi                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| [`shell/sync.sh`](shell/sync.sh) · [`shell/prune-branches.sh`](shell/prune-branches.sh)                    | Script tiện ích cho người phát triển ([ADR 00000009](docs/adr/00000009-checks-as-scripts.md)), mỗi script một việc; `make sync` chạy lần lượt hai script, bước đầu lỗi thì không chạy bước sau. `sync.sh <branch>`: dừng khi tên branch không hợp lệ, còn thay đổi chưa commit hoặc đang dở rebase, merge, cherry-pick, revert, bisect; chuyển sang branch rồi `git pull --ff-only` — branch ở máy lệch với origin thì dừng, không tự tạo merge commit; branch chưa có hoặc đã bị xóa trên origin thì bỏ qua bước kéo. `prune-branches.sh`: xóa branch cục bộ đã hợp nhất bằng Merge hoặc Squash vào `origin/main` (so theo nội dung vì Squash đổi SHA) mà branch theo dõi trên origin đã bị xóa; giữ `main`, branch còn thay đổi, branch hiện tại và branch đang mở ở worktree khác; thiếu `origin/main` thì dừng |
-| [`.gitmessage`](.gitmessage) · [`.git-blame-ignore-revs`](.git-blame-ignore-revs) · [`.mailmap`](.mailmap) | Mẫu commit theo quy ước; `git blame` bỏ qua commit chỉ đổi định dạng; gộp các cách viết tên tác giả                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| [`pyproject.toml`](pyproject.toml)                                                                         | Python tối thiểu của script (`requires-python`) để ruff trong VS Code và `ruff check` gõ tay kiểm tra giống `make check`; không đóng gói, không có dependency                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| [`.npmrc`](.npmrc) · [`.shellcheckrc`](.shellcheckrc)                                                      | npm ghi phiên bản chính xác, không tạo `package-lock.json`; cấu hình ShellCheck                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| [`CITATION.cff`](CITATION.cff)                                                                             | Cách trích dẫn repository; từ khóa là nguồn của topics trên GitHub                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| [`.github.code-workspace`](.github.code-workspace)                                                         | Workspace VS Code: mở thư mục gốc của repository                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Đường dẫn                                                                                                  | Chức năng                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`Makefile`](Makefile)                                                                                     | Lệnh thiết lập, kiểm tra, đồng bộ Git, phát hành và quản trị tổ chức                                                                                          |
+| [`mise.toml`](mise.toml) · [`.nvmrc`](.nvmrc) · [`package.json`](package.json)                             | Nguồn phiên bản duy nhất: Python, ruff, ShellCheck, actionlint; Node.js; Prettier (`devEngines` chặn phiên bản sai)                                           |
+| [`.editorconfig`](.editorconfig) · [`.prettierrc.json`](.prettierrc.json) · [`ruff.toml`](ruff.toml)       | Quy tắc định dạng (mục [PHÁT TRIỂN CỤC BỘ](#️-phát-triển-cục-bộ))                                                                                              |
+| [`.gitattributes`](.gitattributes) · [`.gitignore`](.gitignore)                                            | Xuống dòng theo loại tệp, tệp nhị phân; bỏ qua tệp tạm, `node_modules/`, bí mật                                                                               |
+| [`.devcontainer/`](.devcontainer/) · [`.vscode/extensions.json`](.vscode/extensions.json)                  | Môi trường Dev Container, Codespaces và cấu hình editor                                                                                                       |
+| [`shell/sync.sh`](shell/sync.sh) · [`shell/prune-branches.sh`](shell/prune-branches.sh)                    | Chuyển, kéo branch bằng fast-forward và dọn branch local đã hợp nhất có branch theo dõi bị xóa                                                                |
+| [`.gitmessage`](.gitmessage) · [`.git-blame-ignore-revs`](.git-blame-ignore-revs) · [`.mailmap`](.mailmap) | Mẫu commit theo quy ước; `git blame` bỏ qua commit chỉ đổi định dạng; gộp các cách viết tên tác giả                                                           |
+| [`pyproject.toml`](pyproject.toml)                                                                         | Python tối thiểu của script (`requires-python`) để ruff trong VS Code và `ruff check` gõ tay kiểm tra giống `make check`; không đóng gói, không có dependency |
+| [`.npmrc`](.npmrc) · [`.shellcheckrc`](.shellcheckrc)                                                      | npm ghi phiên bản chính xác, không tạo `package-lock.json`; cấu hình ShellCheck                                                                               |
+| [`CITATION.cff`](CITATION.cff)                                                                             | Cách trích dẫn repository; từ khóa là nguồn của topics trên GitHub                                                                                            |
+| [`.github.code-workspace`](.github.code-workspace)                                                         | Workspace VS Code: mở thư mục gốc của repository                                                                                                              |
 
 **Tài liệu cho người phát triển**
 
@@ -141,187 +208,27 @@ Workflow mẫu Node.js cài dependency bằng `npm ci`, đọc phiên bản Node
 | [`.github/instructions/`](.github/instructions/)                                                                           | Hướng dẫn Copilot theo đường dẫn: mã Python, cấu hình GitHub và tài liệu                                            |
 | [`.github/agents/repository-reviewer.agent.md`](.github/agents/repository-reviewer.agent.md)                               | Agent Copilot rà soát ảnh hưởng toàn tổ chức và sự thống nhất giữa tài liệu với code, dùng công cụ đọc và tìm kiếm  |
 | [`specs/jobs-guideline.md`](specs/jobs-guideline.md)                                                                       | Yêu cầu chuẩn cho một đợt rà soát toàn dự án: phạm vi, cách kiểm chứng, điều kiện hoàn tất và nội dung Pull Request |
+| [`docs/local-checks.md`](docs/local-checks.md)                                                                             | Thiết lập công cụ, hook và kiểm tra                                                                                 |
+| [`docs/github-settings.md`](docs/github-settings.md)                                                                       | Nguồn cài đặt và hợp đồng API GitHub                                                                                |
 | [`CHANGELOG.md`](CHANGELOG.md)                                                                                             | Khung nội dung chuẩn bị phát hành                                                                                   |
 
 ---
 
-## 🛠️ PHÁT TRIỂN CỤC BỘ
+## 📝 QUY TẮC ĐÓNG GÓP
 
-Cài công cụ đúng phiên bản trong [`mise.toml`](mise.toml) và [`.nvmrc`](.nvmrc) — ruff, ShellCheck, actionlint, Node.js cùng phiên bản với CI (CI dùng Python có sẵn của runner, script cần ≥ 3.11) — rồi cài git hook:
+Mọi thay đổi đi qua Pull Request theo [CONTRIBUTING.md](CONTRIBUTING.md), được đánh giá và kiểm tra trước khi hợp nhất. Mỗi thay đổi phải sửa các nơi liên quan trong code, tests, cấu hình và tài liệu theo [ADR 00000013](docs/adr/00000013-related-changes.md).
 
-```bash
-mise trust
-mise install
-make hooks
-```
-
-mise chỉ đọc `mise.toml` sau khi được tin cậy (`mise trust`) và chỉ đưa công cụ lên `PATH` khi shell đã kích hoạt mise (`mise activate` trong tệp cấu hình shell, xem [hướng dẫn của mise](https://mise.jdx.dev/getting-started.html)). Thiếu một trong hai bước, lệnh dùng công cụ cài sẵn của máy: Node.js khác bản trong `.nvmrc` làm `make check` dừng với lỗi `EBADDEVENGINES`.
-
-**Dev Container, Codespaces** ([`.devcontainer/`](.devcontainer/)) tự làm các bước trên:
-
-- Image Python đúng bản trong `mise.toml` ([ADR 00000008](docs/adr/00000008-mise-single-version-source.md)), thêm Ruby và GitHub CLI; Codespaces cần tối thiểu 4 lõi CPU vì `make check` chạy test song song.
-- [`.devcontainer/update-content.sh`](.devcontainer/update-content.sh) cài mise, ruff, ShellCheck, actionlint, Node.js và Prettier (Codespaces prebuild giữ sẵn kết quả); công cụ của mise và cache npm nằm trên volume nên lần dựng lại không tải lại.
-- [`.devcontainer/post-create.sh`](.devcontainer/post-create.sh) tin cậy thư mục làm việc (`safe.directory`) rồi chạy `make hooks`.
-- Mỗi lần mở container, [`.devcontainer/gh-login-hint.py`](.devcontainer/gh-login-hint.py) nhắc `gh auth login` khi GitHub CLI chưa đăng nhập — `make org-preview` cần tài khoản quản trị tổ chức, `GITHUB_TOKEN` của Codespaces không đủ quyền.
-- VS Code định dạng khi lưu: Prettier cho JSON, YAML, Markdown; Ruff cho Python (TOML không tự định dạng); test của `scripts/` chạy được từ khung Testing.
-
-Không dùng mise thì cài Node.js đúng bản trong `.nvmrc` (ví dụ `brew install node@24` rồi đưa `$(brew --prefix node@24)/bin` lên đầu `PATH`): `devEngines` của `package.json` làm npm báo `EBADDEVENGINES` và dừng khi Node.js khác bản này. Thư viện Node.js (Prettier) tự cài khi chạy kiểm tra lần đầu. Script và test chạy được với git ≥ 2.25 và bash ≥ 3.2 (bản mặc định của macOS). `make hooks` liên kết hook tới script; Windows chưa bật Developer Mode không cho tạo liên kết tượng trưng thì cài tệp gọi script thay thế. Git hook ([`scripts/git-hooks.py`](scripts/git-hooks.py)) chạy tự động:
-
-- `git commit`: Prettier, `ruff format`, `ruff check` trên đúng phần đã stage, dùng cấu hình trong Git index kể cả khi bản trên đĩa đã bị xóa; tên tệp được đọc nguyên văn từ danh sách phân cách bằng NUL, giữ cả khoảng trắng đầu tên và ký tự xuống dòng; truyền đường dẫn sau dấu `--` để tên tệp không bị hiểu thành tùy chọn của formatter; các tệp Python khác trong index cũng được xuất (chỉ để ruff nhận đúng gói khi xếp import, không kiểm tra); không xuất được nội dung đã stage hoặc kiểm tra lỗi thì không commit.
-- `git push` một branch: `make check` trên đúng nội dung được đẩy — commit hết hoặc `git stash -u` trước; lỗi thì không đẩy; chỉ đẩy tag thì bỏ qua.
-- `git pull` (cả `--rebase`): chạy song song `make org-preview` (so cài đặt trên GitHub với code), `make links`, `make versions` — chỉ báo, không chặn.
-
-**Quy tắc định dạng** (khai báo trong [`.editorconfig`](.editorconfig), [`.prettierrc.json`](.prettierrc.json), [`ruff.toml`](ruff.toml); `make check` kiểm tra):
-
-- Thụt lề bằng **tab**, độ rộng **4**, kể cả Python và `Makefile`.
-- Chỉ ngôn ngữ **bắt buộc dấu cách** mới dùng dấu cách: **4** cho YAML (cả `.cff`), Markdown, F#, Elm, Nim, Zig; **2** cho Dart, Elixir, Terraform, Crystal, Gleam, Nix (formatter chính thức cố định độ rộng 2).
-- UTF-8, xuống dòng **LF**, có dòng trống cuối tệp; **CRLF** chỉ cho tệp bắt buộc: batch script, dự án Visual Studio/Visual C++, registry/INF (UTF-16 LE), MIME/iCalendar/vCard/CSV.
-- Formatter: **Prettier** cho JSON, YAML, Markdown; **ruff** cho Python. Định dạng lại toàn bộ: `make format`.
-- Lint Python: `ruff check` với bộ luật mặc định cùng B, C4, UP, SIM, PERF, PLW, RUF (khai báo trong `[lint]` của [`ruff.toml`](ruff.toml)); phiên bản Python tối thiểu lấy từ `requires-python` của [`pyproject.toml`](pyproject.toml).
-
-Chạy toàn bộ kiểm tra giống GitHub Actions trên Pull Request (trừ CodeQL) trước khi đẩy:
-
-```bash
-make check
-```
-
-Hook `pre-commit` chạy Prettier, ruff trong thư mục tạm, nơi shim của mise không thấy `mise.toml`, `.nvmrc`: hook ghim đúng phiên bản của dự án bằng `MISE_RUFF_VERSION`, `MISE_NODE_VERSION` (đọc từ hai tệp này) nên dùng đúng công cụ ở mọi máy, kể cả sau khi nâng phiên bản.
-
-Validator kiểm tra kiểu dữ liệu của tên và mô tả biểu mẫu, tên biểu mẫu Issue không trùng nhau, lựa chọn, ID, `required`, `min_length` và các trường của `config.yml`; việc GitHub chấp nhận biểu mẫu Issue/Discussion được kiểm tra riêng bằng `make forms`. Trên ref khác nhánh mặc định, GitHub so `name` của biểu mẫu Issue với cả biểu mẫu trên nhánh mặc định: đổi tên tệp biểu mẫu mà giữ `name` thì `make forms REF=…` báo `Name must be unique` dù validator đạt — xác minh lại bằng `make forms` sau khi hợp nhất. Nhãn `documentation` được cấu hình cho tệp Markdown, `docs/` và `specs/` trong labeler của repository và bản mẫu.
-
-`make quick` xét cả commit so với `origin/main`, thay đổi đã stage, chưa stage và tệp mới. Chỉ khi tất cả là tệp `scripts/test_*.py` còn tồn tại mới chạy tests được chọn; sửa nguồn, cấu hình, tài liệu, xóa tệp hoặc không đọc được Git thì chạy đầy đủ. Các nhóm kiểm tra khác và validator luôn chạy đầy đủ. Trước push vẫn bắt buộc `make check`.
-
-Các script liệt kê tệp từ Git đọc danh sách phân cách bằng NUL mà không chuẩn hóa ký tự xuống dòng trong tên; tệp có khoảng trắng hoặc ký tự CR trong tên vẫn được đưa vào kiểm tra shell, Go và liên kết Markdown.
-
-Prettier dùng cache theo nội dung trong `node_modules/.cache/prettier/`; khi thêm hoặc nâng plugin phải xóa cache này. Bộ chạy tests lưu thời gian trong `.cache/local-checks/test-times.json` để cân bằng nhóm, không lưu kết quả đạt/thất bại và không bỏ tests; chạy một phần (tên tệp test, `make quick`) giữ thời gian của các test khác, lượt chạy đầy đủ bỏ thời gian của test không còn. Cache thiếu, hỏng hoặc không ghi được vẫn chạy tests; test mới được phân nhóm với thời gian ước lượng. Số tiến trình giới hạn bởi CPU khả dụng, affinity và quota cgroup v2 tại `/sys/fs/cgroup/cpu.max`, tối đa theo giới hạn của script.
-
-Hook bỏ các biến môi trường cục bộ mà Git công bố trước khi gọi lệnh `make`, để lệnh Git trong repository tạm của tests tự tìm đúng repository theo thư mục làm việc, kể cả khi hook chạy từ linked worktree. Các biến môi trường khác được giữ nguyên.
-
-`make check` chạy validator, tests, Prettier, Ruff, ShellCheck, actionlint, quy ước branch/commit và kiểm tra dependency. Các nhóm và lệnh độc lập trong từng nhóm chạy đồng thời; đầu ra và danh sách lỗi giữ thứ tự khai báo. Cài công cụ và thư viện hoàn tất trước khi chạy các kiểm tra. Các nhóm dùng chung cấu hình với GitHub Actions; CodeQL chạy trên GitHub. Validator đối chiếu định dạng, biểu mẫu, nhãn, ruleset, ADR, tên trong mã nguồn và tài liệu. Workflow `.yml` và `.yaml` đều được kiểm tra.
-
-Lệnh `make` gọi Python bằng `python3`; dùng trình thông dịch khác (cần ≥ 3.11) thì truyền `PYTHON`, ví dụ `make check PYTHON=python3.14`. Bộ điều phối `scripts/check.py` dùng cùng trình thông dịch cho validator, tests và kiểm tra quy ước, không phụ thuộc bản `python3` khác trong `PATH`. Tham số `BRANCH`, `TAG`, `REF` được truyền qua biến môi trường nên ký tự đặc biệt không bị shell thông dịch.
-
-Chạy riêng các tệp test bằng tên có hoặc không có `.py`:
-
-```sh
-python3 scripts/run-tests.py test_check test_check_markdown_links.py
-```
-
-Không truyền tên thì chạy toàn bộ test. Tên sai, tệp không có test, lỗi import hoặc cú pháp đều làm lệnh thất bại. Bộ kiểm tra liên kết Markdown xét liên kết nội tuyến (liên kết bắt đầu bằng `/` tính từ gốc repository như GitHub) và anchor của tiêu đề ATX (dấu `#`), gồm thụt 0–3 dấu cách, dấu `#` đóng tùy chọn và tiêu đề trùng; bỏ nội dung khối mã có hàng rào và mã nội tuyến. Hàng rào mở/đóng chỉ nhận thụt 0–3 dấu cách theo GFM; sau dấu đóng chỉ nhận dấu cách ASCII hoặc tab. Script không phân tích đầy đủ GFM; khối mã thụt lề hoặc lồng trong danh sách/blockquote, tiêu đề Setext hoặc HTML và liên kết tham chiếu chưa được hỗ trợ. Tệp đích được đọc một lần trong lượt kiểm tra, lượt sau đọc lại.
-
-`make links` kiểm tra liên kết HTTP(S) và nội dung `security.txt` trên website. Các URL chỉ khác fragment dùng chung một lần kiểm tra HTTP trong lượt chạy; đường dẫn và query khác vẫn được kiểm tra riêng. Máy chủ `img.shields.io` được bỏ qua; URL sai được báo lỗi. Phép kiểm tra HTTP không xác minh anchor bên trong trang ngoài. Kết quả được đọc mới ở lượt sau. `make forms` xác minh Issue theo ref của trang; Discussion chỉ được xác minh khi trang đang xem nhánh mặc định. Ref khác có Discussion trả mã lỗi với thông báo chưa xác minh; chạy `make validate` trước khi hợp nhất và `make forms` trên nhánh mặc định sau khi hợp nhất. Khi cấu trúc dữ liệu trang GitHub thay đổi, script báo không đọc được thay vì báo đạt; `make versions` đối chiếu công cụ và action của workflow mẫu với phiên bản phát hành mới nhất. Kiểm tra phiên bản ưu tiên `GH_TOKEN`, rồi `GITHUB_TOKEN`, sau đó token GitHub CLI; thông tin đăng nhập được đọc mới mỗi lượt. `make audit` cần kết nối registry npm; chỉ lỗi kết nối được nhận diện mới được cảnh báo và bỏ qua, cần chạy lại để xác minh dependency. Lỗi HTTP của registry và báo cáo lỗ hổng có mã thoát lỗi vẫn làm kiểm tra thất bại. Lỗi cài thư viện npm làm kiểm tra dừng.
-
-| Lệnh                        | Tác dụng                                                                                                                                                                                                                                                                                                                                                      |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make`                      | Xem danh sách lệnh                                                                                                                                                                                                                                                                                                                                            |
-| `make quick`                | Kiểm tra nhanh: chỉ thu hẹp tests khi mọi tệp thay đổi là test; trường hợp khác chạy đầy đủ                                                                                                                                                                                                                                                                   |
-| `make check`                | Mọi nhóm kiểm tra, chạy song song                                                                                                                                                                                                                                                                                                                             |
-| `make validate`             | Kiểm tra nội dung bằng `scripts/validate.py`                                                                                                                                                                                                                                                                                                                  |
-| `make test`                 | Test tự động của các script, song song theo CPU khả dụng                                                                                                                                                                                                                                                                                                      |
-| `make format`               | Định dạng lại toàn bộ bằng Prettier và ruff                                                                                                                                                                                                                                                                                                                   |
-| `make format-check`         | Prettier, ruff format, ruff check — job "Định dạng (Prettier, ruff)"                                                                                                                                                                                                                                                                                          |
-| `make lint`                 | shellcheck, actionlint — job "Shell script và workflow"                                                                                                                                                                                                                                                                                                       |
-| `make conventions`          | Tên branch và tiêu đề commit theo quy ước                                                                                                                                                                                                                                                                                                                     |
-| `make audit`                | Dependency có lỗ hổng mức high trở lên                                                                                                                                                                                                                                                                                                                        |
-| `make tools`                | Kiểm tra đã cài đủ công cụ; cài thư viện Node.js nếu thiếu hoặc sai phiên bản                                                                                                                                                                                                                                                                                 |
-| `make hooks`                | Cài git hook, mẫu commit `.gitmessage`, cấu hình `git blame` bỏ qua commit chỉ đổi định dạng                                                                                                                                                                                                                                                                  |
-| `make sync [BRANCH=…]`      | Chuyển sang `BRANCH` (mặc định `main`), `git pull --ff-only`, xóa branch cục bộ đã hợp nhất mà branch trên GitHub đã bị xóa; branch chỉ có trên GitHub thì tạo branch theo dõi, chưa đẩy lên thì bỏ qua `git pull`; dừng khi còn thay đổi chưa commit, đang dở thao tác git hoặc branch ở máy lệch với origin — `shell/sync.sh` rồi `shell/prune-branches.sh` |
-| `make cleanup`              | `git clean -fdx`: **xóa vĩnh viễn** mọi tệp git không quản lý — tệp mới chưa `git add`, tệp bị `.gitignore` bỏ qua (`node_modules/`, `.cache/`, `.env`…); xem trước bằng `git clean -ndx`. Lần kiểm tra sau tự cài lại thư viện Node.js                                                                                                                       |
-| `make links`                | Liên kết bên ngoài còn hoạt động; bản `security.txt` trên website khớp repository                                                                                                                                                                                                                                                                             |
-| `make versions`             | Công cụ trong `mise.toml`, action chỉ có trong `workflow-templates/` có bản phát hành mới hơn                                                                                                                                                                                                                                                                 |
-| `make forms REF=…`          | Kiểm tra Issue theo ref; Discussion chỉ xác minh trên nhánh mặc định, ref khác báo chưa xác minh và trả mã lỗi (mặc định `main`)                                                                                                                                                                                                                              |
-| `make org-import`           | Lấy cài đặt GitHub của tổ chức và các repository về `github-settings.json`; chỉ ghi local                                                                                                                                                                                                                                                                     |
-| `make org-settings-preview` | Xem trước cài đặt API trong `github-settings.json`, gồm trạng thái Actions và các endpoint bổ sung                                                                                                                                                                                                                                                            |
-| `make org-settings-apply`   | Áp dụng cài đặt API trong `github-settings.json`, đọc lại để xác nhận; báo riêng mục cần thao tác trên web                                                                                                                                                                                                                                                    |
-| `make org-preview`          | Xem trước việc áp dụng cấu hình chung lên mọi repository và cài đặt tổ chức (cần GitHub CLI)                                                                                                                                                                                                                                                                  |
-| `make labels-preview`       | Xem trước việc đồng bộ nhãn lên các repository                                                                                                                                                                                                                                                                                                                |
-| `make labels-apply`         | Đồng bộ nhãn lên repository đã có (cần GitHub CLI); nhãn mặc định cấp tổ chức nhập trên web                                                                                                                                                                                                                                                                   |
-| `make release-notes TAG=…`  | Xem trước nội dung GitHub Release của một tag                                                                                                                                                                                                                                                                                                                 |
-| `make release-prepare`      | Chuyển mục CHƯA PHÁT HÀNH thành phiên bản của tháng nếu có thay đổi kể từ tag trước                                                                                                                                                                                                                                                                           |
-| `make release-pr`           | Chuẩn bị rồi mở Pull Request phát hành tại máy (cần GitHub CLI, đứng ở `main` sạch)                                                                                                                                                                                                                                                                           |
-
----
-
-## ⚙️ ĐỒNG BỘ CẤU HÌNH
-
-[`scripts/org-setup.py`](scripts/org-setup.py) dùng GitHub CLI để quản lý tệp chung, cài đặt, ruleset, team và nhãn. Đăng nhập bằng `gh auth login`; chạy `make org-preview` để xem trước. Các lệnh đồng bộ mặc định chỉ xem trước, thêm `--apply` để áp dụng; `--repo <tên>` giới hạn repository với các lệnh truyền thống. Lệnh `import-settings` chỉ ghi cấu hình local; `local-settings` xử lý các phạm vi đã có trong [`github-settings.json`](github-settings.json). Quy trình thiết lập repository xem [`ROADMAP.md`](ROADMAP.md).
-
-Nguồn cài đặt và cách nhập, áp dụng xem [`docs/github-settings.md`](docs/github-settings.md). Chạy `make org-import` để lấy trạng thái hiện tại từ GitHub, kiểm tra diff của `github-settings.json`, rồi dùng `make org-settings-preview` và `make org-settings-apply`. Việc nhập không sửa GitHub. Phần `repository_defaults` là chính sách chung cho repository chưa có cấu hình riêng, được giữ khi nhập; phần `organization` và `repositories` phản ánh cài đặt đã đọc từ GitHub. Không suy đoán quyền Actions bị GitHub ẩn khi Actions tắt.
-
-Chế độ `selected` quản lý danh sách repository được phép dùng Actions, actions/reusable workflows được phép và phạm vi Release bất biến. Nguồn lưu tên repository; script giải ID, đặt chính sách trước danh sách và đọc lại để xác nhận. Phạm vi quản lý chỉ gồm các hợp đồng API đã khai báo; các mục chỉ xử lý trên web, giới hạn gói và tài nguyên chưa được bộ nhập quản lý được liệt kê trong hướng dẫn cài đặt.
-
-- **Tệp chung:** lệnh `files` lập kế hoạch từ cây Git tại một commit cố định, thêm tệp thiếu bằng commit do GitHub ký và mở Pull Request; repository chưa có commit nào được bỏ qua. Branch đổi trong lúc ghi hoặc commit thất bại thì không mở Pull Request và xóa branch vừa tạo để lần chạy sau làm lại.
-- **Cài đặt:** lệnh `settings` dùng các giá trị trong `github-settings.json` cho cài đặt chung và phần riêng từng repository; topics lấy từ `CITATION.cff`, bảo mật chỉ bật và giữ trạng thái bật/tắt Actions. Lệnh `local-settings` áp dụng đúng cài đặt đã nhập, gồm bật/tắt Actions, trạng thái bảo mật, topics, thời gian giữ log/artifact, chính sách fork, OIDC, quyền nhóm runner, giới hạn tương tác và liên kết cấu hình bảo mật; mọi phạm vi được đọc trước khi ghi, sau đó đọc lại để xác nhận. Danh sách GitHub Apps chỉ được nhập để đối chiếu.
-- **Ruleset:** đọc hết danh sách, xác minh tên, ID và cấu trúc chi tiết trước khi ghi trong từng repository hoặc cấp tổ chức. Đọc song song, ghi tuần tự; gói Free dùng GraphQL để đối chiếu cấp tổ chức. Cấu hình và cách áp dụng xem [`rulesets/README.md`](rulesets/README.md).
-- **Team:** `TEAMS` và `TEAM_PARENTS` trong [`scripts/orgsetup/teams.py`](scripts/orgsetup/teams.py) quản lý thông tin và cấu trúc cha–con; tạo team cha trước team con, đọc lại quan hệ sau khi ghi. Engineering chứa Maintainers, Developers và QA; Creative chứa Design và Marketing. Hai team cha có quyền `None`: giữ nguyên thành viên và quyền repository. Các team có quyền cấu hình quản lý người quản trị và quyền repository; chỉ thành viên `active` được coi là đã tham gia. Lời mời `pending`, quyền tùy chỉnh chưa xếp hạng được hoặc dữ liệu chưa rõ chặn đồng bộ. Quyền chuẩn đã cao hơn được giữ nguyên.
-- **Nhãn:** nguồn là `labels.yml`; tên không trống, không trùng khi bỏ qua hoa/thường, màu hex 6 ký tự và mô tả tối đa 100 ký tự. Nhãn trên GitHub chỉ khác chữ hoa/thường được đổi tên theo `labels.yml`. Phản hồi sai chặn ghi lên repository đó; nhãn riêng được giữ nguyên.
-
-Lỗi quyền, giới hạn API hoặc lỗi mạng được báo để tránh ghi dựa trên dữ liệu chưa đọc được; chỉ HTTP 404 được coi là chưa có tài nguyên. Dữ liệu được đọc mới mỗi lượt. Các lần ghi đã thành công không được tự hoàn tác nếu một lần ghi sau thất bại.
-
----
-
-## 📝 QUẢN LÝ VÀ CẬP NHẬT
-
-Các nội dung trong repository này được quản lý bởi những thành viên có thẩm quyền của CÔNG TY TNHH TOÀN QUỲNH. Mọi thay đổi đi qua Pull Request theo [`CONTRIBUTING.md`](CONTRIBUTING.md) và cần người quản trị duyệt.
-
-Khi cập nhật nội dung, cần bảo đảm:
-
-- Thông tin chính xác và phù hợp với định hướng của công ty.
-- Không công khai dữ liệu cá nhân, thông tin y tế hoặc thông tin nội bộ.
-- Không lưu trữ mật khẩu, mã truy cập, khóa API hoặc dữ liệu bảo mật.
-- Mỗi thay đổi sửa luôn mọi chỗ liên quan; tài liệu khớp với code ([ADR 00000013](docs/adr/00000013-related-changes.md)).
-- `make check` chạy thành công trước khi đưa lên nhánh chính.
-- Nội dung dành cho người sử dụng được chuẩn bị trong [`CHANGELOG.md`](CHANGELOG.md) khi phát hành phiên bản.
-- Tuân thủ quy định pháp luật và các chính sách của GitHub.
-
----
-
-## 🚀 PHÁT HÀNH
-
-Phiên bản có dạng `Stable.vYYYY.MM.DDXXXX` / `Beta.vYYYY.MM.DDXXXX`. `YYYY.MM.DD` là ngày chuẩn bị phát hành theo giờ Việt Nam; `XXXX` là số thứ tự gồm 4 chữ số, từ `0001` đến `9999`, dùng chung cho Stable và Beta, bắt đầu lại từ `0001` mỗi tháng. Script xác định số tiếp theo từ các tag phát hành của tháng, kể cả khi đổi ngày hoặc đổi kênh. Workflow hằng tháng chuẩn bị bản Stable ngày 1 khi có commit mới kể từ tag trước.
-
-[`CHANGELOG.md`](CHANGELOG.md) là khung chuẩn bị nội dung phiên bản: điền tóm tắt dành cho người sử dụng vào mục **CHƯA PHÁT HÀNH** trước khi phát hành. Mục này trống thì script báo lỗi. Mỗi lần chuẩn bị, script tạo mục phiên bản để workflow đọc khi gắn tag; tệp chỉ giữ nội dung đang chuẩn bị. Mốc phiên bản, chân trang và đường phân cách cuối mục được nhận diện ngoài khối mã có hàng rào; nội dung ví dụ mã được giữ nguyên khi chuẩn bị và tạo Release. Validator cũng xét cấu trúc CHANGELOG ngoài khối mã, theo [cú pháp GFM](https://github.github.com/gfm/#fenced-code-blocks). Các bản đã phát hành được công bố tại [GitHub Releases](https://github.com/TOANQUYNHLLC/.github/releases).
-
-PR phát hành tự động lấy bố cục từ [mẫu phát hành](.github/PULL_REQUEST_TEMPLATE/release.md), điền phiên bản, kênh và hướng dẫn phát hành. Các mục kiểm thử và checklist cần được người quản trị kiểm tra, điền và xác nhận trước khi hợp nhất. Script dừng trước khi tạo branch nếu không đọc được mẫu hoặc thiếu các trường cần điền.
-
-Khi dùng chức năng **Generate release notes** của GitHub, [`.github/release.yml`](.github/release.yml) phân nhóm Pull Request theo nhãn và loại trừ các mục `duplicate`, `invalid`, `wontfix`. Validator kiểm tra nhãn của cấu hình này và [`repository-templates/release.yml`](repository-templates/release.yml) theo `labels.yml`. Workflow phát hành của repository lấy nội dung từ `CHANGELOG.md`. Script tạo Release ghi nội dung UTF-8 vào tệp tạm, đóng tệp trước khi GitHub CLI đọc để tương thích Windows; tệp được dọn cả khi CLI thành công hoặc thất bại.
-
-Trước lần phát hành đầu tiên, liên kết **CHƯA PHÁT HÀNH** so sánh từ SHA đầy đủ của commit gốc tới `HEAD`. Sau khi chuẩn bị các phiên bản tiếp theo, `scripts/release.py` dùng tag phát hành làm mốc so sánh; không dùng tên branch hoặc tag chưa tồn tại.
-
-1. Workflow [`monthly-release.yml`](.github/workflows/monthly-release.yml) chạy lúc 07:00 ngày 1 (giờ Việt Nam): chuyển nội dung đã chuẩn bị thành phiên bản của tháng và mở Pull Request `release/stable.vYYYY.MM.DDXXXX`. Có thể chạy tay tại **Actions → Chuẩn bị phát hành hằng tháng → Run workflow**.
-2. Xem trước bằng `make release-notes TAG=Stable.v2026.11.010001`; đánh giá và hợp nhất Pull Request bằng **Squash** hoặc **Merge**. Pull Request do workflow mở bằng `GITHUB_TOKEN` có thể có lượt chạy kiểm tra chờ phê duyệt. Người có quyền ghi bấm **Approve workflows to run** khi GitHub hiển thị yêu cầu, rồi chờ các kiểm tra bắt buộc thành công trước khi hợp nhất; xem [cơ chế kích hoạt workflow](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
-3. Người quản trị gắn tag trên `main`: `git tag Stable.v2026.11.010001 && git push origin Stable.v2026.11.010001`. Workflow [`release.yml`](.github/workflows/release.yml) tạo GitHub Release. Với lần phát hành đầu tiên chưa có tag, thêm mục tiêu đề phiên bản tương ứng vào `CHANGELOG.md`, tạo commit có chữ ký và gắn tag bằng tay.
-
-Chuẩn bị bản Beta bằng `python3 scripts/release.py prepare --channel Beta`; thêm `--open-pr` để mở Pull Request phát hành tại máy. Có thể truyền `--date YYYY-MM-DD`; ngày trong `--version` phải trùng ngày chuẩn bị. Branch của Beta có dạng `release/beta.vYYYY.MM.DDXXXX`. GitHub Release của tag `Beta.v*` được đánh dấu là bản thử nghiệm. Khi tự chọn số thứ tự, không tải được tag từ origin thì script dừng và giữ nguyên `CHANGELOG.md`; kiểm tra mạng rồi chạy lại.
-
-Nhãn phát hành trong [`labels.yml`](labels.yml): `Stable` — Phiên bản Ổn Định; `Beta` — Phiên bản Thử Nghiệm; `Pre-Release` — Phiên bản Chuẩn Bị Release. Pull Request phát hành tự nhận nhãn `release`, `Pre-Release` và nhãn kênh tương ứng. Cấu hình gắn nhãn trong repository và bản mẫu áp dụng cùng quy tắc.
-
-[`scripts/release.py`](scripts/release.py) kiểm tra phiên bản, ngày, nội dung UTF-8 và trạng thái branch/PR trước khi tạo branch phát hành. Branch đã tồn tại phải có Pull Request đang mở. Lỗi commit được xử lý bằng cách thử xóa branch vừa tạo; lỗi mở Pull Request giữ branch để mở tay. Tổ chức dùng **Immutable releases**: bản đã phát hành không dời tag hoặc dùng lại tên tag.
-
-**Khi GitHub Actions tắt:**
-
-- Hook `pre-push` chạy `make check`; người quản trị hợp nhất sau khi kiểm tra tại máy đạt, vì các kiểm tra bắt buộc chưa có lượt chạy trên GitHub.
-- Hook sau `git pull` chạy `make links`, `make versions`, `make org-preview`; kiểm tra biểu mẫu bằng `make forms`.
-- Chuẩn bị phát hành tại máy: `git switch main && git pull --ff-only && make release-pr`.
-- Sau khi hợp nhất và đẩy tag, tạo Release: `python3 scripts/release.py create Stable.v2026.11.010001`.
-
----
+Tài liệu mô tả trạng thái hiện tại theo từng chủ đề. Nội dung phát hành được chuẩn bị riêng; log phát triển và báo cáo kiểm tra không thuộc tài liệu dự án.
 
 ## 🔐 BẢO MẬT
 
-Nếu phát hiện lỗ hổng hoặc vấn đề liên quan đến bảo mật, vui lòng **không đăng tải công khai** trong Issues, Discussions hoặc Pull Requests. Cách báo cáo riêng, thông tin cần cung cấp và cam kết xử lý được quy định tại [`SECURITY.md`](SECURITY.md).
-
-> ⚠️ Không gửi mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm qua bất kỳ kênh công khai nào.
-
----
+Báo cáo lỗ hổng riêng theo [SECURITY.md](SECURITY.md). Không gửi mật khẩu, token, khóa API, dữ liệu cá nhân hoặc hồ sơ y tế qua kênh công khai.
 
 ## 📞 LIÊN HỆ
 
-- 📧 **Email:** [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com)
-- 🌐 **Website:** [https://toanquynh.com](https://toanquynh.com)
-- 🏢 **Thông tin đầy đủ:** [`profile/README.md`](profile/README.md#-thông-tin-liên-hệ)
-
----
+- Email: [toanquynhvn@gmail.com](mailto:toanquynhvn@gmail.com).
+- Website: [toanquynh.com](https://toanquynh.com).
+- Thông tin công ty: [hồ sơ tổ chức](profile/README.md#-thông-tin-liên-hệ).
 
 <p align="center">
     <strong>© 2026 CÔNG TY TNHH TOÀN QUỲNH</strong><br>
