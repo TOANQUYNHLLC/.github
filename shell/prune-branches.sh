@@ -2,7 +2,7 @@
 # Xóa branch cục bộ đã hợp nhất vào main mà branch theo dõi trên origin đã bị xóa; không đổi branch, không kéo code.
 # make sync chạy script này sau sync.sh (chuyển branch, kéo code mới).
 # Pull Request hợp nhất bằng Squash tạo commit mới trên main nên `git branch -d` báo "not fully merged";
-# script so theo nội dung nên nhận ra cả Merge lẫn Squash, branch còn thay đổi chưa vào main thì giữ nguyên.
+# script so nội dung từng nhóm commit nên nhận ra cả Merge lẫn nhiều lần Squash; còn thay đổi thì giữ nguyên.
 # So với origin/main vừa tải về: main cục bộ có thể chưa kéo các commit hợp nhất mới.
 # Mã thoát: 0 xong (kể cả khi giữ lại branch), 1 lỗi đọc git hoặc có branch không xóa được.
 # Không viết bằng Python vì: script chỉ nối các lệnh git và đọc kết quả từng dòng — shell gọn và tự nhiên hơn.
@@ -16,18 +16,39 @@ fail() {
 	exit 1
 }
 
-# Branch đã vào main: là tổ tiên của main (Merge), giống hệt main, hoặc toàn bộ thay đổi so với điểm tách khớp
-# một commit trên main (Squash — git cherry so nội dung thay đổi, không so SHA). Không xác định được thì coi là chưa.
+# Một nhóm commit đã vào main nếu không đổi nội dung hoặc khớp bản vá của một commit trên main.
+mergedRange() {
+	local base=$1 tip=$2 squashed comparison
+	git diff --quiet "$base" "$tip" && return
+	# Commit tạm chỉ để so nội dung, không gắn vào ref nào: danh tính cố định để chạy được cả trên máy chưa đặt
+	# user.name, user.email (commit-tree từ chối khi thiếu).
+	squashed=$(git -c user.name=prune-branches -c user.email= commit-tree "$tip^{tree}" -p "$base" -m _) ||
+		return
+	# Giới hạn ở base: chỉ đối chiếu commit tạm, không lẫn các commit cha đã squash riêng.
+	comparison=$(git cherry "$BASE" "$squashed" "$base") || return
+	[[ $comparison == "- $squashed" ]]
+}
+
+# Branch đã vào main: là tổ tiên (Merge), có cây giống main, hoặc chia được toàn bộ thay đổi thành các nhóm
+# khớp commit trên main (Squash). Giữ mọi điểm chia hợp lệ để một nhóm khớp sớm không che nhóm lớn hơn phía sau.
 merged() {
-	local branch=$1 base squashed
+	local branch=$1 base history tip checkpoint
+	local -a checkpoints
 	git merge-base --is-ancestor "$branch" "$BASE" && return
 	git diff --quiet "$BASE" "$branch" && return
 	base=$(git merge-base "$BASE" "$branch") || return
-	# Commit tạm chỉ để so nội dung, không gắn vào ref nào: danh tính cố định để chạy được cả trên máy chưa đặt
-	# user.name, user.email (commit-tree từ chối khi thiếu).
-	squashed=$(git -c user.name=prune-branches -c user.email= commit-tree "$branch^{tree}" -p "$base" -m _) ||
-		return
-	[[ $(git cherry "$BASE" "$squashed") == -* ]]
+	mergedRange "$base" "$branch" && return
+	history=$(git rev-list --first-parent --reverse "$base..$branch") || return
+	checkpoints=("$base")
+	while IFS= read -r tip; do
+		for checkpoint in "${checkpoints[@]}"; do
+			if mergedRange "$checkpoint" "$tip"; then
+				checkpoints+=("$tip")
+				break
+			fi
+		done
+	done <<<"$history"
+	[[ ${checkpoints[${#checkpoints[@]} - 1]} == "$(git rev-parse "$branch")" ]]
 }
 
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || fail "Không ở trong một repository git."
