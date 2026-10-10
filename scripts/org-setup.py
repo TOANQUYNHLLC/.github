@@ -13,6 +13,7 @@ Lệnh (nên chạy theo thứ tự):
 		Không ghi GitHub, không nhận --apply, --repo, --discussions.
 	settings-audit: đọc lại mọi nhóm được quản lý, kiểm tra phạm vi repository, dữ liệu chưa nhập và
 		khác biệt của bản local; không ghi local hoặc GitHub, chưa đầy đủ thì trả mã lỗi.
+	settings-inventory: xem khai báo cài đặt chưa biết và bản thủ công ở local; không cần đăng nhập.
 	local-settings: đối chiếu github-settings.json; --apply để áp dụng các mục API được hỗ trợ,
 		bao gồm trạng thái Actions, bảo mật, thời gian lưu dữ liệu, fork, tương tác và cấu hình bảo mật.
 		Kiểm tra tổ chức trước, đọc repository song song có giới hạn; kế hoạch và ghi theo thứ tự nguồn.
@@ -177,7 +178,14 @@ def main():
 	)
 	parser.add_argument(
 		'command',
-		choices=(*COMMANDS, 'preview', 'import-settings', 'local-settings', 'settings-audit'),
+		choices=(
+			*COMMANDS,
+			'preview',
+			'import-settings',
+			'local-settings',
+			'settings-audit',
+			'settings-inventory',
+		),
 	)
 	parser.add_argument('--apply', action='store_true', help='áp dụng thay đổi trên GitHub')
 	parser.add_argument(
@@ -207,8 +215,19 @@ def main():
 		parser.error('--discussions chỉ dùng với settings')
 	if args.complete and args.command != 'import-settings':
 		parser.error('--complete chỉ dùng với import-settings')
-	if args.apply and args.command in ('preview', 'import-settings', 'settings-audit'):
+	if args.apply and args.command in (
+		'preview',
+		'import-settings',
+		'settings-audit',
+		'settings-inventory',
+	):
 		parser.error(f'{args.command} không nhận --apply')
+	if args.command == 'settings-inventory':
+		try:
+			return configuration.inventory.showInventory(configuration.readConfig())
+		except (OSError, ValueError, TypeError) as exc:
+			print(f'❌ {exc}', file=sys.stderr)
+			return 1
 
 	def repositories():
 		# Giữ lỗi đọc để main báo sau khi xác minh đăng nhập; không gọi lại một request đã thất bại.

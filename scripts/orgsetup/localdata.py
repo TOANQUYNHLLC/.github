@@ -88,6 +88,19 @@ def privateValue(reference):
 def valueReferences(config):
 	references = set()
 	for scope in [config['organization'], *config['repositories'].values()]:
+		for item in scope.get('private_settings', {}).values():
+			references.add(item['value_source'])
+		for item in scope.get('manual_settings', {}).values():
+			if item['configuration_source'] is not None:
+				references.add(item['configuration_source'])
+		for section, items in scope.get('pending_settings', {}).items():
+			if section == 'collections':
+				pendingScope = {
+					'collections': {key: value for key, value in items.items() if value is not None}
+				}
+				references.update(
+					valueReferences({'organization': pendingScope, 'repositories': {}})
+				)
 		groups = scope.get('collections', {})
 		for item in groups.get('variables', []):
 			references.add(item['value_source'])
@@ -116,6 +129,9 @@ def saveCapturedValues(config, complete=False):
 		for reference in references:
 			if reference in CAPTURED_VALUES and (not complete or reference not in previous):
 				previous[reference] = CAPTURED_VALUES[reference]
+	if not previous:
+		# Khai báo thủ công chưa có dữ liệu riêng không tạo một tệp rỗng giả như đã sao lưu.
+		return
 	path = dataPath()
 	if (path.parent.resolve()).is_relative_to(github.ROOT.resolve()):
 		raise ValueError('Tệp dữ liệu riêng tư phải nằm ngoài repository')

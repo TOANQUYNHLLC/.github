@@ -162,6 +162,30 @@ def projection(data, fields, required=()):
 	return result
 
 
+def securityOptions(data, captured=False):
+	"""Lọc metadata của reviewer khi nhập; ID chỉ tham chiếu team/role có sẵn, không lưu hồ sơ."""
+	checkObject(data, {'reviewers': list})
+	if 'reviewers' not in data:
+		return {}
+	reviewers, identities = [], set()
+	fields = {'reviewer_id': int, 'reviewer_type': ('TEAM', 'ROLE'), 'mode': ('ALWAYS', 'EXEMPT')}
+	for item in data['reviewers']:
+		reviewer = (
+			projection(item, fields, ('reviewer_id', 'reviewer_type')) if captured else dict(item)
+		)
+		checkObject(reviewer, fields, ('reviewer_id', 'reviewer_type'))
+		identity = (reviewer['reviewer_type'], reviewer['reviewer_id'])
+		if reviewer['reviewer_id'] <= 0 or identity in identities:
+			raise ValueError('Reviewer bảo mật có ID không hợp lệ hoặc trùng')
+		identities.add(identity)
+		reviewers.append(dict(reviewer, mode=reviewer.get('mode', 'ALWAYS')))
+	return {
+		'reviewers': sorted(
+			reviewers, key=lambda item: (item['reviewer_type'], item['reviewer_id'])
+		)
+	}
+
+
 def validateGroup(key, items):
 	if key == 'hosted_runners':
 		return hosted.validateGroup(items)
@@ -221,19 +245,8 @@ def validateGroup(key, items):
 			name = item['property_name']
 		elif key == 'security_definitions':
 			checkObject(item, SECURITY_FIELDS, ('name',))
-			options = item.get('secret_scanning_delegated_bypass_options') or {}
-			for reviewer in options.get('reviewers', []):
-				checkObject(
-					reviewer,
-					{
-						'reviewer_id': int,
-						'reviewer_type': ('TEAM', 'ROLE'),
-						'mode': ('ALWAYS', 'EXEMPT'),
-					},
-					('reviewer_id', 'reviewer_type'),
-				)
-				if reviewer['reviewer_id'] <= 0:
-					raise ValueError('Reviewer bảo mật có ID không hợp lệ')
+			if 'secret_scanning_delegated_bypass_options' in item:
+				securityOptions(item['secret_scanning_delegated_bypass_options'])
 			name = item['name']
 		elif key == 'teams':
 			checkObject(
@@ -634,6 +647,10 @@ def readDetails(base, key):
 			if item.get('target_type') != 'organization':
 				raise ValueError('Cấu hình bảo mật không thuộc tổ chức')
 			value = projection(item, SECURITY_FIELDS, ('name',))
+			if 'secret_scanning_delegated_bypass_options' in value:
+				value['secret_scanning_delegated_bypass_options'] = securityOptions(
+					value['secret_scanning_delegated_bypass_options'], captured=True
+				)
 			identity = value['name']
 		elif key == 'teams':
 			value = projection(
@@ -750,6 +767,13 @@ def itemName(key, item):
 
 
 def itemSummary(key, item):
+	if key == 'security_definitions' and 'secret_scanning_delegated_bypass_options' in item:
+		return dict(
+			item,
+			secret_scanning_delegated_bypass_options=securityOptions(
+				item['secret_scanning_delegated_bypass_options']
+			),
+		)
 	if key in policies.GROUP_PATHS:
 		return policies.summary(key, item)
 	if key == 'branch_protection':

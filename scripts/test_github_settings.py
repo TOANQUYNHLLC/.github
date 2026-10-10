@@ -27,6 +27,11 @@ def baselineConfig():
 	for scope in (organization, repository):
 		scope.pop('collections', None)
 		scope.pop('observed', None)
+		scope.pop('pending_settings', None)
+		scope.pop('private_settings', None)
+		# Fixture này chỉ kiểm tra hợp đồng API; phần thủ công được kiểm tra ở test_inventory.
+		for item in scope.get('manual_settings', {}).values():
+			item.update(status='not_applicable', configuration_source=None)
 	config['repositories'], config['unavailable'] = {'.github': repository}, {}
 	organization['settings']['blog'] = 'https://toanquynh.com'
 	organization['web_settings']['two_factor_requirement_enabled'] = True

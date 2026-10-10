@@ -14,17 +14,18 @@ make org-settings-preview
 make org-settings-apply
 ```
 
-| Lệnh                        | Hành vi                                                                                                        |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `make org-import`           | Đọc cài đặt, kể cả repository archive, rồi ghi nguyên tử nguồn local theo định dạng Prettier; không sửa GitHub |
-| `make org-import-missing`   | Bổ sung dữ liệu chưa có sau nâng cấp gói/quyền, giữ giá trị local đã lưu                                       |
-| `make org-settings-audit`   | Đọc lại mọi nhóm được quản lý; kiểm tra phạm vi và bản local, chưa đầy đủ thì trả mã lỗi                       |
-| `make org-settings-preview` | Đọc GitHub và lập danh sách khác biệt theo nguồn local                                                         |
-| `make org-settings-apply`   | Xác minh mọi phạm vi trước khi ghi, áp dụng tuần tự và đọc lại để xác nhận                                     |
+| Lệnh                          | Hành vi                                                                                                        |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `make org-import`             | Đọc cài đặt, kể cả repository archive, rồi ghi nguyên tử nguồn local theo định dạng Prettier; không sửa GitHub |
+| `make org-import-missing`     | Bổ sung dữ liệu chưa có sau nâng cấp gói/quyền, giữ giá trị local đã lưu                                       |
+| `make org-settings-audit`     | Đọc lại mọi nhóm được quản lý; kiểm tra phạm vi và bản local, chưa đầy đủ thì trả mã lỗi                       |
+| `make org-settings-inventory` | Xem danh mục local, giá trị chưa biết và trạng thái cấu hình thủ công; không cần GitHub CLI đăng nhập          |
+| `make org-settings-preview`   | Đọc GitHub và lập danh sách khác biệt theo nguồn local                                                         |
+| `make org-settings-apply`     | Xác minh mọi phạm vi trước khi ghi, áp dụng tuần tự và đọc lại để xác nhận                                     |
 
 Lỗi đọc metadata chính giữ nguyên tệp khi nhập. Endpoint chưa đọc được ghi vào `unavailable`, không giữ giá trị cũ hoặc suy đoán trạng thái tắt. Lệnh nhập trả mã lỗi nếu còn mục chưa đọc được; nguồn có `unavailable` chặn áp dụng.
 
-`local-settings --only <nhóm>` giới hạn xem trước và áp dụng vào nhóm được chọn rõ; có thể lặp `--only` để chọn nhiều nhóm. Nhóm gồm `settings`, `endpoints`, `security`, `runner_groups`, `security_configuration`, `security_configurations` và các tên trong bảng `collections` dưới đây. Chỉ các mục chưa đọc được thuộc phạm vi được chọn chặn kế hoạch; source, `unavailable` và audit đầy đủ được giữ nguyên. Danh tính sai, dữ liệu nguồn sai hoặc API thuộc nhóm được chọn chưa xác minh được vẫn chặn ghi. Đọc lại sau ghi dùng đúng phạm vi đã chọn, không tự mở rộng sang nhóm khác.
+`local-settings --only <nhóm>` giới hạn xem trước và áp dụng vào nhóm được chọn rõ; có thể lặp `--only` để chọn nhiều nhóm. Nhóm gồm `settings`, `private_settings`, `endpoints`, `security`, `security_options`, `runner_groups`, `security_configuration`, `security_configurations` và các tên trong bảng `collections` dưới đây. Chỉ các mục chưa đọc được thuộc phạm vi được chọn chặn kế hoạch; source, `unavailable` và audit đầy đủ được giữ nguyên. Danh tính sai, dữ liệu nguồn sai hoặc API thuộc nhóm được chọn chưa xác minh được vẫn chặn ghi. Đọc lại sau ghi dùng đúng phạm vi đã chọn, không tự mở rộng sang nhóm khác.
 
 Ví dụ khôi phục ruleset và nhãn sau khi API tương ứng đã đọc được:
 
@@ -62,6 +63,57 @@ Ruleset trong `collections` là bản đang cài trên web. Các lệnh `org-rul
 
 Mục `web_settings` phải được người quản trị khôi phục trên web khi có khác biệt. API ẩn giá trị, cài đặt Apps, secrets và các cơ chế ngoài phạm vi không được suy đoán hoặc tự khôi phục.
 
+## 📝 KHAI BÁO CHƯA ĐỌC ĐƯỢC VÀ CẤU HÌNH THỦ CÔNG
+
+[inventory.py](../scripts/orgsetup/inventory.py) quản lý hai phần trong mỗi phạm vi tổ chức/repository:
+
+- `pending_settings.collections` và `pending_settings.endpoints` khai báo nhóm API chưa đọc được; `pending_settings.settings` khai báo trường cài đặt chính chưa biết. Giá trị `null` nghĩa là chưa biết, không phải danh sách rỗng, trạng thái tắt hoặc giới hạn bằng không. Lệnh nhập giữ chỗ tương ứng với API bị chặn hoặc không trả trường; lần nhập thành công đưa dữ liệu thật vào phần được quản lý và bỏ chỗ chưa biết.
+- Có thể thay `null` bằng mục tiêu muốn áp dụng theo đúng hợp đồng của nhóm; validator kiểm tra như cấu hình đã quản lý. Nếu nhóm đã có dữ liệu một phần, điền trực tiếp phần thiếu ở `collections`/`endpoints`; không khai báo hai mục tiêu khác nhau cho cùng nhóm. Mục tiêu rõ trong pending tham gia preview/áp dụng và `--only`, nhưng `unavailable` hoặc lỗi API hiện tại vẫn chặn ghi. Không tự xóa dấu chưa nhập để vượt kiểm tra.
+- `make org-import-missing` giữ mục tiêu pending đã điền khi API được mở, chuyển nó sang nhóm được quản lý và bổ sung phần thiếu. `make org-import` lấy lại mục tiêu API theo web khi đọc được; cấu hình thủ công được giữ ở cả hai chế độ. Nhập không tự xác nhận trạng thái thủ công.
+
+Ví dụ khai báo giới hạn cache chưa đọc được; đặt object có trường `max_cache_size_gb` theo hợp đồng khi đã quyết định mục tiêu, hoặc giữ `null` khi chưa biết:
+
+```json
+{
+    "pending_settings": {
+        "endpoints": {
+            "actions/cache/storage-limit": null
+        }
+    }
+}
+```
+
+`manual_settings` có các nhóm billing, authentication, OAuth access, GitHub Apps, personal access tokens, Codespaces, Copilot, secrets, webhook/registry credentials, deploy keys, xuất bản mẫu, domain đã xác minh và membership/collaborators. Repository chỉ có các nhóm tương ứng với phạm vi của nó. Đây là danh mục khôi phục thủ công, không phải hợp đồng tự gửi các nhóm đó lên GitHub. Đặc biệt, credentials và secrets phải lấy từ kho riêng; API không xuất giá trị đã bị ẩn. Không lưu hồ sơ thành viên, thông tin thanh toán hoặc nội dung cấu hình riêng trong JSON công khai.
+
+Riêng `billing_email` có API đọc/ghi tổ chức được quản lý bằng `organization.private_settings`: mỗi trường chỉ có `value_source` trỏ tới tệp riêng. Nhập khi API trả trường này; không coi trường bị ẩn là chuỗi rỗng. Giá trị nullable API trả thật được chuẩn hóa thành chuỗi rỗng như trường hồ sơ. Preview chỉ so trong bộ nhớ, áp dụng giải tham chiếu ngay trước PATCH và đọc lại để xác nhận; thiếu giá trị hoặc API chưa trả trường đang quản lý thì chặn ghi. `--only private_settings` chọn riêng phần này. Gói, phương thức thanh toán, ngân sách và các mục billing khác vẫn thuộc danh mục thủ công.
+
+Mỗi nhóm có `status` và `configuration_source`. `unverified` nghĩa là chưa đối chiếu web; `pending` nghĩa là đã có bản riêng nhưng chưa áp dụng/xác nhận; `verified` do quản trị xác nhận sau đối chiếu; `not_applicable` do quản trị xác nhận nhóm không áp dụng. `pending` và `verified` bắt buộc tham chiếu cấu hình riêng; còn thiếu tệp hoặc giá trị thì inventory/audit vẫn báo chưa đủ. Các trạng thái này không được API tự chứng minh.
+
+```json
+{
+    "manual_settings": {
+        "billing": {
+            "status": "unverified",
+            "configuration_source": null
+        }
+    }
+}
+```
+
+Để lưu bản riêng, tạo khóa tham chiếu như `manual/billing` trong tệp `values.json` ngoài Git theo phần dữ liệu riêng tư bên dưới, rồi điền tên khóa vào `configuration_source`. Giá trị là chuỗi cấu hình do quản trị chuẩn bị, có thể là JSON dạng chuỗi hoặc tham chiếu tới kho quản trị riêng; không đưa giá trị thật vào nguồn công khai. Sao lưu cả tệp riêng khi chuyển máy. `make org-settings-inventory` chỉ đọc local, không in nội dung riêng và trả mã lỗi khi còn phần chưa xác minh. Audit kiểm tra thêm trạng thái thủ công; áp dụng nhóm API có thể hoàn tất nhưng kết quả tổng thể vẫn báo phần thủ công còn thiếu. `--only` giới hạn vào nhóm API được chọn, không xác nhận các nhóm thủ công ngoài phạm vi.
+
+Danh mục này bao phủ các nhóm đang khai báo trong công cụ; không chứng minh mọi trang Settings hiện tại hoặc tính năng GitHub mới đều có hợp đồng khôi phục.
+
+## 🔐 CẤU HÌNH BẢO MẬT CÓ API
+
+Các cờ `*_enabled_for_new_repositories` có hợp đồng PATCH trong API tổ chức nằm ở `organization.settings`. Bộ đọc vẫn nhận bản nguồn cũ đặt chúng ở `web_settings`, chuyển đúng giá trị sang phần có thể ghi; hai mục tiêu khác nhau cho cùng cờ bị từ chối. Trường đã bị API bỏ hoặc ẩn được đánh dấu chưa nhập, không thay bằng `false`. GitHub đang loại bỏ dần API bật sản phẩm bảo mật mặc định này và hướng dẫn dùng [code security configurations](https://docs.github.com/en/rest/orgs/orgs#update-an-organization). Ưu tiên `security_definitions` cùng `security_configurations` để quản lý mặc định trên gói/quyền hỗ trợ; cờ legacy chỉ áp dụng khi API còn đọc/ghi và xác nhận được.
+
+`repositories.<tên>.security_options` lưu `secret_scanning_delegated_bypass_options`, gồm danh sách reviewers với `reviewer_id`, `reviewer_type` (`TEAM`/`ROLE`) và `mode` (`ALWAYS`/`EXEMPT`). Đây là ID tham chiếu principal có sẵn trong tổ chức, không phải hồ sơ người dùng; không tự tạo lại principal hoặc suy đoán ID khi tài nguyên đã mất. API quyết định principal có hợp lệ; lỗi hoặc kết quả đọc lại không khớp không được báo hoàn tất. Khi cần thay ID do team/role được tạo lại, đối chiếu principal mới rồi cập nhật nguồn.
+
+Trạng thái delegated bypass và options được gửi cùng PATCH khi cần; options chỉ có hiệu lực khi feature `enabled`. Chọn `--only security_options` chỉ hợp lệ khi feature hiện tại đã bật; nếu cần bật cùng lúc, chọn cả `--only security`. Metadata như `security_configuration_id` của reviewer bị lọc lúc nhập; mode mặc định và thứ tự reviewers được chuẩn hóa để tránh ghi lại sau khi đã khớp. Quy tắc này cũng áp dụng options trong định nghĩa bảo mật cấp tổ chức. Payload chỉ có trường được API hỗ trợ theo [hợp đồng repository](https://docs.github.com/en/rest/repos/repos#update-a-repository).
+
+Nhập bổ sung giữ chính sách cha local: danh sách `selected` trên web không được ghép vào mục tiêu local `all`/`none`. Nếu local yêu cầu `selected` nhưng API hiện tại ẩn danh sách, nguồn giữ dấu chưa biết và chưa cho áp dụng cho đến khi đã có mục tiêu danh sách rõ và đủ dữ liệu đối chiếu. Audit báo cả dữ liệu web chưa có ở local và mục tiêu local chưa đọc được trên API.
+
 ## 🗂️ CẤU TRÚC NGUỒN
 
 | Phần                                        | Vai trò                                                                                                                                    |
@@ -69,16 +121,20 @@ Mục `web_settings` phải được người quản trị khôi phục trên we
 | `organization_name`                         | Xác minh tổ chức trùng với tổ chức mà script quản lý                                                                                       |
 | `repository_defaults`                       | Chính sách chung cho lệnh `settings` truyền thống khi repository chưa có phần riêng; không ghi đè bằng giá trị của một repository lúc nhập |
 | `organization.settings`                     | Hồ sơ công khai, quyền mặc định của thành viên, tạo repository/Pages, fork riêng tư, Projects, sign-off và chính sách deploy key           |
+| `organization.private_settings`             | Trường hồ sơ riêng có API đọc/ghi, hiện quản lý `billing_email`; nguồn công khai chỉ giữ `value_source` ngoài Git                          |
 | `repositories.<tên>.settings`               | Mô tả, trang chủ, tính năng, phương thức hợp nhất, nhánh mặc định, template repository, fork, visibility và archive                        |
 | `endpoints`                                 | Cài đặt có API riêng; chỉ chấp nhận các endpoint và trường đã được script hỗ trợ                                                           |
 | `repositories.<tên>.security`               | Trạng thái tính năng bảo mật có thể PATCH qua `security_and_analysis`                                                                      |
+| `repositories.<tên>.security_options`       | Options bảo mật có thể PATCH; giữ ID tham chiếu team/role có sẵn, lọc metadata và chuẩn hóa mode                                           |
 | `organization.security_configurations`      | Tên, loại và phạm vi mặc định cho repository mới của cấu hình bảo mật có sẵn                                                               |
 | `organization.runner_groups`                | Quyền nhóm runner, workflow, repository được chọn và liên kết mạng; dùng tên, giải ID khi áp dụng                                          |
 | `repositories.<tên>.security_configuration` | Tên cấu hình bảo mật cần gắn; `null` là không gắn                                                                                          |
-| `web_settings`                              | Giá trị chỉ đối chiếu, không ghi qua lệnh này; gồm mục không có API ghi được hỗ trợ và cờ bảo mật REST cũ                                  |
+| `web_settings`                              | Giá trị chỉ đối chiếu, không có hợp đồng ghi được hỗ trợ trong công cụ                                                                     |
 | `collections`                               | Cấu hình có thể ghi của tài nguyên; dùng tên và giải ID khi cần                                                                            |
 | `observed`                                  | Chỉ đối chiếu; ruleset GraphQL thiếu trường REST không được dùng để ghi                                                                    |
 | `unavailable`                               | Endpoint hoặc trường metadata chưa đọc được; phải bổ sung thành công trước khi áp dụng                                                     |
+| `pending_settings`                          | Khai báo trường/nhóm API chưa đọc được; `null` là chưa biết, giá trị đã điền là mục tiêu local cần xác minh                                |
+| `manual_settings`                           | Trạng thái và tham chiếu bản cấu hình ngoài Git cần quản trị khôi phục/xác nhận thủ công                                                   |
 
 Tên repository không được trùng khi bỏ qua hoa/thường. `local-settings` quản lý tổ chức và các repository đã khai báo, không dùng `repository_defaults` cho repository mới chưa nhập. Sau khi tạo repository, nhập lại hoặc dùng các lệnh thiết lập riêng. Danh sách nhập chỉ gồm repository tài khoản hiện tại đọc được, không chứng minh tài khoản thấy toàn bộ repository riêng tư.
 
@@ -131,7 +187,7 @@ Khôi phục tạo hoặc cập nhật các mục local quản lý, giữ tài n
 
 ## 🔐 DỮ LIỆU LOCAL NGOÀI GIT
 
-[localdata.py](../scripts/orgsetup/localdata.py) lưu giá trị variables, URL webhook, địa chỉ/tên entry của IP allow list, định nghĩa regex và registry tại `~/.local/share/toanquynh-orgsetup/TOANQUYNHLLC/values.json`, quyền `0600`. Có thể đặt `ORGSETUP_PRIVATE_DIR` thành thư mục khác ngoài repository; symlink dẫn vào repository và tệp cho tài khoản khác đọc bị từ chối. Tệp chỉ chứa ánh xạ tham chiếu sang chuỗi giá trị, không lưu phản hồi API thô. Các giá trị này không xuất hiện trong kế hoạch hoặc thông báo lỗi khi ghi.
+[localdata.py](../scripts/orgsetup/localdata.py) lưu `billing_email`, giá trị variables, URL webhook, địa chỉ/tên entry của IP allow list, định nghĩa regex và registry tại `~/.local/share/toanquynh-orgsetup/TOANQUYNHLLC/values.json`, quyền `0600`. Có thể đặt `ORGSETUP_PRIVATE_DIR` thành thư mục khác ngoài repository; symlink dẫn vào repository và tệp cho tài khoản khác đọc bị từ chối. Tệp chỉ chứa ánh xạ tham chiếu sang chuỗi giá trị, không lưu phản hồi API thô. Các giá trị này không xuất hiện trong kế hoạch hoặc thông báo lỗi khi ghi.
 
 `value_source` của variable và `url_source` của webhook trỏ tới khóa trong tệp riêng. Tham chiếu giữ đúng phạm vi tổ chức, repository hoặc environment. Mỗi giá trị mới có tham chiếu riêng; giá trị cũ được giữ để khôi phục các bản nguồn trước, kể cả khi thay tệp JSON công khai thất bại. Sao lưu an toàn tệp riêng cùng phiên bản `github-settings.json` tương ứng trước khi chuyển máy hoặc khôi phục; chỉ có nguồn trong Git thì chưa đủ khi nguồn chứa tham chiếu riêng tư. Xem trước không ghi tệp riêng.
 
@@ -233,14 +289,14 @@ API tạo registry không nhận tên: GitHub cấp tên và script tìm lại t
 
 | Nhóm                                                  | Phạm vi xử lý                                                                                                                                               |
 | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `web_settings`                                        | Chỉ đối chiếu; gồm yêu cầu 2FA, tên nhánh mặc định tổ chức, quyền thành viên và cờ bảo mật REST không có hợp đồng ghi trong script                          |
+| `web_settings`                                        | Chỉ đối chiếu; gồm yêu cầu 2FA, tên nhánh mặc định tổ chức, quyền thành viên và validity checks chưa có hợp đồng ghi trực tiếp trong script                 |
 | Actions bị tắt                                        | Chỉ lưu trường API trả; không suy đoán `allowed_actions` bị ẩn hoặc danh sách selected chưa đọc được                                                        |
 | GitHub Apps                                           | Chỉ lưu tên đã cài trong `installed_apps`; cài/gỡ và quyền installation dùng luồng riêng                                                                    |
 | Ruleset, team, nhãn                                   | Bản đang cài nằm trong `collections`; nguồn chính sách riêng vẫn ở [ruleset](../rulesets/README.md), [team](../MAINTAINERS.md), [labels.yml](../labels.yml) |
 | Codespaces access, dry run/xuất bản mẫu               | API Codespaces access chỉ có ghi chính sách, không có đọc tương ứng; dry run và xuất bản mẫu cần web, không báo đã sao lưu tự động                          |
 | OAuth, billing, SSO, credentials, secrets, deploy key | Cơ chế quản trị riêng; nguồn không lưu giá trị bí mật                                                                                                       |
 
-`--repo <tên>` chỉ dùng với `files`, `settings`, `rulesets`, `team`, `labels`; tên không trống, không có khoảng trắng hoặc owner. Lệnh cấp tổ chức, `preview`, `import-settings`, `local-settings`, `settings-audit` từ chối tùy chọn này. `--discussions` chỉ dùng với `settings`; `preview`, `import-settings` và `settings-audit` không nhận `--apply`. `--complete` chỉ dùng với `import-settings`; `--only` chỉ dùng với `local-settings`. Tùy chọn được kiểm tra trước đăng nhập và API để giữ đúng phạm vi.
+`--repo <tên>` chỉ dùng với `files`, `settings`, `rulesets`, `team`, `labels`; tên không trống, không có khoảng trắng hoặc owner. Lệnh cấp tổ chức, `preview`, `import-settings`, `local-settings`, `settings-audit`, `settings-inventory` từ chối tùy chọn này. `--discussions` chỉ dùng với `settings`; `preview`, `import-settings`, `settings-audit`, `settings-inventory` không nhận `--apply`. `--complete` chỉ dùng với `import-settings`; `--only` chỉ dùng với `local-settings`. Tùy chọn được kiểm tra trước đăng nhập và API để giữ đúng phạm vi; inventory chỉ đọc local và không cần đăng nhập.
 
 Ruleset cấp tổ chức cần gói GitHub hỗ trợ, kể cả import trên web; GraphQL chỉ đối chiếu. Team xác nhận thông tin, membership và quyền sau ghi; lời mời đang chờ chưa hoàn tất. Chi tiết và mã lỗi theo [ADR 00000015](adr/00000015-github-sync-verification.md).
 
