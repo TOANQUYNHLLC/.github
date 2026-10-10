@@ -25,6 +25,11 @@ def sourceConfig():
 	for scope in [config['organization'], *config['repositories'].values()]:
 		scope.pop('collections', None)
 		scope.pop('observed', None)
+		scope.pop('pending_settings', None)
+		scope.pop('private_settings', None)
+		# Fixture danh mục API không quản lý cấu hình thủ công; test_inventory kiểm tra phần đó.
+		for item in scope.get('manual_settings', {}).values():
+			item.update(status='not_applicable', configuration_source=None)
 	return config
 
 

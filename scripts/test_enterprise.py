@@ -418,6 +418,7 @@ class EnterpriseSettingsTest(unittest.TestCase):
 
 	def testGraphqlErrorsStopBeforeEnablingPolicyAndVerification(self):
 		config = copy.deepcopy(configuration.readConfig(ROOT))
+		config['organization'].pop('private_settings', None)
 		config['unavailable'] = {}
 		before = {'enabled': False, 'apps_enabled': False, 'entries': []}
 		with mock.patch.object(github, 'ghJson', return_value=ipPage([ipEntry()])):

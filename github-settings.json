@@ -39,7 +39,13 @@
 			"members_can_create_public_pages": true,
 			"members_can_create_private_pages": true,
 			"secret_scanning_push_protection_custom_link_enabled": false,
-			"secret_scanning_push_protection_custom_link": ""
+			"secret_scanning_push_protection_custom_link": "",
+			"advanced_security_enabled_for_new_repositories": false,
+			"dependabot_alerts_enabled_for_new_repositories": true,
+			"dependabot_security_updates_enabled_for_new_repositories": true,
+			"dependency_graph_enabled_for_new_repositories": true,
+			"secret_scanning_enabled_for_new_repositories": false,
+			"secret_scanning_push_protection_enabled_for_new_repositories": false
 		},
 		"web_settings": {
 			"two_factor_requirement_enabled": true,
@@ -52,12 +58,6 @@
 			"members_can_create_teams": true,
 			"members_can_view_dependency_insights": true,
 			"default_repository_branch": "main",
-			"advanced_security_enabled_for_new_repositories": false,
-			"dependabot_alerts_enabled_for_new_repositories": true,
-			"dependabot_security_updates_enabled_for_new_repositories": true,
-			"dependency_graph_enabled_for_new_repositories": true,
-			"secret_scanning_enabled_for_new_repositories": false,
-			"secret_scanning_push_protection_enabled_for_new_repositories": false,
 			"secret_scanning_validity_checks_enabled": false,
 			"installed_apps": ["atlassian", "slack"]
 		},
@@ -541,6 +541,81 @@
 					]
 				}
 			]
+		},
+		"pending_settings": {
+			"collections": {
+				"network_configurations": null,
+				"custom_patterns": null,
+				"pattern_settings": null,
+				"actions_policies": null,
+				"dependabot_access": null,
+				"hosted_runners": null,
+				"rulesets": null,
+				"webhooks": null
+			}
+		},
+		"manual_settings": {
+			"authentication": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"billing": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"codespaces": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"copilot": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"custom_pattern_publication": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"deploy_keys": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"github_apps": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"members_and_collaborators": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"oauth_access": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"personal_access_tokens": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"registry_credentials": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"secrets": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"verified_domains": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"webhook_credentials": {
+				"status": "unverified",
+				"configuration_source": null
+			}
+		},
+		"private_settings": {
+			"billing_email": {
+				"value_source": "orgs/TOANQUYNHLLC/settings/billing_email#aecab653d82243b58d3335d0863e9f4a"
+			}
 		}
 	},
 	"repositories": {
@@ -1043,6 +1118,45 @@
 				"variables": [],
 				"webhooks": [],
 				"actions_policies": []
+			},
+			"pending_settings": {
+				"collections": {
+					"custom_patterns": null
+				},
+				"endpoints": {
+					"actions/cache/retention-limit": null,
+					"actions/cache/storage-limit": null
+				}
+			},
+			"manual_settings": {
+				"codespaces": {
+					"status": "unverified",
+					"configuration_source": null
+				},
+				"custom_pattern_publication": {
+					"status": "unverified",
+					"configuration_source": null
+				},
+				"deploy_keys": {
+					"status": "unverified",
+					"configuration_source": null
+				},
+				"github_apps": {
+					"status": "unverified",
+					"configuration_source": null
+				},
+				"members_and_collaborators": {
+					"status": "unverified",
+					"configuration_source": null
+				},
+				"secrets": {
+					"status": "unverified",
+					"configuration_source": null
+				},
+				"webhook_credentials": {
+					"status": "unverified",
+					"configuration_source": null
+				}
 			}
 		}
 	},

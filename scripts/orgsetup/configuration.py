@@ -13,14 +13,23 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import quote
 
-from orgsetup import catalog, enterprise, github, localdata, resources
+from orgsetup import catalog, enterprise, github, inventory, localdata, resources
 
 CONFIG_NAME = 'github-settings.json'
 # printWidth của .prettierrc.json: tệp nhập về phải giữ đúng định dạng Prettier để make check không báo lỗi.
 PRINT_WIDTH = 100
 BOOL = bool
 STRING = str
+LEGACY_SECURITY_DEFAULTS = (
+	'advanced_security_enabled_for_new_repositories',
+	'dependabot_alerts_enabled_for_new_repositories',
+	'dependabot_security_updates_enabled_for_new_repositories',
+	'dependency_graph_enabled_for_new_repositories',
+	'secret_scanning_enabled_for_new_repositories',
+	'secret_scanning_push_protection_enabled_for_new_repositories',
+)
 ORG_FIELDS = {
+	**dict.fromkeys(LEGACY_SECURITY_DEFAULTS, BOOL),
 	**dict.fromkeys(
 		(
 			'name',
@@ -98,12 +107,6 @@ ORG_WEB_FIELDS = {
 			'members_can_view_dependency_insights',
 			'readers_can_create_discussions',
 			'display_commenter_full_name_setting_enabled',
-			'advanced_security_enabled_for_new_repositories',
-			'dependabot_alerts_enabled_for_new_repositories',
-			'dependabot_security_updates_enabled_for_new_repositories',
-			'dependency_graph_enabled_for_new_repositories',
-			'secret_scanning_enabled_for_new_repositories',
-			'secret_scanning_push_protection_enabled_for_new_repositories',
 			'secret_scanning_validity_checks_enabled',
 		),
 		BOOL,
@@ -120,6 +123,8 @@ SECURITY_FIELDS = (
 	'secret_scanning_delegated_alert_dismissal',
 	'secret_scanning_delegated_bypass',
 )
+SECURITY_OPTION_FIELDS = ('secret_scanning_delegated_bypass_options',)
+PRIVATE_ORG_FIELDS = ('billing_email',)
 WORKFLOW_FIELDS = {
 	'default_workflow_permissions': ('read', 'write'),
 	'can_approve_pull_request_reviews': BOOL,
@@ -387,8 +392,21 @@ def readScope(repo=None):
 	unavailable = {}
 	if not scope['settings']:
 		raise ValueError(f'{base}: thiếu cài đặt')
-	if set(fields) - set(scope['settings']):
+	missing = set(fields) - set(scope['settings'])
+	optional = set(LEGACY_SECURITY_DEFAULTS) if organization else set()
+	if missing - optional:
 		raise ValueError(f'{base}: thiếu trường cài đặt chính; không ghi đè nguồn local')
+	for key in sorted(missing & optional):
+		unavailable[f'{base}/settings/{key}'] = 'API không trả cờ bảo mật mặc định; không suy đoán'
+	if organization:
+		for key in PRIVATE_ORG_FIELDS:
+			if key not in current:
+				continue
+			value = current[key]
+			if value is not None and not isinstance(value, str):
+				raise ValueError(f'{base}: trường riêng tư {key} sai kiểu')
+			alias = localdata.captureValue(f'{base}/settings/{key}', value or '')
+			scope.setdefault('private_settings', {})[key] = {'value_source': alias}
 	if not organization:
 		if type(current.get('private')) is not bool:
 			raise ValueError(f'{base}: thiếu private')
@@ -412,6 +430,13 @@ def readScope(repo=None):
 			and isinstance(value, dict)
 			and value.get('status') in STATUS_FIELDS
 		}
+		options = {
+			key: catalog.securityOptions(analysis[key], captured=True)
+			for key in SECURITY_OPTION_FIELDS
+			if key in analysis
+		}
+		if options:
+			scope['security_options'] = options
 		for key in REPO_WEB_FIELDS:
 			if key in analysis:
 				scope['web_settings'][key] = (
@@ -585,6 +610,24 @@ def readConfig(root=None):
 	return validateConfig(data)
 
 
+def normalizeConfig(data):
+	"""Đọc được bản khôi phục cũ; chuyển cờ có API ghi sang settings mà không đổi giá trị."""
+	result = copy.deepcopy(data)
+	scope = result.get('organization')
+	if not isinstance(scope, dict):
+		return result
+	settings, webSettings = scope.get('settings'), scope.get('web_settings')
+	if not isinstance(settings, dict) or not isinstance(webSettings, dict):
+		return result
+	for key in LEGACY_SECURITY_DEFAULTS:
+		if key not in webSettings:
+			continue
+		if key in settings and settings[key] != webSettings[key]:
+			raise ValueError(f'{CONFIG_NAME}: cờ bảo mật mặc định có hai mục tiêu khác nhau: {key}')
+		settings[key] = webSettings.pop(key)
+	return result
+
+
 def validateConfig(data):
 	"""Cùng một hợp đồng cho nguồn trên đĩa và bản nhập trước khi thay thế nguyên tử."""
 	if localdata.hasReferences(data):
@@ -602,6 +645,7 @@ def validateConfig(data):
 		or data['organization_name'] != github.ORG
 	):
 		raise ValueError(f'{CONFIG_NAME}: cấu trúc hoặc tổ chức không hợp lệ')
+	data = normalizeConfig(data)
 	checkFields(data['repository_defaults'], REPO_FIELDS, 'repository_defaults', partial=True)
 	if (
 		not isinstance(data['repositories'], dict)
@@ -619,12 +663,21 @@ def validateConfig(data):
 	for repo in data['repositories']:
 		if not re.fullmatch(r'[A-Za-z0-9_.-]+', repo) or repo in ('.', '..'):
 			raise ValueError(f'{CONFIG_NAME}: tên repository không hợp lệ')
-	for repo, scope in [(None, data['organization']), *data['repositories'].items()]:
+	for repo, savedScope in [(None, data['organization']), *data['repositories'].items()]:
+		scope = savedScope
 		organization = repo is None
-		allowedScopeKeys = {'settings', 'web_settings', 'endpoints', 'collections', 'observed'} | (
-			{'security_configurations', 'runner_groups'}
+		allowedScopeKeys = {
+			'settings',
+			'web_settings',
+			'endpoints',
+			'collections',
+			'observed',
+			'pending_settings',
+			'manual_settings',
+		} | (
+			{'security_configurations', 'runner_groups', 'private_settings'}
 			if organization
-			else {'security', 'security_configuration'}
+			else {'security', 'security_options', 'security_configuration'}
 		)
 		if (
 			not isinstance(scope, dict)
@@ -632,6 +685,13 @@ def validateConfig(data):
 			or not {'settings', 'web_settings', 'endpoints'} <= set(scope)
 		):
 			raise ValueError(f'{CONFIG_NAME}: cấu trúc phạm vi {repo} không hợp lệ')
+		inventory.validateScope(
+			scope,
+			organization,
+			ORG_ENDPOINTS if organization else REPO_ENDPOINTS,
+			ORG_FIELDS if organization else REPO_FIELDS,
+		)
+		scope = inventory.configuredScope(scope)
 		checkFields(
 			scope['settings'], ORG_FIELDS if organization else REPO_FIELDS, str(repo), partial=True
 		)
@@ -705,6 +765,23 @@ def validateConfig(data):
 				str(repo),
 				partial=True,
 			)
+		if 'security_options' in scope:
+			options = scope['security_options']
+			if not isinstance(options, dict) or set(options) - set(SECURITY_OPTION_FIELDS):
+				raise ValueError('security_options chứa mục không được hỗ trợ')
+			for value in options.values():
+				catalog.securityOptions(value)
+		if 'private_settings' in scope:
+			items = scope['private_settings']
+			if not isinstance(items, dict) or set(items) - set(PRIVATE_ORG_FIELDS):
+				raise ValueError('private_settings có trường không được hỗ trợ')
+			for key, item in items.items():
+				catalog.checkObject(item, {'value_source': str}, ('value_source',))
+				if not re.fullmatch(
+					rf'orgs/{re.escape(github.ORG)}/settings/{key}#[a-f0-9]{{32}}',
+					item['value_source'],
+				):
+					raise ValueError('private_settings cần tham chiếu ngoài Git đúng phạm vi')
 		if organization and 'security_configurations' in scope:
 			items = scope['security_configurations']
 			if not isinstance(items, list):
@@ -743,8 +820,9 @@ def validateConfig(data):
 
 def validateDependencies(config):
 	"""Chặn cấu hình mâu thuẫn với chính sách tổ chức và các tính năng phụ thuộc."""
-	organization = config['organization']['endpoints']
-	for repo, scope in config['repositories'].items():
+	organization = inventory.configuredScope(config['organization'])['endpoints']
+	for repo, savedScope in config['repositories'].items():
+		scope = inventory.configuredScope(savedScope)
 		endpoints, security = scope['endpoints'], scope.get('security', {})
 		if (
 			endpoints.get('actions/permissions', {}).get('enabled') is True
@@ -893,7 +971,15 @@ def mergeMissing(previous, captured):
 def completeScope(previous, captured):
 	"""Chỉ bổ sung dữ liệu chưa có; không ghi đè mục local đã nhập hoặc người quản trị đã chỉnh."""
 	result = copy.deepcopy(previous)
-	for section in ('settings', 'web_settings', 'endpoints', 'security', 'collections'):
+	for section in (
+		'settings',
+		'web_settings',
+		'endpoints',
+		'security',
+		'security_options',
+		'private_settings',
+		'collections',
+	):
 		if section in captured:
 			result.setdefault(section, {})
 			for key, value in captured[section].items():
@@ -907,6 +993,10 @@ def completeScope(previous, captured):
 					]
 				else:
 					result[section][key] = mergeMissing(result[section][key], value)
+	# API chỉ trả danh sách con của chính sách đang chạy; không gắn nó vào mục tiêu local khác.
+	for suffix, (parent, selector) in SELECTED_ENDPOINTS.items():
+		if result['endpoints'].get(parent, {}).get(selector) != 'selected':
+			result['endpoints'].pop(suffix, None)
 	for key in ('runner_groups', 'security_configurations', 'security_configuration'):
 		if key in captured and key not in result:
 			result[key] = copy.deepcopy(captured[key])
@@ -927,6 +1017,23 @@ def completeScope(previous, captured):
 	return result
 
 
+def scopeUnavailable(scope, base, unavailable, endpoints):
+	"""Giữ dấu thiếu cho danh sách local cần nhưng API ẩn do chính sách hiện tại khác mục tiêu."""
+	problems = dict(unavailable)
+	configured = inventory.configuredScope(scope)
+	for suffix, (parent, selector) in SELECTED_ENDPOINTS.items():
+		if (
+			suffix in endpoints
+			and configured['endpoints'].get(parent, {}).get(selector) == 'selected'
+			and suffix not in configured['endpoints']
+		):
+			problems.setdefault(
+				f'{base}/{suffix}',
+				'Danh sách selected của mục tiêu local chưa có; API không trả khi chính sách web khác',
+			)
+	return problems
+
+
 def importSettings(complete=False):
 	"""GET GitHub → ghi nguyên tử một tệp local sau khi hoàn tất đọc; không gửi mutation GitHub."""
 	previous = readConfig()
@@ -942,16 +1049,46 @@ def importSettings(complete=False):
 		'unavailable': {},
 	}
 	with ThreadPoolExecutor(max_workers=4) as pool:
-		for repo, (scope, unavailable) in zip(
+		for repo, (scope, capturedUnavailable) in zip(
 			[None, *repos], pool.map(captureScope, [None, *repos]), strict=True
 		):
+			unavailable = capturedUnavailable
 			if repo is None:
 				config['organization'] = (
-					completeScope(previous['organization'], scope) if complete else scope
+					completeScope(inventory.configuredScope(previous['organization']), scope)
+					if complete
+					else scope
+				)
+				unavailable = scopeUnavailable(
+					config['organization'], f'orgs/{github.ORG}', unavailable, ORG_ENDPOINTS
+				)
+				config['organization'] = inventory.refreshScope(
+					previous['organization'],
+					config['organization'],
+					f'orgs/{github.ORG}',
+					unavailable,
+					ORG_ENDPOINTS,
+					ORG_FIELDS,
 				)
 			else:
 				config['repositories'][repo] = (
-					completeScope(previous['repositories'][repo], scope) if complete else scope
+					completeScope(inventory.configuredScope(previous['repositories'][repo]), scope)
+					if complete
+					else scope
+				)
+				unavailable = scopeUnavailable(
+					config['repositories'][repo],
+					f'repos/{github.ORG}/{repo}',
+					unavailable,
+					REPO_ENDPOINTS,
+				)
+				config['repositories'][repo] = inventory.refreshScope(
+					previous['repositories'].get(repo, {}),
+					config['repositories'][repo],
+					f'repos/{github.ORG}/{repo}',
+					unavailable,
+					REPO_ENDPOINTS,
+					REPO_FIELDS,
 				)
 			config['unavailable'].update(unavailable)
 	validateConfig(config)
@@ -999,7 +1136,7 @@ def auditSettings():
 	config = readConfig()
 	localdata.resetCapture()
 	repos = github.listRepos(None, includeArchived=True)
-	problems = []
+	problems = inventory.configProblems(config)
 	if {name.casefold() for name in repos} != {name.casefold() for name in config['repositories']}:
 		problems.append('Danh sách repository trên GitHub khác phạm vi đã lưu')
 	with ThreadPoolExecutor(max_workers=4) as pool:
@@ -1011,7 +1148,18 @@ def auditSettings():
 			problems.append(f'{path}: {reason}')
 		if wanted is None:
 			continue
-		for section in ('settings', 'web_settings', 'endpoints', 'security', 'collections'):
+		wanted = inventory.configuredScope(wanted)
+		for section in (
+			'settings',
+			'web_settings',
+			'endpoints',
+			'security',
+			'security_options',
+			'private_settings',
+			'collections',
+		):
+			for key in wanted.get(section, {}).keys() - current.get(section, {}).keys():
+				problems.append(f'{base}/{section}/{key}: nguồn local chưa đối chiếu được với API')
 			for key, value in current.get(section, {}).items():
 				if key not in wanted.get(section, {}):
 					problems.append(f'{base}/{section}/{key}: chưa có trong bản local')
@@ -1025,6 +1173,16 @@ def auditSettings():
 						for item in wanted[section][key]
 					}
 					if before != after:
+						problems.append(f'{base}/{section}/{key}: khác bản local')
+				elif section == 'private_settings':
+					if localdata.capturedValue(value['value_source']) != localdata.privateValue(
+						wanted[section][key]['value_source']
+					):
+						problems.append(f'{base}/{section}/{key}: khác bản local')
+				elif section == 'security_options':
+					if catalog.securityOptions(value) != catalog.securityOptions(
+						wanted[section][key]
+					):
 						problems.append(f'{base}/{section}/{key}: khác bản local')
 				elif section == 'endpoints':
 					if any(
@@ -1242,11 +1400,55 @@ def securityBindingChanges(plan, base, repo, current, wanted, resourceCache=None
 	plan.append((path, method, body, {'security_configuration': name}))
 
 
+def securityChanges(plan, base, current, wanted):
+	"""Gửi trạng thái và options cùng PATCH; options không được báo đã áp dụng khi feature đang tắt."""
+	flagPlan = []
+	addChanges(flagPlan, base, current.get('security', {}), wanted.get('security', {}))
+	changes = flagPlan[0][3] if flagPlan else {}
+	body = {key: {'status': value} for key, value in changes.items()}
+	for key, value in wanted.get('security_options', {}).items():
+		target = catalog.securityOptions(value)
+		if not target:
+			continue
+		live = current.get('security_options', {}).get(key)
+		if live is not None and catalog.securityOptions(live) == target:
+			continue
+		feature = key.removesuffix('_options')
+		status = wanted.get('security', {}).get(feature, current.get('security', {}).get(feature))
+		if status != 'enabled':
+			raise ValueError(f'{base}/{key}: options cần {feature} enabled; dừng trước khi ghi')
+		body[feature] = {'status': 'enabled'}
+		body[key] = target
+		changes[key] = target
+	if body:
+		plan.append((base, 'PATCH', {'security_and_analysis': body}, changes))
+
+
+def privateSettingChanges(plan, base, current, wanted):
+	"""Giá trị riêng được đối chiếu trong bộ nhớ; kế hoạch và thông báo chỉ giữ tên trường."""
+	for key, item in wanted.get('private_settings', {}).items():
+		live = current.get('private_settings', {}).get(key)
+		if live is None:
+			raise ValueError(f'{base}/{key}: API chưa trả giá trị riêng; dừng trước khi ghi')
+		target = localdata.privateValue(item['value_source'])
+		if localdata.capturedValue(live['value_source']) != target:
+			plan.append(
+				(
+					base,
+					'PATCH',
+					{key: {'$local_value': item['value_source']}},
+					{'private_setting': key},
+				)
+			)
+
+
 def configuredScopes(config):
 	"""Tổ chức được xử lý trước; đọc các repository song song, trả theo thứ tự nguồn sau khi đọc xong."""
 
 	def read(repo):
-		wanted = config['organization'] if repo is None else config['repositories'][repo]
+		wanted = inventory.configuredScope(
+			config['organization'] if repo is None else config['repositories'][repo]
+		)
 		keys = list(wanted.get('collections', {}))
 		return captureScope(repo, keys) if keys else readScope(repo)
 
@@ -1265,6 +1467,8 @@ SETTING_GROUPS = frozenset(
 		'settings',
 		'endpoints',
 		'security',
+		'security_options',
+		'private_settings',
 		'runner_groups',
 		'security_configuration',
 		'security_configurations',
@@ -1278,6 +1482,7 @@ def groupUnavailable(path, groups):
 	paths = {catalog.GROUP_PATHS[key] for key in groups if key in catalog.GROUP_PATHS}
 	for key, suffix in (
 		('security', 'security_and_analysis'),
+		('security_options', 'security_and_analysis'),
 		('runner_groups', 'actions/runner-groups'),
 		('security_configuration', 'code-security-configuration'),
 		('security_configurations', 'code-security'),
@@ -1287,7 +1492,9 @@ def groupUnavailable(path, groups):
 	if 'endpoints' in groups:
 		paths.update(ORG_ENDPOINTS)
 		paths.update(REPO_ENDPOINTS)
-	return any(path.endswith(f'/{suffix}') for suffix in paths)
+	if 'settings' in groups:
+		paths.update(f'settings/{key}' for key in ORG_FIELDS | REPO_FIELDS)
+	return any(path.endswith((f'/{suffix}', f' ({suffix})')) for suffix in paths)
 
 
 def selectSettingGroups(config, groups):
@@ -1298,6 +1505,7 @@ def selectSettingGroups(config, groups):
 	selected = copy.deepcopy(config)
 
 	def select(scope):
+		scope = inventory.configuredScope(scope)
 		result = {'settings': {}, 'web_settings': {}, 'endpoints': {}}
 		result.update({key: value for key, value in scope.items() if key in groups})
 		if 'collections' in scope:
@@ -1351,7 +1559,8 @@ def syncConfiguredSettings(apply=False, verify=False, only=None):
 		raise ValueError(
 			f'{CONFIG_NAME}: có mục chưa nhập; chạy make org-import-missing để bổ sung trước khi áp dụng'
 		)
-	for repo, wanted, (current, unavailable) in configuredScopes(config):
+	for repo, savedWanted, (current, unavailable) in configuredScopes(config):
+		wanted = savedWanted
 		base = (
 			f'orgs/{github.ORG}' if repo is None else f'repos/{github.ORG}/{quote(repo, safe="")}'
 		)
@@ -1366,6 +1575,9 @@ def syncConfiguredSettings(apply=False, verify=False, only=None):
 			raise ValueError(
 				f'{base}: chưa đọc được {", ".join(selectedUnavailable)}; dừng trước khi ghi'
 			)
+		manual.extend(inventory.scopeProblems(wanted, base))
+		wanted = inventory.configuredScope(wanted)
+		privateSettingChanges(plan, base, current, wanted)
 		archivePlan = []
 		repositorySettings = dict(wanted['settings'])
 		if repo is not None and 'archived' in repositorySettings:
@@ -1415,23 +1627,7 @@ def syncConfiguredSettings(apply=False, verify=False, only=None):
 			if current['web_settings'][key] != value:
 				manual.append(f'{base}/{key}: cần đối chiếu và sửa trên web')
 		if repo is not None:
-			security = wanted.get('security', {})
-			before = len(plan)
-			addChanges(plan, base, current.get('security', {}), security)
-			if len(plan) > before:
-				path, method, _, changes = plan.pop()
-				plan.append(
-					(
-						path,
-						method,
-						{
-							'security_and_analysis': {
-								key: {'status': value} for key, value in changes.items()
-							}
-						},
-						changes,
-					)
-				)
+			securityChanges(plan, base, current, wanted)
 		definitions = ORG_ENDPOINTS if repo is None else REPO_ENDPOINTS
 		# Tắt security updates trước alerts; bật alerts trước security updates, không phụ thuộc thứ tự JSON.
 		ordered = sorted(

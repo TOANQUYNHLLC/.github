@@ -136,6 +136,10 @@ org-import-missing: ## Bổ sung phần chưa có sau nâng cấp gói hoặc qu
 org-settings-audit: ## Kiểm tra toàn bộ phạm vi bản nhập và khác biệt với GitHub; chỉ đọc
 	$(PYTHON) scripts/org-setup.py settings-audit
 
+.PHONY: org-settings-inventory
+org-settings-inventory: ## Xem danh mục local, mục chưa biết và cấu hình thủ công; không cần đăng nhập
+	$(PYTHON) scripts/org-setup.py settings-inventory
+
 .PHONY: org-settings-preview
 org-settings-preview: ## So cài đặt GitHub với github-settings.json, gồm trạng thái Actions và các endpoint bổ sung
 	$(PYTHON) scripts/org-setup.py local-settings
