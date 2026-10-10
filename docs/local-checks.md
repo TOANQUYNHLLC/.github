@@ -93,6 +93,6 @@ Script xử lý hàng rào thụt 0–3 dấu cách theo GFM; không phân tích
 
 `make sync BRANCH=…` gọi [shell/sync.sh](../shell/sync.sh) rồi [shell/prune-branches.sh](../shell/prune-branches.sh). Bước đầu lỗi thì không dọn branch. Lệnh yêu cầu cây làm việc sạch, không đang dở thao tác Git; kéo bằng fast-forward và dừng khi branch lệch với origin.
 
-Bước dọn so nội dung đã hợp nhất vào `origin/main`, hỗ trợ Merge và Squash, chỉ xóa branch local có branch theo dõi trên origin đã bị xóa. Giữ `main`, branch hiện tại, branch còn thay đổi và branch đang mở ở worktree khác. Thiếu `origin/main` làm lệnh dừng.
+Bước dọn so nội dung đã hợp nhất vào `origin/main`, hỗ trợ Merge và Squash, kể cả branch được squash thành nhiều nhóm qua các PR khác nhau. Với Squash, script đối chiếu các nhóm commit liên tiếp từ điểm tách với bản vá trên `origin/main`; nhóm không đổi nội dung cũng được chấp nhận. Không xác nhận được toàn bộ thay đổi thì giữ branch. Chỉ xóa branch local có branch theo dõi trên origin đã bị xóa. Giữ `main`, branch hiện tại, branch còn thay đổi và branch đang mở ở worktree khác. Thiếu `origin/main` làm lệnh dừng.
 
 `make cleanup` dùng `git clean -fdx`, xóa vĩnh viễn mọi tệp Git không quản lý, kể cả `.env`, cache và tệp mới chưa add. Xem trước bằng `git clean -ndx`.

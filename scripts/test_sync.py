@@ -174,6 +174,74 @@ class SyncTest(unittest.TestCase):
 		self.assertEqual(self.localBranches(), ['feat/extra', 'main'])
 		self.assertIn('Giữ lại feat/extra: có thay đổi chưa vào main', result.stdout)
 
+	def testDeletesBranchSquashedInSeveralGroups(self):
+		# Một branch tiếp tục được dùng sau lần squash đầu: mỗi nhóm khớp một commit khác trên main.
+		self.branch('fix/groups', 'a.txt', 'b.txt')
+		self.mergeOnRemote('fix/groups', squash=True)
+		self.git(self.clone, 'switch', '-q', 'fix/groups')
+		self.commit(self.clone, 'c.txt', 'nhóm sau')
+		self.commit(self.clone, 'd.txt', 'nhóm sau')
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/groups')
+		self.mergeOnRemote('fix/groups', squash=True)
+		# main đã sửa lại nội dung sau hợp nhất: không thể chỉ so cây cuối của branch với main hiện tại.
+		self.commit(self.other, 'a.txt', 'đã sửa trên main')
+		self.git(self.other, 'push', '-q', 'origin', 'main')
+		self.sync()
+		self.assertEqual(self.localBranches(), ['main'])
+		self.assertEqual((self.clone / 'a.txt').read_text(), 'đã sửa trên main\n')
+
+	def testDeletesBranchContainingSeparatelySquashedMerge(self):
+		# Như fix/project_review: commit riêng, merge nhánh đã squash riêng, rồi một nhóm commit squash.
+		self.branch('fix/review', 'a.txt')
+		self.branch('docs/guide', 'b.txt')
+		self.mergeOnRemote('fix/review', squash=True)
+		self.mergeOnRemote('docs/guide', squash=True)
+		self.git(self.clone, 'switch', '-q', 'fix/review')
+		self.git(self.clone, 'merge', '-q', '--no-ff', '-m', 'nhập tài liệu', 'docs/guide')
+		self.commit(self.clone, 'c.txt', 'sửa lỗi')
+		self.commit(self.clone, 'd.txt', 'sửa lỗi')
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/review')
+		self.mergeOnRemote('fix/review', squash=True)
+		self.commit(self.other, 'later.txt', 'sau hợp nhất')
+		self.git(self.other, 'push', '-q', 'origin', 'main')
+		self.sync()
+		self.assertEqual(self.localBranches(), ['main'])
+
+	def testPruneTriesAllValidSquashBoundaries(self):
+		# Commit đầu từng được cherry-pick rồi revert; bản squash sau chứa cả commit đầu và commit thứ hai.
+		# Chọn ngay điểm chia đầu tiên sẽ bỏ lỡ nhóm lớn hơn và giữ nhầm branch đã hợp nhất.
+		self.branch('fix/boundaries', 'a.txt', 'b.txt')
+		first = self.git(self.clone, 'rev-parse', 'fix/boundaries~1').strip()
+		self.git(self.other, 'fetch', '-q', 'origin')
+		self.git(self.other, 'cherry-pick', first)
+		self.git(self.other, 'revert', '--no-edit', 'HEAD')
+		self.git(self.other, 'push', '-q', 'origin', 'main')
+		self.mergeOnRemote('fix/boundaries', squash=True)
+		self.git(self.clone, 'switch', '-q', 'fix/boundaries')
+		self.commit(self.clone, 'c.txt', 'nhóm sau')
+		self.commit(self.clone, 'd.txt', 'nhóm sau')
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/boundaries')
+		self.mergeOnRemote('fix/boundaries', squash=True)
+		self.commit(self.other, 'later.txt', 'sau hợp nhất')
+		self.git(self.other, 'push', '-q', 'origin', 'main')
+		self.sync()
+		self.assertEqual(self.localBranches(), ['main'])
+
+	def testKeepsUnmergedChangesBetweenSquashedGroups(self):
+		# Các commit trước và sau đã vào main, nhưng commit ở giữa chưa vào: không được bỏ qua nhóm đó.
+		self.branch('fix/incomplete', 'a.txt', 'b.txt')
+		self.mergeOnRemote('fix/incomplete', squash=True)
+		self.git(self.clone, 'switch', '-q', 'fix/incomplete')
+		self.commit(self.clone, 'missing.txt', 'chưa hợp nhất')
+		self.commit(self.clone, 'c.txt', 'đã hợp nhất')
+		later = self.git(self.clone, 'rev-parse', 'HEAD').strip()
+		self.git(self.other, 'fetch', '-q', str(self.clone), later)
+		self.git(self.other, 'cherry-pick', later)
+		self.git(self.other, 'push', '-q', 'origin', 'main')
+		result = self.sync()
+		self.assertEqual(self.localBranches(), ['fix/incomplete', 'main'])
+		self.assertIn('Giữ lại fix/incomplete: có thay đổi chưa vào main', result.stdout)
+
 	def testKeepsBranchOpenInWorktree(self):
 		# Branch đang mở ở worktree khác: git branch -D từ chối — script báo và chạy tiếp các branch sau.
 		self.branch('docs/worktree', 'a.txt')
