@@ -23,7 +23,7 @@ PYTHON := python3
 
 # Tham số của lệnh: make sync BRANCH=…, make release-notes TAG=…, make forms REF=…. Công thức đọc giá trị từ biến
 # môi trường ("$$BRANCH") thay vì chèn $(BRANCH) vào lệnh — ký tự đặc biệt không bị shell thông dịch.
-export BRANCH TAG REF
+export BRANCH TAG REF PYTHON
 
 ##@ Trợ giúp
 
