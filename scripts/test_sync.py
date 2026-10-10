@@ -4,6 +4,8 @@ remote đã xóa).
 Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
 """
 
+import contextlib
+import io
 import os
 import shutil
 import subprocess
@@ -11,12 +13,13 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 # discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
 try:
-	from testsupport import ROOT
+	from testsupport import ROOT, loadScript
 except ModuleNotFoundError:
-	from scripts.testsupport import ROOT
+	from scripts.testsupport import ROOT, loadScript
 
 SCRIPT = ROOT / 'shell' / 'sync.sh'
 PRUNE = ROOT / 'shell' / 'prune-branches.sh'
@@ -150,6 +153,20 @@ class SyncTest(unittest.TestCase):
 		return self.git(
 			self.clone, 'for-each-ref', '--format=%(refname:short)', 'refs/heads'
 		).split()
+
+	def gitFailureEnvironment(self, argument):
+		"""Git giả chỉ làm lỗi lệnh có một tham số đã chọn; mọi lệnh khác gọi Git thật."""
+		folder = Path(self.tmp.name) / 'bin'
+		folder.mkdir(exist_ok=True)
+		wrapper = folder / 'git'
+		wrapper.write_text(
+			'#!/usr/bin/env python3\nimport os\nimport sys\n'
+			f'if {argument!r} in sys.argv[1:]:\n    sys.exit(128)\n'
+			f'os.execv({shutil.which("git")!r}, ["git", *sys.argv[1:]])\n',
+			encoding='utf-8',
+		)
+		wrapper.chmod(0o755)
+		return dict(self.environment, PATH=f'{folder}{os.pathsep}{os.environ["PATH"]}')
 
 	def testDeletesSquashedAndMergedBranches(self):
 		# Squash đổi SHA nên git branch -d báo "not fully merged"; script nhận ra theo nội dung. Branch hợp nhất
@@ -471,8 +488,8 @@ class SyncTest(unittest.TestCase):
 		self.assertIn('branch theo dõi của feat/gone trên origin đã bị xóa', result.stdout)
 
 	def testPruneWorksWithoutGitIdentity(self):
-		# Máy chưa đặt user.name, user.email (máy mới, CI): commit-tree của bước nhận diện Squash vẫn chạy được.
-		# main có thêm commit sau khi hợp nhất để nội dung khác branch — buộc đi qua bước so bằng git cherry.
+		# Máy chưa đặt user.name, user.email (máy mới, CI): bước nhận diện Squash không tạo commit tạm.
+		# main có thêm commit sau khi hợp nhất để nội dung khác branch — buộc đi qua bước so bản vá.
 		self.branch('fix/squashed', 'b.txt')
 		self.mergeOnRemote('fix/squashed', squash=True)
 		self.commit(self.other, 'later.txt', 'sau khi hợp nhất')
@@ -583,6 +600,350 @@ class SyncTest(unittest.TestCase):
 		self.git(self.clone, 'branch', 'local/only')
 		self.sync()
 		self.assertEqual(self.localBranches(), ['feat/open', 'local/only', 'main'])
+
+	def testPruneKeepsDistinctWhitespace(self):
+		# git cherry bỏ khoảng trắng khi so bản vá; thụt lề khác vẫn có thể đổi hành vi Python.
+		self.git(self.clone, 'switch', '-q', '-c', 'fix/whitespace')
+		self.commit(self.clone, 'logic.py', "if True:\n\tprint('x')")
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/whitespace')
+		self.git(self.clone, 'switch', '-q', 'main')
+		self.commit(self.other, 'logic.py', "if True:\n    print('x')")
+		self.git(self.other, 'push', '-q', 'origin', 'main', ':fix/whitespace')
+		result = self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['fix/whitespace', 'main'])
+		self.assertIn('Giữ lại fix/whitespace', result.stdout)
+
+	def testPruneDoesNotResolveOriginMainAsTag(self):
+		self.branch('fix/unmerged', 'a.txt')
+		self.git(self.other, 'push', '-q', 'origin', ':fix/unmerged')
+		self.git(self.clone, 'tag', 'origin/main', 'fix/unmerged')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['fix/unmerged', 'main'])
+
+	def testPruneHandlesTagWithSameNameAsBranch(self):
+		self.branch('fix/squashed', 'a.txt')
+		self.mergeOnRemote('fix/squashed', squash=True)
+		self.git(self.clone, 'tag', 'fix/squashed', 'main')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['main'])
+		self.assertEqual(
+			self.git(self.clone, 'tag', '--list', 'fix/squashed').strip(), 'fix/squashed'
+		)
+
+	def testPruneDoesNotIgnoreSubmoduleChanges(self):
+		# gitlink được tạo trực tiếp trong index để không phụ thuộc mạng hay git submodule của máy.
+		moduleCommit = self.git(self.clone, 'rev-parse', 'HEAD').strip()
+		self.git(self.clone, 'switch', '-q', '-c', 'fix/submodule')
+		self.git(
+			self.clone, 'update-index', '--add', '--cacheinfo', f'160000,{moduleCommit},vendor'
+		)
+		self.git(self.clone, 'commit', '-qm', 'thêm submodule')
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/submodule')
+		self.git(self.clone, 'switch', '-q', 'main')
+		self.git(self.clone, 'config', 'diff.ignoreSubmodules', 'all')
+		self.git(self.other, 'push', '-q', 'origin', ':fix/submodule')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['fix/submodule', 'main'])
+
+	def testPruneKeepsDistinctStringWhitespace(self):
+		self.git(self.clone, 'switch', '-q', '-c', 'fix/string_space')
+		self.commit(self.clone, 'logic.py', "print('a b')")
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/string_space')
+		self.git(self.clone, 'switch', '-q', 'main')
+		self.commit(self.other, 'logic.py', "print('ab')")
+		self.git(self.other, 'push', '-q', 'origin', 'main', ':fix/string_space')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['fix/string_space', 'main'])
+
+	def testPruneReportsGitFailureAndContinuesOtherBranches(self):
+		self.branch('fix/broken', 'a.txt')
+		self.branch('fix/squashed', 'b.txt')
+		self.mergeOnRemote('fix/broken', squash=True)
+		self.mergeOnRemote('fix/squashed', squash=True)
+		tip = self.git(self.clone, 'rev-parse', 'fix/broken').strip()
+		result = self.attempt(PRUNE, environment=self.gitFailureEnvironment(f'{tip}^{{commit}}'))
+		self.assertEqual(result.returncode, 1, result.stderr)
+		self.assertIn('Giữ lại fix/broken: lỗi đối chiếu lịch sử', result.stderr)
+		self.assertEqual(self.localBranches(), ['fix/broken', 'main'])
+
+	def testPruneStopsWhenFetchFails(self):
+		self.branch('fix/squashed', 'a.txt')
+		self.mergeOnRemote('fix/squashed', squash=True)
+		result = self.attempt(PRUNE, environment=self.gitFailureEnvironment('fetch'))
+		self.assertEqual(result.returncode, 1, result.stderr)
+		self.assertIn('Không tải được từ origin', result.stderr)
+		self.assertEqual(self.localBranches(), ['fix/squashed', 'main'])
+
+	def testPruneKeepsDifferentBinaryContent(self):
+		self.git(self.clone, 'switch', '-q', '-c', 'fix/binary')
+		(self.clone / 'data.bin').write_bytes(b'\0local\xff\n')
+		self.git(self.clone, 'add', 'data.bin')
+		self.git(self.clone, 'commit', '-qm', 'thêm dữ liệu nhị phân local')
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/binary')
+		self.git(self.clone, 'switch', '-q', 'main')
+		(self.other / 'data.bin').write_bytes(b'\0main\xff\n')
+		self.git(self.other, 'add', 'data.bin')
+		self.git(self.other, 'commit', '-qm', 'thêm dữ liệu nhị phân main')
+		self.git(self.other, 'push', '-q', 'origin', 'main', ':fix/binary')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['fix/binary', 'main'])
+
+	def testPruneRecognizesSquashedBinaryContent(self):
+		self.git(self.clone, 'switch', '-q', '-c', 'fix/binary')
+		(self.clone / 'data.bin').write_bytes(b'\0local\xff\n')
+		self.git(self.clone, 'add', 'data.bin')
+		self.git(self.clone, 'commit', '-qm', 'thêm dữ liệu nhị phân')
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/binary')
+		self.git(self.clone, 'switch', '-q', 'main')
+		self.mergeOnRemote('fix/binary', squash=True)
+		self.commit(self.other, 'later.txt', 'sau hợp nhất')
+		self.git(self.other, 'push', '-q', 'origin', 'main')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['main'])
+
+	def testPruneKeepsUnmergedExecutableBit(self):
+		self.git(self.clone, 'switch', '-q', '-c', 'fix/executable')
+		path = self.clone / 'base.txt'
+		path.chmod(path.stat().st_mode | 0o111)
+		self.git(self.clone, 'update-index', '--chmod=+x', 'base.txt')
+		self.git(self.clone, 'commit', '-qm', 'đổi quyền thực thi')
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/executable')
+		self.git(self.clone, 'switch', '-q', 'main')
+		self.git(self.other, 'push', '-q', 'origin', ':fix/executable')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['fix/executable', 'main'])
+
+	def testPruneKeepsOriginalHistoryDespiteReplaceRefs(self):
+		self.branch('fix/original', 'a.txt')
+		self.git(self.other, 'push', '-q', 'origin', ':fix/original')
+		self.git(self.clone, 'replace', 'fix/original', 'main')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['fix/original', 'main'])
+
+	def testPruneFromSubdirectoryIncludesAllPaths(self):
+		self.branch('fix/outside', 'a.txt')
+		self.git(self.other, 'push', '-q', 'origin', ':fix/outside')
+		folder = self.clone / 'nested'
+		folder.mkdir()
+		self.git(self.clone, 'config', 'diff.relative', 'true')
+		subprocess.run(
+			['bash', str(PRUNE)], cwd=folder, env=self.environment, capture_output=True, check=True
+		)
+		self.assertEqual(self.localBranches(), ['fix/outside', 'main'])
+
+	def testPruneKeepsChangesAtDifferentRepeatedLines(self):
+		self.commit(self.clone, 'repeated.txt', 'x\nx')
+		self.git(self.clone, 'push', '-q', 'origin', 'main')
+		self.git(self.other, 'pull', '-q')
+		self.git(self.clone, 'switch', '-q', '-c', 'fix/first_line')
+		self.commit(self.clone, 'repeated.txt', 'y\nx')
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/first_line')
+		self.git(self.clone, 'switch', '-q', 'main')
+		self.commit(self.other, 'repeated.txt', 'x\ny')
+		self.git(self.other, 'push', '-q', 'origin', 'main', ':fix/first_line')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['fix/first_line', 'main'])
+
+	def testPruneKeepsChangesAtDifferentRepeatedBlocks(self):
+		block = '\n'.join(['a'] * 10)
+		original = f'{block}\nseparator\n{block}'
+		self.commit(self.clone, 'repeated.txt', original)
+		self.git(self.clone, 'push', '-q', 'origin', 'main')
+		self.git(self.other, 'pull', '-q')
+		lines = original.splitlines()
+		self.git(self.clone, 'switch', '-q', '-c', 'fix/first_block')
+		lines[5] = 'changed'
+		self.commit(self.clone, 'repeated.txt', '\n'.join(lines))
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/first_block')
+		self.git(self.clone, 'switch', '-q', 'main')
+		lines[5], lines[16] = 'a', 'changed'
+		self.commit(self.other, 'repeated.txt', '\n'.join(lines))
+		self.git(self.other, 'push', '-q', 'origin', 'main', ':fix/first_block')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['fix/first_block', 'main'])
+
+	def testPruneKeepsBranchUpdatedDuringVerification(self):
+		self.branch('fix/racing', 'a.txt')
+		before = self.git(self.clone, 'rev-parse', 'fix/racing').strip()
+		self.mergeOnRemote('fix/racing', squash=True)
+		self.commit(self.other, 'post.txt', 'sau hợp nhất')
+		self.git(self.other, 'push', '-q', 'origin', 'main')
+		self.git(self.clone, 'switch', '-q', 'fix/racing')
+		self.commit(self.clone, 'later.txt', 'chưa hợp nhất')
+		after = self.git(self.clone, 'rev-parse', 'HEAD').strip()
+		self.git(self.clone, 'switch', '-q', 'main')
+		self.git(self.clone, 'update-ref', 'refs/heads/fix/racing', before)
+		folder = Path(self.tmp.name) / 'bin'
+		folder.mkdir()
+		realGit = shutil.which('git')
+		wrapper = folder / 'git'
+		wrapper.write_text(
+			'#!/usr/bin/env python3\nimport os\nimport subprocess\nimport sys\n'
+			'if "write-tree" in sys.argv[1:]:\n'
+			f'    subprocess.run([{realGit!r}, "update-ref", "refs/heads/fix/racing", '
+			f'{after!r}, {before!r}], check=True)\n'
+			f'os.execv({realGit!r}, ["git", *sys.argv[1:]])\n',
+			encoding='utf-8',
+		)
+		wrapper.chmod(0o755)
+		result = self.attempt(
+			PRUNE,
+			environment=dict(self.environment, PATH=f'{folder}{os.pathsep}{os.environ["PATH"]}'),
+		)
+		self.assertEqual(result.returncode, 0, result.stderr)
+		self.assertEqual(self.localBranches(), ['fix/racing', 'main'])
+		self.assertEqual(self.git(self.clone, 'rev-parse', 'fix/racing').strip(), after)
+		self.assertIn('Giữ lại fix/racing: branch đã thay đổi trong lúc đối chiếu', result.stdout)
+
+	def testPruneReportsUnreadableUpstream(self):
+		self.branch('fix/squashed', 'a.txt')
+		self.mergeOnRemote('fix/squashed', squash=True)
+		result = self.attempt(
+			PRUNE, environment=self.gitFailureEnvironment('refs/remotes/origin/fix/squashed')
+		)
+		self.assertEqual(result.returncode, 1, result.stderr)
+		self.assertIn('Giữ lại fix/squashed: không đọc được branch theo dõi', result.stderr)
+		self.assertEqual(self.localBranches(), ['fix/squashed', 'main'])
+
+	def testPrunePreservesUserIndexAndWorktree(self):
+		self.branch('fix/squashed', 'a.txt')
+		self.mergeOnRemote('fix/squashed', squash=True)
+		self.commit(self.other, 'later.txt', 'sau hợp nhất')
+		self.git(self.other, 'push', '-q', 'origin', 'main')
+		draft = self.clone / 'draft.txt'
+		draft.write_text('đã stage\n', encoding='utf-8')
+		self.git(self.clone, 'add', 'draft.txt')
+		draft.write_text('đang sửa thêm\n', encoding='utf-8')
+		index = self.clone / '.git' / 'index'
+		before = index.read_bytes()
+		head = self.git(self.clone, 'rev-parse', 'HEAD')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['main'])
+		self.assertEqual(index.read_bytes(), before)
+		self.assertEqual(draft.read_text(), 'đang sửa thêm\n')
+		self.assertEqual(self.git(self.clone, 'rev-parse', 'HEAD'), head)
+
+	def testPruneRecognizesTextDiffContainingNul(self):
+		self.git(self.clone, 'switch', '-q', '-c', 'fix/nul_text')
+		(self.clone / 'data.dat').write_bytes(b'a\0b\nlast line')
+		self.git(self.clone, 'add', 'data.dat')
+		self.git(self.clone, 'commit', '-qm', 'thêm nội dung có NUL')
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/nul_text')
+		self.git(self.clone, 'switch', '-q', 'main')
+		self.mergeOnRemote('fix/nul_text', squash=True)
+		self.commit(self.other, 'later.txt', 'sau hợp nhất')
+		self.git(self.other, 'push', '-q', 'origin', 'main')
+		info = self.clone / '.git' / 'info'
+		info.mkdir(exist_ok=True)
+		(info / 'attributes').write_text('data.dat diff\n', encoding='utf-8')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['main'])
+
+	def testPruneKeepsOriginalHistoryDespiteGrafts(self):
+		self.branch('fix/original', 'a.txt')
+		self.git(self.other, 'push', '-q', 'origin', ':fix/original')
+		main = self.git(self.clone, 'rev-parse', 'main').strip()
+		branch = self.git(self.clone, 'rev-parse', 'fix/original').strip()
+		info = self.clone / '.git' / 'info'
+		info.mkdir(exist_ok=True)
+		(info / 'grafts').write_text(f'{main} {branch}\n{branch}\n', encoding='utf-8')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['fix/original', 'main'])
+
+	def testPruneHandlesSha256Repository(self):
+		folder = Path(self.tmp.name) / 'sha256'
+		folder.mkdir()
+		probe = subprocess.run(
+			['git', 'init', '-q', '--bare', '--object-format=sha256', str(folder / 'probe.git')],
+			env=self.environment,
+			capture_output=True,
+			check=False,
+		)
+		if probe.returncode != 0:
+			self.skipTest('Git hiện tại chưa hỗ trợ repository SHA-256')
+		self.prepare(folder)
+		self.environment['GIT_DEFAULT_HASH'] = 'sha256'
+		self.build(folder)
+		self.branch('fix/sha256', 'a.txt', 'b.txt')
+		self.mergeOnRemote('fix/sha256', squash=True)
+		self.git(self.clone, 'switch', '-q', 'fix/sha256')
+		self.commit(self.clone, 'c.txt', 'nhóm sau')
+		self.commit(self.clone, 'd.txt', 'nhóm sau')
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/sha256')
+		self.mergeOnRemote('fix/sha256', squash=True)
+		self.commit(self.other, 'later.txt', 'sau hợp nhất')
+		self.git(self.other, 'push', '-q', 'origin', 'main')
+		self.sync()
+		self.assertEqual(self.localBranches(), ['main'])
+		self.assertEqual(len(self.git(self.clone, 'rev-parse', 'HEAD').strip()), 64)
+
+	def testPruneKeepsChangeInSectionDeletedOnMain(self):
+		block = '\n'.join(['a'] * 10)
+		original = f'FIRST\n{block}\nSECOND\n{block}'
+		self.commit(self.clone, 'sections.txt', original)
+		self.git(self.clone, 'push', '-q', 'origin', 'main')
+		self.git(self.other, 'pull', '-q')
+		self.git(self.clone, 'switch', '-q', '-c', 'fix/first_section')
+		lines = original.splitlines()
+		lines[6] = 'changed'
+		self.commit(self.clone, 'sections.txt', '\n'.join(lines))
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/first_section')
+		self.git(self.clone, 'switch', '-q', 'main')
+		remaining = f'SECOND\n{block}'.splitlines()
+		self.commit(self.other, 'sections.txt', '\n'.join(remaining))
+		remaining[6] = 'changed'
+		self.commit(self.other, 'sections.txt', '\n'.join(remaining))
+		self.git(self.other, 'push', '-q', 'origin', 'main', ':fix/first_section')
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['fix/first_section', 'main'])
+
+	def testPruneRecognizesSquashAfterMainInsertsPrefix(self):
+		original = '\n'.join(f'line {index}' for index in range(20))
+		self.commit(self.clone, 'lines.txt', original)
+		self.git(self.clone, 'push', '-q', 'origin', 'main')
+		self.git(self.other, 'pull', '-q')
+		self.git(self.clone, 'switch', '-q', '-c', 'fix/line')
+		changed = original.replace('line 12', 'changed')
+		self.commit(self.clone, 'lines.txt', changed)
+		self.git(self.clone, 'push', '-q', '-u', 'origin', 'fix/line')
+		self.git(self.clone, 'switch', '-q', 'main')
+		self.commit(self.other, 'lines.txt', f'prefix\n{original}')
+		self.mergeOnRemote('fix/line', squash=True)
+		self.runScript(PRUNE)
+		self.assertEqual(self.localBranches(), ['main'])
+
+	def testPruneUsesSelectedPythonInterpreter(self):
+		self.branch('fix/squashed', 'a.txt')
+		self.mergeOnRemote('fix/squashed', squash=True)
+		folder = Path(self.tmp.name) / 'interpreter selection'
+		folder.mkdir()
+		marker = folder / 'called'
+		interpreter = folder / 'python'
+		interpreter.write_text(
+			'#!/usr/bin/env python3\nimport os\nimport sys\nfrom pathlib import Path\n'
+			f'Path({str(marker)!r}).write_text("đã chọn", encoding="utf-8")\n'
+			f'os.execv({sys.executable!r}, [{sys.executable!r}, *sys.argv[1:]])\n',
+			encoding='utf-8',
+		)
+		interpreter.chmod(0o755)
+		result = self.attempt(PRUNE, environment=dict(self.environment, PYTHON=str(interpreter)))
+		self.assertEqual(result.returncode, 0, result.stderr)
+		self.assertTrue(marker.exists())
+		self.assertEqual(self.localBranches(), ['main'])
+
+
+class BranchMergeCliTest(unittest.TestCase):
+	def testOldPythonStopsBeforeReadingGit(self):
+		module = loadScript('check-branch-merged')
+		output = io.StringIO()
+		with (
+			mock.patch.object(module.sys, 'version_info', (3, 9, 25)),
+			mock.patch.object(module, 'git') as gitMock,
+			contextlib.redirect_stderr(output),
+		):
+			self.assertEqual(module.main(), 2)
+		gitMock.assert_not_called()
+		self.assertIn('Python ≥ 3.11', output.getvalue())
 
 
 if __name__ == '__main__':
