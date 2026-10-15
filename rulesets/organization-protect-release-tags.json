@@ -1,0 +1,48 @@
+{
+	"name": "Organization Protect Release Tags",
+	"target": "tag",
+	"enforcement": "active",
+	"conditions": {
+		"ref_name": {
+			"exclude": [],
+			"include": ["refs/tags/v*", "refs/tags/Stable.v*", "refs/tags/Beta.v*"]
+		},
+		"repository_name": {
+			"exclude": [],
+			"include": ["~ALL"],
+			"protected": false
+		}
+	},
+	"bypass_actors": [
+		{
+			"actor_id": 1,
+			"actor_type": "OrganizationAdmin",
+			"bypass_mode": "always"
+		}
+	],
+	"rules": [
+		{
+			"type": "creation"
+		},
+		{
+			"type": "update"
+		},
+		{
+			"type": "deletion"
+		},
+		{
+			"type": "non_fast_forward"
+		},
+		{
+			"type": "required_signatures"
+		},
+		{
+			"type": "required_status_checks",
+			"parameters": {
+				"strict_required_status_checks_policy": true,
+				"do_not_enforce_on_create": false,
+				"required_status_checks": []
+			}
+		}
+	]
+}

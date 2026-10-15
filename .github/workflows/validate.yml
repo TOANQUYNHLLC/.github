@@ -1,0 +1,75 @@
+name: Kiểm tra repository
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+
+permissions:
+    contents: read
+
+concurrency:
+    # Push mới trên cùng Pull Request hủy lượt chạy cũ; lượt chạy trên nhánh chính luôn chạy hết.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+    content:
+        name: Liên kết, biểu mẫu, nhãn, cấu hình định dạng và mẫu email
+        runs-on: ubuntu-latest
+        # Test chạy song song (scripts/run-tests.py) — vài giây trên máy, lâu hơn trên runner 2 lõi.
+        timeout-minutes: 10
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Kiểm tra nội dung và test các script
+              run: python3 scripts/check.py content
+
+    format:
+        name: Định dạng (Prettier, ruff)
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Cài Node.js
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version-file: .nvmrc
+                  package-manager-cache: false
+
+            - name: Cài thư viện
+              run: npm install --include=dev --no-audit --no-fund
+
+            - name: Cài ruff (phiên bản trong mise.toml)
+              uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+              with:
+                  install_args: ruff
+
+            - name: Prettier, ruff format, ruff check
+              run: python3 scripts/check.py format
+
+    lint:
+        name: Shell script và workflow
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Cài shellcheck, actionlint (phiên bản trong mise.toml)
+              uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+              with:
+                  install_args: shellcheck actionlint
+
+            - name: shellcheck, actionlint
+              run: python3 scripts/check.py lint

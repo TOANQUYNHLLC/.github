@@ -1,0 +1,36 @@
+name: Kiểm tra tên branch
+
+on:
+    pull_request:
+        types:
+            - opened
+            - reopened
+            - synchronize
+
+permissions:
+    contents: read
+
+concurrency:
+    # Push mới trên cùng Pull Request hủy lượt chạy cũ.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    branch:
+        name: Kiểm tra tên branch
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        steps:
+            # Script kiểm tra dùng chung của tổ chức (nhánh chính của TOANQUYNHLLC/.github — được ruleset
+            # bảo vệ: Pull Request, phê duyệt, commit có chữ ký); sửa quy ước ở một nơi cho mọi repository.
+            - name: Lấy script của tổ chức
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  repository: TOANQUYNHLLC/.github
+                  path: .org
+                  persist-credentials: false
+
+            - name: Kiểm tra tên branch
+              env:
+                  BRANCH: ${{ github.head_ref }}
+              run: python3 .org/scripts/conventions.py branch "$BRANCH"

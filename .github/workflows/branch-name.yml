@@ -1,0 +1,32 @@
+name: Kiểm tra tên branch
+
+on:
+    pull_request:
+        types:
+            - opened
+            - reopened
+            - synchronize
+
+permissions:
+    contents: read
+
+concurrency:
+    # Push mới trên cùng Pull Request hủy lượt chạy cũ.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    branch:
+        name: Kiểm tra tên branch
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Kiểm tra tên branch
+              env:
+                  BRANCH: ${{ github.head_ref }}
+              run: python3 scripts/conventions.py branch "$BRANCH"

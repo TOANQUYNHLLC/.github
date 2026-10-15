@@ -1,0 +1,6 @@
+{
+	"name": "Đóng mục không hoạt động — TOÀN QUỲNH",
+	"description": "Hằng tuần đánh dấu stale Issue và Pull Request không hoạt động 60 ngày, đóng sau 14 ngày; bỏ qua nhãn security và ưu tiên cao.",
+	"iconName": "stale",
+	"categories": ["Automation"]
+}

@@ -1,0 +1,9 @@
+# Mẫu clang-format — chép vào root repository C/C++. Quy ước tổ chức: tab độ rộng 4, LF.
+BasedOnStyle: LLVM
+UseTab: Always
+IndentWidth: 4
+TabWidth: 4
+ContinuationIndentWidth: 4
+ColumnLimit: 100
+LineEnding: LF
+InsertNewlineAtEOF: true

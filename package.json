@@ -1,0 +1,19 @@
+{
+	"name": "toanquynh-github",
+	"private": true,
+	"description": "Công cụ định dạng (Prettier) cho repository .github của CÔNG TY TNHH TOÀN QUỲNH",
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"version": "24",
+			"onFail": "error"
+		},
+		"packageManager": {
+			"name": "npm",
+			"onFail": "error"
+		}
+	},
+	"devDependencies": {
+		"prettier": "3.9.10"
+	}
+}

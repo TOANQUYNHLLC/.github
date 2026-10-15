@@ -1,0 +1,399 @@
+"""Test tự động cho scripts/check-external-links.py.
+
+Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
+"""
+
+import contextlib
+import http.server
+import io
+import socket
+import socketserver
+import subprocess
+import tempfile
+import threading
+import unittest
+from pathlib import Path
+from unittest import mock
+
+# discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
+try:
+	from testsupport import loadScript
+except ModuleNotFoundError:
+	from scripts.testsupport import loadScript
+
+
+def answerOk(handler):
+	handler.send_response(200)
+	handler.end_headers()
+
+
+def answerWith(codes):
+	"""Trả lần lượt các mã trong codes (mã cuối dùng cho mọi lần sau)."""
+
+	def answer(handler):
+		handler.send_response(codes.pop(0) if len(codes) > 1 else codes[0])
+		handler.end_headers()
+
+	return answer
+
+
+def handlerClass(head, get=None):
+	"""Lớp xử lý HTTP trả lời HEAD bằng head, GET bằng get (mặc định như HEAD), không in nhật ký."""
+
+	class Handler(http.server.BaseHTTPRequestHandler):
+		def do_HEAD(self):
+			head(self)
+
+		def do_GET(self):
+			(get or head)(self)
+
+		def log_message(self, format, *args):
+			pass
+
+	return Handler
+
+
+QuietHandler = handlerClass(answerOk)
+
+
+class ExternalLinksTest(unittest.TestCase):
+	def testBadgeHostsDoNotHideOtherLinks(self):
+		module = loadScript('check-external-links')
+		urls = (
+			'https://example.test/img.shields.io/missing',
+			'https://example.test/?ref=img.shields.io',
+			'https://img.shields.io.other.test/missing',
+			'https://[bad]/',
+		)
+		documents = {
+			module.ROOT / 'README.md': '\n'.join(f'[x]({url})' for url in urls)
+			+ '\n[x](https://IMG.SHIELDS.IO/badge/x)\n',
+		}
+		self.assertEqual(module.collectLinks(documents), {url: {'README.md'} for url in urls})
+
+	def testFragmentsShareRequestsAndReadFreshStatus(self):
+		module = loadScript('check-external-links')
+		requests, statuses = [], [200]
+
+		def answer(handler):
+			requests.append((handler.command, handler.path))
+			handler.send_response(statuses[0])
+			handler.end_headers()
+
+		server = socketserver.ThreadingTCPServer(('127.0.0.1', 0), handlerClass(answer))
+		threading.Thread(
+			target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+		).start()
+		try:
+			base = f'http://127.0.0.1:{server.server_address[1]}/docs'
+			urls = [
+				f'{base}{query}#{fragment}' for query in ('', '?v=1') for fragment in ('a', 'b')
+			]
+			documents = {module.ROOT / 'README.md': '\n'.join(f'[x]({url})' for url in urls)}
+			with mock.patch.object(module, 'readDocuments', return_value=(documents, [])):
+				with contextlib.redirect_stdout(io.StringIO()) as output:
+					self.assertEqual(module.main(), 0)
+				self.assertCountEqual(requests, [('HEAD', '/docs'), ('HEAD', '/docs?v=1')])
+				for url in urls:
+					self.assertIn(f'✅ 200 {url}', output.getvalue())
+				requests.clear()
+				statuses[0] = 410
+				with contextlib.redirect_stdout(io.StringIO()) as output:
+					self.assertEqual(module.main(), 1)
+				self.assertCountEqual(
+					requests,
+					[
+						(method, path)
+						for method in ('HEAD', 'GET')
+						for path in ('/docs', '/docs?v=1')
+					],
+				)
+				for url in urls:
+					self.assertIn(f'❌ 410 {url} (README.md)', output.getvalue())
+		finally:
+			server.shutdown()
+			server.server_close()
+
+	def testBlockedPagesWarnWithoutFailing(self):
+		# Trang chặn truy cập tự động (401, 403, 429, 999) chỉ cảnh báo kiểm tra thủ công; trang mất (404) vẫn lỗi.
+		module = loadScript('check-external-links')
+		documents = {
+			module.ROOT / 'README.md': '[a](https://blocked.test/)\n[b](https://gone.test/)\n'
+		}
+		statuses = {'https://blocked.test/': 403, 'https://gone.test/': 404}
+		for urls, expected in ((['https://blocked.test/'], 0), (list(statuses), 1)):
+			with self.subTest(urls=urls):
+				selected = {
+					path: '\n'.join(
+						line for line in text.split('\n') if any(u in line for u in urls)
+					)
+					for path, text in documents.items()
+				}
+				with (
+					mock.patch.object(module, 'readDocuments', return_value=(selected, [])),
+					mock.patch.object(module, 'linkStatus', side_effect=statuses.get),
+					contextlib.redirect_stdout(io.StringIO()) as output,
+				):
+					self.assertEqual(module.main(), expected)
+				self.assertIn(
+					'⚠️  403 https://blocked.test/ — trang chặn truy cập tự động', output.getvalue()
+				)
+
+	def testEscapedBackticksDoNotHideExternalLinks(self):
+		module = loadScript('check-external-links')
+		documents = {
+			module.ROOT / 'README.md': r'\`[x](https://real.test/)\` `[x](https://code.test/)`',
+		}
+		self.assertEqual(module.collectLinks(documents), {'https://real.test/': {'README.md'}})
+
+	def testUppercaseHttpSchemesAreCollected(self):
+		module = loadScript('check-external-links')
+		documents = {
+			module.ROOT / 'README.md': '[x](HTTPS://example.test/docs)',
+			module.ROOT / 'links.yaml': 'link: HTTP://example.test/api',
+		}
+		self.assertEqual(
+			module.collectLinks(documents),
+			{
+				'HTTPS://example.test/docs': {'README.md'},
+				'HTTP://example.test/api': {'links.yaml'},
+			},
+		)
+
+	def testMarkdownCodeExamplesAreNotRequested(self):
+		module = loadScript('check-external-links')
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			path = module.ROOT / 'README.md'
+			path.write_text(
+				'~~~md\n[x](https://fake.test/)\n~~~\n````\n```\n[x](https://fake.test/)\n```\n````\n`[x](https://fake.test/)`\n[x](https://real.test/)\n',
+				encoding='utf-8',
+			)
+			with mock.patch.object(module, 'textFiles', return_value=[path]):
+				self.assertEqual(module.collectLinks(), {'https://real.test/': {'README.md'}})
+
+	def testInvalidUrlsDoNotStopOtherLinks(self):
+		module = loadScript('check-external-links')
+		for url in ('http://[bad]/', 'https://example.test:wrong/', 'https://example.test/đường'):
+			with self.subTest(url=url):
+				self.assertIsInstance(module.linkStatus(url), str)
+
+	def testUnreadableFilesAreReportedAndOtherLinksAreChecked(self):
+		module = loadScript('check-external-links')
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			bad = module.ROOT / '.well-known/security.txt'
+			bad.parent.mkdir()
+			bad.write_bytes(b'\xff')
+			good = module.ROOT / 'README.md'
+			good.write_text('[a](https://example.test/)\n', encoding='utf-8')
+			output = io.StringIO()
+			with (
+				mock.patch.object(module, 'textFiles', return_value=[bad, good]),
+				mock.patch.object(module, 'linkStatus', return_value=200) as check,
+				contextlib.redirect_stdout(output),
+			):
+				self.assertEqual(module.main(), 1)
+			check.assert_called_once_with('https://example.test/')
+			self.assertIn('.well-known/security.txt: không đọc được', output.getvalue())
+			self.assertIn('✅ 200 https://example.test/', output.getvalue())
+
+	def testCanonicalNeedsOnlyOneRequestAndReadsFreshContents(self):
+		module = loadScript('check-external-links')
+		requests = []
+		served = []
+
+		def answer(handler):
+			requests.append(handler.command)
+			body = served[0].encode()
+			handler.send_response(200)
+			handler.end_headers()
+			handler.wfile.write(body)
+
+		server = socketserver.TCPServer(('127.0.0.1', 0), handlerClass(answer))
+		threading.Thread(
+			target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+		).start()
+		try:
+			with tempfile.TemporaryDirectory() as folder:
+				module.ROOT = Path(folder)
+				path = module.ROOT / '.well-known/security.txt'
+				path.parent.mkdir()
+				url = f'http://127.0.0.1:{server.server_address[1]}/security.txt'
+				original = f'Contact: mailto:a\nCanonical: {url}\n'
+				path.write_text(original, encoding='utf-8')
+				doc = module.ROOT / 'README.md'
+				doc.write_text(f'[x]({url}#contact)\n', encoding='utf-8')
+				served.append(original)
+				with (
+					mock.patch.object(module, 'textFiles', return_value=[path, doc]),
+					contextlib.redirect_stdout(io.StringIO()),
+				):
+					self.assertEqual(module.main(), 0)
+					self.assertEqual(requests, ['GET'])
+					path.write_text(original.replace('mailto:a', 'mailto:b'), encoding='utf-8')
+					self.assertEqual(module.main(), 1)
+					self.assertEqual(requests, ['GET', 'GET'])
+		finally:
+			server.shutdown()
+			server.server_close()
+
+	def testInvalidCanonicalIsReported(self):
+		module = loadScript('check-external-links')
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			path = module.ROOT / 'security.txt'
+			for url in ('http://[bad]/', 'file:///etc/passwd'):
+				with self.subTest(url=url):
+					path.write_text(f'Canonical: {url}\n', encoding='utf-8')
+					self.assertIn('không đọc được', module.publishedCopyDiffers(path))
+
+	def testUnreachableAddressIsSkippedAndRemembered(self):
+		# Địa chỉ đầu không kết nối được: linkStatus chuyển sang địa chỉ sau và nhớ địa chỉ hỏng — chứng minh
+		# opener thật sự kết nối qua connectQuickly. Cổng đóng trên 127.0.0.1 thay cho địa chỉ hỏng.
+		module = loadScript('check-external-links')
+		# TCPServer thay HTTPServer: HTTPServer tra tên máy (getfqdn), trên macOS mất vài giây.
+		server = socketserver.TCPServer(('127.0.0.1', 0), QuietHandler)
+		threading.Thread(
+			target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+		).start()
+		port = server.server_address[1]
+		with socket.socket() as probe:
+			probe.bind(('127.0.0.1', 0))
+			closed = probe.getsockname()[1]
+		candidates = [
+			(socket.AF_INET, socket.SOCK_STREAM, 0, '', ('127.0.0.1', closed)),
+			(socket.AF_INET, socket.SOCK_STREAM, 0, '', ('localhost', port)),
+		]
+		try:
+			with mock.patch.object(module.socket, 'getaddrinfo', return_value=candidates):
+				self.assertEqual(module.linkStatus(f'http://example.test:{port}/'), 200)
+		finally:
+			server.shutdown()
+			server.server_close()
+		self.assertEqual(module.UNREACHABLE, {'127.0.0.1'})
+
+	def testIpv4IsTriedFirst(self):
+		# Máy chủ có IPv6 hỏng (như conventionalcommits.org): thử IPv4 trước nên không phải chờ IPv6.
+		module = loadScript('check-external-links')
+		server = socketserver.TCPServer(('127.0.0.1', 0), QuietHandler)
+		threading.Thread(
+			target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+		).start()
+		port = server.server_address[1]
+		candidates = [
+			(socket.AF_INET6, socket.SOCK_STREAM, 0, '', ('::1', port, 0, 0)),
+			(socket.AF_INET, socket.SOCK_STREAM, 0, '', ('127.0.0.1', port)),
+		]
+		try:
+			with mock.patch.object(module.socket, 'getaddrinfo', return_value=candidates):
+				self.assertEqual(module.linkStatus(f'http://example.test:{port}/'), 200)
+		finally:
+			server.shutdown()
+			server.server_close()
+		self.assertEqual(module.UNREACHABLE, set())
+
+	def testFallsBackToGetAndRetriesServerErrors(self):
+		# HEAD bị từ chối (404) nhưng GET đọc được: liên kết còn sống. GET lỗi 503 lần đầu: thử lại rồi đạt.
+		module = loadScript('check-external-links')
+		module.RETRY_DELAY = 0
+		for head, get, expected in (
+			([404], [200], 200),
+			([404], [503, 200], 200),
+			([404], [404], 404),
+		):
+			server = socketserver.TCPServer(
+				('127.0.0.1', 0), handlerClass(answerWith(head), answerWith(get))
+			)
+			threading.Thread(
+				target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+			).start()
+			try:
+				url = f'http://127.0.0.1:{server.server_address[1]}/'
+				self.assertEqual(module.linkStatus(url), expected, (head, get))
+			finally:
+				server.shutdown()
+				server.server_close()
+
+	def testPublishedCopyMustMatch(self):
+		# security.txt đăng trên website (URL Canonical) phải giống bản trong repository.
+		module = loadScript('check-external-links')
+		served = []
+
+		def answer(handler):
+			body = served[0].encode()
+			handler.send_response(200)
+			handler.send_header('Content-Length', str(len(body)))
+			handler.end_headers()
+			handler.wfile.write(body)
+
+		server = socketserver.TCPServer(('127.0.0.1', 0), handlerClass(answer))
+		threading.Thread(
+			target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+		).start()
+		url = f'http://127.0.0.1:{server.server_address[1]}/.well-known/security.txt'
+		try:
+			with tempfile.TemporaryDirectory() as folder:
+				module.ROOT = Path(folder)
+				path = Path(folder) / 'security.txt'
+				path.write_text(f'Contact: mailto:a\nCanonical: {url}\n', encoding='utf-8')
+				served.append(path.read_text(encoding='utf-8').replace('\n', '\r\n'))
+				self.assertIsNone(module.publishedCopyDiffers(path))
+				served[0] = 'Contact: mailto:b\n'
+				self.assertIn('khác security.txt', module.publishedCopyDiffers(path))
+		finally:
+			server.shutdown()
+			server.server_close()
+
+	def testBrokenResponseIsReportedNotRaised(self):
+		# Máy chủ ngắt kết nối không trả lời, trả dòng trạng thái rác hoặc thân ngắn hơn Content-Length: báo liên
+		# kết lỗi thay vì văng lỗi làm dừng cả lượt kiểm tra.
+		module = loadScript('check-external-links')
+
+		def hangUp(handler):
+			handler.close_connection = True
+
+		def garbage(handler):
+			handler.wfile.write(b'KHONG PHAI HTTP\r\n\r\n')
+
+		def truncated(handler):
+			handler.send_response(200)
+			handler.send_header('Content-Length', '100')
+			handler.end_headers()
+			handler.wfile.write(b'Contact: mailto:a\n')
+
+		for answer in (hangUp, garbage, truncated):
+			server = socketserver.TCPServer(('127.0.0.1', 0), handlerClass(answer))
+			threading.Thread(
+				target=server.serve_forever, kwargs={'poll_interval': 0.05}, daemon=True
+			).start()
+			url = f'http://127.0.0.1:{server.server_address[1]}/security.txt'
+			try:
+				if answer is not truncated:
+					self.assertIn('không kết nối được', module.linkStatus(url), answer.__name__)
+					continue
+				with tempfile.TemporaryDirectory() as folder:
+					module.ROOT = Path(folder)
+					path = Path(folder) / 'security.txt'
+					path.write_text(f'Contact: mailto:a\nCanonical: {url}\n', encoding='utf-8')
+					self.assertIn('không đọc được', module.publishedCopyDiffers(path))
+			finally:
+				server.shutdown()
+				server.server_close()
+
+	def testCollectsLinksFromFilesWithSpaces(self):
+		# Tên tệp có khoảng trắng vẫn được đọc; tệp đã xóa trên đĩa (còn trong index) bị bỏ qua.
+		module = loadScript('check-external-links')
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			(root / 'ghi chú.md').write_text('[a](https://example.com/a)\n', encoding='utf-8')
+			(root / 'xoa.md').write_text('[b](https://example.com/b)\n', encoding='utf-8')
+			subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+			subprocess.run(['git', 'add', '-A'], cwd=root, check=True)
+			(root / 'xoa.md').unlink()
+			module.ROOT = root
+			self.assertEqual(module.collectLinks(), {'https://example.com/a': {'ghi chú.md'}})
+
+
+if __name__ == '__main__':
+	unittest.main()

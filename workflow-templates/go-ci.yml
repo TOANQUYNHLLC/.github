@@ -1,0 +1,52 @@
+name: Go CI
+
+on:
+    push:
+        branches:
+            - $default-branch
+    pull_request:
+
+permissions:
+    contents: read
+
+concurrency:
+    # Push mới trên cùng Pull Request hủy lượt chạy cũ; lượt chạy trên nhánh chính luôn chạy hết.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+    build:
+        name: Định dạng, vet, kiểm thử và build
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Cài Go
+              uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+              with:
+                  go-version-file: go.mod
+
+            # Script kiểm tra dùng chung của tổ chức (nhánh chính của TOANQUYNHLLC/.github — được ruleset
+            # bảo vệ: Pull Request, phê duyệt, commit có chữ ký); sửa quy ước ở một nơi cho mọi repository.
+            - name: Lấy script của tổ chức
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  repository: TOANQUYNHLLC/.github
+                  path: .org
+                  persist-credentials: false
+
+            - name: Kiểm tra định dạng (gofmt)
+              run: python3 .org/scripts/check-gofmt.py
+
+            - name: Vet
+              run: go vet ./...
+
+            - name: Kiểm thử
+              run: go test -race ./...
+
+            - name: Build
+              run: go build ./...
