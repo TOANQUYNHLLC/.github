@@ -1,0 +1,142 @@
+# 🔀 YÊU CẦU HỢP NHẤT MÃ NGUỒN
+
+<!--
+Dùng biểu mẫu này để trình bày thay đổi, ảnh hưởng sử dụng và bằng chứng kiểm chứng cho người đánh giá.
+Mẫu dành cho Pull Request thay đổi cấu hình, workflow hoặc hạ tầng.
+Điền phần phù hợp với phạm vi PR; nêu rõ giới hạn kiểm chứng và bỏ phần không áp dụng.
+Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào Pull Request.
+Vấn đề bảo mật: KHÔNG mô tả chi tiết lỗ hổng trong Pull Request công khai — báo cáo riêng qua tab Security → Report a vulnerability hoặc email toanquynhvn@gmail.com theo chính sách tại https://github.com/TOANQUYNHLLC/.github/blob/main/SECURITY.md
+-->
+
+## 📋 TÓM TẮT THAY ĐỔI
+
+<!-- Nêu vấn đề cụ thể, kết quả sử dụng sau thay đổi và phạm vi của PR. -->
+
+- Cấu hình hoặc workflow bị ảnh hưởng:
+- Hành vi trước thay đổi:
+- Hành vi sau thay đổi:
+
+## 🎯 MỤC ĐÍCH
+
+<!-- Giải thích nhu cầu và điều kiện để thay đổi đáp ứng mục tiêu. -->
+
+- Nhu cầu vận hành hoặc vấn đề cần giải quyết:
+
+## 🔗 VẤN ĐỀ LIÊN QUAN
+
+<!-- Ví dụ: Closes #123, Fixes #123 hoặc Related to #123. -->
+
+- Issue/Ticket:
+
+## 🏷️ LOẠI THAY ĐỔI
+
+<!-- Đánh dấu [x] vào các lựa chọn phù hợp. -->
+
+- [ ] 🐛 Sửa lỗi
+- [ ] ✨ Thêm tính năng mới
+- [ ] ♻️ Tái cấu trúc hoặc cải thiện mã nguồn
+- [ ] ⚡ Cải thiện hiệu năng
+- [ ] 🎨 Thay đổi giao diện hoặc trải nghiệm người dùng
+- [ ] 🔐 Cập nhật bảo mật
+- [ ] 🗄️ Thay đổi cơ sở dữ liệu
+- [x] ⚙️ Thay đổi cấu hình, hạ tầng hoặc triển khai
+- [ ] 📝 Cập nhật tài liệu
+- [ ] 🧪 Bổ sung hoặc cập nhật kiểm thử
+- [ ] 🔧 Công việc bảo trì khác
+
+## 📦 PHẠM VI ẢNH HƯỞNG
+
+<!-- Đánh dấu các thành phần bị ảnh hưởng. -->
+
+- [ ] Frontend
+- [ ] Backend
+- [ ] API
+- [ ] Cơ sở dữ liệu
+- [ ] Hệ thống xác thực hoặc phân quyền
+- [ ] Hạ tầng hoặc quy trình triển khai
+- [ ] Tài liệu
+- [ ] Không ảnh hưởng đến chức năng hiện có
+
+## 🛠️ NỘI DUNG ĐÃ THỰC HIỆN
+
+<!-- Mô tả cách triển khai hiện tại và các điểm cần đánh giá; tránh chép diễn biến làm việc hoặc danh sách commit. -->
+
+- Thay đổi quyền truy cập, permissions hoặc rulesets:
+- Secrets hoặc variables cần thiết lập (chỉ nêu tên, không điền giá trị):
+- Repository hoặc môi trường cần áp dụng thủ công:
+
+-
+-
+-
+
+## 🧪 KIỂM THỬ
+
+### CÁCH KIỂM THỬ
+
+<!-- Mô tả các bước để kiểm tra thay đổi này. -->
+
+1.
+2.
+3.
+
+### KẾT QUẢ
+
+- Lệnh kiểm tra cú pháp và cấu hình:
+- Kết quả chạy thử hoặc xem trước thay đổi:
+- Kết quả kiểm tra quyền và các workflow liên quan:
+- Phần chưa kiểm chứng và lý do:
+
+- [ ] Đã kiểm thử trên môi trường phát triển
+- [ ] Các kiểm thử tự động đã chạy thành công
+- [ ] Đã kiểm tra các trường hợp biên liên quan
+- [ ] Chưa thể kiểm thử đầy đủ và đã nêu rõ phần chưa kiểm chứng và lý do
+
+## 📷 HÌNH ẢNH HOẶC VIDEO MINH HỌA
+
+<!-- Bổ sung ảnh chụp màn hình hoặc video nếu thay đổi liên quan đến giao diện. -->
+
+Không áp dụng.
+
+## ⚠️ RỦI RO VÀ KHẢ NĂNG TƯƠNG THÍCH
+
+<!-- Mô tả ảnh hưởng có thể xảy ra, thay đổi phá vỡ tương thích hoặc yêu cầu cập nhật dữ liệu. -->
+
+- Mức độ rủi ro: Thấp / Trung bình / Cao
+- Có thay đổi phá vỡ tương thích: Có / Không
+- Có yêu cầu migration dữ liệu: Có / Không
+- Có yêu cầu cập nhật biến môi trường: Có / Không
+
+## ↩️ PHƯƠNG ÁN KHÔI PHỤC
+
+<!-- Nêu cách hoàn tác hoặc khôi phục nếu thay đổi gây lỗi sau khi triển khai. -->
+
+- Cách khôi phục cấu hình trước đó:
+- Các cài đặt trên GitHub hoặc môi trường cần hoàn tác thủ công:
+- Cách kiểm tra sau khi khôi phục:
+
+## ✅ CHECKLIST TRƯỚC KHI GỬI
+
+- [ ] Tôi đã tự kiểm tra lại mã nguồn và nội dung thay đổi.
+- [ ] Thay đổi chỉ bao gồm những nội dung cần thiết cho Pull Request này.
+- [ ] Mã nguồn tuân thủ quy ước và tiêu chuẩn của dự án.
+- [ ] Tôi đã chạy formatter và lint của dự án, không còn lỗi.
+- [ ] Tên branch, commit và tiêu đề Pull Request theo quy ước trong `CONTRIBUTING.md`.
+- [ ] Tôi đã bổ sung hoặc cập nhật kiểm thử khi cần thiết.
+- [ ] Tôi đã cập nhật tài liệu liên quan; nội dung phát hành trong `CHANGELOG.md` được cập nhật khi chuẩn bị phiên bản (nếu dự án có).
+- [ ] Tôi đã đọc và đối chiếu các nơi liên quan; mã nguồn, tests, cấu hình, mẫu và tài liệu thống nhất trong PR này.
+- [ ] Tôi đã kiểm tra khả năng tương thích với chức năng hiện có.
+- [ ] Tôi không đưa mật khẩu, khóa API, token truy cập hoặc thông tin bảo mật vào mã nguồn.
+- [ ] Tôi không đưa dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào repository.
+- [ ] Tôi đã kiểm tra các tệp cấu hình và biến môi trường liên quan.
+- [ ] Tôi đã kiểm tra quyền tối thiểu và các cài đặt cần áp dụng ngoài Git.
+- [ ] Tôi đã kiểm tra ảnh hưởng đến workflow, rulesets và cấu hình liên quan, hoặc nêu rõ lý do không áp dụng.
+- [ ] Pull Request đã sẵn sàng để được đánh giá.
+
+## 💬 GHI CHÚ CHO NGƯỜI ĐÁNH GIÁ
+
+<!-- Nêu những phần cần được chú ý hoặc cần người đánh giá hỗ trợ kiểm tra kỹ hơn. -->
+
+---
+
+**CÔNG TY TNHH TOÀN QUỲNH**\
+_Kết nối công nghệ – Kiến tạo giá trị – Chăm sóc bằng sự tận tâm_

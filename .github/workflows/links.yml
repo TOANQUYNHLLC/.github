@@ -1,0 +1,39 @@
+name: Kiểm tra liên kết
+
+on:
+    schedule:
+        - cron: '0 1 * * 1'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    # Không chạy chồng: lượt sau chờ lượt trước xong, không hủy.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    links:
+        name: Kiểm tra liên kết
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Kiểm tra liên kết
+              run: python3 scripts/check-external-links.py
+
+            # Ba kiểm tra độc lập: bước trước lỗi vẫn chạy bước sau để báo đủ một lượt.
+            - name: Kiểm tra GitHub chấp nhận biểu mẫu
+              if: ${{ !cancelled() }}
+              run: python3 scripts/check-github-forms.py
+
+            - name: Kiểm tra công cụ trong mise.toml, action của workflow mẫu có bản mới đủ 30 ngày
+              if: ${{ !cancelled() }}
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: python3 scripts/check-tool-versions.py

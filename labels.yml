@@ -1,0 +1,171 @@
+# Bộ nhãn chuẩn cho mọi repository của CÔNG TY TNHH TOÀN QUỲNH.
+# Áp dụng bằng: python3 scripts/org-setup.py labels [--apply] [--repo TÊN] (make labels-preview, make labels-apply).
+# color: mã hex 6 ký tự trong dấu nháy (tránh YAML đọc thành số), không có dấu #. description: tối đa 100 ký tự.
+# Chọn theo tần suất ở các repository phổ biến và repository ứng dụng (gồm y tế): có đủ các nhãn phổ biến nhất.
+# Không dùng nhãn thay được bằng tính năng GitHub (work in progress → Draft Pull Request; do not merge → Draft và
+# phê duyệt bắt buộc; epic → sub-issues).
+
+# Loại vấn đề — biểu mẫu Issue gắn bug, enhancement, question; Pull Request dùng để nhóm nội dung GitHub Release
+# (repository-templates/release.yml, chép vào .github/release.yml của repository). Có đủ 9 nhãn mặc định của GitHub
+# (validate.py kiểm tra).
+# .github/labeler.yml tự gắn nhãn loại cho Pull Request theo tiền tố branch trong CONTRIBUTING.md.
+- name: bug
+  color: 'd73a4a'
+  description: Một chức năng chạy sai, không chạy hoặc hiển thị không đúng
+- name: regression
+  color: 'b60205'
+  description: Chức năng trước đây chạy đúng nay bị lỗi
+- name: enhancement
+  color: 'a2eeef'
+  description: Tính năng mới hoặc cải thiện chức năng hiện có
+- name: question
+  color: 'd876e3'
+  description: Câu hỏi hoặc cần hỗ trợ
+- name: documentation
+  color: '0075ca'
+  description: Cập nhật hoặc bổ sung tài liệu
+- name: security
+  color: 'b60205'
+  description: Liên quan đến bảo mật (chi tiết lỗ hổng báo cáo riêng qua SECURITY.md)
+- name: help wanted
+  color: '008672'
+  description: Cần thêm người cùng xử lý
+- name: breaking change
+  color: 'e11d21'
+  description: Thay đổi phá vỡ tương thích (commit có dấu ! hoặc BREAKING CHANGE)
+- name: performance
+  color: 'f9d0c4'
+  description: Cải thiện hiệu năng
+- name: refactor
+  color: 'c5def5'
+  description: Tái cấu trúc, không đổi hành vi
+- name: tests
+  color: 'bfd4f2'
+  description: Bổ sung hoặc sửa kiểm thử
+- name: ci
+  color: 'fef2c0'
+  description: Workflow CI/CD, build, triển khai
+- name: accessibility
+  color: '0052cc'
+  description: Khả năng tiếp cận — trình đọc màn hình, bàn phím, độ tương phản
+- name: ui/ux
+  color: 'd4a5ff'
+  description: Giao diện hoặc trải nghiệm người dùng
+- name: i18n
+  color: '5319e7'
+  description: Đa ngôn ngữ, bản dịch (tiếng Việt, tiếng Anh)
+- name: build
+  color: 'bfdadc'
+  description: Hệ thống build, phụ thuộc, công cụ phát triển
+- name: chore
+  color: 'e4e4e4'
+  description: Cấu hình, phụ thuộc, công việc bảo trì khác
+- name: hotfix
+  color: 'ff7619'
+  description: Sửa lỗi khẩn cấp trên bản đang chạy thật
+- name: release
+  color: '1d76db'
+  description: Chuẩn bị phát hành — CHANGELOG, số phiên bản
+
+# Kênh và giai đoạn phát hành
+- name: Stable
+  color: '0e8a16'
+  description: Phiên bản Ổn Định
+- name: Beta
+  color: 'fbca04'
+  description: Phiên bản Thử Nghiệm
+- name: Pre-Release
+  color: 'a2eeef'
+  description: Phiên bản Chuẩn Bị Release
+
+# Phạm vi ảnh hưởng — khớp mục "Phạm vi ảnh hưởng" trong biểu mẫu Issue
+- name: 'area: frontend'
+  color: 'c2e0f4'
+  description: Giao diện người dùng
+- name: 'area: backend'
+  color: 'c2e0f4'
+  description: Xử lý phía máy chủ
+- name: 'area: api'
+  color: 'c2e0f4'
+  description: Giao diện lập trình (API)
+- name: 'area: database'
+  color: 'c2e0f4'
+  description: Cơ sở dữ liệu
+- name: 'area: auth'
+  color: 'c2e0f4'
+  description: Hệ thống xác thực hoặc phân quyền
+- name: 'area: infrastructure'
+  color: 'c2e0f4'
+  description: Hạ tầng hoặc quy trình triển khai
+
+# Mức độ ưu tiên — khớp với lựa chọn trong biểu mẫu
+- name: 'priority: khẩn cấp'
+  color: 'b60205'
+  description: Hệ thống ngừng hoạt động hoặc mất dữ liệu
+- name: 'priority: cao'
+  color: 'd93f0b'
+  description: Ảnh hưởng lớn, chưa có cách xử lý tạm
+- name: 'priority: trung bình'
+  color: 'fbca04'
+  description: Có cách xử lý tạm
+- name: 'priority: thấp'
+  color: '0e8a16'
+  description: Cải tiến nhỏ
+
+# Trạng thái xử lý
+- name: needs triage
+  color: 'ededed'
+  description: Chờ người quản trị phân loại — biểu mẫu Issue tự gắn, bỏ nhãn sau khi phân loại
+- name: needs more info
+  color: 'd4c5f9'
+  description: Cần người tạo bổ sung thông tin
+- name: confirmed
+  color: '0e8a16'
+  description: Đã phân loại và xác nhận lỗi hoặc đề xuất hợp lệ
+- name: upstream
+  color: 'fbca04'
+  description: Do thư viện hoặc dịch vụ bên ngoài — chờ bên đó sửa (stale bỏ qua)
+- name: blocked
+  color: 'e99695'
+  description: Đang chờ việc khác xong mới làm tiếp được
+- name: in progress
+  color: 'c2e0c6'
+  description: Đang được xử lý
+- name: pinned
+  color: 'fad8c7'
+  description: Giữ lâu dài — workflow stale không đánh dấu, không đóng
+- name: duplicate
+  color: 'cfd3d7'
+  description: Trùng với Issue hoặc Pull Request đã có
+- name: invalid
+  color: 'e4e669'
+  description: Không hợp lệ hoặc thiếu thông tin
+- name: wontfix
+  color: 'ffffff'
+  description: Không xử lý
+- name: good first issue
+  color: '7057ff'
+  description: Phù hợp cho người mới tham gia
+- name: stale
+  color: 'dadada'
+  description: Không có hoạt động trong thời gian dài, sẽ tự đóng nếu không có phản hồi
+
+# Dùng bởi Dependabot — tên và màu theo nhãn Dependabot tự tạo (dependabot-core)
+- name: dependencies
+  color: '0366d6'
+  description: Cập nhật thư viện hoặc phụ thuộc
+- name: github_actions
+  color: '000000'
+  description: Cập nhật GitHub Actions
+- name: javascript
+  color: '168700'
+  description: Cập nhật thư viện JavaScript (npm)
+- name: python
+  color: '2b67c6'
+  description: Cập nhật thư viện Python (pip)
+- name: go
+  color: '16e2e2'
+  description: Cập nhật module Go
+- name: docker
+  color: '21ceff'
+  description: Cập nhật image Docker

@@ -1,0 +1,547 @@
+"""Test tự động cho scripts/check.py: nhóm kiểm tra khớp workflow validate.yml.
+
+Chạy: make test (song song)   hoặc: python3 -m unittest discover -s scripts -p 'test_*.py'
+"""
+
+import contextlib
+import io
+import os
+import re
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+import tomllib
+import unittest
+from pathlib import Path
+from unittest import mock
+
+# discover (make test) đặt scripts/ vào sys.path; chạy từ thư mục gốc (python3 -m unittest scripts.test_…) thì không.
+try:
+	from testsupport import ROOT, loadScript
+except ModuleNotFoundError:
+	from scripts.testsupport import ROOT, loadScript
+
+
+class CheckTest(unittest.TestCase):
+	def runMain(self, argv, changed=None):
+		"""main() của check.py với công cụ coi như đủ; trả (mã thoát, đầu ra, nhóm và test được chọn)."""
+		module = loadScript('check')
+		output = io.StringIO()
+		with (
+			mock.patch.object(module.sys, 'argv', ['check.py', *argv]),
+			mock.patch.object(module, 'ensureTools', return_value=True),
+			mock.patch.object(module, 'changedFiles', return_value=changed),
+			mock.patch.object(module, 'runGroups', return_value=True) as run,
+			contextlib.redirect_stdout(output),
+		):
+			code = module.main()
+		return code, output.getvalue(), run.call_args.args if run.called else None
+
+	def testUnknownGroupIsRejectedBeforeRunning(self):
+		code, output, ran = self.runMain(['khong_co'])
+		self.assertEqual(code, 2)
+		self.assertIn('Nhóm không có: khong_co', output)
+		self.assertIsNone(ran)
+
+	def testQuickNarrowsOnlyTestsWhenOnlyTestFilesChanged(self):
+		# make quick: chỉ sửa tệp test thì chỉ chạy các tệp test đó, mọi nhóm khác vẫn chạy đủ; sửa tệp khác (hoặc
+		# không đọc được Git) thì chạy đầy đủ.
+		module = loadScript('check')
+		groups = list(module.checkGroups())
+		for changed, selected, message in (
+			({'scripts/test_check.py'}, ['test_check'], 'chỉ thu hẹp tests'),
+			({'scripts/test_check.py', 'README.md'}, None, 'chạy mọi kiểm tra'),
+			(None, None, 'chạy mọi kiểm tra'),
+		):
+			with self.subTest(changed=changed):
+				code, output, ran = self.runMain(['quick'], changed)
+				self.assertEqual(code, 0)
+				self.assertIn(message, output)
+				self.assertEqual(ran, (groups, selected))
+
+	def testToolsOnlyChecksToolsWithoutRunning(self):
+		code, _, ran = self.runMain(['tools'])
+		self.assertEqual(code, 0)
+		self.assertIsNone(ran)
+
+	def testCommandsRunTogetherAndKeepOrderedFailures(self):
+		module = loadScript('check')
+		commands = [['first'], ['second'], ['third']]
+		barrier = threading.Barrier(len(commands), timeout=3)
+
+		def runCommand(name, command):
+			barrier.wait()
+			return command == commands[1], f'{command[0]} hoàn tất\n'
+
+		with (
+			mock.patch.object(module, 'checkGroups', return_value={'content': commands}),
+			mock.patch.object(module, 'runCommand', side_effect=runCommand),
+		):
+			output, failed = module.runGroup('content')
+		self.assertEqual(
+			output,
+			''.join(f'$ {command[0]}\n{command[0]} hoàn tất\n' for command in commands),
+		)
+		self.assertEqual(failed, ['content: first', 'content: third'])
+
+	def testQuickScopeFallsBackForSharedFilesAndDeletedTests(self):
+		module = loadScript('check')
+		self.assertEqual(module.quickTests({'scripts/test_check.py'}), ['test_check'])
+		for paths in (
+			None,
+			set(),
+			{'labels.yml'},
+			{'scripts/test_missing.py'},
+			{'scripts/test_check.py', 'scripts/check.py'},
+		):
+			self.assertIsNone(module.quickTests(paths))
+
+	def testChangedFilesCombinesCommittedStagedAndNewFiles(self):
+		# make quick xét commit so với origin/main, thay đổi chưa commit và tệp mới; một lệnh git lỗi (chưa có
+		# origin/main…) thì không đoán phạm vi — trả None để chạy đầy đủ.
+		module = loadScript('check')
+		outputs = {
+			'origin/main...HEAD': 'scripts/test_check.py\0',
+			'HEAD': 'scripts/test_check.py\0README.md\0',
+			'--others': 'scripts/test_new.py\0',
+		}
+
+		def run(command, *args, **kwargs):
+			key = next(key for key in outputs if key in command)
+			return subprocess.CompletedProcess(command, 0, outputs[key].encode('utf-8'), b'')
+
+		with mock.patch.object(module.subprocess, 'run', run):
+			self.assertEqual(
+				module.changedFiles(),
+				{'scripts/test_check.py', 'README.md', 'scripts/test_new.py'},
+			)
+
+		def failing(command, *args, **kwargs):
+			code = 128 if 'origin/main...HEAD' in command else 0
+			return subprocess.CompletedProcess(command, code, b'', b'fatal: bad revision')
+
+		with mock.patch.object(module.subprocess, 'run', failing):
+			self.assertIsNone(module.changedFiles())
+
+	def testQuickSelectionDoesNotMutateFullCommands(self):
+		module = loadScript('check')
+		commands = [list(command) for command in module.checkGroups()['content']]
+		with mock.patch.object(module, 'runCommand', return_value=(True, '')) as run:
+			module.runGroup('content', ['test_check'])
+			run.assert_has_calls(
+				[
+					mock.call('content', commands[0]),
+					mock.call('content', [*commands[-1], 'test_check']),
+				],
+				any_order=True,
+			)
+			run.reset_mock()
+			module.runGroup('content')
+			run.assert_has_calls(
+				[mock.call('content', command) for command in commands], any_order=True
+			)
+			self.assertEqual(run.call_count, len(commands))
+		self.assertEqual(module.checkGroups()['content'], commands)
+
+	def testPythonCommandsUseRunningInterpreter(self):
+		module = loadScript('check')
+		with (
+			mock.patch.object(module.sys, 'executable', '/selected/python'),
+			mock.patch.object(module, 'shellScripts', return_value=[]),
+		):
+			groups = module.checkGroups()
+		for name in ('content', 'conventions'):
+			for command in groups[name]:
+				self.assertEqual(command[0], '/selected/python')
+
+	@unittest.skipIf(os.name == 'nt', 'Tệp gọi shell trong PATH chỉ chạy trên POSIX')
+	def testSelectedInterpreterWorksWhenPathPythonIsUnusable(self):
+		# Trình thông dịch chạy check.py hợp lệ nhưng python3 trong PATH có thể cũ hoặc không chạy được.
+		# Các script con phải vẫn chạy bằng chính trình thông dịch đã được người dùng chọn.
+		module = loadScript('check')
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			module.ROOT = root
+			(root / 'scripts').mkdir()
+			for name in ('validate.py', 'run-tests.py', 'conventions.py'):
+				(root / 'scripts' / name).write_text(
+					'import sys\nprint(sys.executable)\n', encoding='utf-8'
+				)
+			binPath = root / 'bin'
+			binPath.mkdir()
+			unusablePython = binPath / 'python3'
+			unusablePython.write_text('#!/bin/sh\nexit 97\n', encoding='utf-8')
+			unusablePython.chmod(0o755)
+			output = io.StringIO()
+			with (
+				mock.patch.object(module, 'shellScripts', return_value=[]),
+				mock.patch.dict(os.environ, PATH=str(binPath)),
+				contextlib.redirect_stdout(output),
+			):
+				self.assertTrue(module.runGroups(['content', 'conventions']), output.getvalue())
+			self.assertEqual(output.getvalue().splitlines().count(sys.executable), 4)
+
+	def testMinimumPythonDeclaredConsistently(self):
+		# requires-python của pyproject.toml (ruff đọc khi chạy ngoài check.py) phải trùng --target-version mà
+		# check.py, git hook truyền cho ruff và phiên bản check.py chặn — lệch thì VS Code và make check báo khác nhau.
+		project = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))['project']
+		major, minor = re.fullmatch(r'>=(\d+)\.(\d+)', project['requires-python']).groups()
+		target = f'py{major}{minor}'
+		lint = loadScript('check').checkGroups()['format']
+		self.assertIn(['ruff', 'check', '--target-version', target, '.'], lint)
+		hooks = (ROOT / 'scripts' / 'git-hooks.py').read_text(encoding='utf-8')
+		self.assertIn(f"'--target-version', '{target}'", hooks)
+		check = (ROOT / 'scripts' / 'check.py').read_text(encoding='utf-8')
+		self.assertIn(f'sys.version_info < ({major}, {minor})', check)
+
+	def testScriptsNeedingNewPythonReportOldVersionClearly(self):
+		# python3 của macOS là 3.9; ứng dụng giao diện gọi hook, make gọi script bằng bản đó. Script dùng tomllib,
+		# zip(strict=…) phải báo phiên bản cần thay vì traceback — giả lập Python 3.9: không có tomllib.
+		simulate = (
+			'import os, runpy, sys; sys.modules["tomllib"] = None; sys.version_info = (3, 9, 25); '
+			'sys.version = "3.9.25 (giả lập)"; sys.argv = sys.argv[1:]; '
+			'sys.path.insert(0, os.path.dirname(sys.argv[0])); '
+			'runpy.run_path(sys.argv[0], run_name="__main__")'
+		)
+		for script, arguments in (
+			('check.py', []),
+			('validate.py', []),
+			('git-hooks.py', ['post-merge', '0']),
+			('org-setup.py', ['preview']),
+			('check-tool-versions.py', []),
+			('check-external-links.py', []),
+			('check-github-forms.py', []),
+		):
+			with self.subTest(script=script):
+				result = subprocess.run(
+					[sys.executable, '-c', simulate, str(ROOT / 'scripts' / script), *arguments],
+					cwd=ROOT,
+					capture_output=True,
+					text=True,
+					timeout=30,
+					check=False,
+				)
+				output = result.stdout + result.stderr
+				self.assertEqual(result.returncode, 1, output)
+				self.assertIn('Python ≥ 3.11 (đang dùng 3.9.25)', output)
+				self.assertNotIn('Traceback', output)
+
+	def testLabelerSupportsForksWithoutRunningPrCode(self):
+		validator = loadScript('validate')
+		for name in ('.github/workflows/labeler.yml', 'workflow-templates/labeler.yml'):
+			with self.subTest(path=name):
+				workflow = validator.loadYaml(ROOT / name, dict)
+				# Psych đọc khóa YAML 1.1 "on" thành true; JSON chuyển khóa đó thành chuỗi "true".
+				events = workflow.get('on', workflow.get('true', {}))
+				self.assertIn('pull_request_target', events)
+				self.assertNotIn('pull_request', events)
+				self.assertIn('github.event.pull_request.number', workflow['concurrency']['group'])
+				job = workflow['jobs']['label']
+				self.assertEqual(job['permissions'], {'contents': 'read', 'pull-requests': 'write'})
+				self.assertEqual(len(job['steps']), 1)
+				self.assertTrue(job['steps'][0]['uses'].startswith('actions/labeler@'))
+				self.assertNotIn('run', job['steps'][0])
+
+	def testWorkflowLintIncludesBothYamlExtensions(self):
+		module = loadScript('check')
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			for name in (
+				'.github/workflows/check.yml',
+				'.github/workflows/build.yaml',
+				'workflow-templates/example.yaml',
+			):
+				path = module.ROOT / name
+				path.parent.mkdir(parents=True, exist_ok=True)
+				path.write_text('name: kiểm tra\n', encoding='utf-8')
+			self.assertEqual(
+				module.workflowFiles(),
+				[
+					'.github/workflows/build.yaml',
+					'.github/workflows/check.yml',
+					'workflow-templates/example.yaml',
+				],
+			)
+
+	def testFailedDependencyInstallStopsChecksWithoutTraceback(self):
+		module = loadScript('check')
+		module.checkGroups()
+		with tempfile.TemporaryDirectory() as folder:
+			module.ROOT = Path(folder)
+			output = io.StringIO()
+			with (
+				mock.patch.object(module.shutil, 'which', return_value='/bin/tool'),
+				mock.patch.object(
+					module.subprocess, 'run', return_value=subprocess.CompletedProcess([], 1)
+				),
+				mock.patch.object(module.sys, 'argv', ['check.py', 'format']),
+				mock.patch.object(module, 'runGroups') as run,
+				contextlib.redirect_stdout(output),
+			):
+				self.assertEqual(module.main(), 1)
+			self.assertIn('Không cài được thư viện Node.js', output.getvalue())
+			run.assert_not_called()
+
+	def testValidateWorkflowRunsCheckGroups(self):
+		# Mỗi job của validate.yml gọi đúng một nhóm của check.py — tại máy và trên GitHub chạy cùng lệnh.
+		groups = loadScript('check').checkGroups()
+		workflow = (ROOT / '.github' / 'workflows' / 'validate.yml').read_text(encoding='utf-8')
+		called = re.findall(r'run: python3 scripts/check\.py (\w+)$', workflow, re.MULTILINE)
+		self.assertEqual(called, ['content', 'format', 'lint'])
+		self.assertTrue(set(called) <= set(groups))
+		self.assertEqual(list(groups), ['content', 'format', 'lint', 'conventions', 'audit'])
+
+	def testAuditNetworkErrorOnlyWarns(self):
+		# Mất mạng: audit chỉ cảnh báo; lỗ hổng thật (mã thoát khác 0, không phải lỗi mạng) vẫn chặn.
+		module = loadScript('check')
+		results = {
+			# Lỗi gộp vào đầu ra (stderr=STDOUT) như khi check.py chạy lệnh thật.
+			'network': subprocess.CompletedProcess(
+				[], 1, 'npm warn audit request to https://x failed, reason: connect ECONNREFUSED\n'
+			),
+			'vulnerable': subprocess.CompletedProcess([], 1, '1 high severity vulnerability\n', ''),
+		}
+		for case, expected in (('network', True), ('vulnerable', False)):
+			# subprocess của script là module dùng chung — vá tạm bằng mock.patch để tự hoàn lại.
+			with (
+				mock.patch.object(module.subprocess, 'run', return_value=results[case]),
+				contextlib.redirect_stdout(io.StringIO()),
+				contextlib.redirect_stderr(io.StringIO()),
+			):
+				self.assertEqual(module.runCommand('audit', ['npm', 'audit'])[0], expected, case)
+
+	def testAuditVulnerabilityReportCannotBeMistakenForNetworkError(self):
+		module = loadScript('check')
+		for title in (
+			'ENOTFOUND',
+			'EAI_AGAIN',
+			'ETIMEDOUT',
+			'ECONNREFUSED',
+			'ECONNRESET',
+			'ENETUNREACH',
+			'request to https://registry.example failed',
+			'npm warn audit request to https://registry.example failed, reason: ECONNRESET',
+		):
+			for colored in (False, True):
+				with self.subTest(title=title, colored=colored):
+					header = '# npm audit report'
+					if colored:
+						header = f'\x1b[37m{header}\x1b[39m'
+					output = (
+						'npm warn audit request to https://registry.example failed, reason: ECONNRESET\n'
+						f'{header}\n\nexample  *\nSeverity: high\n'
+						f'{title} - https://example.com/advisory\n1 high severity vulnerability\n'
+					)
+					result = subprocess.CompletedProcess([], 1, output)
+					with mock.patch.object(module.subprocess, 'run', return_value=result):
+						passed, actual = module.runCommand('audit', ['npm', 'audit'])
+					self.assertFalse(passed)
+					self.assertEqual(actual, output)
+
+	def testAuditRegistryHttpErrorIsNotAConnectionFailure(self):
+		module = loadScript('check')
+		for status in (400, 401, 403, 404, 429, 500, 503):
+			with self.subTest(status=status):
+				output = (
+					'npm warn audit request to https://registry.example failed, '
+					f'reason: {status} Registry Error\n'
+					'npm error audit endpoint returned an error\n'
+				)
+				result = subprocess.CompletedProcess([], 1, output)
+				with mock.patch.object(module.subprocess, 'run', return_value=result):
+					passed, actual = module.runCommand('audit', ['npm', 'audit'])
+				self.assertFalse(passed)
+				self.assertEqual(actual, output)
+
+	def testAuditRecognizedNetworkDiagnosticsOnlyWarn(self):
+		module = loadScript('check')
+		for code in (
+			'ENOTFOUND',
+			'EAI_AGAIN',
+			'ETIMEDOUT',
+			'ECONNREFUSED',
+			'ECONNRESET',
+			'ENETUNREACH',
+		):
+			for prefix in (
+				'npm warn audit request to https://registry.example failed, reason:',
+				'npm error code',
+				'npm ERR! code',
+			):
+				with self.subTest(code=code, prefix=prefix):
+					output = f'\x1b[33m{prefix}\x1b[39m {code}\n'
+					result = subprocess.CompletedProcess([], 1, output)
+					with mock.patch.object(module.subprocess, 'run', return_value=result):
+						passed, actual = module.runCommand('audit', ['npm', 'audit'])
+					self.assertTrue(passed)
+					self.assertIn('Bỏ qua audit', actual)
+					self.assertTrue(actual.startswith(output))
+
+	def testShellScriptsKeepSpecialNames(self):
+		# Script shell ở bất kỳ thư mục nào, tên có dấu vẫn được shellcheck kiểm tra.
+		module = loadScript('check')
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			(root / 'công cụ').mkdir()
+			(root / 'công cụ' / 'cài đặt.sh').write_text('#!/usr/bin/env bash\n', encoding='utf-8')
+			subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+			module.ROOT = root
+			self.assertEqual(module.shellScripts(), ['công cụ/cài đặt.sh'])
+
+	@unittest.skipIf(os.name == 'nt', 'Windows không hỗ trợ CR trong tên tệp')
+	def testGitFileListsKeepCarriageReturns(self):
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			subprocess.run(['git', 'init', '-q'], cwd=root, check=True)
+			(root / 'initial.txt').write_text('Khởi tạo\n', encoding='utf-8')
+			subprocess.run(['git', 'add', 'initial.txt'], cwd=root, check=True)
+			subprocess.run(
+				[
+					'git',
+					'-c',
+					'user.name=test',
+					'-c',
+					'user.email=',
+					'-c',
+					'commit.gpgsign=false',
+					'commit',
+					'-qm',
+					'init',
+				],
+				cwd=root,
+				check=True,
+			)
+			subprocess.run(
+				['git', 'update-ref', 'refs/remotes/origin/main', 'HEAD'], cwd=root, check=True
+			)
+			for name in ('ghi\rchú.md', 'kiểm\rtra.sh', 'mã\rnguồn.go'):
+				(root / name).write_text('Nội dung\n', encoding='utf-8')
+			for script, function, expected in (
+				('check', 'shellScripts', ['kiểm\rtra.sh']),
+				('check-gofmt', 'goFiles', ['mã\rnguồn.go']),
+				('check-markdown-links', 'markdownFiles', [Path('ghi\rchú.md')]),
+				('check-external-links', 'textFiles', [root / 'ghi\rchú.md', root / 'initial.txt']),
+			):
+				module = loadScript(script)
+				module.ROOT = root
+				with self.subTest(script=script), contextlib.chdir(root):
+					self.assertCountEqual(getattr(module, function)(), expected)
+			module = loadScript('check')
+			module.ROOT = root
+			self.assertEqual(module.changedFiles(), {'ghi\rchú.md', 'kiểm\rtra.sh', 'mã\rnguồn.go'})
+
+	def testGroupsAreListedOnce(self):
+		# main, ensureTools, runGroup cùng dùng danh sách nhóm: liệt kê script shell (gọi git) chỉ một lần mỗi lượt.
+		module = loadScript('check')
+		calls = []
+
+		def shellScripts():
+			calls.append(1)
+			return ['a.sh']
+
+		passed = subprocess.CompletedProcess([], 0, '', '')
+		with (
+			mock.patch.object(module, 'shellScripts', shellScripts),
+			mock.patch.object(module.subprocess, 'run', return_value=passed),
+			mock.patch.object(module.sys, 'argv', ['check.py']),
+			mock.patch.object(module.shutil, 'which', return_value='/bin/x'),
+			contextlib.redirect_stdout(io.StringIO()),
+		):
+			self.assertEqual(module.main(), 0)
+		self.assertEqual(len(calls), 1)
+
+	def testGroupsRunInParallelButPrintInOrder(self):
+		# Nhóm chậm (đầu) và nhóm nhanh chạy cùng lúc; đầu ra vẫn theo thứ tự nhóm, lệnh lỗi được liệt kê. Barrier
+		# chỉ mở khi cả hai nhóm cùng đang chạy — chạy tuần tự thì hết hạn chờ; không đo thời gian nên không phụ
+		# thuộc tốc độ máy.
+		module = loadScript('check')
+		barrier = threading.Barrier(2, timeout=10)
+
+		def runGroup(name, selectedTests=None):
+			barrier.wait()
+			if name == 'slow':
+				time.sleep(0.05)  # xong sau nhóm nhanh: đầu ra vẫn phải đứng trước
+				return '$ slow\nchậm\n', []
+			return '$ fast\nnhanh\n', ['fast: fast']
+
+		output = io.StringIO()
+		with (
+			mock.patch.object(module, 'runGroup', runGroup),
+			contextlib.redirect_stdout(output),
+		):
+			self.assertFalse(module.runGroups(['slow', 'fast']))
+		text = output.getvalue()
+		self.assertLess(text.index('chậm'), text.index('nhanh'))
+		self.assertIn('❌ fast:', text)
+
+	def testMakefileTargetsArePhonyAndGrouped(self):
+		# Lệnh có mô tả (hiện trong make help) khai báo .PHONY ngay phía trên — tệp trùng tên lệnh không làm make bỏ
+		# qua lệnh — và nằm dưới một nhóm ##@ để make help in theo nhóm.
+		lines = (ROOT / 'Makefile').read_text(encoding='utf-8').split('\n')
+		group = None
+		targets = []
+		for index, line in enumerate(lines):
+			if line.startswith('##@ '):
+				group = line[4:]
+			match = re.match(r'^([a-z][a-z-]*):.*## ', line)
+			if match:
+				target = match.group(1)
+				targets.append(target)
+				self.assertEqual(lines[index - 1], f'.PHONY: {target}', target)
+				self.assertIsNotNone(group, target)
+		self.assertEqual(len(targets), len(set(targets)))
+		listing = subprocess.run(
+			['make', '--no-print-directory', 'help'],
+			cwd=ROOT,
+			capture_output=True,
+			text=True,
+			check=True,
+		).stdout
+		self.assertEqual(re.findall(r'^  make (\S+)', listing, re.MULTILINE), targets)
+
+	def testPrettierUsesInstalledVersion(self):
+		# --no: không tự tải Prettier mới nhất; thiếu "--" thì npm coi --check là cấu hình của npm, in tệp rồi
+		# thoát 0 mà Prettier không chạy.
+		module = loadScript('check')
+		with mock.patch.object(module, 'shellScripts', return_value=[]):
+			command = module.checkGroups()['format'][0]
+		self.assertEqual(command[:4], ['npx', '--no', '--', 'prettier'])
+		makefile = (ROOT / 'Makefile').read_text(encoding='utf-8')
+		self.assertIn('\tnpx --no -- prettier --write .\n', makefile)
+
+	def testNodeModulesReinstalledWhenMissingOrOutdated(self):
+		# Thiếu thư viện (NODE_ENV=production làm npm bỏ devDependencies) hoặc khác phiên bản package.json (sau khi
+		# Dependabot nâng) thì cài lại, kèm devDependencies; đúng phiên bản thì không gọi npm.
+		module = loadScript('check')
+		with tempfile.TemporaryDirectory() as folder:
+			root = Path(folder)
+			(root / 'package.json').write_text(
+				'{"devDependencies": {"prettier": "3.9.9"}}', encoding='utf-8'
+			)
+			installed = root / 'node_modules' / 'prettier' / 'package.json'
+			module.ROOT = root
+			for case, version, expected in (
+				('missing', None, True),
+				('outdated', '3.9.8', True),
+				('current', '3.9.9', False),
+			):
+				if version:
+					installed.parent.mkdir(parents=True, exist_ok=True)
+					installed.write_text(f'{{"version": "{version}"}}', encoding='utf-8')
+				passed = subprocess.CompletedProcess([], 0, '', '')
+				with (
+					mock.patch.object(module, 'checkGroups', return_value={'audit': [['npm']]}),
+					mock.patch.object(module.shutil, 'which', return_value='/bin/x'),
+					mock.patch.object(module.subprocess, 'run', return_value=passed) as run,
+				):
+					self.assertTrue(module.ensureTools(['audit']), case)
+				calls = [call.args[0] for call in run.call_args_list]
+				self.assertEqual(calls, [module.NPM_INSTALL] if expected else [], case)
+				if expected:
+					self.assertIn('--include=dev', module.NPM_INSTALL)
+
+
+if __name__ == '__main__':
+	unittest.main()

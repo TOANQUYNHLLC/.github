@@ -1,0 +1,40 @@
+name: Kiểm tra tài liệu
+
+on:
+    push:
+        branches:
+            - $default-branch
+    pull_request:
+
+permissions:
+    contents: read
+
+concurrency:
+    # Push mới trên cùng Pull Request hủy lượt chạy cũ; lượt chạy trên nhánh chính luôn chạy hết.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+    docs:
+        name: Liên kết nội bộ trong Markdown
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            # Script dùng chung của tổ chức, ghim theo tag phát hành của TOANQUYNHLLC/.github (Protect Release
+            # Tags, Release bất biến): thay đổi trên nhánh chính không tự chạy ở repository này. release.py cập
+            # nhật ref khi phát hành bản mới; sửa ref theo bản đã kiểm chứng khi nâng.
+            - name: Lấy script của tổ chức
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  repository: TOANQUYNHLLC/.github
+                  ref: Stable.v2026.11.010001
+                  path: .org
+                  persist-credentials: false
+
+            - name: Kiểm tra liên kết nội bộ
+              run: python3 .org/scripts/check-markdown-links.py

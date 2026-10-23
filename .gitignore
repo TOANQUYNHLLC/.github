@@ -1,0 +1,34 @@
+# Hệ điều hành
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Trình soạn thảo
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.history/
+*.swp
+*~
+
+# Python
+__pycache__/
+*.pyc
+.ruff_cache/
+
+# Node.js
+node_modules/
+
+# Log
+*.log
+
+# Biến môi trường và bí mật — không bao giờ commit (trừ file mẫu)
+.env
+.env.*
+!.env.example
+
+# Lockfile của Dev Container: repository này không commit; devcontainer.json ghim image, feature theo phiên bản chính.
+devcontainer-lock.json
+
+# Cache local của các kiểm tra (không chứa kết quả đạt/thất bại).
+.cache/

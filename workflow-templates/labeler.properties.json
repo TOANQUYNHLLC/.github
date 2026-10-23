@@ -1,0 +1,6 @@
+{
+	"name": "Gắn nhãn Pull Request — TOÀN QUỲNH",
+	"description": "Tự gắn nhãn loại cho Pull Request theo tiền tố branch trong CONTRIBUTING.md và nhãn phạm vi theo thư mục thay đổi (.github/labeler.yml).",
+	"iconName": "labeler",
+	"categories": ["Automation"]
+}

@@ -1,0 +1,36 @@
+title: '[Ý tưởng] '
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Chia sẻ ý tưởng để cùng thảo luận trước khi tạo Issue **✨ Đề xuất tính năng**.
+
+              > ⚠️ Không đưa mật khẩu, khóa API, token truy cập, dữ liệu cá nhân, hồ sơ bệnh án hoặc thông tin y tế nhạy cảm vào thảo luận.
+
+    - type: textarea
+      id: idea
+      attributes:
+          label: 💡 Ý TƯỞNG
+          description: Mô tả ngắn gọn ý tưởng.
+      validations:
+          required: true
+
+    - type: textarea
+      id: problem
+      attributes:
+          label: 🎯 VẤN ĐỀ CẦN GIẢI QUYẾT
+          description: Vì sao cần thay đổi này, ai được hưởng lợi.
+      validations:
+          required: true
+
+    - type: textarea
+      id: successCriteria
+      attributes:
+          label: ✅ TIÊU CHÍ THÀNH CÔNG
+          description: Kết quả nào cho thấy ý tưởng giải quyết được vấn đề? Nêu phần ngoài phạm vi nếu cần; có thể tiếp tục làm rõ trong thảo luận.
+
+    - type: textarea
+      id: alternatives
+      attributes:
+          label: 🔀 PHƯƠNG ÁN THAY THẾ
+          description: Các cách khác đã cân nhắc, nếu có.

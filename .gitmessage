@@ -1,0 +1,13 @@
+
+# <loại>(<phạm vi>): <mô tả ngắn, tối đa 72 ký tự, không dấu chấm cuối>
+#
+# Loại: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+# Thay đổi phá vỡ tương thích: thêm ! sau loại, ví dụ feat(api)!: …
+#
+# Thân (cách tiêu đề một dòng trống): giải thích VÌ SAO và ảnh hưởng của thay đổi.
+#
+# Chân:
+# Closes #123
+# BREAKING CHANGE: <mô tả>
+#
+# Xem CONTRIBUTING.md — mục QUY ƯỚC COMMIT. Dòng bắt đầu bằng # bị bỏ qua.

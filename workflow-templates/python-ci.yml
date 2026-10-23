@@ -1,0 +1,56 @@
+name: Python CI
+
+on:
+    push:
+        branches:
+            - $default-branch
+    pull_request:
+
+permissions:
+    contents: read
+
+concurrency:
+    # Push mới trên cùng Pull Request hủy lượt chạy cũ; lượt chạy trên nhánh chính luôn chạy hết.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+    build:
+        name: Cài đặt, kiểm tra định dạng và kiểm thử
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Cài Python
+              uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+              with:
+                  python-version-file: .python-version
+
+            # Script dùng chung của tổ chức, ghim theo tag phát hành của TOANQUYNHLLC/.github (Protect Release
+            # Tags, Release bất biến): thay đổi trên nhánh chính không tự chạy ở repository này. release.py cập
+            # nhật ref khi phát hành bản mới; sửa ref theo bản đã kiểm chứng khi nâng.
+            - name: Lấy script và phiên bản công cụ của tổ chức
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  repository: TOANQUYNHLLC/.github
+                  ref: Stable.v2026.11.010001
+                  path: .org
+                  persist-credentials: false
+
+            - name: Cài công cụ, requirements và package của dự án
+              run: python .org/scripts/install-python-dependencies.py
+
+            - name: Kiểm tra định dạng (ruff format)
+              run: ruff format --check --extend-exclude .org .
+
+            - name: Lint (ruff check)
+              run: ruff check --extend-exclude .org .
+
+            # Không có thư mục tests thì bỏ qua kiểm thử.
+            - name: Kiểm thử
+              if: hashFiles('tests/**') != ''
+              run: python -m pytest

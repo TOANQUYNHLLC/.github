@@ -1,0 +1,1625 @@
+{
+	"organization_name": "TOANQUYNHLLC",
+	"repository_defaults": {
+		"has_issues": true,
+		"has_projects": false,
+		"has_wiki": false,
+		"web_commit_signoff_required": true,
+		"allow_squash_merge": true,
+		"allow_merge_commit": true,
+		"allow_rebase_merge": true,
+		"allow_auto_merge": true,
+		"allow_update_branch": true,
+		"delete_branch_on_merge": true,
+		"squash_merge_commit_title": "PR_TITLE",
+		"squash_merge_commit_message": "PR_BODY",
+		"merge_commit_title": "MERGE_MESSAGE",
+		"merge_commit_message": "PR_TITLE"
+	},
+	"organization": {
+		"settings": {
+			"description": "The Official Repository of TOAN QUYNH Co., Ltd",
+			"name": "TOAN QUYNH CO., LTD",
+			"company": "",
+			"blog": "https://toanquynh.com",
+			"location": "Vietnam",
+			"email": "toanquynhvn@gmail.com",
+			"twitter_username": "",
+			"has_organization_projects": true,
+			"has_repository_projects": true,
+			"default_repository_permission": "none",
+			"members_can_create_repositories": true,
+			"members_can_create_public_repositories": true,
+			"members_can_create_private_repositories": true,
+			"members_can_create_internal_repositories": false,
+			"members_can_create_pages": true,
+			"members_can_fork_private_repositories": true,
+			"web_commit_signoff_required": true,
+			"deploy_keys_enabled_for_repositories": true,
+			"members_can_create_public_pages": true,
+			"members_can_create_private_pages": true,
+			"advanced_security_enabled_for_new_repositories": false,
+			"dependabot_alerts_enabled_for_new_repositories": true,
+			"dependabot_security_updates_enabled_for_new_repositories": true,
+			"dependency_graph_enabled_for_new_repositories": true,
+			"secret_scanning_enabled_for_new_repositories": true,
+			"secret_scanning_push_protection_enabled_for_new_repositories": true,
+			"secret_scanning_push_protection_custom_link_enabled": false,
+			"secret_scanning_push_protection_custom_link": ""
+		},
+		"web_settings": {
+			"two_factor_requirement_enabled": true,
+			"members_can_delete_repositories": true,
+			"members_can_change_repo_visibility": true,
+			"members_can_invite_outside_collaborators": true,
+			"members_can_delete_issues": true,
+			"display_commenter_full_name_setting_enabled": false,
+			"readers_can_create_discussions": true,
+			"members_can_create_teams": true,
+			"members_can_view_dependency_insights": true,
+			"default_repository_branch": "main",
+			"secret_scanning_validity_checks_enabled": false,
+			"installed_apps": []
+		},
+		"endpoints": {
+			"actions/permissions/workflow": {
+				"default_workflow_permissions": "read",
+				"can_approve_pull_request_reviews": true
+			},
+			"actions/permissions/artifact-and-log-retention": {
+				"days": 90
+			},
+			"actions/permissions/fork-pr-contributor-approval": {
+				"approval_policy": "first_time_contributors"
+			},
+			"actions/permissions/fork-pr-workflows-private-repos": {
+				"run_workflows_from_fork_pull_requests": false,
+				"send_write_tokens_to_workflows": false,
+				"send_secrets_and_variables": false,
+				"require_approval_for_fork_pr_workflows": false
+			},
+			"interaction-limits": {},
+			"interaction-limits/pulls/creation-cap": {
+				"enabled": false,
+				"max_open_pull_requests": 1,
+				"include_drafts": false
+			},
+			"actions/permissions/self-hosted-runners": {
+				"enabled_repositories": "all"
+			},
+			"copilot/coding-agent/permissions": {
+				"enabled_repositories": "all"
+			},
+			"actions/oidc/customization/sub": {},
+			"actions/permissions": {
+				"enabled_repositories": "all",
+				"allowed_actions": "all",
+				"sha_pinning_required": true
+			},
+			"settings/immutable-releases": {
+				"enforced_repositories": "all"
+			}
+		},
+		"private_settings": {
+			"billing_email": {
+				"value_source": "orgs/TOANQUYNHLLC/settings/billing_email#aecab653d82243b58d3335d0863e9f4a"
+			}
+		},
+		"runner_groups": [
+			{
+				"settings": {
+					"name": "Default",
+					"visibility": "all",
+					"allows_public_repositories": false,
+					"restricted_to_workflows": false,
+					"selected_workflows": []
+				},
+				"default": true,
+				"inherited": false,
+				"workflow_restrictions_read_only": false,
+				"selected_repositories": []
+			}
+		],
+		"security_configurations": [
+			{
+				"name": "GitHub recommended",
+				"target_type": "global",
+				"default_for_new_repos": "none"
+			}
+		],
+		"collections": {
+			"organization_roles": [
+				{
+					"name": "all_repo_admin",
+					"description": "Grants admin access to all repositories in the organization.",
+					"source": "Predefined",
+					"base_role": "admin",
+					"permissions": [],
+					"teams": []
+				},
+				{
+					"name": "all_repo_maintain",
+					"description": "Grants maintenance access to all repositories in the organization.",
+					"source": "Predefined",
+					"base_role": "maintain",
+					"permissions": [],
+					"teams": []
+				},
+				{
+					"name": "all_repo_read",
+					"description": "Grants read access to all repositories in the organization.",
+					"source": "Predefined",
+					"base_role": "read",
+					"permissions": [],
+					"teams": []
+				},
+				{
+					"name": "all_repo_triage",
+					"description": "Grants triage access to all repositories in the organization.",
+					"source": "Predefined",
+					"base_role": "triage",
+					"permissions": [],
+					"teams": []
+				},
+				{
+					"name": "all_repo_write",
+					"description": "Grants write access to all repositories in the organization.",
+					"source": "Predefined",
+					"base_role": "write",
+					"permissions": [],
+					"teams": []
+				},
+				{
+					"name": "app_manager",
+					"description": "Grants the ability to manage all GitHub Apps owned by an organization.",
+					"source": "Predefined",
+					"base_role": null,
+					"permissions": [],
+					"teams": []
+				},
+				{
+					"name": "ci_cd_admin",
+					"description": "Grants admin access to manage Actions policies, runners, runner groups, network configurations, secrets, variables, and usage metrics for an organization.",
+					"source": "Predefined",
+					"base_role": null,
+					"permissions": [
+						"read_organization_actions_usage_metrics",
+						"write_organization_actions_secrets",
+						"write_organization_actions_settings",
+						"write_organization_actions_variables",
+						"write_organization_network_configurations",
+						"write_organization_runner_custom_images",
+						"write_organization_runners_and_runner_groups"
+					],
+					"teams": []
+				},
+				{
+					"name": "open_source_license_manager",
+					"description": "Grants the ability to review open-source license compliance closure requests and update repository license policies.",
+					"source": "Predefined",
+					"base_role": "read",
+					"permissions": [
+						"review_license_compliance_closure_requests",
+						"view_license_compliance_closure_requests",
+						"view_repository_license_policy"
+					],
+					"teams": []
+				},
+				{
+					"name": "security_manager",
+					"description": "Grants the ability to manage security policies, security alerts, and security configurations for an organization and all its repositories.",
+					"source": "Predefined",
+					"base_role": "read",
+					"permissions": [
+						"delete_alerts_code_scanning",
+						"org_bypass_code_scanning_dismissal_requests",
+						"org_bypass_dependabot_alert_dismissal_requests",
+						"org_bypass_secret_scanning_closure_requests",
+						"org_review_and_manage_secret_scanning_bypass_requests",
+						"org_review_and_manage_secret_scanning_closure_requests",
+						"publish_repository_advisories",
+						"read_code_quality",
+						"read_code_scanning",
+						"read_repository_advisories",
+						"resolve_dependabot_alerts",
+						"resolve_secret_scanning_alerts",
+						"review_org_code_scanning_dismissal_requests",
+						"review_org_dependabot_alert_dismissal_requests",
+						"triage_repository_advisories",
+						"view_dependabot_alerts",
+						"view_org_code_scanning_dismissal_requests",
+						"view_org_dependabot_alert_dismissal_requests",
+						"view_secret_scanning_alerts",
+						"write_code_quality",
+						"write_code_scanning",
+						"write_repository_advisories"
+					],
+					"teams": []
+				}
+			],
+			"ip_allow_list": [
+				{
+					"enabled": false,
+					"apps_enabled": false,
+					"entries": []
+				}
+			],
+			"dependabot_access": [
+				{
+					"repositories": []
+				}
+			],
+			"private_registries": [],
+			"property_schema": [],
+			"security_definitions": [],
+			"teams": [
+				{
+					"name": "Admins",
+					"slug": "admins",
+					"description": "Quản trị Organization, repository, bảo mật và phân quyền.",
+					"privacy": "secret",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": null,
+					"repositories": {
+						"TOANQUYNHLLC/.github": "admin"
+					}
+				},
+				{
+					"name": "Creative",
+					"slug": "creative",
+					"description": "Thiết kế sản phẩm, thương hiệu và nội dung truyền thông.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": null,
+					"repositories": {}
+				},
+				{
+					"name": "Design",
+					"slug": "design",
+					"description": "Thiết kế UI/UX, góp ý sản phẩm.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": "creative",
+					"repositories": {
+						"TOANQUYNHLLC/.github": "triage"
+					}
+				},
+				{
+					"name": "Developers",
+					"slug": "developers",
+					"description": "Phát triển, review và duy trì mã nguồn.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": "engineering",
+					"repositories": {
+						"TOANQUYNHLLC/.github": "write"
+					}
+				},
+				{
+					"name": "Engineering",
+					"slug": "engineering",
+					"description": "Phát triển, kiểm thử và duy trì các sản phẩm phần mềm.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": null,
+					"repositories": {}
+				},
+				{
+					"name": "Maintainers",
+					"slug": "maintainers",
+					"description": "Duy trì repository, quản lý phát hành và kiểm duyệt Pull Request.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": "engineering",
+					"repositories": {
+						"TOANQUYNHLLC/.github": "maintain"
+					}
+				},
+				{
+					"name": "Marketing",
+					"slug": "marketing",
+					"description": "Website, bài viết, hình ảnh truyền thông.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": "creative",
+					"repositories": {
+						"TOANQUYNHLLC/.github": "read"
+					}
+				},
+				{
+					"name": "QA",
+					"slug": "qa",
+					"description": "Quản lý issue, kiểm thử, xác nhận lỗi.",
+					"privacy": "closed",
+					"notification_setting": "notifications_enabled",
+					"parent_team_slug": "engineering",
+					"repositories": {
+						"TOANQUYNHLLC/.github": "triage"
+					}
+				}
+			],
+			"security_managers": [],
+			"oidc_properties": [],
+			"variables": []
+		},
+		"observed": {
+			"web_rulesets": [
+				{
+					"ruleset_id": 24409577,
+					"name": "Protect Main (Organization)",
+					"target": "branch",
+					"enforcement": "active",
+					"conditions": {
+						"ref_name": {
+							"exclude": [],
+							"include": ["~DEFAULT_BRANCH", "refs/heads/main"]
+						},
+						"repository_name": {
+							"exclude": [],
+							"include": ["~ALL"],
+							"protected": false
+						}
+					},
+					"bypass_actors": [
+						{
+							"name": "Organization admin",
+							"actor_id": null,
+							"actor_type": "OrganizationAdmin",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Deploy keys",
+							"actor_id": null,
+							"actor_type": "DeployKey",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Repository migrations",
+							"actor_id": null,
+							"actor_type": "RepositoryMigration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Repository admin",
+							"actor_id": 5,
+							"actor_type": "RepositoryRole",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "GitHub Merge Queue",
+							"actor_id": 262318,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Copilot code review",
+							"actor_id": 946600,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Copilot cloud agent",
+							"actor_id": 1143301,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "GitHub Code Quality Agent",
+							"actor_id": 4229212,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						}
+					],
+					"rules": [
+						{
+							"type": "deletion"
+						},
+						{
+							"type": "non_fast_forward"
+						},
+						{
+							"type": "creation"
+						},
+						{
+							"type": "update",
+							"parameters": {
+								"update_allows_fetch_and_merge": false
+							}
+						},
+						{
+							"type": "required_signatures"
+						},
+						{
+							"type": "pull_request",
+							"parameters": {
+								"required_reviewers": [],
+								"allowed_merge_methods": ["merge", "squash", "rebase"],
+								"dismissal_restriction": {
+									"enabled": false,
+									"allowed_actors": []
+								},
+								"require_code_owner_review": true,
+								"require_last_push_approval": true,
+								"dismiss_stale_reviews_on_push": true,
+								"required_approving_review_count": 1,
+								"authorized_dismissal_actors_only": false,
+								"required_review_thread_resolution": true,
+								"ignore_approvals_from_contributors": false,
+								"require_extra_approval_for_unattributed_changes": true
+							}
+						},
+						{
+							"type": "required_status_checks",
+							"parameters": {
+								"required_status_checks": [
+									{
+										"context": "Kiểm tra tiêu đề Pull Request",
+										"integration_id": 15368
+									},
+									{
+										"context": "Kiểm tra tên branch",
+										"integration_id": 15368
+									}
+								],
+								"do_not_enforce_on_create": true,
+								"strict_required_status_checks_policy": true
+							}
+						},
+						{
+							"type": "code_quality",
+							"parameters": {
+								"severity": "all",
+								"ai_findings_severity": "none"
+							}
+						},
+						{
+							"type": "code_scanning",
+							"parameters": {
+								"code_scanning_tools": [
+									{
+										"tool": "CodeQL",
+										"alerts_threshold": "errors",
+										"security_alerts_threshold": "high_or_higher"
+									}
+								]
+							}
+						}
+					]
+				},
+				{
+					"ruleset_id": 24409540,
+					"name": "Protect Pushes (Organization)",
+					"target": "push",
+					"enforcement": "active",
+					"conditions": {
+						"repository_name": {
+							"exclude": [],
+							"include": ["~ALL"],
+							"protected": false
+						}
+					},
+					"bypass_actors": [
+						{
+							"name": "Organization admin",
+							"actor_id": null,
+							"actor_type": "OrganizationAdmin",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Deploy keys",
+							"actor_id": null,
+							"actor_type": "DeployKey",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Repository migrations",
+							"actor_id": null,
+							"actor_type": "RepositoryMigration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Repository admin",
+							"actor_id": 5,
+							"actor_type": "RepositoryRole",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Dependabot",
+							"actor_id": 29110,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "GitHub Merge Queue",
+							"actor_id": 262318,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Copilot code review",
+							"actor_id": 946600,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Copilot cloud agent",
+							"actor_id": 1143301,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "GitHub Code Quality Agent",
+							"actor_id": 4229212,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						}
+					],
+					"rules": [
+						{
+							"type": "file_path_restriction",
+							"parameters": {
+								"ignored_file_paths": [],
+								"restricted_file_paths": [
+									"**/.env",
+									"**/id_rsa",
+									"**/id_dsa",
+									"**/id_ecdsa",
+									"**/id_ed25519"
+								]
+							}
+						},
+						{
+							"type": "file_extension_restriction",
+							"parameters": {
+								"restricted_file_extensions": [
+									"*.pem",
+									"*.key",
+									"*.p12",
+									"*.pfx",
+									"*.jks",
+									"*.keystore",
+									"*.ppk",
+									"*.kdbx",
+									"*.sqlite",
+									"*.sqlite3",
+									"*.db"
+								]
+							}
+						},
+						{
+							"type": "max_file_size",
+							"parameters": {
+								"max_file_size": 10,
+								"ignored_file_paths": []
+							}
+						},
+						{
+							"type": "max_file_path_length",
+							"parameters": {
+								"max_file_path_length": 200
+							}
+						}
+					]
+				},
+				{
+					"ruleset_id": 24409565,
+					"name": "Protect Release Tags (Organization)",
+					"target": "tag",
+					"enforcement": "active",
+					"conditions": {
+						"ref_name": {
+							"exclude": [],
+							"include": ["~ALL"]
+						},
+						"repository_name": {
+							"exclude": [],
+							"include": ["~ALL"],
+							"protected": false
+						}
+					},
+					"bypass_actors": [
+						{
+							"name": "Organization admin",
+							"actor_id": null,
+							"actor_type": "OrganizationAdmin",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Deploy keys",
+							"actor_id": null,
+							"actor_type": "DeployKey",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Repository migrations",
+							"actor_id": null,
+							"actor_type": "RepositoryMigration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Repository admin",
+							"actor_id": 5,
+							"actor_type": "RepositoryRole",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Dependabot",
+							"actor_id": 29110,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "GitHub Merge Queue",
+							"actor_id": 262318,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Copilot code review",
+							"actor_id": 946600,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Copilot cloud agent",
+							"actor_id": 1143301,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "GitHub Code Quality Agent",
+							"actor_id": 4229212,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						}
+					],
+					"rules": [
+						{
+							"type": "creation"
+						},
+						{
+							"type": "update",
+							"parameters": {
+								"update_allows_fetch_and_merge": false
+							}
+						},
+						{
+							"type": "deletion"
+						},
+						{
+							"type": "non_fast_forward"
+						},
+						{
+							"type": "required_signatures"
+						},
+						{
+							"type": "required_status_checks",
+							"parameters": {
+								"required_status_checks": [],
+								"do_not_enforce_on_create": false,
+								"strict_required_status_checks_policy": true
+							}
+						}
+					]
+				}
+			],
+			"repository_policies": [
+				{
+					"policy_id": 24035634,
+					"name": "OrgRepoPolicies",
+					"target": "repository",
+					"enforcement": "active",
+					"conditions": {
+						"repository_name": {
+							"exclude": [],
+							"include": ["~ALL"]
+						}
+					},
+					"bypass_actors": [
+						{
+							"name": "Organization admin",
+							"actor_id": null,
+							"actor_type": "OrganizationAdmin",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Deploy keys",
+							"actor_id": null,
+							"actor_type": "DeployKey",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Repository migrations",
+							"actor_id": null,
+							"actor_type": "RepositoryMigration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Repository admin",
+							"actor_id": 5,
+							"actor_type": "RepositoryRole",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Dependabot",
+							"actor_id": 29110,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "GitHub Merge Queue",
+							"actor_id": 262318,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Copilot code review",
+							"actor_id": 946600,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "Copilot cloud agent",
+							"actor_id": 1143301,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						},
+						{
+							"name": "GitHub Code Quality Agent",
+							"actor_id": 4229212,
+							"actor_type": "Integration",
+							"bypass_mode": "always"
+						}
+					],
+					"rules": [
+						{
+							"type": "repository_visibility",
+							"parameters": {
+								"public": false,
+								"private": true,
+								"internal": false
+							}
+						},
+						{
+							"type": "repository_create",
+							"parameters": {}
+						},
+						{
+							"type": "repository_delete",
+							"parameters": {}
+						},
+						{
+							"type": "repository_transfer",
+							"parameters": {}
+						},
+						{
+							"type": "repository_name",
+							"parameters": {
+								"negate": true,
+								"pattern_source": "orgs/TOANQUYNHLLC/repository-policies/24035634/pattern#67dbc8697c2a4f0cafa4c3770f246ff0"
+							}
+						}
+					]
+				}
+			]
+		},
+		"pending_settings": {
+			"collections": {
+				"network_configurations": null,
+				"custom_patterns": null,
+				"pattern_settings": null,
+				"actions_policies": null,
+				"dependabot_access": null,
+				"hosted_runners": null,
+				"rulesets": null,
+				"webhooks": null
+			}
+		},
+		"manual_settings": {
+			"authentication": {
+				"status": "pending",
+				"configuration_source": "orgs/TOANQUYNHLLC/manual/authentication#1a304ff37fb04fcab2d4e057879f1352"
+			},
+			"billing": {
+				"status": "pending",
+				"configuration_source": "orgs/TOANQUYNHLLC/manual/billing#40cfd7dd9b7945c9b08ee4661aa40a31"
+			},
+			"codespaces": {
+				"status": "pending",
+				"configuration_source": "orgs/TOANQUYNHLLC/manual/codespaces#6fe70d43b4814750891db9170cea71ae"
+			},
+			"copilot": {
+				"status": "pending",
+				"configuration_source": "orgs/TOANQUYNHLLC/manual/copilot#e7c84fb100fb4ee08081bd0d82afaa32"
+			},
+			"custom_pattern_publication": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"deploy_keys": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"github_apps": {
+				"status": "pending",
+				"configuration_source": "orgs/TOANQUYNHLLC/manual/github_apps#f6c0fccf9f4140c3ad03d2f63193fce5"
+			},
+			"members_and_collaborators": {
+				"status": "pending",
+				"configuration_source": "orgs/TOANQUYNHLLC/manual/members_and_collaborators#11f3ca73d4ab482fba3118b5ae5e658c"
+			},
+			"oauth_access": {
+				"status": "pending",
+				"configuration_source": "orgs/TOANQUYNHLLC/manual/oauth_access#c18e56292df94253a0993d254a8ce827"
+			},
+			"personal_access_tokens": {
+				"status": "pending",
+				"configuration_source": "orgs/TOANQUYNHLLC/manual/personal_access_tokens#1f0a77a8b9f04c1ba6a236d626fc5a25"
+			},
+			"registry_credentials": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"repository_policies": {
+				"status": "pending",
+				"configuration_source": "orgs/TOANQUYNHLLC/repository-policies/configuration#29857532831145e8a0df5f0f14ace34a"
+			},
+			"secrets": {
+				"status": "unverified",
+				"configuration_source": null
+			},
+			"settings_pages": {
+				"status": "pending",
+				"configuration_source": "orgs/TOANQUYNHLLC/manual/settings_pages#593ae0a9574b4e0d8e7477c3c321106d"
+			},
+			"verified_domains": {
+				"status": "pending",
+				"configuration_source": "orgs/TOANQUYNHLLC/manual/verified_domains#1e9c32aa72b84cf0b436c96c8f2336d1"
+			},
+			"webhook_credentials": {
+				"status": "unverified",
+				"configuration_source": null
+			}
+		}
+	},
+	"repositories": {
+		".github": {
+			"settings": {
+				"description": "Hồ sơ tổ chức, tệp cộng đồng mặc định, biểu mẫu và cấu hình GitHub dùng chung cho mọi repository của CÔNG TY TNHH TOÀN QUỲNH",
+				"homepage": "https://toanquynh.com",
+				"has_issues": true,
+				"has_projects": true,
+				"has_wiki": true,
+				"has_discussions": true,
+				"archived": false,
+				"allow_forking": true,
+				"is_template": false,
+				"web_commit_signoff_required": true,
+				"has_pull_requests": true,
+				"pull_request_creation_policy": "all",
+				"visibility": "public",
+				"default_branch": "main",
+				"allow_squash_merge": true,
+				"allow_merge_commit": true,
+				"allow_rebase_merge": true,
+				"allow_auto_merge": true,
+				"delete_branch_on_merge": true,
+				"allow_update_branch": true,
+				"squash_merge_commit_message": "PR_BODY",
+				"squash_merge_commit_title": "PR_TITLE",
+				"merge_commit_message": "PR_TITLE",
+				"merge_commit_title": "MERGE_MESSAGE"
+			},
+			"web_settings": {
+				"secret_scanning_validity_checks": "disabled"
+			},
+			"endpoints": {
+				"actions/permissions/workflow": {
+					"default_workflow_permissions": "read",
+					"can_approve_pull_request_reviews": true
+				},
+				"actions/permissions/artifact-and-log-retention": {
+					"days": 90
+				},
+				"actions/permissions/fork-pr-contributor-approval": {
+					"approval_policy": "first_time_contributors"
+				},
+				"interaction-limits": {},
+				"interaction-limits/pulls/creation-cap": {
+					"enabled": false,
+					"max_open_pull_requests": 1,
+					"include_drafts": false
+				},
+				"actions/oidc/customization/sub": {
+					"use_default": true,
+					"use_immutable_subject": true
+				},
+				"actions/permissions": {
+					"enabled": true,
+					"allowed_actions": "all",
+					"sha_pinning_required": true
+				},
+				"topics": {
+					"names": [
+						"community-health-files",
+						"github",
+						"issue-templates",
+						"rulesets",
+						"workflow-templates"
+					]
+				},
+				"vulnerability-alerts": {
+					"enabled": true
+				},
+				"automated-security-fixes": {
+					"enabled": false
+				},
+				"private-vulnerability-reporting": {
+					"enabled": true
+				},
+				"immutable-releases": {
+					"enabled": true
+				},
+				"code-scanning/default-setup": {
+					"state": "not-configured",
+					"languages": ["actions", "python"],
+					"query_suite": "default",
+					"threat_model": "remote",
+					"runner_type": "standard",
+					"runner_label": null
+				}
+			},
+			"security": {
+				"secret_scanning": "enabled",
+				"secret_scanning_push_protection": "enabled",
+				"secret_scanning_non_provider_patterns": "disabled"
+			},
+			"security_configuration": null,
+			"collections": {
+				"actions_policies": [],
+				"branch_protection": [],
+				"labels": [
+					{
+						"name": "accessibility",
+						"color": "0052cc",
+						"description": "Khả năng tiếp cận — trình đọc màn hình, bàn phím, độ tương phản"
+					},
+					{
+						"name": "area: api",
+						"color": "c2e0f4",
+						"description": "Giao diện lập trình (API)"
+					},
+					{
+						"name": "area: auth",
+						"color": "c2e0f4",
+						"description": "Hệ thống xác thực hoặc phân quyền"
+					},
+					{
+						"name": "area: backend",
+						"color": "c2e0f4",
+						"description": "Xử lý phía máy chủ"
+					},
+					{
+						"name": "area: database",
+						"color": "c2e0f4",
+						"description": "Cơ sở dữ liệu"
+					},
+					{
+						"name": "area: frontend",
+						"color": "c2e0f4",
+						"description": "Giao diện người dùng"
+					},
+					{
+						"name": "area: infrastructure",
+						"color": "c2e0f4",
+						"description": "Hạ tầng hoặc quy trình triển khai"
+					},
+					{
+						"name": "Beta",
+						"color": "fbca04",
+						"description": "Phiên bản Thử Nghiệm"
+					},
+					{
+						"name": "blocked",
+						"color": "e99695",
+						"description": "Đang chờ việc khác xong mới làm tiếp được"
+					},
+					{
+						"name": "breaking change",
+						"color": "e11d21",
+						"description": "Thay đổi phá vỡ tương thích (commit có dấu ! hoặc BREAKING CHANGE)"
+					},
+					{
+						"name": "bug",
+						"color": "d73a4a",
+						"description": "Một chức năng chạy sai, không chạy hoặc hiển thị không đúng"
+					},
+					{
+						"name": "build",
+						"color": "bfdadc",
+						"description": "Hệ thống build, phụ thuộc, công cụ phát triển"
+					},
+					{
+						"name": "chore",
+						"color": "e4e4e4",
+						"description": "Cấu hình, phụ thuộc, công việc bảo trì khác"
+					},
+					{
+						"name": "ci",
+						"color": "fef2c0",
+						"description": "Workflow CI/CD, build, triển khai"
+					},
+					{
+						"name": "confirmed",
+						"color": "0e8a16",
+						"description": "Đã phân loại và xác nhận lỗi hoặc đề xuất hợp lệ"
+					},
+					{
+						"name": "dependencies",
+						"color": "0366d6",
+						"description": "Cập nhật thư viện hoặc phụ thuộc"
+					},
+					{
+						"name": "docker",
+						"color": "21ceff",
+						"description": "Cập nhật image Docker"
+					},
+					{
+						"name": "documentation",
+						"color": "0075ca",
+						"description": "Cập nhật hoặc bổ sung tài liệu"
+					},
+					{
+						"name": "duplicate",
+						"color": "cfd3d7",
+						"description": "Trùng với Issue hoặc Pull Request đã có"
+					},
+					{
+						"name": "enhancement",
+						"color": "a2eeef",
+						"description": "Tính năng mới hoặc cải thiện chức năng hiện có"
+					},
+					{
+						"name": "github_actions",
+						"color": "000000",
+						"description": "Cập nhật GitHub Actions"
+					},
+					{
+						"name": "go",
+						"color": "16e2e2",
+						"description": "Cập nhật module Go"
+					},
+					{
+						"name": "good first issue",
+						"color": "7057ff",
+						"description": "Phù hợp cho người mới tham gia"
+					},
+					{
+						"name": "help wanted",
+						"color": "008672",
+						"description": "Cần thêm người cùng xử lý"
+					},
+					{
+						"name": "hotfix",
+						"color": "ff7619",
+						"description": "Sửa lỗi khẩn cấp trên bản đang chạy thật"
+					},
+					{
+						"name": "i18n",
+						"color": "5319e7",
+						"description": "Đa ngôn ngữ, bản dịch (tiếng Việt, tiếng Anh)"
+					},
+					{
+						"name": "in progress",
+						"color": "c2e0c6",
+						"description": "Đang được xử lý"
+					},
+					{
+						"name": "invalid",
+						"color": "e4e669",
+						"description": "Không hợp lệ hoặc thiếu thông tin"
+					},
+					{
+						"name": "javascript",
+						"color": "168700",
+						"description": "Cập nhật thư viện JavaScript (npm)"
+					},
+					{
+						"name": "needs more info",
+						"color": "d4c5f9",
+						"description": "Cần người tạo bổ sung thông tin"
+					},
+					{
+						"name": "needs triage",
+						"color": "ededed",
+						"description": "Chờ người quản trị phân loại — biểu mẫu Issue tự gắn, bỏ nhãn sau khi phân loại"
+					},
+					{
+						"name": "performance",
+						"color": "f9d0c4",
+						"description": "Cải thiện hiệu năng"
+					},
+					{
+						"name": "pinned",
+						"color": "fad8c7",
+						"description": "Giữ lâu dài — workflow stale không đánh dấu, không đóng"
+					},
+					{
+						"name": "Pre-Release",
+						"color": "a2eeef",
+						"description": "Phiên bản Chuẩn Bị Release"
+					},
+					{
+						"name": "priority: cao",
+						"color": "d93f0b",
+						"description": "Ảnh hưởng lớn, chưa có cách xử lý tạm"
+					},
+					{
+						"name": "priority: khẩn cấp",
+						"color": "b60205",
+						"description": "Hệ thống ngừng hoạt động hoặc mất dữ liệu"
+					},
+					{
+						"name": "priority: thấp",
+						"color": "0e8a16",
+						"description": "Cải tiến nhỏ"
+					},
+					{
+						"name": "priority: trung bình",
+						"color": "fbca04",
+						"description": "Có cách xử lý tạm"
+					},
+					{
+						"name": "python",
+						"color": "2b67c6",
+						"description": "Cập nhật thư viện Python (pip)"
+					},
+					{
+						"name": "question",
+						"color": "d876e3",
+						"description": "Câu hỏi hoặc cần hỗ trợ"
+					},
+					{
+						"name": "refactor",
+						"color": "c5def5",
+						"description": "Tái cấu trúc, không đổi hành vi"
+					},
+					{
+						"name": "regression",
+						"color": "b60205",
+						"description": "Chức năng trước đây chạy đúng nay bị lỗi"
+					},
+					{
+						"name": "release",
+						"color": "1d76db",
+						"description": "Chuẩn bị phát hành — CHANGELOG, số phiên bản"
+					},
+					{
+						"name": "security",
+						"color": "b60205",
+						"description": "Liên quan đến bảo mật (chi tiết lỗ hổng báo cáo riêng qua SECURITY.md)"
+					},
+					{
+						"name": "Stable",
+						"color": "0e8a16",
+						"description": "Phiên bản Ổn Định"
+					},
+					{
+						"name": "stale",
+						"color": "dadada",
+						"description": "Không có hoạt động trong thời gian dài, sẽ tự đóng nếu không có phản hồi"
+					},
+					{
+						"name": "tests",
+						"color": "bfd4f2",
+						"description": "Bổ sung hoặc sửa kiểm thử"
+					},
+					{
+						"name": "ui/ux",
+						"color": "d4a5ff",
+						"description": "Giao diện hoặc trải nghiệm người dùng"
+					},
+					{
+						"name": "upstream",
+						"color": "fbca04",
+						"description": "Do thư viện hoặc dịch vụ bên ngoài — chờ bên đó sửa (stale bỏ qua)"
+					},
+					{
+						"name": "wontfix",
+						"color": "ffffff",
+						"description": "Không xử lý"
+					}
+				],
+				"autolinks": [],
+				"custom_properties": [],
+				"rulesets": [
+					{
+						"name": "Protect Main",
+						"target": "branch",
+						"enforcement": "active",
+						"conditions": {
+							"ref_name": {
+								"exclude": [],
+								"include": ["~DEFAULT_BRANCH"]
+							}
+						},
+						"bypass_actors": [
+							{
+								"actor_id": 107941543,
+								"actor_type": "User",
+								"bypass_mode": "always"
+							},
+							{
+								"actor_id": 108377655,
+								"actor_type": "User",
+								"bypass_mode": "always"
+							}
+						],
+						"rules": [
+							{
+								"type": "deletion"
+							},
+							{
+								"type": "non_fast_forward"
+							},
+							{
+								"type": "creation"
+							},
+							{
+								"type": "update"
+							},
+							{
+								"type": "required_signatures"
+							},
+							{
+								"type": "pull_request",
+								"parameters": {
+									"required_approving_review_count": 1,
+									"dismiss_stale_reviews_on_push": true,
+									"required_reviewers": [],
+									"require_code_owner_review": true,
+									"dismissal_restriction": {
+										"enabled": true,
+										"allowed_actors": [
+											{
+												"id": 107941543,
+												"type": "User"
+											},
+											{
+												"id": 108377655,
+												"type": "User"
+											}
+										]
+									},
+									"require_last_push_approval": true,
+									"required_review_thread_resolution": true,
+									"require_extra_approval_for_unattributed_changes": true,
+									"allowed_merge_methods": ["merge", "squash", "rebase"]
+								}
+							},
+							{
+								"type": "required_status_checks",
+								"parameters": {
+									"strict_required_status_checks_policy": true,
+									"do_not_enforce_on_create": true,
+									"required_status_checks": [
+										{
+											"context": "Liên kết, biểu mẫu, nhãn, cấu hình định dạng và mẫu email",
+											"integration_id": 15368
+										},
+										{
+											"context": "Định dạng (Prettier, ruff)",
+											"integration_id": 15368
+										},
+										{
+											"context": "Shell script và workflow",
+											"integration_id": 15368
+										},
+										{
+											"context": "Kiểm tra tiêu đề Pull Request",
+											"integration_id": 15368
+										},
+										{
+											"context": "Kiểm tra tên branch",
+											"integration_id": 15368
+										}
+									]
+								}
+							},
+							{
+								"type": "code_quality",
+								"parameters": {
+									"severity": "all"
+								}
+							},
+							{
+								"type": "required_deployments",
+								"parameters": {
+									"required_deployment_environments": []
+								}
+							}
+						]
+					},
+					{
+						"name": "Protect Release Tags",
+						"target": "tag",
+						"enforcement": "active",
+						"conditions": {
+							"ref_name": {
+								"exclude": [],
+								"include": [
+									"refs/tags/v*",
+									"refs/tags/Stable.v*",
+									"refs/tags/Beta.v*"
+								]
+							}
+						},
+						"bypass_actors": [
+							{
+								"actor_id": 107941543,
+								"actor_type": "User",
+								"bypass_mode": "always"
+							},
+							{
+								"actor_id": 108377655,
+								"actor_type": "User",
+								"bypass_mode": "always"
+							}
+						],
+						"rules": [
+							{
+								"type": "creation"
+							},
+							{
+								"type": "update"
+							},
+							{
+								"type": "deletion"
+							},
+							{
+								"type": "non_fast_forward"
+							},
+							{
+								"type": "required_signatures"
+							},
+							{
+								"type": "required_status_checks",
+								"parameters": {
+									"strict_required_status_checks_policy": true,
+									"do_not_enforce_on_create": true,
+									"required_status_checks": []
+								}
+							}
+						]
+					}
+				],
+				"environments": [],
+				"pages": [],
+				"variables": [],
+				"webhooks": []
+			},
+			"observed": {
+				"web_rulesets": [
+					{
+						"ruleset_id": 24042610,
+						"name": "Protect Main",
+						"target": "branch",
+						"enforcement": "active",
+						"conditions": {
+							"ref_name": {
+								"exclude": [],
+								"include": ["~DEFAULT_BRANCH"]
+							}
+						},
+						"bypass_actors": [
+							{
+								"name": "User 107941543",
+								"actor_id": 107941543,
+								"actor_type": "User",
+								"bypass_mode": "always"
+							},
+							{
+								"name": "User 108377655",
+								"actor_id": 108377655,
+								"actor_type": "User",
+								"bypass_mode": "always"
+							}
+						],
+						"rules": [
+							{
+								"type": "deletion"
+							},
+							{
+								"type": "non_fast_forward"
+							},
+							{
+								"type": "creation"
+							},
+							{
+								"type": "update",
+								"parameters": {
+									"update_allows_fetch_and_merge": false
+								}
+							},
+							{
+								"type": "required_signatures"
+							},
+							{
+								"type": "pull_request",
+								"parameters": {
+									"required_reviewers": [],
+									"allowed_merge_methods": ["merge", "squash", "rebase"],
+									"require_code_owner_review": true,
+									"require_last_push_approval": true,
+									"dismiss_stale_reviews_on_push": true,
+									"required_approving_review_count": 1,
+									"authorized_dismissal_actors_only": false,
+									"required_review_thread_resolution": true,
+									"ignore_approvals_from_contributors": false,
+									"require_extra_approval_for_unattributed_changes": true,
+									"dismissal_restriction_source": "repos/TOANQUYNHLLC/.github/web-rulesets/24042610/dismissal-restriction#e77c89127094402abbf0f973c027615a"
+								}
+							},
+							{
+								"type": "required_status_checks",
+								"parameters": {
+									"required_status_checks": [
+										{
+											"context": "Liên kết, biểu mẫu, nhãn, cấu hình định dạng và mẫu email",
+											"integration_id": 15368
+										},
+										{
+											"context": "Định dạng (Prettier, ruff)",
+											"integration_id": 15368
+										},
+										{
+											"context": "Shell script và workflow",
+											"integration_id": 15368
+										},
+										{
+											"context": "Kiểm tra tiêu đề Pull Request",
+											"integration_id": 15368
+										},
+										{
+											"context": "Kiểm tra tên branch",
+											"integration_id": 15368
+										}
+									],
+									"do_not_enforce_on_create": true,
+									"strict_required_status_checks_policy": true
+								}
+							},
+							{
+								"type": "code_quality",
+								"parameters": {
+									"severity": "all",
+									"ai_findings_severity": "none"
+								}
+							},
+							{
+								"type": "required_deployments",
+								"parameters": {
+									"required_deployment_environments": []
+								}
+							}
+						]
+					},
+					{
+						"ruleset_id": 24068333,
+						"name": "Protect Release Tags",
+						"target": "tag",
+						"enforcement": "active",
+						"conditions": {
+							"ref_name": {
+								"exclude": [],
+								"include": [
+									"refs/tags/v*",
+									"refs/tags/Stable.v*",
+									"refs/tags/Beta.v*"
+								]
+							}
+						},
+						"bypass_actors": [
+							{
+								"name": "User 107941543",
+								"actor_id": 107941543,
+								"actor_type": "User",
+								"bypass_mode": "always"
+							},
+							{
+								"name": "User 108377655",
+								"actor_id": 108377655,
+								"actor_type": "User",
+								"bypass_mode": "always"
+							}
+						],
+						"rules": [
+							{
+								"type": "creation"
+							},
+							{
+								"type": "update",
+								"parameters": {
+									"update_allows_fetch_and_merge": false
+								}
+							},
+							{
+								"type": "deletion"
+							},
+							{
+								"type": "non_fast_forward"
+							},
+							{
+								"type": "required_signatures"
+							},
+							{
+								"type": "required_status_checks",
+								"parameters": {
+									"required_status_checks": [],
+									"do_not_enforce_on_create": true,
+									"strict_required_status_checks_policy": true
+								}
+							}
+						]
+					}
+				]
+			},
+			"pending_settings": {
+				"collections": {
+					"custom_patterns": null
+				},
+				"endpoints": {
+					"actions/cache/retention-limit": null,
+					"actions/cache/storage-limit": null
+				}
+			},
+			"manual_settings": {
+				"codespaces": {
+					"status": "pending",
+					"configuration_source": "repos/TOANQUYNHLLC/.github/manual/codespaces#2ce886a77210491ca1385b91023ca91f"
+				},
+				"custom_pattern_publication": {
+					"status": "unverified",
+					"configuration_source": null
+				},
+				"deploy_keys": {
+					"status": "unverified",
+					"configuration_source": null
+				},
+				"github_apps": {
+					"status": "pending",
+					"configuration_source": "repos/TOANQUYNHLLC/.github/manual/github_apps#34fed5a9e8b34fc6945226c65423d6e9"
+				},
+				"members_and_collaborators": {
+					"status": "pending",
+					"configuration_source": "repos/TOANQUYNHLLC/.github/manual/members_and_collaborators#b082b2be8f94426b9f2b27286bb22656"
+				},
+				"secrets": {
+					"status": "unverified",
+					"configuration_source": null
+				},
+				"settings_pages": {
+					"status": "pending",
+					"configuration_source": "repos/TOANQUYNHLLC/.github/manual/settings_pages#cfd4398234c74eb8a5e787ac5d4a9f76"
+				},
+				"webhook_credentials": {
+					"status": "unverified",
+					"configuration_source": null
+				}
+			}
+		}
+	},
+	"unavailable": {
+		"orgs/TOANQUYNHLLC/settings/network-configurations": "HTTP 404",
+		"orgs/TOANQUYNHLLC/secret-scanning/custom-patterns": "HTTP 404",
+		"orgs/TOANQUYNHLLC/secret-scanning/pattern-configurations": "HTTP 404",
+		"orgs/TOANQUYNHLLC/actions/policies": "HTTP 403",
+		"orgs/TOANQUYNHLLC/dependabot/repository-access": "API không trả default_level; danh sách repository đã lưu, không suy đoán null",
+		"orgs/TOANQUYNHLLC/actions/hosted-runners": "HTTP 404",
+		"orgs/TOANQUYNHLLC/rulesets": "HTTP 403",
+		"orgs/TOANQUYNHLLC/hooks": "HTTP 404",
+		"repos/TOANQUYNHLLC/.github/actions/cache/retention-limit": "HTTP 402",
+		"repos/TOANQUYNHLLC/.github/actions/cache/storage-limit": "HTTP 402",
+		"repos/TOANQUYNHLLC/.github/secret-scanning/custom-patterns": "HTTP 404"
+	}
+}

@@ -1,0 +1,35 @@
+name: Tạo GitHub Release
+
+on:
+    push:
+        tags:
+            - 'v*'
+            - 'Stable.v*'
+            - 'Beta.v*'
+
+permissions:
+    contents: read
+
+concurrency:
+    # Không chạy chồng: lượt sau chờ lượt trước xong, không hủy.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    release:
+        name: Tạo GitHub Release từ CHANGELOG.md
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        permissions:
+            contents: write # tạo GitHub Release từ tag
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Tạo Release từ CHANGELOG.md
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ github.ref_name }}
+              run: python3 scripts/release.py create "$TAG"

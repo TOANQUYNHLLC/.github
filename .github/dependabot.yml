@@ -1,0 +1,49 @@
+# Dependabot không mở Pull Request cập nhật cho repository này: open-pull-requests-limit: 0 tắt cập nhật
+# phiên bản; Dependabot security updates tắt trong cài đặt repository. Bỏ dòng open-pull-requests-limit ở
+# từng hệ sinh thái để bật lại đề xuất cho GitHub Action (ghim theo commit SHA), công cụ Node.js (Prettier) và
+# feature của Dev Container (ghim theo phiên bản chính).
+# cooldown: khi bật lại, chờ 30 ngày sau khi một phiên bản phát hành mới đề xuất (tránh gói độc vừa phát hành).
+version: 2
+updates:
+    - package-ecosystem: github-actions
+      directory: /
+      open-pull-requests-limit: 0
+      schedule:
+          interval: monthly
+      cooldown:
+          default-days: 30
+      labels:
+          - dependencies
+          - github_actions
+      commit-message:
+          prefix: chore
+
+    - package-ecosystem: npm
+      directory: /
+      open-pull-requests-limit: 0
+      schedule:
+          interval: monthly
+      cooldown:
+          default-days: 30
+      labels:
+          - dependencies
+          - javascript
+      commit-message:
+          prefix: chore
+      groups:
+          # Gộp mọi bản cập nhật công cụ phát triển vào một Pull Request mỗi tháng.
+          dev-tools:
+              patterns:
+                  - '*'
+
+    - package-ecosystem: devcontainers
+      directory: /
+      open-pull-requests-limit: 0
+      schedule:
+          interval: monthly
+      cooldown:
+          default-days: 30
+      labels:
+          - dependencies
+      commit-message:
+          prefix: chore

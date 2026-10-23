@@ -1,0 +1,42 @@
+name: Chuẩn bị phát hành hằng tháng
+
+on:
+    schedule:
+        # 07:00 ngày 1 hằng tháng giờ Việt Nam (00:00 UTC).
+        - cron: '0 0 1 * *'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}
+    cancel-in-progress: false
+
+jobs:
+    prepare:
+        name: Mở Pull Request phát hành nếu có thay đổi
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        permissions:
+            contents: write # tạo branch release/… và commit CHANGELOG.md (GitHub ký)
+            pull-requests: write # mở Pull Request phát hành
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+
+            - name: Chuyển CHƯA PHÁT HÀNH thành phiên bản của tháng
+              id: prepare
+              run: python3 scripts/release.py prepare
+
+            - name: Mở Pull Request phát hành (commit do GitHub ký)
+              if: steps.prepare.outputs.version
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  VERSION: ${{ steps.prepare.outputs.version }}
+                  PREVIOUS: ${{ steps.prepare.outputs.previous }}
+                  COMMITS: ${{ steps.prepare.outputs.commits }}
+              run: python3 scripts/release.py open-pr "$VERSION" "$PREVIOUS" "$COMMITS"

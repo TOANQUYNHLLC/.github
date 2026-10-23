@@ -1,0 +1,53 @@
+name: CodeQL
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+    schedule:
+        - cron: '0 3 * * 1'
+
+permissions:
+    contents: read
+
+concurrency:
+    # Push mới trên cùng Pull Request hủy lượt chạy cũ; lượt chạy trên nhánh chính luôn chạy hết.
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+    analyze:
+        name: Phân tích bảo mật (${{ matrix.language }})
+        runs-on: ubuntu-latest
+        timeout-minutes: 60
+        permissions:
+            actions: read # CodeQL đọc thông tin lượt chạy workflow (bắt buộc với repository riêng tư)
+            contents: read
+            security-events: write # tải kết quả CodeQL lên Code scanning
+        strategy:
+            fail-fast: false
+            matrix:
+                # Chỉ ngôn ngữ repository có mã: CodeQL báo lỗi khi không có mã nguồn của ngôn ngữ được quét
+                # (repository không có JavaScript, TypeScript). Thêm ngôn ngữ khi có mã của ngôn ngữ đó.
+                include:
+                    - language: actions
+                      build-mode: none
+                    - language: python
+                      build-mode: none
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Khởi tạo CodeQL
+              uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+              with:
+                  languages: ${{ matrix.language }}
+                  build-mode: ${{ matrix.build-mode }}
+
+            - name: Phân tích
+              uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+              with:
+                  category: '/language:${{ matrix.language }}'
